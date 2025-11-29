@@ -1,0 +1,129 @@
+<template>
+
+	<!-- <div if:true={showSpinner}>
+		<lightning-spinner variant="brand" alternative-text="Loading" size="medium"></lightning-spinner>
+	</div> -->
+
+	<lightning-card variant="narrow" class="card">
+		<lightning-record-edit-form object-api-name="Employee_Wise_Account_Target__c">
+			<lightning-layout multiple-rows size="12">
+				<lightning-layout-item size="2" class="slds-p-top_x-small slds-p-horizontal_x-small"
+					small-device-size="2" medium-device-size="2" large-device-size="2">
+					<lightning-input-field field-name="Fiscal_Year__c" variant="label-stacked"
+						onchange={onFilterInputChange} value={fiscId}>
+					</lightning-input-field>
+				</lightning-layout-item>
+
+				<lightning-layout-item if:true={employes} size="2" class="slds-p-top_x-small slds-p-horizontal_x-small"
+					small-device-size="2" medium-device-size="2" large-device-size="2">
+					<lightning-input-field field-name="Employee__c" variant="label-stacked"
+						onchange={onFilterInputChange} value={empId}>
+					</lightning-input-field>
+				</lightning-layout-item>
+
+				<lightning-layout-item if:true={EWTarget_Flag} size="3"
+					class="slds-p-top_x-small slds-p-horizontal_x-small" small-device-size="3" medium-device-size="3"
+					large-device-size="3" style="padding-top: 33px !important; font-size: 15px; font-weight: 500;">
+					EWTarget Quantity : {EWTarget_value}
+				</lightning-layout-item>
+
+				<lightning-layout-item if:true={prodcategory} size="2"
+					class="slds-p-top_x-small slds-p-horizontal_x-small" small-device-size="2" medium-device-size="2"
+					large-device-size="2">
+					<lightning-input-field field-name="Product_Category1__c" variant="label-stacked"
+						onchange={onFilterInputChange} value={prodCatVal}>
+					</lightning-input-field>
+				</lightning-layout-item>
+
+				<lightning-layout-item if:true={EWPCTarget_Flag} size="3"
+					class="slds-p-top_x-small slds-p-horizontal_x-small" small-device-size="3" medium-device-size="3"
+					large-device-size="3" style="padding-top: 33px !important; font-size: 15px; font-weight: 500;">
+					Target Amount : {EWTarget_value}
+				</lightning-layout-item>
+
+				<!-- <lightning-layout-item if:true={remaining_flag} size="3" class="slds-p-top_x-small slds-p-horizontal_x-small"
+					small-device-size="3" medium-device-size="3" large-device-size="3"
+					style="padding-top: 33px !important; font-size: 15px; font-weight: 500;">
+					Remaining Quantity : {remaining_value}
+				</lightning-layout-item> -->
+
+
+				<!-- <lightning-layout-item size="3" class="slds-p-top_x-small slds-p-horizontal_x-small" small-device-size="4"
+					medium-device-size="4" large-device-size="3">
+					<lightning-combobox label="Employee" options={employees} variant="label-inline"
+						onchange={handleEmployeeChange}>
+					</lightning-combobox>
+				</lightning-layout-item> -->
+			</lightning-layout>
+		</lightning-record-edit-form>
+	</lightning-card>
+
+	<lightning-card variant="narrow" class="card">
+		<lightning-tabset variant="vertical">
+			<lightning-tab onactive={handleparentTabChange} data-label="Employee_Wise_Target__c"
+				label="Employee Wise Target" style="padding: 0% 0.5%"> <!-- class="slds-scrollable"> -->
+				<lightning-tabset if:true={employeeWise} class="childTabSet">
+					<lightning-tab onactive={handleChildTabChange} data-label="Yearly" label="Yearly"
+						style="padding: 0px">
+						<c-targetvsactual-child if:true={filters} parent-tab-label={parentTabLabel}
+							child-tab-label={childTabLabel} fisc-id={fiscId}
+							onhandletogglespinner={handleToggleSpinner}>
+						</c-targetvsactual-child>
+					</lightning-tab>
+					<lightning-tab onactive={handleChildTabChange} data-label="Monthly" label="Monthly"
+						style="padding: 0px">
+						<c-targetvsactual-child if:true={filters} parent-tab-label={parentTabLabel}
+							child-tab-label={childTabLabel} fisc-id={fiscId}
+							onhandletogglespinner={handleToggleSpinner}>
+						</c-targetvsactual-child>
+					</lightning-tab>
+				</lightning-tabset>
+			</lightning-tab>
+
+
+			<!-- <lightning-tab onactive={handleparentTabChange} data-label="Employee_Wise_Product_Category_Target__c"
+				label="Employee Wise Product Category Target" style="padding: 0% 0.5%" class="slds-scrollable">
+				<lightning-tabset class="childTabSet" if:true={employeeCategoryWise}>
+					<lightning-tab onactive={handleChildTabChange} data-label="Yearly" label="Yearly" style="padding: 0px">
+						<c-targetvsactual-child if:true={filters} parent-tab-label={parentTabLabel} child-tab-label={childTabLabel}
+							fisc-id={fiscId} emp-id={empId} target-val-flag={EWTarget_value}
+							onhandletogglespinner={handleToggleSpinner}>
+						</c-targetvsactual-child>
+					</lightning-tab>
+					<lightning-tab onactive={handleChildTabChange} data-label="Monthly" label="Monthly" style="padding: 0px">
+						<c-targetvsactual-child parent-tab-label={parentTabLabel} child-tab-label={childTabLabel} fisc-id={fiscId}
+							emp-id={empId} target-val-flag={EWTarget_value} onremainingvalue={handleRemainingValueCheck}
+							onhandletogglespinner={handleToggleSpinner}>
+
+						</c-targetvsactual-child>
+					</lightning-tab>
+				</lightning-tabset>
+			</lightning-tab> -->
+
+			<lightning-tab onactive={handleparentTabChange} data-label="Employee_Wise_Account_Target__c"
+				label="Employee Wise Account Target" style="padding: 0% 0.5%" class="slds-scrollable">
+				<lightning-tabset class="childTabSet" if:true={employeeProductWise}>
+					<lightning-tab onactive={handleChildTabChange} data-label="Yearly" label="Yearly"
+						style="padding: 0px">
+						<c-targetvsactual-child parent-tab-label={parentTabLabel} child-tab-label={childTabLabel}
+							fisc-id={fiscId} emp-id={empId} prod-cat-val={prodCatVal} target-val-flag={EWTarget_value}
+							onremainingvalue={handleRemainingValueCheck} onhandletogglespinner={handleToggleSpinner}>
+						</c-targetvsactual-child>
+					</lightning-tab>
+					<lightning-tab onactive={handleChildTabChange} data-label="Monthly" label="Monthly"
+						style="padding: 0px">
+						<c-targetvsactual-child parent-tab-label={parentTabLabel} child-tab-label={childTabLabel}
+							fisc-id={fiscId} emp-id={empId} prod-cat-val={prodCatVal} target-val-flag={EWTarget_value}
+							onremainingvalue={handleRemainingValueCheck} onhandletogglespinner={handleToggleSpinner}>
+						</c-targetvsactual-child>
+					</lightning-tab>
+				</lightning-tabset>
+			</lightning-tab>
+
+
+
+		</lightning-tabset>
+
+	</lightning-card>
+
+</template>

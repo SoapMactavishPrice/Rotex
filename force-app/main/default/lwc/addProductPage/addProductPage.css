@@ -1,0 +1,61 @@
+.slds-modal__container {
+    max-width: 80rem !important;
+    width: 80% !important;
+    height:95% !important;
+  }
+  
+  
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+  }
+  
+  input[type=number]{
+  border: none;
+  background-color: transparent;
+  }
+  
+  input[type=number]:focus {
+  outline: none;
+  }
+  
+  button {
+  background-color: transparent;
+  visibility: hidden;
+  }
+  table tbody tr:hover button {
+  visibility: visible;
+  }
+  
+  .icon:hover {
+  --slds-c-icon-color-foreground: rgb(255, 255, 255);
+  }
+  
+  
+  table {
+  border-collapse: collapse;
+  }
+  
+  table thead tr th {background-color: aliceblue;}
+  
+  th, td {
+  padding:5px;
+  border-bottom: 1px solid #ddd;
+  }
+  
+  
+  table tbody tr:hover{
+  background-color: aliceblue;
+  }
+  
+  
+  .divclas{
+  position: absolute;
+  z-index: 99;
+  margin-left: 65%;
+  background: white;
+  border: 1px solid;
+  padding: 1%;
+  width: 30%;
+  }

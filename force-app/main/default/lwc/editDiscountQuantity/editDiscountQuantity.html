@@ -1,0 +1,56 @@
+<template>
+    <div class="container">
+        <lightning-card>
+            <div class="custom-header">Edit Discount &amp; Quantity</div>
+            <div class="table-wrapper">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Customer Part No.</th>
+                            <th>List Price</th>
+                            <th>Discount (SAP)</th>
+                            <th>Discount Offered</th>
+                            <th>Quantity</th>
+                            <th>Sales Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template for:each={quoteLineItemList} for:item="item">
+                            <tr key={item.Id}>
+                                <td>{item.Product2.Name}</td>
+                                <td>
+                                    <lightning-input type="text" data-id={item.Id} variant="label-hidden"
+                                        value={item.Customer_Part_No__c} class="input-field"
+                                        onchange={handleCustomerPartNoChange}>
+                                    </lightning-input>
+                                </td>
+                                <td class="amount">{item.ListPrice}</td>
+                                <td class="amount">{item.Discount_as_per_SAP__c}%</td>
+                                <td>
+                                    <lightning-input type="number" data-id={item.Id} variant="label-hidden"
+                                        value={item.Discount_to_be_offered__c} class="input-field"
+                                        onchange={handleDiscountChange}>
+                                    </lightning-input>
+                                </td>
+                                <td>
+                                    <lightning-input type="number" data-id={item.Id} variant="label-hidden"
+                                        value={item.Quantity} class="input-field" onchange={handleQuantityChange}>
+                                    </lightning-input>
+                                </td>
+                                <td class="amount highlight">{item.UnitPrice}</td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="footer-actions">
+                <lightning-button label="Cancel" variant="neutral" onclick={closeModal}>
+                </lightning-button>
+                <lightning-button label="Save" variant="brand" onclick={handleSave} class="slds-m-left_small">
+                </lightning-button>
+            </div>
+        </lightning-card>
+    </div>
+</template>

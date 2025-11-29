@@ -1,0 +1,18 @@
+/* Target the container wrapping the table to allow content to overflow */
+.slds-box > div {
+    overflow: visible !important;
+    /* Also ensure no parent has overflow hidden set unexpectedly */
+}
+
+/* Target standard SLDS scrollable containers that might be parents */
+c-quote-sales-price-approval .slds-scrollable_y, 
+c-quote-sales-price-approval .slds-scrollable--y,
+c-quote-sales-price-approval .slds-scrollable_x,
+c-quote-sales-price-approval .slds-scrollable--x {
+    overflow: visible !important;
+}
+
+/* Ensure the combobox list itself can layer correctly */
+.slds-listbox {
+    z-index: 9002 !important; /* Higher than typical modal z-index (9001) */
+}

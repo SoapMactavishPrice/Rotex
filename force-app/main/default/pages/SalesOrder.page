@@ -1,0 +1,584 @@
+<apex:page controller="salesOrderPDFController" id="myPage" standardStylesheets="false" renderAs="pdf" applyHtmlTag="false" applyBodyTag="false" showHeader="false" docType="html-5.0"> 
+    <html>
+        <head>
+            <style>
+                @page {
+            size: A4;
+            @top-center {
+            content: element(header);
+            }
+            @bottom-left {
+            content: element(footer);
+            }
+            margin-bottom: 100px;
+            }
+            div.header {
+            padding-top: 10px;
+            position: running(header);
+            display: block;
+            text-align: center;
+            margin-bottom: 100px;
+            }
+            div.footer {
+            line-height: 8px;
+            position: running(footer);
+            display: block;
+            }
+            
+            div.pageNumber {
+                position: running(footer);
+                text-align: right;
+                font-size: 12px;
+                <!-- margin-bottom: 40px; -->
+                }
+                .pagenumber:before {
+                content: "Page " counter(page) " of " counter(pages);
+                }
+                .pagecount:before {
+                content: counter(pages);
+                }
+                        
+            img.logo {
+            width: 100px; 
+            height: auto;
+            }
+            .quotation-heading {<!--
+             font-family: 'Impact', sans-serif;
+            font-size: 24px;
+            text-align: center;
+            color: #008080; -->
+            text-align: center;
+            margin-top: 20px; 
+            }
+            .table1 {
+            font-size: 12px;
+            <!-- border-collapse: collapse;-->
+            width: 100%;
+            text-align: center;
+            }
+            .row1{
+            width:100%;
+            text-align: center;
+            line-height: 0px;
+            }
+            </style>
+        </head>
+        <body>
+            <div class="header" style="height: 85px;">
+                <apex:image alt="Logo_Rotex" url="{!$Resource.Rotex_Header}" height="85px" /><br/>
+            </div>
+            
+            
+             <div class="footer" style="font-size:12px">
+            <p class="pageNumber" style="text-align: right;
+                font-size: 10px;">
+                <strong>  <span class="pagenumber"></span></strong>
+            </p>
+            <hr style="color: #e1e300;
+                        border: 1px solid;"/>
+            <table style="width: 100%">
+                <tr>
+                    <td><strong>Reg Office</strong></td>
+                    <td>: 987/11, GIDC, Makarpura, Vadodara 390 010, India.</td>
+                    <td><strong>Phone </strong></td>
+                    <td>: +91 265 617 4100</td>
+                </tr>
+                <tr>
+                    <td><strong>Jurisdiction </strong></td>
+                    <td>: Vadodara, Gujarat, India.</td>
+                    <td></td>
+                    <td> : +91 265 263 8136</td>
+                </tr>
+                <tr>
+                    <td><strong>CIN No. </strong></td>
+                    <td>: U29259GJ1983PLC005831 <strong>GST NO. </strong> 24AABCR0011J1Z0</td>
+                    <td><strong>Fax </strong></td>
+                    <td>: +91 265 263 1352</td>
+                </tr>
+                
+            </table>
+        </div>
+            
+            <div class="quotation-heading">
+                <br/><br/><h3>Order Acknowledgement</h3>
+            </div>
+            
+            
+            <table>
+                <tr >
+                    <td style = "width: 60%;font-size: 12px; "> 
+                        <div  class="normalText" style="text-align: left;  line-height: 20px;">
+                            
+                            <Span><strong>1001041</strong> </Span><br/>
+                            <Span><strong>C.B. TRADING CORPORATION</strong> </Span><br/>
+                            <Span>CS /12/160, MALHAR ENTERPRISE BLDG </Span><br/>
+                            <Span>OPP BANK OF BARODA, SUNMILL COMPOUND </Span><br/>
+                            <Span>MUMBAI 400013 Maharashtra India </Span><br/>
+                            <Span>Email: info@cbtindia.com </Span>
+                            
+                            
+                        </div>
+                    </td>
+                    
+                    <td style = "width: 20%;font-size: 12px; line-height: 20px;">
+                        <Span><strong>Order Acknowledgement</strong></Span><br/>
+                        <Span><strong>Date</strong></Span><br/>
+                        <Span><strong>Customer Order No</strong></Span><br/>
+                        <Span><strong>Customer Order Date</strong></Span><br/>
+                        <Span><strong>GST No</strong></Span>
+                    </td>
+                    <td style = "width: 20%;font-size: 12px;text-align:left; line-height: 20px;">
+                        <Span><strong>:&nbsp;</strong>{!}</Span><br/>
+                        <Span><strong>:&nbsp;</strong>{!}</Span><br/>
+                        <Span><strong>:&nbsp;</strong>{!}</Span><br/>
+                        <Span><strong>:&nbsp;</strong>{!}</Span><br/>
+                        <Span><strong>:&nbsp;</strong>{!}</Span>
+                    </td> 
+                </tr>
+                
+                <br/>
+            </table> 
+            
+            <table class="table1" style=" width: 100%;">
+                <tr >
+                    <th style="width: 8%; font-size: 12px; line-height: 1; text-align: center;">Sr. No.</th>
+                    <th style="width: 13%; font-size: 12px; line-height: 1; text-align: center;">Rotex Item No</th>
+                    <th style="width: 20%; font-size: 12px; line-height: 1; text-align: center;">Description</th>
+                    <th style="width: 10%; font-size: 12px; line-height: 1; text-align: center;">HSN Code</th>
+                    <th style="width: 10%; font-size: 12px; line-height: 1; text-align: center;">Quantity</th>
+                    <th style="width: 10%; font-size: 12px; line-height: 1; text-align: center;">UoM</th>
+                    <th style="width: 15%; font-size: 12px; line-height: 1; text-align: center;">Unit Price (INR)</th>
+                    <th style="width: 15%; font-size: 12px; line-height: 1; text-align: center;">Total (INR)</th>
+                </tr>
+                <apex:variable var="rows" value="{!0}"/>
+                <apex:repeat value="{!orderRecord.orderItems}" var="lineItem">
+                <tr>
+                    <apex:variable var="rows" value="{!rows+1}"/>
+                    <td style="text-align: center;">{!rows}</td>
+                    <td style="text-align: center;">{!lineItem.RotexItemNumber}</td>
+                    <td style="text-align: left;">{!lineItem.Goodsservices}</td>
+                    <td style="text-align: center;"></td>
+                    <td style="text-align: center;">{!lineItem.Quantity}</td>
+                    <td style="text-align: center;"></td>
+                    <td style="text-align: center;">{!lineItem.Rate}</td>
+                    <td style="text-align: center;">{!lineItem.Totalvalue}</td>
+                    
+                </tr>
+                </apex:repeat>
+                 <tr>
+                    <td colspan="8"><br/></td>
+                </tr>
+                <tr >
+                    <td  colspan="7" style="text-align: right;"><strong>Basic Value (INR)</strong></td>
+                    <td style="text-align: left;"><strong>:&nbsp;{!totalValueINR}</strong></td>
+                </tr>
+                <tr>
+                    <td style="text-align: right;" colspan="7"><strong>IGST</strong></td>
+                    <td style="text-align: left;"><strong>:&nbsp;</strong></td>
+                </tr>
+                
+                <tr>
+                    <td style="text-align: right;" colspan="7"><strong>Total Amount (INR)</strong></td>
+                    <td style="text-align: left;"><strong>:&nbsp;{!totalValueINR}</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="8"><br/><br/></td>
+                </tr>
+                <tr>
+                    <td style="text-align: right;" colspan="8"> {!no2words} </td>
+                </tr>
+                <tr>
+                    <td style="text-align: right;" colspan="8"> <strong>Taxes, duties and transport costs excluded unless explicitly mentioned.</strong> </td>
+                </tr>
+            </table>
+            
+                            <hr/>
+                <table style="width: 100%; ">
+                    <tr>
+                        <td colspan="2" style="font-size: 13px;" >
+                            <strong>Special Terms and Conditions</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 20%; vertical-align: middle; font-size: 12px; ">
+                            <span><strong>Delivery Period</strong></span><br/>
+                            <span><strong>Incoterm</strong></span><br/>
+                            <span><strong>Payment Terms</strong></span><br/>
+                            <span><strong>Prices</strong></span><br/>
+                            <span><strong>Warranty Terms</strong></span><br/>
+                            <span><strong>Liquidate Terms</strong></span><br/>
+                            <span><strong>Ship to Address</strong></span><br/>
+                            <span><strong>Ship to GST No. </strong></span><br/>
+                            <span><strong>Transport Details</strong></span><br/>
+                            <span><strong>Delivery Location</strong></span><br/>
+                            <span><strong>GAD QAP :</strong></span>
+                        </td>
+                        <td style="width: 80%; vertical-align: middle; font-size: 12px;">
+                            <span>:&nbsp;</span><br/>
+                            <span>:&nbsp;</span><br/>
+                            <span>:&nbsp;</span><br/>
+                            <span>:&nbsp;</span><br/>
+                            <span>:&nbsp;</span><br/>
+                            <span>:&nbsp;</span><br/>
+                            <span>:&nbsp;</span><br/>
+                            <span>:&nbsp;</span><br/>
+                            <span>:&nbsp;</span><br/>
+                            <span>:&nbsp;</span><br/>
+                            <span>:&nbsp;</span>
+                        </td>
+                    </tr>
+                    <hr/>
+                </table>
+                <table>
+                    <tr>
+                        <td style="font-size: 12px; width: 100%;" colspan="3">
+                            <strong>
+                                Kind Attn:<br/><br/>
+                                We thank you for your inquiry and have the pleasure to submit our techno-commercial offer in accordance with our standard terms and conditions of sales.
+                            </strong>
+                        </td>
+                    </tr>
+                </table>
+                
+                <table>
+                    <tr> 
+                        <td style="font-size: 12px;">
+                            
+                            <Span>1. If GAD and QAP preapproval is necessary, then the PDD date will be adhered to if GAD (General Arrangement Drawing) &amp; QAP (Quality acceptance plan) approval is received within 2 weeks from the purchase order date.</Span> <br/>
+                            <Span>2. If MDCC terms are applicable, then the PDD (Promissory Delivery Date) will be adhered to if MDCC (Manufacturing and dispatch clearance) approval is received within 2 weeks from the purchase order date.</Span><br/>
+                            <Span>3. Any delay in receiving the above documents will delay the PDD by the same proportion.</Span><br/>
+                            <Span>4. The quoted PDD may not be adhered to in case, on the date of PDD, any overdue outstanding is observed.</Span><br/>
+                            <Span>5. Current overdue outstanding amount: 250,000.00 INR (Please clear this amount for on-time delivery).</Span>
+                            
+                        </td>
+                    </tr>
+                </table>
+                
+                
+            
+            <div style="page-break-before:always; width: 100%; margin-top:40px; ">
+                
+                
+                <table style="width: 100%;  columns: 2;  text-align: center; columns: 2;">
+                    <tr class="row1">
+                        <td colspan="2"  style=" width: 100%; text-align: center; font-size:14px;">
+                            <strong>TERMS AND CONDITIONS</strong>
+                        </td>
+                    </tr>
+                    <tr  >
+                        <td style="width: 50%;vertical-align: text-top; text-align: left; font-size: 7.5pt;">
+                            <p>
+                                <strong>1. DEFINITIONS: </strong> #Rotex# shall mean # Rotex Automation Limited#
+                                #Customer# shall mean the person(s) or company that purchases
+                                Equipment/Services from Rotex pursuant to this Order.
+                                #Equipment# means all components, spare parts, goods, equipment, or materials
+                                of any kind, which are supplied by Rotex under this Order.
+                                #Operator# shall mean the operator or user of the Equipment/Services.
+                                #Order# shall mean the agreement between Rotex and the Customer
+                                (individually #Party# and collectively #the Parties#) for the sale and purchase of
+                                the Equipment/Services, including the Terms and Conditions of Sale herein and
+                                any contemporaneous writing, signed by both Parties, and firmly attached
+                                hereto.<br/>
+                                #Services# means all services, including maintenance and installation services,
+                                provided under this Order.<br/><br/>
+                                <strong>2. OFFER AND GOVERNING PROVISIONS: </strong>Each quotation and Order
+                                acknowledgement issued by Rotex is an offer by Rotex to sell the goods and/or
+                                services described in it in accordance with these Terms and Conditions of Sale,
+                                is not an acceptance of any offer made by the Customer, and is expressly
+                                conditioned upon the Customer's assent to these Terms and Conditions of Sale.
+                                Rotex objects to any additional or different terms contained in any purchase
+                                order or other communication previously or hereafter provided by Customer to
+                                Rotex. No such additional or different terms or conditions will be of any force
+                                or effect. The terms of the Order will be the entire agreement between
+                                Customer and Rotex on the subject of the transaction that it describes; and there
+                                are no conditions to that agreement that are not part of the Order.<br/><br/>
+                                <strong>3. PURCHASE PRICE: </strong>Prices shall be as specified by Rotex and shall apply
+                                for the period specified. If no period is specified, prices shall be valid for 30
+                                days. Prices cited herein are based on current costs and are subject to reasonable
+                                adjustment on or after the date of acceptance of any purchase order to meet a
+                                rise or fall in such costs, as computed on the date of delivery. In the event the
+                                Customer is purchasing the Equipment for resale to a third party, the Customer
+                                shall intimate Rotex of the same. In such event, Rotex reserves the right, to the
+                                extent permitted by the applicable law, to establish and to revise, by giving
+                                written notice to the Customer, maximum prices at which each of the Equipment
+                                may be sold by the Customer to a third party.<br/><br/>
+                                <strong>4. PAYMENT: </strong>(A) Unless otherwise agreed to by Rotex in writing, payment
+                                shall be made in full by Customer in advance of shipment or delivery. Customer
+                                agrees to pay the entire amount of each invoice without set-off or deduction.<br/>
+                                (B) Punctual payment as stipulated herein is of the essence for the Order. When
+                                any sum owed by Customer to Rotex under this Order is overdue, Rotex may,
+                                without notice to Customer:<br/>
+                                (i) cease the supply of further Equipment/Services under this Order without
+                                liability for any loss (including loss of profit, consequential or indirect loss or
+                                other financial or economic loss) to Customer until such sum, together with such
+                                interest as may be due thereon, is paid; and/or<br/>
+                                (ii) terminate the Order and any other agreements between Rotex and Customer,
+                                whether or not any sums are due for payment by Customer thereunder, without
+                                prejudice to Rotex' right to recover such sums as may be due from the Customer
+                                and without liability on the part of Rotex;<br/>
+                                (C) No defect in the Order of the Equipment/Services shall operate to interfere
+                                with the terms of payment. If payment is not made as provided above, Customer
+                                shall thereby be deemed to have waived the warranties provided in Section 10
+                                hereunder. Rotex may demand different terms of payment from those specified
+                                on the face of this Order, whenever it reasonably appears that Customer#s
+                                financial condition requires such changes and may demand assurance of the
+                                Customer#s ability to pay whenever it reasonably appears that such ability is in
+                                doubt. Such demand shall be in writing and Rotex may, upon making such
+                                demand, stop production and/or suspend shipments hereunder.<br/>
+                                (D) If Customer is in default of any payment obligation, Rotex is, without
+                                reminder and prejudice to any other rights, entitled to charge interest at the
+                                prevailing lending base rate of State Bank of India + 200 bps for any
+                                outstanding sum, beginning with any due date of payment until receipt of full
+                                and final payment along with interest accrued thereon.<br/><br/>
+                                <strong>5. TIME IS OF THE ESSENCE: </strong>This clause (where applicable) cannot be
+                                accepted, Rotex will use all reasonable efforts to meet the Customer#s/ delivery
+                                schedules<br/><br/>
+                                <strong>6. DELIVERY: </strong>(A) Unless otherwise agreed to in writing, all shipments of
+                                Equipment by Rotex shall be Ex Works Rotex# Designated Facility
+                                (INCOTERMS 2020). Customer acknowledges that delivery dates provided by
+                                Rotex are estimates only. Rotex shall use reasonable efforts to make timely
+                            </p> 
+                        </td>
+                        
+                        <td style="width: 50%;vertical-align: text-top; text-align: left; font-size: 7.5pt;">
+                            <p>
+                                defect. The warranty period shall commence date of shipment of the Equipment
+                                to the Customer, whether or not the Equipment has been installed or
+                                commissioned.<br/><br/>
+                                (B) Rotex warrants that it shall use reasonable efforts to provide the Services
+                                ordered under the Order. Rotex does not represent or warrant that all Equipment
+                                problems will be corrected or if corrected, corrected to the full satisfaction of
+                                Customer. The express warranty set forth in the first sentence of this paragraph
+                                shall be the only warranty given by Rotex with respect to the Services provided.<br/><br/>
+                                (C) For Equipment that is not manufactured by Rotex, Rotex' only responsibility
+                                is to assign to its Customer any manufacturer#s warranty that does not prohibit
+                                such assignment.<br/><br/>
+                                (D) Equipment and parts that are consumed in normal operation are not covered
+                                by this Warranty.<br/><br/>
+                                (E) If Customer or end user, as the case may be, discovers a defect within the
+                                applicable warranty period, it must be reported to Rotex# service department
+                                immediately upon discovery.<br/><br/>
+                                (F) Within a reasonable time after proper notification, Rotex shall, during its
+                                normal business hours, Monday through Friday, correct any defect covered by
+                                this warranty with either new or used replacement parts, without charge. The
+                                original duration of this Warranty shall remain applicable to those parts not
+                                repaired or replaced. Any part repaired or replaced is warranted to conform to
+                                Rotex's specifications and to be free from defects in materials or workmanship
+                                appearing within a period after repair or replacement equivalent to the warranty
+                                period originally applicable to the Equipment of which it is a part, subject to the
+                                other terms of this Warranty. The above remedies are the exclusive remedies of
+                                Customer and End user, and the sole responsibility of Rotex, for breach of this
+                                Warranty.<br/><br/>
+                                (G) Rotex# Warranty ceases to be effective if Customer and/or End user fail to
+                                operate and use the Equipment sold hereunder in a safe and reasonable manner
+                                in accordance with Rotex# written instructions.<br/><br/>
+                                (H) Neither Customer nor End User shall be entitled to any remedy under this
+                                Warranty with respect to<br/><br/>
+                                (i) Equipment that has been subjected to any alteration, disassembly, tampering,
+                                modification, or repair without prior authorization by Rotex;<br/><br/>
+                                (ii) Equipment subjected to experimental running or any type of operation or use
+                                other than that for which the Equipment/Services is designed;<br/><br/>
+                                (iii) Equipment from which Rotex# and/or vendor#s trademark or serial number
+                                has been altered, removed, or obliterated without Rotex# written permission,
+                                excluding any alteration, removal, or obliteration directly caused by accident or
+                                mishap;<br/><br/>
+                                (iv) Equipment that has been in storage or immobilized for 1 year or more after
+                                delivery.<br/><br/>
+                                <strong>(I) ROTEX MAKES NO OTHER WARRANTY, EXPRESS OR
+                                IMPLIED, AND SPECIFICALLY MAKES NO WARRANTY OF
+                                MERCHANTABILITY OR OF FITNESS FOR A PARTICULAR
+                                PURPOSE IN RESPECT OF THE EQUIPMENT OR OTHERWISE;
+                                AND THE EXPRESS WARRANTY SET FORTH IN THIS ARTICLE IS
+                                IN LIEU OF ANY SUCH WARRANTY AND ANY OTHER
+                                OBLIGATION OR LIABILITY ON THE PART OF ROTEX.</strong><br/><br/>
+                                (J) For purposes of the exclusive remedies set forth in this Warranty, and the
+                                limitations of liability set forth in Section 11 of the Terms and Conditions of
+                                Sale into which it is incorporated, "Rotex" shall be deemed to include Rotex, its
+                                subsidiaries, and their affiliates, directors, officers, employees, agents,
+                                representatives, subcontractors, and suppliers of all of them.
+                                (K) This Warranty is non-transferable and is applicable only to the original
+                                Customer.<br/>
+                                (L) This Warranty shall not be extended, altered or varied except by written
+                                instrument executed by Rotex.<br/>
+                                (M) Any official action or legal proceeding for breach of this Warranty must be
+                                commenced within 18 months after acceptance of the Equipment/Services. 
+                                
+                                
+                            </p>
+                        </td>
+                        
+                        
+                    </tr>
+                    
+                </table> 
+            </div>  
+            
+            <div style="page-break-after:auto;width: 100%;  margin-top: 150px;">
+                
+                
+                <table style="width: 100%;  columns: 2;  text-align: center; columns: 2;">
+                    
+                    <tr  >
+                        <td style="width: 50%;vertical-align: text-top; text-align: left; font-size: 7.5pt;">
+                            <p>
+                                
+                                REVENUES. LOSS OF BUSINESS, OR FAILURE OR DELAY IN
+                                PERFORMANCE, WHETHER BASED ON BREACH OF WARRANTY OR
+                                OTHER CONTRACT BREACH, NEGLIGENCE OR OTHER TORT OR ON
+                                ANY STRICT LIABILITY THEORY, EVEN IF ROTEX HAS BEEN
+                                ADVISED OF THE POSSIBILITY OF ANY SUCH DAMAGES. NOR
+                                SHALL ROTEX OR ANY OF ITS AFFILIATES BE RESPONSIBLE FOR
+                                ANY CLAIM AGAINST CUSTOMER BY A THIRD PARTY.<br/>
+                                (C)To the fullest extent permitted by applicable law, Customer shall defend,
+                                indemnify, and hold harmless Rotex and its affiliates and their respective
+                                officers, partners, directors, employees, agents, successors, and assigns ("Rotex
+                                Parties") from and against any and all losses, claims, damages, liabilities,
+                                expenses (including, without limitation, fees and disbursements of legal counsel
+                                and expenses of litigation) or other obligations (collectively #Losses#) and
+                                threatened Losses to the extent they arise from or in connection with the
+                                purchase, use and/operation of the Equipment/Services by Customer or End
+                                User, including but not limited to any of the following: (i) the death or bodily
+                                injury of any agent, employee, customer, business invitee, or business visitor or
+                                other person, and the damage, loss, or destruction of any real or tangible
+                                personal property; (ii) any action taken by or on behalf of Customer or End User
+                                in the performance of this Order that causes Rotex or any of its affiliates to be
+                                obligated to indemnify, defend, and/or hold harmless any third party; (iii) any
+                                claim, demand, charge, action, cause of action, or other proceeding resulting
+                                from an act or omission of Customer, its employees, agents, or subcontractors
+                                acting in its or their capacity as an employer or potential employer with respect
+                                to the claimant; and (iv) any claim by Customer or End User, whether based on
+                                warranty or other contract breach, negligence or other tort or on any strict
+                                liability theory, for matters disclaimed in subsection (B) above. Customer shall
+                                fully indemnify and completely hold harmless the Rotex Parties as provided
+                                above, whether or not negligence or other fault of any of the Rotex Parties
+                                contributed to, or is claimed or alleged to have contributed to, the claim, action,
+                                damage, loss, cost, liability or expense. Nothing in subsection (B) and this
+                                subsection (C) above shall exclude or limit the liability of Rotex or its affiliates,
+                                or require Customer to defend, indemnify or hold harmless Rotex or its
+                                affiliates, in circumstances where the Losses claimed are alleged to have
+                                resulted from (i) willful misconduct or gross negligence of Rotex or its affiliates,
+                                (ii) any fraud or fraudulent conduct on the part of Rotex or its affiliates, or (iii)
+                                any other liability that cannot be excluded by law, and where (in each case) such
+                                fault or liability on the part of the Rotex and/or its affiliates is adjudicated to be
+                                the cause of the Losses.<br/>
+                                (D) Rotex shall not be liable for failure to deliver, for delay in delivery, or for
+                                any losses or damage to Customer, or to the Equipment/Services occasioned by
+                                delays, in the performance of Rotex# obligations, due to: (i) any cause beyond
+                                Rotex# reasonable control or the control of Rotex# suppliers or subcontractors;
+                                (ii) an act of God, act or omission of Customer, act of civil or military authority,
+                                fire, terrorism, strike or other labor difficulty, riot or other civil disturbance,
+                                insolvency or other inability to perform by the manufacturer, delay in
+                                transportation; or (iii) any other commercial impracticability.<br/>
+                                (E) The conditions to performance specifically stated in this provision and
+                                elsewhere in this Order shall be the only conditions precedent or subsequent to
+                                an absolute duty of performance on the part of Customer and Rotex. In no event
+                                of breach or repudiation of this Order by Rotex shall Rotex be liable for indirect,
+                                special, third party, incidental, or consequential damages, including without
+                                limitation lost profits, data, or goodwill, and Customer hereby agrees not to
+                                make any such claim on Rotex. Customer agrees to defend, indemnify and hold
+                                harmless Rotex from and against any claim, loss, liability, expense or damage
+                                (including liens or legal fees) incurred by Rotex with respect to any of
+                                Customers export or re-export activities contrary to Section 17 # Export &amp;
+                                Import Controls.<br/>
+                                (F) Rotex shall not be liable to Customer nor Operator for any losses or damage
+                                as a result of Equipment that has been subjected to any alteration, disassembly,
+                                tampering, modification, or repair without prior authorization by Rotex.<br/><br/>
+                                <strong>12. TAXES: </strong>Sales, goods and services and use taxes, payable by Customer,
+                                which are presently or may hereafter be imposed by any taxing authority, are not
+                                included in the Purchase Price. Any direct or import duty or customs duty
+                                payable by Rotex, which may hereafter be imposed by any taxing authority,
+                                wheresoever located, upon the manufacture, sale or delivery of products covered
+                                by this Order, or any increase in rate of any such tax or import or customs
+                                exaction now in force, shall be added to the Purchase Price. If such charge is
+                                not collected at the time of payment of Purchase Price, Customer will indemnify
+                                and hold Rotex harmless against any such charge.<br/><br/>
+                                <strong>13. CHANGES AND TERMINATION: </strong>(A) Rotex shall have the right, in
+                                its sole discretion, to terminate this Order whenever it deems fit including if
+                                Customer: (i) is unable to pay its debts generally as and when they become
+                                due; (ii) is the subject of a legal process declaring it insolvent; (iii) ceases or
+                                threatens to cease carrying on its business; or (iv) commits a breach of this
+                                
+                            </p> 
+                        </td>
+                        
+                        <td style="width: 50%;vertical-align: text-top; text-align: left; font-size: 7.5pt;">
+                            <p>
+                                <strong>15. DISPUTE RESOLUTION, GOVERNING LAW, AND FORUM: </strong><br/>
+                                (A)In the event a dispute arises under or relates to this Order, the Parties shall
+                                diligently attempt to resolve the dispute within 30 days from the date either
+                                Party gives written notice to the other of its intent to invoke this provision,
+                                during which period neither Party may commence legal action to assert its rights
+                                against the other. In the event the Parties do not resolve the dispute within the
+                                30-day period referenced above, either Party may refer the dispute to and which
+                                dispute shall finally be resolved by arbitration in accordance with (Indian)
+                                Arbitration and Conciliation Act, 1996<br/>
+                                (B) Customer further irrevocably consents to the service of process out of any of
+                                the aforementioned courts in any such action or proceeding if such process shall
+                                be in writing and either shall be delivered in person or sent by registered or
+                                certified mail (return receipt requested), postage pre-paid, and addressed to
+                                Customer at the address of Customer for notices under this Order. Nothing
+                                herein shall affect the right of Rotex to serve process in any other manner
+                                permitted by law or to commence legal proceedings or otherwise proceed
+                                against Customer in any other jurisdiction.<br/>
+                                (C) Rotex shall have the right to collect from Customer its reasonable expenses,
+                                including attorneys# fees, incurred in enforcing this Order.<br/>
+                                (D) The rights and obligations herein shall survive completion of the final
+                                payment under this Order.<br/><br/>
+                                <strong>16. CONFIDENTIALITY: </strong>The Parties agree that, in the course of
+                                performance of this Order, it may be necessary and desirable for them to
+                                exchange confidential information. For example, all updates, repairs,
+                                replacements, fixes, modifications, and other changes to the Equipment/Services
+                                shall be considered Rotex# proprietary information. To accomplish this
+                                confidentiality, the Parties agree as follows: Customer shall not disclose
+                                confidential information of Rotex to any person outside its employ, except as
+                                authorized by Rotex and/or when required by (a) applicable law; or (b) by the
+                                court. Customer shall use the same level of care in preserving the confidential
+                                nature of the confidential information as it uses to protect its own confidential
+                                information but not less than reasonable care. Customer shall use the
+                                Equipment only for the purpose contemplated by the parties at the time of sale,
+                                and for no other purpose. Customer shall not: (a) reverse engineer, disassemble
+                                (except to the extent applicable laws specifically prohibit such restriction), or
+                                decompile the Equipment or any portion thereof; (b) engage in activities to
+                                develop improvements to the Equipment; (c) modify the Equipment or integrate
+                                the Equipment with any other products, systems, devices or other items other
+                                than as contemplated at the time of sale; or (d) allow or assist any third party to
+                                perform any of the foregoing.<br/><br/>
+                                <strong>17. EXPORT AND IMPORT CONTROLS: </strong>The sale, resale or other
+                                disposition of Equipment and any related technology or documentation are
+                                subject to the export control laws, regulations and orders India. Customer
+                                agrees to comply with such laws, regulations and orders and shall not authorize
+                                or permit its employees, distributors, customers, brokers, freight forwarders,
+                                and/or agents to export or re-export any of the Order Equipment/Services or any
+                                technology covered by this Order to any foreign person without complying with
+                                applicable import and export laws and regulations of India, along with
+                                Customer#s country<br/><br/>
+                                <strong>18. LICENSE AND OWNERSHIP: </strong>To the extent that the Order
+                                Equipment/Services contain or are software, Rotex hereby grants to Customer a
+                                non-exclusive, non-transferable, personal license to use the software and related
+                                documentation. Customer#s use of the Order Equipment/Services conclusively
+                                evidences its acceptance of this license and this Order, including this Section 18.
+                                Title to the software shall at all times remain with Rotex. Customer agrees that
+                                the software, all enhancements, related documentation, and derivative works are,
+                                and will remain, the sole property of Rotex and includes valuable trade secrets. 
+                                Customer agrees to treat the software and related documentation as confidential
+                                and to not copy, reproduce, sub-license, or otherwise disclose the software and
+                                related documentation to third parties. Customer agrees to not disassemble,
+                                decompile, reverse engineer, create derivative works from, attempt to derive the
+                                source code or otherwise translate, customize, localize, modify, add to, or in any
+                                way alter, rent, or loan the software or related documentation.<br/><br/>
+                                <strong>19. ASSIGNMENT: </strong>Customer shall not assign or transfer or purport to assign
+                                or transfer any contract to which these Conditions apply or the benefit thereof to
+                                any other person whatsoever without the consent of Rotex.<br/><br/>
+                                <strong>20. WAIVER: </strong>The waiver of any provision or of any breach or default shall
+                                not be deemed a waiver of any other provision, breach or default.<br/><br/>
+                                <strong>21. FORCE MAJEURE: </strong>#Force Majeure# occurrence shall be deemed to be
+                                
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table> 
+            </div> 
+        </body>
+    </html>
+</apex:page>

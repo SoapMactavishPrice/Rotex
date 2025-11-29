@@ -1,0 +1,58 @@
+<apex:page controller="EventAttendeeController" sidebar="false" showHeader="false">
+    <html>
+        <apex:slds />
+        <style>
+            table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            width: 100%;
+            border: 1px solid #ddd;
+            }
+            
+            th, td {
+            text-align: left;
+            padding: 8px;
+            }
+            
+            tr:nth-child(even){background-color: #f2f2f2}
+            
+            .dateFormat{
+            visibility:hidden;            
+            }
+        </style>
+        
+        <body class="slds-scope">
+            <apex:form >                
+                <div class="slds-box" style="width:100%;margin:auto">                      
+                    <apex:pagemessages />                     
+                    <div id="HtmlDiv" class="table-responsive">
+                        <table class="slds-table slds-table_bordered slds-scrollable--x slds-table_col-bordered slds-table_resizable-cols"  style="width:100%">  
+                            <tr> 
+                                <th style="background-color:#0176D3;color:white;white-space: auto;width:10%" class="slds-text-align_center ">Attendee Name</th>
+                                <th style="background-color:#0176D3;color:white;white-space: auto;width:25%" class="slds-text-align_center ">MOM</th>
+                                <th style="background-color:#0176D3;color:white;white-space: auto;width:30%" class="slds-text-align_center ">Visit Description</th>
+                                <th style="background-color:#0176D3;color:white;white-space: auto;width:10%" class="slds-text-align_center ">Next Action Date</th>
+                                <th style="background-color:#0176D3;color:white;white-space: auto;width:25%" class="slds-text-align_center ">Next Action Points</th>
+                                
+                            </tr>                        
+                            <apex:repeat value="{!oppList}" var="opps">
+                                <tr>
+                                    <td class="slds-text-align_center"><apex:outputField style="white-space:auto;" styleClass="slds-input" value="{!opps.User_Name__c}"/></td>
+                                    <td class="slds-text-align_center"><apex:inputField style="white-space:auto;" styleClass="slds-input" value="{!opps.MOM__c}" /></td>
+                                    <td class="slds-text-align_center"><apex:inputField style="white-space:auto;" styleClass="slds-input" value="{!opps.Visit_Description__c}" /></td>
+                                    <td class="slds-text-align_center"><apex:inputField style="white-space:auto;" styleClass="slds-input" value="{!opps.Next_Action_Date__c}" /></td>
+                                    <td class="slds-text-align_center"><apex:inputField style="white-space:auto;" styleClass="slds-input" value="{!opps.Next_Action_Points__c}" /></td>
+                                </tr>
+                            </apex:repeat>   
+                        </table>
+                    </div>
+                    
+                    <div align="center" draggable="false">
+                        <apex:commandButton value="Save" action="{!Save}" styleClass="slds-button slds-button_brand slds-button__icon_right slds-button--brand slds-m-top--medium"/>
+                        <apex:commandButton value="Cancel" action="{!Cancel}" styleClass="slds-button slds-button_destructive slds-button__icon_right slds-button--brand slds-m-top--medium"/>
+                    </div>
+                </div>
+            </apex:form>  
+        </body>
+    </html>
+</apex:page>

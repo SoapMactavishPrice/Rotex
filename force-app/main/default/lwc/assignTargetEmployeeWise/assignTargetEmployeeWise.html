@@ -1,0 +1,206 @@
+<template>
+
+    <div if:true={showSpinner}>
+        <lightning-spinner variant="brand" alternative-text="Loading" size="medium"></lightning-spinner>
+    </div>
+
+    <div>
+
+        <div>
+            <div class="slds-grid slds-p-vertical_xx-small">
+                <div class="slds-size_2-of-12">
+                    <div style="width: 60%">
+                        <lightning-combobox variant="label-hidden" data-show-entries-input
+                            value={pageLengthDefaultValue} options={pageLengthOptions} onchange={handlePageEntries}>
+                        </lightning-combobox>
+                    </div>
+                </div>
+                <div class="slds-size_4-of-12" onkeyup={handleSearch}>
+                    <lightning-input variant="label-hidden" type="search" onchange={handleSearching} name="Search"
+                        label="Search"></lightning-input>
+                </div>
+                <div class="slds-size_6-of-12">
+                    <div lwc:dom="manual" data-pagination class="pagination"></div>
+                    <!--
+            <div style="display: flex; justify-content: right; text-align: center; flex-direction: row">
+              <lightning-button style="margin: 1%" icon-name="utility:back" label="Prev" icon-position="left"
+                onclick={handlePrevClick} disabled={isPrevAvailable}>
+              </lightning-button>
+              <lightning-button style="margin: 1%; pointer-events: none !important" class="pointereventsnone"
+                label={paginatorString}></lightning-button>
+              <lightning-button style="margin: 1%" icon-name="utility:forward" label="Next" icon-position="right"
+                onclick={handleNextClick} disabled={isNextAvailable}>
+              </lightning-button>
+            </div>
+          -->
+                </div>
+            </div>
+
+            <div if:true={hasDataInTable}>
+
+                <div if:true={yearly} class="slds-grid" style="overflow: auto">
+                    <div class="slds-size_1-of-12"></div>
+                    <table class="slds-table slds-table_cell-buffer slds-table_bordered targetdatatable">
+                        <thead>
+                            <tr class="slds-text-title_caps">
+                                <th scope="col" class="slds-size_2-of-12" data-colname="Name" onclick={handleSort}>
+                                    <div class="slds-truncate slds-p-around_xx-small" style="display: flex">
+                                        {parameterLabel}
+                                        <!--
+                      <div if:true={isParamSort} class="slds-p-horizontal_xx-small">
+                        <div if:true={isAsc}>
+                          <lightning-icon icon-name="utility:arrowup" size="xx-small"></lightning-icon>
+                        </div>
+                        <div if:true={isDesc}>
+                          <lightning-icon icon-name="utility:arrowdown" size="xx-small"></lightning-icon>
+                        </div>
+                      </div>
+                      -->
+                                    </div>
+                                </th>
+                                <th scope="col" class="slds-size_2-of-12">
+                                    <!-- data-colname="Target_Amount__c" onclick={handleSort} -->
+                                    <div class="slds-truncate slds-p-around_xx-small" style="display: flex">
+                                        Target Amount
+                                        <!--
+                      <div if:true={isTargetAmountSort} class="slds-p-horizontal_xx-small">
+                        <div if:true={isAsc}>
+                          <lightning-icon icon-name="utility:arrowdown" size="xx-small"></lightning-icon>
+                        </div>
+                        <div if:true={isDesc}>
+                          <lightning-icon icon-name="utility:arrowup" size="xx-small"></lightning-icon>
+                        </div>
+                      </div>
+                      -->
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <template for:each={data} for:item="item">
+                                <tr key={item.index} class={item.className}>
+                                    <td class="slds-size_2-of-12">
+                                        <div class="slds-truncate slds-p-around_xx-small">{item.ParameterName}</div>
+                                    </td>
+                                    <td class="slds-size_2-of-12">
+
+                                        <div if:true={item.targetAmountEdit} class="slds-truncate slds-p-around_none">
+                                            <lightning-input value={item.Target_Amount_New__c} type="number"
+                                                variant="label-hidden" formatter="number" data-id={item.ParameterId}
+                                                step="0.01" onchange={onDataInput}></lightning-input>
+                                            <div data-id={item.ParameterId} class="slds-form-element__help"
+                                                style="color: var(--slds-g-color-error-base-40,#ea001e)"></div>
+                                        </div>
+                                        <div if:false={item.targetAmountEdit}
+                                            class="slds-truncate slds-p-around_xx-small">
+                                            <lightning-formatted-number value={item.Target_Amount_New__c}
+                                                format-style="number" currency-code="INR"></lightning-formatted-number>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <div class="slds-size_4-of-12"></div>
+                </div>
+
+                <div if:true={monthly}>
+                    <div class="scrollwrappper1 targetdatatable">
+                        <div class="scrollwrappper2">
+                            <table class="slds-table slds-table_bordered monthlytable">
+                                <thead>
+                                    <tr class="slds-text-title_caps">
+                                        <th scope="col">
+                                            <div class="slds-truncate slds-p-around_xx-small" style="width: 200px">
+                                                {parameterLabel}
+                                            </div>
+                                            <!-- slds-text-align_center -->
+                                        </th>
+                                        <template for:each={months} for:item="item">
+                                            <th scope="col" key={item.index}>
+                                                <div class="slds-truncate slds-p-around_xx-small" style="width: 110px">
+                                                    {item}</div>
+                                            </th>
+                                        </template>
+                                        <th scope="col">
+                                            <div class="slds-truncate slds-p-around_xx-small">&nbsp;</div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={data} for:item="item">
+                                        <tr key={item.index}>
+                                            <td>
+                                                <div class="slds-truncate slds-p-around_xx-small">{item.ParameterName}
+                                                </div>
+                                            </td>
+                                            <template for:each={item.childData} for:item="childItem">
+                                                <td key={childItem.childIndex} class={childItem.className}>
+
+                                                    <div if:true={childItem.targetAmountEdit}
+                                                        class="slds-truncate slds-p-around_none">
+                                                        <lightning-input value={childItem.Monthly_Target_Amount_New__c}
+                                                            type="number" variant="label-hidden" step="0.01"
+                                                            data-id={item.ParameterId}
+                                                            data-childid={childItem.ParameterId} onchange={onDataInput}>
+                                                        </lightning-input>
+
+                                                        <div data-childid={childItem.ParameterId}
+                                                            class="slds-form-element__help"
+                                                            style="color: var(--slds-g-color-error-base-40,#ea001e)">
+                                                        </div>
+                                                    </div>
+
+                                                    <div if:false={childItem.targetAmountEdit}
+                                                        class="slds-truncate slds-p-around_xx-small">
+                                                        <lightning-formatted-number
+                                                            value={childItem.Monthly_Target_Amount_New__c} type="number"
+                                                            variant="label-hidden"></lightning-formatted-number>
+                                                    </div>
+
+                                                </td>
+                                            </template>
+                                            <td class="slds-p-around_xx-small">
+                                                <div class="slds-truncate">&nbsp;</div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div if:true={isDataModified} class="slds-m-around_none slds-p-around_none slds-docked-form-footer">
+                <lightning-layout vertical-align="center" class="slds-m-vertical_x-small">
+                    <lightning-layout-item class="slds-col slds-size_2-of-5"></lightning-layout-item>
+                    <lightning-layout-item class="slds-col slds-size_1-of-5 slds-align_absolute-center">
+                        <lightning-button variant="button" type="button" onclick={handleReset} label="Cancel"
+                            class="slds-m-horizontal_small">
+                        </lightning-button>
+                        <lightning-button variant="brand" type="button" onclick={handleSave} label="Save"
+                            class="slds-m-horizontal_small">
+                        </lightning-button>
+                    </lightning-layout-item>
+                    <lightning-layout-item class="slds-col slds-size_3-of-5"></lightning-layout-item>
+                </lightning-layout>
+            </div>
+
+        </div>
+
+        <div if:false={hasDataInTable} style="width: 95%">
+            <div
+                class="slds-grid slds-gutters slds-wrap slds-p-horizontal_small slds-m-top_xx-small slds-m-bottom_xx-small">
+                <div class="slds-col slds-size_3-of-12"></div>
+                <div class="slds-col slds-size_6-of-12"><img src="/img/chatter/OpenRoad.svg"
+                        class="slds-illustration__svg">
+                </div>
+            </div>
+            <div class="slds-col slds-size_3-of-12"></div>
+        </div>
+
+    </div>
+</template>

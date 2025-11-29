@@ -1,0 +1,100 @@
+<template>
+    <lightning-card>
+        <h4 style="text-align: center; font-size: 24px; font-weight: bold; padding-bottom: 20px;">Quote Discount
+            Approval</h4>
+        <template if:true={quotes}>
+            <template for:each={quotes} for:item="quote">
+                <div key={quote.quoteId} class="slds-box slds-m-bottom_medium">
+                    <h3 class="slds-text-heading_small" style="padding-bottom: 6px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="flex: 1;"><b>Account Name:</b> {quote.accountName}</span>
+                            <span style="flex: 1;"><b>Quote Owner:</b> {quote.quoteOwnerName}</span>
+                            <span style="flex: 1;"><b>Quote Number:</b> {quote.quoteNumber}</span>
+                            <span style="flex: 1;"><b>Quote Name:</b> {quote.quoteName}</span>
+                        </div>
+                    </h3>
+
+                    <div style="overflow-x: auto;max-width: 100%; white-space: nowrap;">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                            <thead>
+                                <tr>
+                                    <th scope="col" style="width: 20%">Product Name</th>
+                                    <th scope="col" style="text-align: center;">Quantity</th>
+                                    <th scope="col" style="text-align: center;">Discount (SAP)</th>
+                                    <th scope="col" style="text-align: center;">Discount</th>
+                                    <th scope="col">Approver Status</th>
+                                    <th scope="col">Sales Manager Comments</th>
+                                    <th scope="col">Country / Continent Sales / LOB Comments</th>
+
+                                    <th scope="col">Rotex Board Member Comments</th>
+                                    <th scope="col">Managing Director Comments</th>
+                                    <th scope="col">Global Sales Head Comments</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={quote.quoteLineItems} for:item="item">
+                                    <tr key={item.quoteLineItemId}>
+                                        <td>{item.productName}</td>
+                                        <td style="text-align: center;">{item.quantity}</td>
+                                        <td style="text-align: center;">{item.d1}</td>
+                                        <td style="text-align: center;">{item.d2}</td>
+                                        <td>
+                                            <lightning-combobox name="ApprovalStatus" data-parent={item.parentId}
+                                                data-id={item.quoteLineItemId} data-field="approvalStatus"
+                                                value={item.approvalStatus} options={statusOptions}
+                                                onchange={handleLineItemChanges} variant="label-hidden" dropdown-alignment="auto">
+                                            </lightning-combobox>
+                                        </td>
+                                        <td>
+                                            <lightning-input disabled={item.bcheck1} value={item.Sales_Manager_Comments}
+                                                data-parent={item.parentId} data-field="Sales_Manager_Comments"
+                                                data-id={item.quoteLineItemId} onchange={handleLineItemChanges}
+                                                variant="label-hidden">
+                                            </lightning-input>
+                                        </td>
+                                        <td>
+
+                                            <lightning-input disabled={item.bcheck2}
+                                                value={item.Country_Continent_Sales_LOB_Comments}
+                                                data-parent={item.parentId}
+                                                data-field="Country_Continent_Sales_LOB_Comments"
+                                                data-id={item.quoteLineItemId} onchange={handleLineItemChanges}
+                                                variant="label-hidden">
+                                            </lightning-input>
+                                        </td>
+                                        <td>
+                                            <lightning-input disabled={item.bcheck3}
+                                                value={item.Rotex_Board_Member_Comments} data-parent={item.parentId}
+                                                data-field="Rotex_Board_Member_Comments" data-id={item.quoteLineItemId}
+                                                onchange={handleLineItemChanges} variant="label-hidden">
+                                            </lightning-input>
+                                        </td>
+                                        <td>
+                                            <lightning-input disabled={item.bcheck4}
+                                                value={item.Managing_Director_Comments} data-parent={item.parentId}
+                                                data-field="Managing_Director_Comments" data-id={item.quoteLineItemId}
+                                                onchange={handleLineItemChanges} variant="label-hidden">
+                                            </lightning-input>
+                                        </td>
+                                        <td>
+                                            <lightning-input disabled={item.bcheck5}
+                                                value={item.Global_Sales_Head_Comments} data-parent={item.parentId}
+                                                data-field="Global_Sales_Head_Comments" data-id={item.quoteLineItemId}
+                                                onchange={handleLineItemChanges} variant="label-hidden">
+                                            </lightning-input>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+            <div class="slds-m-top_medium slds-text-align_center">
+                <lightning-button label="Cancel" onclick={redirectToHome} variant="neutral"></lightning-button>
+                <lightning-button class="slds-m-left_small" label="Save Changes" onclick={saveChanges} variant="brand"
+                    disabled={isSaveDisabled}></lightning-button>
+            </div>
+        </template>
+    </lightning-card>
+</template>

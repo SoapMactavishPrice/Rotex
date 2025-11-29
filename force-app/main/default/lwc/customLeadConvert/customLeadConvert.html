@@ -1,0 +1,227 @@
+<template>
+
+    <div if:true={showSpinner}>
+        <lightning-spinner variant="brand" alternative-text="Loading" size="medium"></lightning-spinner>
+    </div>
+
+    <lightning-modal-header label={modalHeader}></lightning-modal-header>
+
+    <lightning-modal-body class="modal-body">
+        <div>
+            <lightning-card if:true={leadRecord} variant=" narrow">
+                <lightning-layout multiple-rows horizontal-align="spread" pull-to-boundary="small"
+                    vertical-align="stretch" class="slds-var-m-around_small layout-body slds-box">
+                    <lightning-layout-item class="col1">
+                        <div class="slds-text-heading_small">Account</div>
+                    </lightning-layout-item>
+
+                    <!-- <lightning-layout-item class="col2">
+                        <div class="slds-text-heading_small" style="width: 255px !important;">
+                            <span class="slds-radio">
+                                <input type="radio" class="create-new-existing-radio" id="acc-create-new" name="Account"
+                                    value="AccountCreateNew" onclick={decideRequiredOrNot} checked />
+                                <label class="slds-radio__label" for="acc-create-new">
+                                    <span class="slds-radio_faux"></span>
+                                    <span class="slds-form-element__label slds-text-title_bold">Create New</span>
+                                </label>
+                            </span>
+                        </div>
+                    </lightning-layout-item> -->
+
+                    <!-- <template if:true={is_Account_OR}>
+                        <lightning-layout-item class="col3">
+                            <div class="separator-container">
+                                <div class="slds-text-align_center" style="padding-top: 50px;">- OR -</div>
+                                <div class="vertical-line"></div>
+                            </div>
+                        </lightning-layout-item>
+                    </template> -->
+
+                    <lightning-layout-item class="col2">
+                        <div class="slds-text-heading_small" style="width: 255px !important;">
+                            <span class="slds-radio">
+                                <input type="radio" class="create-new-existing-radio account-radio"
+                                    id="acc-create-existing" name="Account" value="AccountExisting"
+                                    onclick={decideRequiredOrNot} checked />
+                                <label class="slds-radio__label" for="acc-create-existing">
+                                    <span class="slds-radio_faux"></span>
+                                    <span class="slds-form-element__label slds-text-title_bold">Choose Existing</span>
+                                </label>
+                            </span>
+                        </div>
+
+                        <div class="create-record-form existing-account-lookup slds-box slds-var-m-top_small"
+                            style="width: 255px !important;">
+                            <label class="slds-form-element__label" style="padding-bottom: 0px !important;">Search
+                                Account</label>
+                            <c-enhanced-custom-lookup if:true={refreshSelectedAccountId} object-api-name="Account"
+                                icon-name="standard:account" default-record-id={selectedAccountId} return-fields=""
+                                sort-column="Name" display-fields="" query-fields="['Name','SAP_Customer_Code__c']"
+                                onrecordselection={handleExistingAccountSelect}></c-enhanced-custom-lookup>
+                            <c-enhanced-custom-lookup if:false={refreshSelectedAccountId} object-api-name="Account"
+                                icon-name="standard:account" default-record-id={selectedAccountId} return-fields=""
+                                sort-column="Name" display-fields="" query-fields="['Name','SAP_Customer_Code__c']"
+                                onrecordselection={handleExistingAccountSelect}></c-enhanced-custom-lookup>
+                            <!-- <div if:true={AccountExistingShowError} class="custom_error_container">
+                                Please choose an existing Account
+                            </div> -->
+                        </div>
+
+                    </lightning-layout-item>
+                    <lightning-layout-item class="col3">
+                        <div class="separator-container">
+                            <div class="slds-text-align_center" style="padding-top: 50px;"></div>
+                            <div class="vertical-line"></div>
+                        </div>
+                    </lightning-layout-item>
+                    <lightning-layout-item class="col4">
+                        <div class="slds-text-heading_small" style="width: 255px !important;"></div>
+                    </lightning-layout-item>
+
+                </lightning-layout>
+
+                <lightning-layout multiple-rows horizontal-align="spread" pull-to-boundary="small"
+                    vertical-align="stretch" class="slds-var-m-around_small layout-body slds-box">
+                    <lightning-layout-item class="col1">
+                        <div class="slds-text-heading_small">Contact</div>
+                    </lightning-layout-item>
+
+                    <lightning-layout-item class="col2">
+
+                        <div class="slds-text-heading_small" style="width: 255px !important;">
+                            <span class="slds-radio">
+                                <input type="radio" class="create-new-existing-radio contact-radio" id="cont-create-new"
+                                    name="Contact" value="ContactCreateNew" onclick={decideRequiredOrNot} checked />
+                                <label class="slds-radio__label" for="cont-create-new">
+                                    <span class="slds-radio_faux"></span>
+                                    <span class="slds-form-element__label slds-text-title_bold">Create New</span>
+                                </label>
+                            </span>
+                        </div>
+
+                        <template if:true={isNewContactFlag}>
+                            <div class="create-record-form slds-box slds-var-m-top_small"
+                                style="width: 255px !important;">
+                                <lightning-input-name name="ContactName" label="Contact Name"
+                                    first-name={leadRecord.FirstName} last-name={leadRecord.LastName}
+                                    options={salutationOptions} fields-to-display={fieldList}
+                                    onchange={handleValueChange} required={ContactCreateNew} lwc:ref="contactNameRef">
+                                </lightning-input-name>
+                            </div>
+                        </template>
+                    </lightning-layout-item>
+
+                    <template if:true={is_Contact_OR}>
+                        <lightning-layout-item class="col3">
+                            <div class="separator-container">
+                                <div class="slds-text-align_center" style="padding-top: 50px;">- OR -</div>
+                                <div class="vertical-line"></div>
+                            </div>
+                        </lightning-layout-item>
+                    </template>
+
+                    <lightning-layout-item class="col4 contact-select-existing" aria-describedby="help">
+                        <div if:true={AccountCreateNew} class="disabledContactTooltip">
+                            <div class="slds-popover slds-popover_tooltip slds-nubbin_top-left" role="tooltip" id="help"
+                                style="position: absolute; margin-left: 5%; margin-top: 10%">
+                                <div class="slds-popover__body">
+                                    Available only if existing account is selected
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="slds-text-heading_small" style="width: 255px !important;">
+                                <span class="slds-radio">
+                                    <input type="radio" class="create-new-existing-radio contact-radio"
+                                        id="cont-create-existing" name="Contact" value="ContactExisting"
+                                        onclick={decideRequiredOrNot} disabled={AccountCreateNew} />
+                                    <label class="slds-radio__label" for="cont-create-existing">
+                                        <span class="slds-radio_faux"></span>
+                                        <span class="slds-form-element__label slds-text-title_bold">Choose
+                                            Existing</span>
+                                    </label>
+                                </span>
+                            </div>
+
+                            <template if:true={isExistingContactFlag}>
+                                <div class="create-record-form slds-box slds-var-m-top_small"
+                                    style="width: 255px !important;">
+                                    <label class="slds-form-element__label"
+                                        style="padding-bottom: 0px !important;">Search
+                                        Contact</label>
+                                    <c-enhanced-custom-lookup if:true={refreshSelectedContactId}
+                                        style="width: 92%; display: inline-block" object-api-name="Contact"
+                                        icon-name="standard:contact" default-record-id={selectedContactId}
+                                        return-fields="" sort-column="Name" display-fields="" query-fields="['Name']"
+                                        filter={contactExistingFilter} onrecordselection={handleExistingContactSelect}
+                                        disabled={AccountCreateNew}></c-enhanced-custom-lookup>
+                                    <c-enhanced-custom-lookup if:false={refreshSelectedContactId}
+                                        style="width: 92%; display: inline-block" object-api-name="Contact"
+                                        icon-name="standard:contact" default-record-id={selectedContactId}
+                                        return-fields="" sort-column="Name" display-fields="" query-fields="['Name']"
+                                        filter={contactExistingFilter} onrecordselection={handleExistingContactSelect}
+                                        disabled={AccountCreateNew}></c-enhanced-custom-lookup>
+                                    <lightning-helptext style="width: 8%; text-align: right; display: inline-grid"
+                                        content="When selected, existing contact data will be overwritten"></lightning-helptext>
+                                    <!-- transform: scale(1.5) -->
+                                </div>
+                                <!-- <div if:true={ContactExistingShowError} class="custom_error_container">
+                                    Please choose an existing contact or create a new
+                                    one.
+                                </div> -->
+                            </template>
+                        </div>
+                    </lightning-layout-item>
+                </lightning-layout>
+
+                <lightning-layout multiple-rows horizontal-align="spread" pull-to-boundary="small"
+                    vertical-align="stretch" class="slds-var-m-around_small layout-body slds-box"
+                    style="justify-content: left !important;">
+                    <lightning-layout-item class="col1" style="margin-right: 86px !important;">
+                        <div class="slds-text-heading_small">Opportunity</div>
+                    </lightning-layout-item>
+
+                    <lightning-layout-item class="col2" style="margin-left:0%;">
+                        <div class="slds-text-heading_small" style="width: 255px !important;">
+                            <span class="slds-radio">
+                                <input type="radio" class="create-new-existing-radio" id="opp-create-new"
+                                    name="Opportunity" value="OpportunityCreateNew" onclick={decideRequiredOrNot}
+                                    checked />
+                                <label class="slds-radio__label" for="opp-create-new">
+                                    <span class="slds-radio_faux"></span>
+                                    <span class="slds-form-element__label slds-text-title_bold">Create New</span>
+                                </label>
+                            </span>
+                        </div>
+
+                        <!-- <template if:true={isNewEnquiryFlag}> -->
+                            <div class="create-record-form slds-box slds-var-m-top_small"
+                                style="width: 255px !important;">
+                                <lightning-input class="opportunity-fields" label="Opportunity Name"
+                                    name="opportunityName" value={opportunityName} onchange={handleValueChange}
+                                    required={OpportunityCreateNewName} lwc:ref="opportunityNameRef"></lightning-input>
+                                <!-- <lightning-input type="checkbox" label="Don't create an opportunity upon conversion"
+                                    class="slds-m-top_medium" data-name-invcheck="createEnquiryCheckbox"
+                                    checked={isCreateEnquiryChecked} onchange={handleisCreateEnquiryCheck}>
+                                </lightning-input> -->
+                            </div>
+                        <!-- </template> -->
+                    </lightning-layout-item>
+
+
+                </lightning-layout>
+
+            </lightning-card>
+        </div>
+    </lightning-modal-body>
+
+    <lightning-modal-footer>
+        <div>
+            <lightning-button label="Cancel" name="Cancel" onclick={closeComponent}
+                class="slds-var-m-right_small"></lightning-button>
+            <lightning-button variant="brand" label="Convert" name="Convert" onclick={handleConfirmClick}
+                class="slds-var-m-left_small"></lightning-button>
+        </div>
+    </lightning-modal-footer>
+
+</template>

@@ -1,0 +1,80 @@
+.container {
+        padding: 0.75rem;
+    }
+
+    .custom-header {
+        font-size: 18px;
+        font-weight: 600;
+        text-align: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #dddbda;
+        margin-bottom: 0.5rem;
+    }
+
+    .table-wrapper {
+        max-height: 350px;
+        overflow-y: auto;
+        border: 1px solid #dddbda;
+        border-radius: 0.5rem;
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .custom-table thead {
+        background: linear-gradient(to right, #fafafa, #f3f3f3);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .custom-table th {
+        padding: 10px 12px;
+        border-bottom: 2px solid #d8dde6;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 12px;
+    }
+
+    .custom-table th {
+        padding: 8px 10px;
+        border-bottom: 1px solid #d8dde6;
+        font-weight: 600;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .custom-table td {
+        padding: 6px 10px;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
+    }
+
+    .custom-table tr:hover {
+        background-color: #f9fbfd;
+    }
+
+    .amount {
+        text-align: right;
+        font-weight: 500;
+    }
+
+    .highlight {
+        font-weight: 600;
+    }
+
+    .input-field {
+        width: 90px;
+    }
+
+    .footer-actions {
+        display: flex;
+        justify-content: flex-end;
+        padding: 0.75rem;
+        border-top: 1px solid #dddbda;
+        margin-top: 0.5rem;
+    }

@@ -1,0 +1,206 @@
+<template>
+	<div if:true={showSpinner} class="exampleHolder">
+		<lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+	</div>
+
+	<template if:false={syncDataResponseFlag}>
+		<div class="modal-container">
+			<!-- Header -->
+			<div class="modal-header">
+				<h2>Update Quotation Details</h2>
+				<div class="header-divider"></div>
+			</div>
+
+			<!-- Scrollable Content -->
+			<div class="modal-body">
+				<lightning-record-edit-form object-api-name="Quote" record-id={recordId} onsubmit={handleMainSubmit}
+					onsuccess={handleMainSuccess} onerror={handleNewError} data-id="mainform">
+					<lightning-messages></lightning-messages>
+					<lightning-layout multiple-rows>
+
+						<lightning-layout-item size="12" padding="around-small" style="padding: 0 0 5px 0;">
+							<div class="subheaddiv">Quotation Information</div>
+						</lightning-layout-item>
+
+						<!-- <lightning-layout-item size="3" padding="around-small" class="pt0">
+							<label class="slds-form-element__label">
+								<span style="color: red;">* </span>
+								Binding Period Validity Start Date
+							</label>
+							<lightning-input-field field-name="Quote_Date__c" variant="label-hidden" required></lightning-input-field>
+						</lightning-layout-item>
+						<lightning-layout-item size="3" padding="around-small" class="pt0">
+							<label class="slds-form-element__label">
+								<span style="color: red;">* </span>
+								Binding Period Validity End Date
+							</label>
+							<lightning-input-field field-name="Quote_Valid_Till__c" variant="label-hidden"
+								required></lightning-input-field>
+						</lightning-layout-item> -->
+						<!-- <lightning-layout-item size="3" padding="around-small" class="pt0">
+							<label class="slds-form-element__label">
+								<span style="color: red;">* </span>
+								Customer Purchase Order Date
+							</label>
+							<lightning-input-field field-name="CustomerPurchaseOrderDate__c" variant="label-hidden"
+								required></lightning-input-field>
+						</lightning-layout-item> -->
+						<lightning-layout-item size="3" padding="around-small" class="pt0">
+							<label class="slds-form-element__label">
+								<span style="color: red;">* </span>
+								Requested Delivery Date
+							</label>
+							<lightning-input-field field-name="RequestedDeliveryDate__c" variant="label-hidden"
+								required></lightning-input-field>
+						</lightning-layout-item>
+						<lightning-layout-item size="3" padding="around-small" class="pt0">
+							<label class="slds-form-element__label">
+								<span style="color: red;">* </span>
+								Customer Reference Date
+							</label>
+							<lightning-input-field field-name="Customer_Reference_Date__c" variant="label-hidden"
+								required></lightning-input-field>
+						</lightning-layout-item>
+						<lightning-layout-item size="3" padding="around-small" class="pt0">
+							<label class="slds-form-element__label">
+								<span style="color: red;">* </span>
+								Customer Reference No
+							</label>
+							<lightning-input-field field-name="Customer_Reference_No__c" variant="label-hidden"
+								required></lightning-input-field>
+						</lightning-layout-item>
+						<lightning-layout-item size="6" padding="around-small" class="pt0">
+							<label class="slds-form-element__label"><span style="color: red;">* </span>Bill To
+								Party</label>
+							<lightning-combobox name="bp" variant="label-hidden" options={bpOptions}
+								placeholder="Select Bill To Party" onchange={handleInputChange} value={bpValue}
+								data-name="bpdata"></lightning-combobox>
+						</lightning-layout-item>
+						<lightning-layout-item size="6" padding="around-small" class="pt0">
+							<label class="slds-form-element__label"><span style="color: red;">* </span>Ship To
+								Party</label>
+							<lightning-combobox name="sh" variant="label-hidden" options={shOptions}
+								placeholder="Select Ship To Party" onchange={handleInputChange} value={shValue}
+								data-name="shdata"></lightning-combobox>
+						</lightning-layout-item>
+						<lightning-layout-item size="6" padding="around-small" class="pt0">
+							<label class="slds-form-element__label">Sales Agent</label>
+							<lightning-combobox name="ca" variant="label-hidden" options={caOptions}
+								placeholder="Select Sales Agent" onchange={handleInputChange} value={caValue}
+								data-name="cadata"></lightning-combobox>
+						</lightning-layout-item>
+
+						<lightning-layout-item size="12" padding="around-small" style="padding: 0 0 10px 0;">
+							<div class="subheaddiv">Quotation Product Information</div>
+						</lightning-layout-item>
+						<lightning-layout-item size="12" padding="around-small" style="padding-top: 0px !important;">
+							<table class="slds-table slds-table_cell-buffer slds-table_bordered"
+								style="table-layout: fixed;">
+								<thead>
+									<tr class="slds-line-height_reset">
+										<th class="" scope="col" style="background-color: #066afe; color: #fff;">
+											<div class="slds-truncate" title="Name">Product</div>
+										</th>
+										<th class="" scope="col" style="background-color: #066afe; color: #fff;">
+											<div class="slds-truncate" title="Name">List Price</div>
+										</th>
+										<th class="" scope="col" style="background-color: #066afe; color: #fff;">
+											<div class="slds-truncate" title="Name">Sales Price</div>
+										</th>
+										<th class="" scope="col" style="background-color: #066afe; color: #fff;">
+											<div class="slds-truncate" title="Name">Discount</div>
+										</th>
+										<th class="" scope="col" style="background-color: #066afe; color: #fff;">
+											<div class="slds-truncate" title="Name">Quantity</div>
+										</th>
+										<th class="" scope="col" style="background-color: #066afe; color: #fff;">
+											<div class="slds-truncate" title="Name">Total Price</div>
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									<template if:true={orderLineItemList} for:each={orderLineItemList} for:item="ail"
+										for:index="Index">
+										<tr key={ail.Id}>
+											<th scope="col">
+												<div class="slds-truncate" title="Product Name"
+													style="white-space: break-spaces;">
+													{ail.Product2.Name}</div>
+											</th>
+											<th scope="col">
+												<div class="slds-truncate" title="Product Name"
+													style="white-space: break-spaces;">
+													{ail.ListPrice}</div>
+											</th>
+											<th scope="col">
+												<div class="slds-truncate" title="Product Name"
+													style="white-space: break-spaces;">
+													{ail.UnitPrice}</div>
+											</th>
+											<th scope="col">
+												<div class="slds-truncate" title="Product Name"
+													style="white-space: break-spaces;">
+													{ail.Discount_to_be_offered__c}</div>
+											</th>
+											<th scope="col">
+												<div class="slds-truncate" title="Product Name"
+													style="white-space: break-spaces;">
+													{ail.Quantity}</div>
+											</th>
+											<th scope="col">
+												<div class="slds-truncate" title="Product Name"
+													style="white-space: break-spaces;">
+													{ail.TotalPrice}</div>
+											</th>
+										</tr>
+									</template>
+								</tbody>
+							</table>
+						</lightning-layout-item>
+
+					</lightning-layout>
+				</lightning-record-edit-form>
+			</div>
+			<div class="modal-footer">
+				<lightning-button variant="brand" label="Save" onclick={handleMainSubmit}></lightning-button>
+				<lightning-button label="Cancel" variant="neutral" class="slds-m-left_small"
+					onclick={closeModal}></lightning-button>
+			</div>
+		</div>
+	</template>
+
+	<template if:true={syncDataResponseFlag}>
+		<div>
+			<div class="showerror slds-p-around_medium" style="font-weight: 500;">
+				<div if:true={ResponseMessage} style="display: flex;align-items: center;">
+					<svg style="height: 50px;width: 40px;margin-right: 10px;" class="slds-icon slds-icon_x-small"
+						focusable="false" data-key="check" aria-hidden="true" height="40px" width="40px" version="1.1"
+						xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" xml:space="preserve">
+						<circle style="fill:#17a717;" cx="256" cy="256" r="256" />
+						<polygon style="fill:#fff;" points="230.288,365.04 137.456,292.528 157.152,267.312 223.04,318.768 329.984,161.28 
+            356.448,179.248 " />
+					</svg>
+					{ResponseMessage}
+				</div>
+				<div if:true={errorResponseMessage} style="display: flex;align-items: center;">
+					<svg style="height: 50px;width: 40px;margin-right: 10px;" width="40px" height="40px"
+						viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg">
+						<g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"
+							sketch:type="MSPage">
+							<g id="Icon-Set-Filled" sketch:type="MSLayerGroup"
+								transform="translate(-570.000000, -1089.000000)" fill="red">
+								<path
+									d="M591.657,1109.24 C592.048,1109.63 592.048,1110.27 591.657,1110.66 C591.267,1111.05 590.633,1111.05 590.242,1110.66 L586.006,1106.42 L581.74,1110.69 C581.346,1111.08 580.708,1111.08 580.314,1110.69 C579.921,1110.29 579.921,1109.65 580.314,1109.26 L584.58,1104.99 L580.344,1100.76 C579.953,1100.37 579.953,1099.73 580.344,1099.34 C580.733,1098.95 581.367,1098.95 581.758,1099.34 L585.994,1103.58 L590.292,1099.28 C590.686,1098.89 591.323,1098.89 591.717,1099.28 C592.11,1099.68 592.11,1100.31 591.717,1100.71 L587.42,1105.01 L591.657,1109.24 L591.657,1109.24 Z M586,1089 C577.163,1089 570,1096.16 570,1105 C570,1113.84 577.163,1121 586,1121 C594.837,1121 602,1113.84 602,1105 C602,1096.16 594.837,1089 586,1089 L586,1089 Z"
+									id="cross-circle" sketch:type="MSShapeGroup">
+								</path>
+							</g>
+						</g>
+					</svg>
+					{errorResponseMessage}
+				</div>
+
+			</div>
+		</div>
+	</template>
+
+</template>

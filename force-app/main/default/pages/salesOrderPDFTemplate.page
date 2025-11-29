@@ -1,0 +1,40 @@
+<apex:page controller="salesOrderPDFController" applyHtmlTag="false" showHeader="false" docType="html-5.0" >
+    <head>
+        <apex:slds />
+    </head>
+    
+    <body style="width: 80%; margin: 0 auto" class="slds-scope">
+        <apex:pagemessages />
+        
+        <apex:outputText rendered="{!isValid}">
+            
+            <!--  SAVE, SAVE AND SEND -->
+            <div style="width:80%; padding-bottom: 2%; margin: 0 auto"> 
+                <apex:slds />
+                <div style="padding: 5px">
+                    <apex:form >
+                        <div style="padding: 5px">
+                            <apex:inputText html-placeholder="Email ID" value="{!emailId}" styleClass="slds-input" /> 
+                            <apex:inputText html-placeholder="CC Addresses  (Comma Seperated)" value="{!CC_Addresses}" styleClass="slds-input" style="margin-top: 5px" />
+                            <apex:inputText html-placeholder="Subject" value="{!subject}" styleClass="slds-input" style="margin-top: 5px; margin-bottom: 10px" />
+                            <apex:inputTextarea richText="true" value="{!body}" styleClass="slds-input" />
+                        </div>
+                        
+                        
+                        <div style="margin: 10px 5px; text-align: right" >
+                            <apex:commandButton action="{!save}" value="Save PDF" styleClass="slds-button slds-button_brand"></apex:commandButton>
+                            <apex:commandButton action="{!saveAndSend}" value="Save And Send" styleClass="slds-button slds-button_brand"></apex:commandButton>
+                            <apex:commandButton action="{!cancel}" value="Cancel" styleClass="slds-button slds-button_destructive"></apex:commandButton>
+                            
+                        </div>
+                    </apex:form>
+                </div>
+            </div>
+            
+            <iframe id="pdf" src="{!pdfURL}" style="width: 100%; height: 100vh"></iframe>
+            
+        </apex:outputText> 
+        
+    </body>
+    
+</apex:page>

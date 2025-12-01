@@ -91,6 +91,7 @@ export default class EditDiscountQuantity extends LightningElement {
     }
 
     handleSave() {
+        this.showSpinner = true;
         console.log('quoteLineItemList ', this.quoteLineItemList);
 
         const itemsToUpdate = this.quoteLineItemList.map(item => ({

@@ -54,6 +54,7 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
     @track AllProductData = [];
     @track firstHalfProductData = [];
     @track secondHalfProductData = [];
+    @track thirdHalfProductData = [];
     @track SelectedProductData = [];
     @track lstResult = [];
     @track hasRecords = true;
@@ -129,7 +130,6 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
             let dataObj = JSON.parse(result);
             console.log('firstHalfProductData', dataObj);
             this.firstHalfProductData = dataObj.productList;
-
             findProducts({
                 recordId: this.recId,
                 productFamily: [],
@@ -139,12 +139,22 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
                 let dataObj = JSON.parse(result);
                 console.log('secondHalfProductData', dataObj);
                 this.secondHalfProductData = dataObj.productList;
-                setTimeout(() => {
-                    this.AllProductData = [...this.firstHalfProductData, ...this.secondHalfProductData];
-                    this.ShowTableData = this.AllProductData;
-                    this.paginiateData(JSON.stringify(this.AllProductData));
-                    this.page = 1;
-                }, 2000);
+                findProducts({
+                    recordId: this.recId,
+                    productFamily: [],
+                    searchKey: this.searchKey,
+                    batchNo: 3
+                }).then(result => {
+                    let dataObj = JSON.parse(result);
+                    console.log('thirdHalfProductData', dataObj);
+                    this.thirdHalfProductData = dataObj.productList;
+                    setTimeout(() => {
+                        this.AllProductData = [...this.firstHalfProductData, ...this.secondHalfProductData, ...this.thirdHalfProductData];
+                        this.ShowTableData = this.AllProductData;
+                        this.paginiateData(JSON.stringify(this.AllProductData));
+                        this.page = 1;
+                    }, 3000);
+                });
             });
 
         });
@@ -191,6 +201,9 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
 
             if (result != null) {
                 this.customerSAPdiscount = parseFloat(result);
+                if (this.customerSAPdiscount < 0) {
+                    this.customerSAPdiscount = this.customerSAPdiscount * -1;
+                }
             }
         })
     }

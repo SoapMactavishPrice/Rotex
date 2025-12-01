@@ -1,14 +1,53 @@
-/* Target the container wrapping the table to allow content to overflow */
-.slds-box > div {
-    overflow: visible !important;
-    /* Also ensure no parent has overflow hidden set unexpectedly */
+.table-container {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+    padding-bottom: 200px;
+    margin-bottom: -200px;
 }
+
+.slds-box {
+    overflow: visible !important;
+}
+
 table {
-    table-layout: fixed;
-    width: 100% !important;
+    table-layout: auto !important;
+    width: max-content !important;
+    min-width: 100%;
+    border-collapse: collapse;
 }
 
 th, td {
     white-space: normal !important;
     overflow-wrap: break-word !important;
+    padding: 8px !important;
+    vertical-align: top;
+    min-width: 80px;
+    overflow: visible !important;
+}
+
+th {
+    background-color: #f3f3f3;
+    font-weight: bold;
+}
+
+tbody tr td {
+    overflow: visible !important;
+}
+
+/* Ensure dropdowns are fully visible */
+lightning-combobox {
+    position: static !important;
+}
+
+.slds-combobox-picklist {
+    overflow: visible !important;
+}
+
+.slds-dropdown {
+    overflow: visible !important;
+    position: absolute !important;
+    z-index: 9999 !important;
 }

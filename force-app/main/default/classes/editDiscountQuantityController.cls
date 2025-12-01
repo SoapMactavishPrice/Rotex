@@ -18,7 +18,9 @@ public class editDiscountQuantityController {
         Quote q = [
             SELECT Id, Ship_To_Party_Code__c, Bill_To_Party_Code__c,
             BillingStreet, BillingCity, BillingCountry, BillingPostalCode, BillingStateCode,
-            ShippingStreet, ShippingCity, ShippingCountry, ShippingPostalCode, ShippingStateCode
+            ShippingStreet, ShippingCity, ShippingCountry, ShippingPostalCode, ShippingStateCode,
+            Bill_To_Street__c,Bill_To_City__c,Bill_To_District__c,Bill_To_Postal_Code__c,Bill_To_State__c,Bill_To_Country__c,
+            Ship_To_Street__c,Ship_To_City__c,Ship_To_District__c,Ship_To_Postal_Code__c,Ship_To_State__c,Ship_To_Country__c
             FROM Quote WHERE Id = :qId
         ];
         System.debug('q-->'+q);
@@ -33,16 +35,18 @@ public class editDiscountQuantityController {
 
         q.Ship_To_Party_Code__c = (String)shiptoMap.get('Partner_No__c');
         q.Bill_To_Party_Code__c = (String)billtoMap.get('Partner_No__c');
-        q.BillingStreet = (String)shiptoMap.get('Street__c');
-        q.BillingCity = (String)shiptoMap.get('City__c');
-        // q.BillingCountry = (String)shiptoMap.get('Country__c');
-        q.BillingPostalCode = (String)shiptoMap.get('Postal_Code__c');
-        // q.BillingStateCode = (String)shiptoMap.get('State__c');
-        q.ShippingStreet = (String)billtoMap.get('Street__c');
-        q.ShippingCity = (String)billtoMap.get('City__c');
-        // q.ShippingCountry = (String)billtoMap.get('Country__c');
-        q.ShippingPostalCode = (String)billtoMap.get('Postal_Code__c');
-        // q.ShippingStateCode = (String)billtoMap.get('State__c');
+        q.Bill_To_Street__c = (String)billtoMap.get('Street__c');
+        q.Bill_To_City__c = (String)billtoMap.get('City__c');
+        q.Bill_To_District__c = (String)billtoMap.get('District__c');
+        q.Bill_To_Country__c = (String)billtoMap.get('Country__c');
+        q.Bill_To_Postal_Code__c = (String)billtoMap.get('Postal_Code__c');
+        q.Bill_To_State__c = (String)billtoMap.get('State__c');
+        q.Ship_To_Street__c = (String)shiptoMap.get('Street__c');
+        q.Ship_To_City__c = (String)shiptoMap.get('City__c');
+        q.Ship_To_District__c = (String)shiptoMap.get('District__c');
+        q.Ship_To_Country__c = (String)shiptoMap.get('Country__c');
+        q.Ship_To_Postal_Code__c = (String)shiptoMap.get('Postal_Code__c');
+        q.Ship_To_State__c = (String)shiptoMap.get('State__c');
         update q;
     }
 

@@ -24,7 +24,7 @@ trigger AutoSubmitNextQuoteApproval_V1 on Quote (after update) {
 
         // ******** LEVEL 4 ********
         if (!submitted && !String.isBlank(q.Validity_of_Offer__c) && String.isBlank(q.Approval_Status__c)) {
-            submitted = AutoApprovalHelper.submitApproval(q.Id, 'Quote_Dynamic_Validity_Terms_v7');
+            submitted = AutoApprovalHelper.submitApproval(q.Id, 'Quote_Dynamic_Validity_Approval_V6');
         }
     }
 

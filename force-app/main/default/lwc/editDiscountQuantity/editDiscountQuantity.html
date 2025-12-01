@@ -1,6 +1,9 @@
 <template>
     <div class="container">
         <lightning-card>
+            <template if:true={showSpinner}>
+                <lightning-spinner alternative-text="Loading" size="large"></lightning-spinner>
+            </template>
             <div class="custom-header">Edit Discount &amp; Quantity</div>
             <div class="table-wrapper">
                 <table class="custom-table">

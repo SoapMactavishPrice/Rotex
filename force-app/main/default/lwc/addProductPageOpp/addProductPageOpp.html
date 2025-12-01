@@ -46,6 +46,9 @@
 														placeholder="Search Product here..."
 														onkeyup={showFilteredProducts} class="searchBox">
 													</lightning-input>
+													<lightning-combobox name="progress" label="Status" value={value}
+														placeholder="Select Progress" options={options}
+														onchange={handleChange}></lightning-combobox>
 													<span if:true={showErrorMsg} style="color:red">First, enter keywords
 														for a product. Then add filters and click Apply.</span>
 												</div>

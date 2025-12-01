@@ -61,6 +61,35 @@ color: #008080; -->
             line-height: 0px;
             }            
         </style>
+        <style>
+    .tot-label { 
+        text-align: right; 
+        white-space: nowrap; 
+        padding-right: 10px; 
+        font-weight: bold;
+    }
+    .tot-value { 
+        text-align: right; 
+        white-space: nowrap; 
+        font-weight: bold;
+    }
+    .blank-cells {
+        height: 4px;
+    }
+</style>
+
+<style>
+    .num {
+        text-align: right;
+        white-space: nowrap;
+        padding-right: 6px;
+    }
+    .label-right {
+        text-align: right;
+        white-space: nowrap;
+        padding-right: 6px;
+    }
+</style>
     </head>
     
     <body style="width: 100%">
@@ -146,94 +175,101 @@ color: #008080; -->
             <br/>
         </table> 
         
-        <table class="table1">
-            <tr>
-                <th style="width: 10%; font-size: 12px; line-height: 1; text-align: center;">Sr. No.</th>
-                <th style="width: 10%; font-size: 12px; line-height: 1; text-align: center;">Item Code</th>
-                <th style="width: 20%; font-size: 12px; line-height: 1; text-align: center;">Description</th>
-                <!--<th style="width: 10%; font-size: 12px; line-height: 1; text-align: center;">HSN Code</th>-->
-                <th style="width: 10%; font-size: 12px; line-height: 1; text-align: center;">Quantity</th>
-                <th style="width: 10%; font-size: 12px; line-height: 1; text-align: center;">UoM</th>
-                <th style="width: 15%; font-size: 12px; line-height: 1; text-align: center;">Unit Price (INR)</th>
-                <th style="width: 15%; font-size: 12px; line-height: 1; text-align: center;">Total (INR)</th>
-            </tr>
-            <apex:variable var="rows" value="{!0}"/>
-            <apex:repeat value="{!quoteRecord.lineItems}" var="lineItem"> 
-                <tr>
-                    <apex:variable var="rows" value="{!rows+1}"/>
-                    <td style="text-align: center;">{!rows}</td>
-                    <td style="text-align: center;">{!lineItem.ItemCode}</td>
-                    <td style="text-align: left;">{!lineItem.GoodsDescription}<br/>
-                    <apex:outputPanel rendered="{!NOT(ISBLANK(lineItem.CustomerPartNo))}">    
-                    Cust Part No.:{!lineItem.CustomerPartNo}</apex:outputPanel></td>
-                    
-                   <!-- <td style="text-align: center;">{!lineItem.GoodsDescription}</td>-->
-                    <td style="text-align: center;">{!lineItem.Quantity}</td>
-                    <td style="text-align: center;">{!lineItem.UoM}</td>
-                    <td style="text-align: center;">{!lineItem.Rate}</td>
-                    <td style="text-align: center;">{!lineItem.Totalvalue}</td>
-                </tr>
-            </apex:repeat> 
-            <tr>
-                <td colspan="7" style="text-align: right;"><strong>Gross Price (INR)</strong></td>
-                <td style="text-align: left;"><strong>:&nbsp;{!totalValueINR}</strong></td>
-            </tr>
-            
-            <!-- IGST Row -->
-            <tr>
-                <td style="text-align: right;" colspan="7">
-                    <strong>{!IF(quData.Total_IGST_Amount__c>0, 'IGST', '')}</strong>
-                </td>
-                <td style="text-align: left;">
-                    <strong>{!IF(quData.Total_IGST_Amount__c>0, ':' & TEXT(quData.Total_IGST_Amount__c), '')}</strong>
-                </td>
-            </tr>
+    
 
 
-            
-            <!-- CGST Row -->
-           <tr>
-                <td style="text-align: right;" colspan="7">
-                    <strong>{!IF(quData.Total_CGST_Amount__c>0, 'CGST', '')}</strong>
-                </td>
-                <td style="text-align: left;">
-                    <strong>{!IF(quData.Total_CGST_Amount__c>0, ':' & TEXT(quData.Total_CGST_Amount__c), '')}</strong>
-                </td>
-            </tr>
-            
-            <!-- SGST Row -->
-            <tr>
-                <td style="text-align: right;" colspan="7">
-                    <strong>{!IF(quData.Total_SGST_Amount__c>0, 'SGST', '')}</strong>
-                </td>
-                <td style="text-align: left;">
-                    <strong>{!IF(quData.Total_SGST_Amount__c>0, ':' & TEXT(quData.Total_SGST_Amount__c), '')}</strong>
-                </td>
-            </tr>
-            
-            <tr><td colspan="8"><br/></td></tr>
-            
-            <tr>
-                <td style="text-align: right;" colspan="7"><strong>Total Amount (INR)</strong></td>
-                <td style="text-align: left;"><strong>:&nbsp;{!quData.GrandTotal}</strong></td>
-            </tr>
 
-            <tr>
-                <td colspan="8"><br/><br/></td>
-            </tr>
-            <tr>
-                <td style="text-align: right;" colspan="8">{!no2words} </td>
-            </tr>
-            <tr>
-                <td style="text-align: right;" colspan="9"> </td>
-            </tr>
-            <tr>
-                <td style="text-align: right;" colspan="8"> <strong>Taxes, duties and transport costs excluded unless explicitly mentioned.</strong> </td>
-            </tr>
-            <tr>
-                <td style="text-align: right;" colspan="9">  </td>
-            </tr>
-        </table>
+
+<!-- Use margins for left-right space -->
+<div style="margin-left:1px; margin-right:1px;">
+
+<table class="table1" style="width:100%;">
+
+    <tr>
+        <th style="width: 10%; font-size: 12px; text-align: left;">Sr. No.</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">Item Code</th>
+        <th style="width: 25%; font-size: 12px; text-align: left;">Description</th>
+        <th style="width: 10%; font-size: 12px; text-align: left;">Quantity</th>
+        <th style="width: 10%; font-size: 12px; text-align: left;">UoM</th>
+        <th style="width: 10%; font-size: 12px; text-align: left;">Unit Price (INR)</th>
+        <th style="width: 10%; font-size: 12px; text-align: left;">Total (INR)</th>
+    </tr>
+
+    <apex:variable var="rows" value="{!0}"/>
+    <apex:repeat value="{!quoteRecord.lineItems}" var="lineItem"> 
+        <tr>
+            <apex:variable var="rows" value="{!rows+1}"/>
+            <td style="text-align: left;">{!rows}</td>
+
+            <td style="text-align: left;">{!lineItem.ItemCode}</td>
+
+            <td style="white-space: normal;word-wrap: break-word;word-break: break-all;width: 250px;text-align: left">
+                <apex:outputText value="{!lineItem.wrappedDescription}" escape="false"/>
+                <br/>
+                <apex:outputPanel rendered="{!NOT(ISBLANK(lineItem.CustomerPartNo))}">
+                    Cust Part No.: {!lineItem.CustomerPartNo}
+                </apex:outputPanel>
+            </td>
+
+            <td style="text-align: left;">{!lineItem.Quantity}</td>
+            <td style="text-align: left;">{!lineItem.UoM}</td>
+
+            <td style="text-align: left;" class="num">{!lineItem.Rate}</td>
+            <td style="text-align: left;" class="num">{!lineItem.Totalvalue}</td>
+        </tr>
+    </apex:repeat>
+
+    <!-- TOTALS -->
+    <tr>
+        <td></td><td></td><td></td><td></td><td></td>
+        <td style="text-align: left;" class="label-right"><strong>Gross Price (INR)</strong></td>
+        <td style="text-align: left;" class="num"><strong>{!totalValueINR}</strong></td>
+    </tr>
+
+    <tr>
+        <td></td><td></td><td></td><td></td><td></td>
+        <td style="text-align: left;" class="label-right"><strong>{!IF(quData.Total_IGST_Amount__c>0,'IGST','')}</strong></td>
+        <td style="text-align: left;" class="num">{!IF(quData.Total_IGST_Amount__c>0,TEXT(quData.Total_IGST_Amount__c),'')}</td>
+    </tr>
+
+    <tr>
+        <td></td><td></td><td></td><td></td><td></td>
+        <td style="text-align: left;" class="label-right"><strong>{!IF(quData.Total_CGST_Amount__c>0,'CGST','')}</strong></td>
+        <td style="text-align: left;" class="num">{!IF(quData.Total_CGST_Amount__c>0,TEXT(quData.Total_CGST_Amount__c),'')}</td>
+    </tr>
+
+    <tr>
+        <td></td><td></td><td></td><td></td><td></td>
+        <td style="text-align: left;" class="label-right"><strong>{!IF(quData.Total_SGST_Amount__c>0,'SGST','')}</strong></td>
+        <td style="text-align: left;" class="num">{!IF(quData.Total_SGST_Amount__c>0,TEXT(quData.Total_SGST_Amount__c),'')}</td>
+    </tr>
+
+    <tr><td colspan="7"><br/></td></tr>
+
+    <tr>
+        <td></td><td></td><td></td><td></td><td></td>
+        <td style="text-align: left;" class="label-right"><strong>Total Amount (INR)</strong></td>
+        <td style="text-align: left;" class="num"><strong>{!quData.GrandTotal}</strong></td>
+    </tr>
+
+    <tr><td colspan="8"><br/><br/></td></tr>
+
+    <tr>
+        <td style="text-align: right;" colspan="8">{!no2words}</td>
+    </tr>
+
+    <tr><td colspan="9"></td></tr>
+
+    <tr>
+        <td style="text-align: right;" colspan="8"><strong>Taxes, duties and transport costs excluded unless explicitly mentioned.</strong></td>
+    </tr>
+
+</table>
+
+</div>
+
+
+
         <hr/>
         
         <table style="width: 100%; ">
@@ -262,7 +298,7 @@ color: #008080; -->
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Liquidate_Terms__c))}">
                     <span><strong>Liquidate Terms</strong></span><br/>
                </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.ShippingName))}">
+               <apex:outputPanel rendered="{!LEN(shipToAddress) > 0}">
                     <span><strong>Ship to Address</strong></span><br/>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Transport_Details__c))}">
@@ -294,8 +330,8 @@ color: #008080; -->
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Liquidate_Terms__c))}">
                     <span>:&nbsp;{!quData.Liquidate_Terms__c}</span><br/>
                </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.ShippingName))}">
-                    <span>:&nbsp;</span>{!quData.ShippingName}<br/>
+               <apex:outputPanel rendered="{!LEN(shipToAddress) > 0}">
+                    <span>:&nbsp;</span>{!shipToAddress}<br/>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Transport_Details__c))}">
                     <span>:&nbsp;{!quData.Transport_Details__c}</span><br/>

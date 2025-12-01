@@ -19,7 +19,8 @@ public class salesQuotationPDFController {
     public string INCOTerms {get;set;}
     public string PaymentTerms {get;set;}
     public string QuoteNumber {get;set;}
-    
+    public String shipToAddress { get; set; }
+
     public salesQuotationPDFController(){
         qId = ApexPages.currentPage().getparameters().get('id');
         System.debug('qId: ' + qId);
@@ -58,7 +59,10 @@ return;
                       Account.Street__c,Account.City__c,Account.District__c,Account.Postal_Code__c,Account.State__c,Account.Country__c,
                       Account.GSTIN_No__c,Account.Email_Id__c,Warranty_Terms__c,Special_Remarks__c,Delivery_Period__c,Liquidate_Terms__c,
                       Transport_Details__c,Delivery_Location__c,Opportunity.Customer_Enquiry_Ref_No__c,Prices__c,Total_IGST_Amount__c,
-                      Total_CGST_Amount__c,Total_SGST_Amount__c
+                      Total_CGST_Amount__c,Total_SGST_Amount__c,Payment_Terms_Approval_Status__c,Warranty_Terms_Approval_Status__c,
+                      Is_Small_Order_Handling__c,Minimum_Offer_Approval_Status__c,
+                      Bill_To_Street__c,Bill_To_City__c,Bill_To_Postal_Code__c,Bill_To_State__c,Bill_To_Country__c,
+                      Ship_To_Street__c,Ship_To_City__c,Ship_To_Postal_Code__c,Ship_To_State__c,Ship_To_Country__c
                       FROM Quote WHERE Id = :qId];
         } catch (Exception e) {
             System.debug('Error querying Quote data: ' + e.getMessage());
@@ -80,14 +84,56 @@ return;
         isValid = true;
         createNew = true;
         body = 'Dear Sir/Madam, <br/><br/>Please find attached Quote PDF.';
+        // Build Ship To Address – skip empty fields
+        List<String> shipParts = new List<String>();
         
+        if (String.isNotBlank(quData.Ship_To_Street__c))      shipParts.add(quData.Ship_To_Street__c);
+        if (String.isNotBlank(quData.Ship_To_City__c))        shipParts.add(quData.Ship_To_City__c);
+        if (String.isNotBlank(quData.Ship_To_State__c))       shipParts.add(quData.Ship_To_State__c);
+        if (String.isNotBlank(quData.Ship_To_Postal_Code__c)) shipParts.add(quData.Ship_To_Postal_Code__c);
+        if (String.isNotBlank(quData.Ship_To_Country__c))     shipParts.add(quData.Ship_To_Country__c);
+        
+        // Join address with comma
+        shipToAddress = String.join(shipParts, ', ');
+
         if (String.isNotBlank(quData.Email)) {
             emailId = quData.Email;
         } else {
             ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Please Fill Email'));
             isValid = false;
         }  
-        
+        // Small Order Handling condition
+        if (quData.Is_Small_Order_Handling__c == true) {
+            if (quData.Minimum_Offer_Approval_Status__c == 'Submitted') {
+                ApexPages.addMessage(new ApexPages.Message(
+                    ApexPages.Severity.ERROR,
+                    'Minimum Offer approval is still in Submitted status (Pending Approval)'
+                ));
+                isValid = false;
+            }
+        }
+        if (quData.Payment_Terms_Approval_Status__c == 'Submitted') {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Payment Terms approval is still in Submitted status (Pending Approval)'
+            ));
+            isValid = false;
+        }
+        if (quData.Warranty_Terms_Approval_Status__c == 'Submitted') {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Warranty Terms approval is still in Submitted status (Pending Approval)'
+            ));
+            isValid = false;
+        }
+        if (quData.Approval_Status__c == 'Submitted') {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Validity of Offer approval is still in Submitted status (Pending Approval)'
+            ));
+            isValid = false;
+        }
+
         
         //quoteRecord.QuotationNo = quData.QuoteNumber;
         
@@ -100,7 +146,8 @@ return;
                      Unit_of_Measure_Code__c, Units_per_Parcel__c, Insurance_Charges__c, EBDTA_Gain_Deficit__c, Estimated_Freight_Per_Kgs__c, 
                      Estimated_Commission_Per_Kgs__c, Estimated_Ocean_Freight_Per_Kgs__c, Estimated_Inspection_Fee_Per_Kgs__c, LC_Confirmation_Charges_Per_Kgs__c, 
                      Other_Incidental_Expenses_Per_Kgs__c, Unit_Price_Excl_VAT_Rate_per_Kgs__c, Line_Amount_Excl_VAT_Qty_Rate__c, 
-                     Product2.ProductCode,Product2.Base_UOM__c,Customer_Part_No__c
+                     Product2.ProductCode,Product2.Base_UOM__c,Customer_Part_No__c,Sales_Rep_Status__c,Sales_Manager_Status__c,
+                     Country_Continent_Sales_H_LOB_Status__c,Global_Sales_Head_Status__c,Rotex_Board_Member_Status__c,Managing_Director_Status__c
                      FROM QuoteLineItem 
                      WHERE QuoteId = :quData.Id];
         } catch (Exception e) {
@@ -114,8 +161,32 @@ return;
         
         totalQuantity = 0;
         totalValueINR = 0;
+        // ❗ Check if any QLI has approval still in Submitted status
+        Boolean hasPendingSalesApproval = false;
         
+        for (QuoteLineItem qli : qItem) {
+            if (
+                qli.Sales_Manager_Status__c == 'Submitted' ||
+                qli.Sales_Rep_Status__c == 'Submitted' ||
+                qli.Country_Continent_Sales_H_LOB_Status__c == 'Submitted' ||
+                qli.Global_Sales_Head_Status__c == 'Submitted' ||
+                qli.Rotex_Board_Member_Status__c == 'Submitted' ||
+                qli.Managing_Director_Status__c == 'Submitted'
+            ) {
+                hasPendingSalesApproval = true;
+                break;
+            }
+        }
         
+        if (hasPendingSalesApproval) {
+            ApexPages.addMessage(
+                new ApexPages.Message(
+                    ApexPages.Severity.ERROR,
+                    'Discount approval is still in Submitted status. Please wait until all approvals are completed.'
+                )
+            );
+            isValid = false;
+        }
         if (qItem.size() > 0) {
             for (QuoteLineItem qli : qItem) {
                 QuoteLineItemWrapper ql = new QuoteLineItemWrapper();
@@ -148,7 +219,21 @@ return;
             isValid = false;
         }	
     }
-    
+    public static String forceWrap(String s, Integer interval) {
+    if (String.isBlank(s)) return s;
+    String out = '';
+    Integer cnt = 0;
+    for (Integer i = 0; i < s.length(); i++) {
+        out += s.substring(i, i+1);
+        cnt++;
+        if (cnt >= interval) {
+            out += '<br/>';  // force line break
+            cnt = 0;
+        }
+    }
+    return out;
+}
+
     public PageReference save() {
         if (!isValid) {
             return null;
@@ -334,5 +419,9 @@ public String CSwiftCode {get;set;}*/
         // public String Line_Item_Id {get;set;}
         // public String Part_No_c {get;set;}
         // public String Product_Description {get;set;}
+        public String getWrappedDescription() {
+    return salesQuotationPDFController.forceWrap(this.GoodsDescription, 30);
+}
+
     }
 }

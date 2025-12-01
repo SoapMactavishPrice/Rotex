@@ -99,4 +99,62 @@ public class editDiscountQuantityControllerTest {
         System.assertEquals(5, updatedQli.Quantity, 'Quantity should be updated');
         System.assertEquals(20, updatedQli.Discount_to_be_offered__c, 'Discount should be updated');
     }
+    @IsTest
+static void testUpdateShiptoBilltoOnQuote() {
+
+    // Fetch existing test quote created in @testSetup
+    Quote q = [
+        SELECT Id 
+        FROM Quote 
+        LIMIT 1
+    ];
+
+    // Create mock Ship-To JSON
+    String shiptoJson = JSON.serialize(new Map<String, Object>{
+        'Partner_No__c' => 'SHIP001',
+        'Street__c' => 'Ship Street 123',
+        'City__c' => 'ShipCity',
+        'Postal_Code__c' => '111111'
+    });
+
+    // Create mock Bill-To JSON
+    String billtoJson = JSON.serialize(new Map<String, Object>{
+        'Partner_No__c' => 'BILL001',
+        'Street__c' => 'Bill Street 987',
+        'City__c' => 'BillCity',
+        'Postal_Code__c' => '999999'
+    });
+
+    Test.startTest();
+    editDiscountQuantityController.updateShiptoBilltoOnQuote(
+        q.Id,
+        shiptoJson,
+        billtoJson
+    );
+    Test.stopTest();
+
+    // Query updated quote fields
+    Quote updatedQ = [
+        SELECT Ship_To_Party_Code__c, Bill_To_Party_Code__c,
+        BillingStreet, BillingCity, BillingPostalCode,
+        ShippingStreet, ShippingCity, ShippingPostalCode,
+        Bill_To_Street__c,Bill_To_City__c,Bill_To_Postal_Code__c,Bill_To_State__c,Bill_To_Country__c,
+        Ship_To_Street__c,Ship_To_City__c,Ship_To_Postal_Code__c,Ship_To_State__c,Ship_To_Country__c
+        FROM Quote
+        WHERE Id = :q.Id
+    ];
+
+    // 🔥 Assertions for updated fields
+    System.assertEquals('SHIP001', updatedQ.Ship_To_Party_Code__c);
+    System.assertEquals('BILL001', updatedQ.Bill_To_Party_Code__c);
+
+    System.assertEquals('Ship Street 123', updatedQ.Ship_To_Street__c);
+    System.assertEquals('ShipCity', updatedQ.Ship_To_City__c);
+    System.assertEquals('111111', updatedQ.Ship_To_Postal_Code__c);
+
+    System.assertEquals('Bill Street 987', updatedQ.Bill_To_Street__c);
+    System.assertEquals('BillCity', updatedQ.Bill_To_City__c);
+    System.assertEquals('999999', updatedQ.Bill_To_Postal_Code__c);
+}
+
 }

@@ -23,6 +23,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         this.fetchQuotes();
     }
 
+    get isLoading() {
+        return this.isSaveDisabled;
+    }
+
     fetchQuotes() {
         getAllQuotations()
             .then(result => {
@@ -115,33 +119,31 @@ validateQuoteData() {
 
 
     saveChanges() {
-        
+        this.isSaveDisabled = true;
         let temp =false;
         temp =  this.validateQuoteData(this.quotes);
         
         console.log('Final Quote List', JSON.stringify(this.quotes));
 
-setTimeout(() => {
-    if(temp){
-        this.isSaveDisabled = true;
-        updateQuoteLineItem({quotationListStringObject: JSON.stringify(this.quotes)}).then((result) => {
-            if (result == 'Success') {
-                this.showToast('Success', 'Quotation Line Items updated successfully', 'success');
+    setTimeout(() => {
+        if(temp){
+            
+            updateQuoteLineItem({quotationListStringObject: JSON.stringify(this.quotes)}).then((result) => {
+                if (result == 'Success') {
+                    this.showToast('Success', 'Quotation Line Items updated successfully', 'success');
 
-                //this.redirectToHome();
-
-                setTimeout(()=>{
-                    //window.location.reload();
-                }, 1500)
-            } else {
-                this.showToast('Error', result, 'error');
-            }
-        }).catch((error)=>{
-            this.isSaveDisabled = false;
-            this.showToast('Error', error.body.message, 'error');
-        })
-    }
-}, 1000); 
+                    setTimeout(()=>{
+                        window.location.reload();
+                    }, 1500)
+                } else {
+                    this.showToast('Error', result, 'error');
+                }
+            }).catch((error)=>{
+                this.isSaveDisabled = false;
+                this.showToast('Error', error.body.message, 'error');
+            })
+        }
+    }, 1000); 
 
     }
 

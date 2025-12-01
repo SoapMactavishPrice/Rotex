@@ -3,16 +3,12 @@
     overflow: visible !important;
     /* Also ensure no parent has overflow hidden set unexpectedly */
 }
-
-/* Target standard SLDS scrollable containers that might be parents */
-c-quote-sales-price-approval .slds-scrollable_y, 
-c-quote-sales-price-approval .slds-scrollable--y,
-c-quote-sales-price-approval .slds-scrollable_x,
-c-quote-sales-price-approval .slds-scrollable--x {
-    overflow: visible !important;
+table {
+    table-layout: fixed;
+    width: 100% !important;
 }
 
-/* Ensure the combobox list itself can layer correctly */
-.slds-listbox {
-    z-index: 9002 !important; /* Higher than typical modal z-index (9001) */
+th, td {
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
 }

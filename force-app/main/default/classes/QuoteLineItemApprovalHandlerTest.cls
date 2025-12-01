@@ -1,129 +1,27 @@
-/*@isTest
-public class QuoteLineItemApprovalHandlerTest {
-
-    @isTest
-    static void testProcessApprovals() {
-
-        // Step 1: Activate Standard Pricebook
-        Id standardPricebookId = Test.getStandardPricebookId();
-        Pricebook2 stdPb = new Pricebook2(
-            Id = standardPricebookId,
-            Name = 'Standard Price Book',
-            IsActive = true
-        );
-        upsert stdPb;
-
-        // Step 2: Create Product
-        Product2 prod = new Product2(Name = 'Test Product', IsActive = true);
-        insert prod;
-
-        // Step 3: Create or get existing PricebookEntry
-        PricebookEntry pbe;
-        List<PricebookEntry> existingPbe = [
-            SELECT Id FROM PricebookEntry 
-            WHERE Product2Id = :prod.Id AND Pricebook2Id = :standardPricebookId LIMIT 1
-        ];
-        if (!existingPbe.isEmpty()) {
-            pbe = existingPbe[0];
-        } else {
-            pbe = new PricebookEntry(
-                Pricebook2Id = standardPricebookId,
-                Product2Id = prod.Id,
-                UnitPrice = 100,
-                IsActive = true,
-                CurrencyIsoCode = 'INR'
-            );
-            insert pbe;
-        }
-
-        // Step 4: Create Users
-        Profile p = [SELECT Id FROM Profile WHERE Name='Standard User' LIMIT 1];
-        
-        User salesRep = new User(
-            FirstName='Sales',
-            LastName='Rep',
-            Email='salesrep'+System.currentTimeMillis()+'@test.com',
-            Username='salesrep'+System.currentTimeMillis()+'@test.com',
-            Alias='srep',
-            TimeZoneSidKey='GMT',
-            LocaleSidKey='en_US',
-            EmailEncodingKey='UTF-8',
-            ProfileId=p.Id,
-            LanguageLocaleKey='en_US'
-        );
-        insert salesRep;
-
-        User salesManager = new User(
-            FirstName='Sales',
-            LastName='Manager',
-            Email='salesmanager'+System.currentTimeMillis()+'@test.com',
-            Username='salesmanager'+System.currentTimeMillis()+'@test.com',
-            Alias='smgr',
-            TimeZoneSidKey='GMT',
-            LocaleSidKey='en_US',
-            EmailEncodingKey='UTF-8',
-            ProfileId=p.Id,
-            LanguageLocaleKey='en_US'
-        );
-        insert salesManager;
-
-        // Step 5: Create Account
-        Account acc = new Account(Name='Test Account');
-        insert acc;
-
-        // Step 6: Create Quote with Standard Pricebook
-        Quote q = new Quote(
-            Name='Test Quote',
-            OwnerId=salesRep.Id,
-            Pricebook2Id = standardPricebookId
-        );
-        insert q;
-
-        // Step 7: Create QuoteLineItem with required PricebookEntry
-        QuoteLineItem qli = new QuoteLineItem(
-            QuoteId = q.Id,
-            PricebookEntryId = pbe.Id,
-            Quantity = 5,
-            UnitPrice = 100,
-            Discount_to_be_offered__c = 15,
-            Discount_as_per_SAP__c = 10
-        );
-        insert qli;
-
-        Test.startTest();
-        // Call the handler method
-        QuoteLineItemApprovalHandler.processApprovals(new List<QuoteLineItem>{qli});
-        Test.stopTest();
-
-        // Step 8: Verify the Submitted status is set
-        QuoteLineItem updatedQli = [SELECT Id, Sales_Manager_Status__c FROM QuoteLineItem WHERE Id = :qli.Id];
-    }
-}*/
-
 @isTest
 public class QuoteLineItemApprovalHandlerTest {
 
-    @isTest
-    static void testProcessApprovals_FullCoverage() {
-
+    @testSetup
+    static void setupTestData() {
+        // Activate Standard Pricebook
         Id standardPricebookId = Test.getStandardPricebookId();
         Pricebook2 stdPb = new Pricebook2(Id = standardPricebookId, IsActive = true);
         upsert stdPb;
 
+        // Create Product
         Product2 prod = new Product2(Name = 'Test Product', IsActive = true);
         insert prod;
 
-        PricebookEntry pbe;
+        // Check if PricebookEntry already exists, if not create it
         List<PricebookEntry> existingPbe = [
             SELECT Id FROM PricebookEntry 
             WHERE Product2Id = :prod.Id 
             AND Pricebook2Id = :standardPricebookId 
             LIMIT 1
         ];
-        if (!existingPbe.isEmpty()) {
-            pbe = existingPbe[0];
-        } else {
-            pbe = new PricebookEntry(
+        
+        if (existingPbe.isEmpty()) {
+            PricebookEntry pbe = new PricebookEntry(
                 Pricebook2Id = standardPricebookId,
                 Product2Id = prod.Id,
                 UnitPrice = 100,
@@ -132,6 +30,7 @@ public class QuoteLineItemApprovalHandlerTest {
             insert pbe;
         }
 
+        // Create Users with different SOA Profiles
         Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
 
         User salesRep = new User(
@@ -174,82 +73,260 @@ public class QuoteLineItemApprovalHandlerTest {
             LocaleSidKey = 'en_US',
             EmailEncodingKey = 'UTF-8',
             ProfileId = p.Id,
-            LanguageLocaleKey = 'en_US'
+            LanguageLocaleKey = 'en_US',
+            SOA_Profile__c = 'Country / Continent Sales Head / LOB Head'
         );
         insert countryHead;
-        
+
+        // Create Account
         Account acc = new Account(Name = 'Test Account');
         insert acc;
-        Opportunity opp = new Opportunity();
-        opp.Name = 'Test Opportunity';
-        opp.StageName = 'Prospecting';
-        opp.CloseDate = Date.today().addDays(30);
+
+        // Create Opportunity
+        Opportunity opp = new Opportunity(
+            Name = 'Test Opportunity',
+            AccountId = acc.Id,
+            StageName = 'Prospecting',
+            CloseDate = Date.today().addDays(30)
+        );
         insert opp;
-        
+    }
+
+    @isTest
+    static void testProcessApprovals_EmptyList() {
+        Test.startTest();
+        QuoteLineItemApprovalHandler.processApprovals(new List<QuoteLineItem>());
+        Test.stopTest();
+    }
+
+    @isTest
+    static void testProcessApprovals_SalesRepOwner() {
+        // Get test data
+        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Country / Continent Sales Head / LOB Head' LIMIT 1];
+        Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
+        PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
+        Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
+        Id standardPricebookId = Test.getStandardPricebookId();
+
+        // Create Quote owned by Sales Rep
         Quote quoteRep = new Quote(
-            Name = 'Quote - Sales Rep',
+            Name = 'Quote - Sales Rep Owner',
             OwnerId = salesRep.Id,
+            OpportunityId = opp.Id,
             Pricebook2Id = standardPricebookId,
-            OpportunityId= opp.Id,
             Sales_Manager__c = salesManager.Id
         );
         insert quoteRep;
 
-        Quote quoteManager = new Quote(
-            Name = 'Quote - Sales Manager',
-            OwnerId = salesManager.Id,
-            Pricebook2Id = standardPricebookId,
-            OpportunityId= opp.Id,
-            Country_Continent_Sales_Head_LOB_Head__c = countryHead.Id,
-            Validity_of_Offer__c = '180 Days',
-            Payment_Terms__c = 'Open Credit upto 180 days',
-            Warranty_Terms__c = '48 Months from date of supply',
-            Is_Small_Order_Handling__c = true,
-            Minimum_Offer_Approval_Status__c = 'Approved',
-            Payment_Terms_Approval_Status__c = 'Approved',
-            Warranty_Terms_Approval_Status__c = 'Approved'
-        );
-        insert quoteManager;
-        quoteManager.QLI_Updated_Flag__c = true;
-        try{
-        update quoteManager;
-        }Catch(Exception e){}
+        // Create QLI with discount exceeding SAP discount
         QuoteLineItem qliRep = new QuoteLineItem(
             QuoteId = quoteRep.Id,
             PricebookEntryId = pbe.Id,
+            Product2Id = prod.Id,
             Quantity = 5,
             UnitPrice = 100,
             Discount_to_be_offered__c = 15,
             Discount_as_per_SAP__c = 10
         );
+
+        Test.startTest();
         insert qliRep;
-        qliRep.Quantity = 6;
-        update qliRep;
+        Test.stopTest();
+    }
+
+    @isTest
+    static void testProcessApprovals_SalesManagerOwner() {
+        // Get test data
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' LIMIT 1];
+        User countryHead = [SELECT Id FROM User WHERE SOA_Profile__c = 'Country / Continent Sales Head / LOB Head' LIMIT 1];
+        Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
+        PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
+        Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
+        Id standardPricebookId = Test.getStandardPricebookId();
+
+        // Create Quote owned by Sales Manager
+        Quote quoteMgr = new Quote(
+            Name = 'Quote - Sales Manager Owner',
+            OwnerId = salesManager.Id,
+            OpportunityId = opp.Id,
+            Pricebook2Id = standardPricebookId,
+            Country_Continent_Sales_Head_LOB_Head__c = countryHead.Id
+        );
+        insert quoteMgr;
+
+        // Create QLI with discount exceeding SAP discount
         QuoteLineItem qliMgr = new QuoteLineItem(
-            QuoteId = quoteManager.Id,
+            QuoteId = quoteMgr.Id,
             PricebookEntryId = pbe.Id,
+            Product2Id = prod.Id,
             Quantity = 10,
             UnitPrice = 200,
             Discount_to_be_offered__c = 20,
             Discount_as_per_SAP__c = 5
         );
-        insert qliMgr;
 
         Test.startTest();
-        QuoteLineItemApprovalHandler.processApprovals(new List<QuoteLineItem>{ qliRep, qliMgr });
+        insert qliMgr;
         Test.stopTest();
+    }
 
-        QuoteLineItem updatedRep = [
-            SELECT Id, Sales_Manager_Status__c 
-            FROM QuoteLineItem 
-            WHERE Id = :qliRep.Id
-        ];
+    @isTest
+    static void testProcessApprovals_NoApprovalNeeded() {
+        // Get test data
+        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' LIMIT 1];
+        Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
+        PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
+        Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
+        Id standardPricebookId = Test.getStandardPricebookId();
 
-        QuoteLineItem updatedMgr = [
-            SELECT Id, Country_Continent_Sales_H_LOB_Status__c 
-            FROM QuoteLineItem 
-            WHERE Id = :qliMgr.Id
-        ];
+        Quote quoteRep = new Quote(
+            Name = 'Quote - No Approval',
+            OwnerId = salesRep.Id,
+            OpportunityId = opp.Id,
+            Pricebook2Id = standardPricebookId,
+            Sales_Manager__c = salesManager.Id
+        );
+        insert quoteRep;
 
+        // Create QLI with discount within SAP discount (no approval needed)
+        QuoteLineItem qliNoApproval = new QuoteLineItem(
+            QuoteId = quoteRep.Id,
+            PricebookEntryId = pbe.Id,
+            Product2Id = prod.Id,
+            Quantity = 5,
+            UnitPrice = 100,
+            Discount_to_be_offered__c = 8,  // Less than SAP discount
+            Discount_as_per_SAP__c = 10
+        );
+
+        Test.startTest();
+        insert qliNoApproval;
+        Test.stopTest();
+    }
+
+    @isTest
+    static void testProcessApprovals_NullDiscountFields() {
+        // Get test data
+        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' LIMIT 1];
+        Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
+        PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
+        Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
+        Id standardPricebookId = Test.getStandardPricebookId();
+
+        Quote quoteRep = new Quote(
+            Name = 'Quote - Null Fields',
+            OwnerId = salesRep.Id,
+            OpportunityId = opp.Id,
+            Pricebook2Id = standardPricebookId,
+            Sales_Manager__c = salesManager.Id
+        );
+        insert quoteRep;
+
+        // Create QLI with null discount fields
+        QuoteLineItem qliNull = new QuoteLineItem(
+            QuoteId = quoteRep.Id,
+            PricebookEntryId = pbe.Id,
+            Product2Id = prod.Id,
+            Quantity = 5,
+            UnitPrice = 100,
+            Discount_to_be_offered__c = null,
+            Discount_as_per_SAP__c = null
+        );
+
+        Test.startTest();
+        insert qliNull;
+        Test.stopTest();
+    }
+
+    @isTest
+    static void testProcessApprovals_MultipleQLIs() {
+        // Get test data
+        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' LIMIT 1];
+        User countryHead = [SELECT Id FROM User WHERE SOA_Profile__c = 'Country / Continent Sales Head / LOB Head' LIMIT 1];
+        Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
+        PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
+        Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
+        Id standardPricebookId = Test.getStandardPricebookId();
+
+        // Create two quotes
+        Quote quoteRep = new Quote(
+            Name = 'Quote Rep Multi',
+            OwnerId = salesRep.Id,
+            OpportunityId = opp.Id,
+            Pricebook2Id = standardPricebookId,
+            Sales_Manager__c = salesManager.Id
+        );
+        
+        Quote quoteMgr = new Quote(
+            Name = 'Quote Mgr Multi',
+            OwnerId = salesManager.Id,
+            OpportunityId = opp.Id,
+            Pricebook2Id = standardPricebookId,
+            Country_Continent_Sales_Head_LOB_Head__c = countryHead.Id
+        );
+        insert new List<Quote>{ quoteRep, quoteMgr };
+
+        // Create multiple QLIs
+        List<QuoteLineItem> qlis = new List<QuoteLineItem>{
+            new QuoteLineItem(
+                QuoteId = quoteRep.Id,
+                PricebookEntryId = pbe.Id,
+                Product2Id = prod.Id,
+                Quantity = 5,
+                UnitPrice = 100,
+                Discount_to_be_offered__c = 15,
+                Discount_as_per_SAP__c = 10
+            ),
+            new QuoteLineItem(
+                QuoteId = quoteMgr.Id,
+                PricebookEntryId = pbe.Id,
+                Product2Id = prod.Id,
+                Quantity = 10,
+                UnitPrice = 200,
+                Discount_to_be_offered__c = 20,
+                Discount_as_per_SAP__c = 5
+            )
+        };
+
+        Test.startTest();
+        insert qlis;
+        Test.stopTest();
+    }
+
+    @isTest
+    static void testGetCustomNotificationTypeId_NotFound() {
+        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' LIMIT 1];
+        Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
+        PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
+        Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
+        Id standardPricebookId = Test.getStandardPricebookId();
+
+        Quote quoteRep = new Quote(
+            Name = 'Quote - Notification Test',
+            OwnerId = salesRep.Id,
+            OpportunityId = opp.Id,
+            Pricebook2Id = standardPricebookId,
+            Sales_Manager__c = salesManager.Id
+        );
+        insert quoteRep;
+
+        QuoteLineItem qli = new QuoteLineItem(
+            QuoteId = quoteRep.Id,
+            PricebookEntryId = pbe.Id,
+            Product2Id = prod.Id,
+            Quantity = 5,
+            UnitPrice = 100,
+            Discount_to_be_offered__c = 15,
+            Discount_as_per_SAP__c = 10
+        );
+
+        Test.startTest();
+        insert qli;
+        Test.stopTest();
     }
 }

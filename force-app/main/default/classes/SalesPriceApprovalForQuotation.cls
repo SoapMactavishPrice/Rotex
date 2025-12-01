@@ -16,22 +16,29 @@ public without sharing class SalesPriceApprovalForQuotation {
     
         // Fetch all pending line items first
         List<QuoteLineItem> quoteLineItems = [
-            SELECT Approval_Comments__c, Approval_Status__c, Approver__c, CreatedById, ServiceDate, 
-            Discount, LastModifiedById, Description, LineNumber, ListPrice, 
-            Product2Id, Product2.Name, Quantity, QuoteId,Discount_as_per_SAP__c,Global_Sales_Head__c,Global_Sales_Head_Status__c,
-            Reject_Reason__c, UnitPrice, SortOrder, Subtotal, TotalPrice,Discount_to_be_offered__c,
-            Sales_Rep__c,Sales_Rep_Status__c,Sales_Manager__c,Sales_Manager_Status__c,
-            Country_Continent_Sales_Head_LOB_Head__c,Country_Continent_Sales_H_LOB_Status__c,
-            Managing_Director_Country_Manage__c,Managing_Director_Status__c,Rotex_Board_Member__c,Rotex_Board_Member_Status__c,
-            Country_Continent_Sales_LOB_Comments__c,Global_Sales_Head_Comments__c,Managing_Director_Comments__c,Rotex_Board_Member_Comments__c,Sales_Manager_Comments__c
+            SELECT Approval_Comments__c, Approval_Status__c, Approver__c, CreatedById, ServiceDate,
+                Discount, LastModifiedById, Description, LineNumber, ListPrice,
+                Product2Id, Product2.Name, Quantity, QuoteId, Discount_as_per_SAP__c, Global_Sales_Head__c,
+                Global_Sales_Head_Status__c, Reject_Reason__c, UnitPrice, SortOrder, Subtotal, TotalPrice,
+                Discount_to_be_offered__c, Sales_Rep__c, Sales_Rep_Status__c, Sales_Manager__c,
+                Sales_Manager_Status__c, Country_Continent_Sales_Head_LOB_Head__c,
+                Country_Continent_Sales_H_LOB_Status__c, Managing_Director_Country_Manage__c,
+                Managing_Director_Status__c, Rotex_Board_Member__c, Rotex_Board_Member_Status__c,
+                Country_Continent_Sales_LOB_Comments__c, Global_Sales_Head_Comments__c,
+                Managing_Director_Comments__c, Rotex_Board_Member_Comments__c,
+                Sales_Manager_Comments__c
             FROM QuoteLineItem
-            WHERE ( Sales_Rep_Status__c ='Submitted' or  Sales_Manager_Status__c ='Submitted' or  Country_Continent_Sales_H_LOB_Status__c ='Submitted' or Global_Sales_Head_Status__c ='Submitted' or  Managing_Director_Status__c ='Submitted'
-                 OR  Rotex_Board_Member_Status__c ='Submitted' ) AND (   Sales_Rep__c = :currentUserId or 
-                   Sales_Manager__c = :currentUserId or Global_Sales_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__c = :currentUserId or 
-                    Managing_Director_Country_Manage__c = :currentUserId OR Rotex_Board_Member__c = :currentUserId )
-                  
-            AND Discount_offered_SAP__c = true
+            WHERE (
+                    (Sales_Rep_Status__c = 'Submitted' AND Sales_Rep__c = :currentUserId) OR
+                    (Sales_Manager_Status__c = 'Submitted' AND Sales_Manager__c = :currentUserId) OR
+                    (Country_Continent_Sales_H_LOB_Status__c = 'Submitted' AND Country_Continent_Sales_Head_LOB_Head__c = :currentUserId) OR
+                    (Global_Sales_Head_Status__c = 'Submitted' AND Global_Sales_Head__c = :currentUserId) OR
+                    (Managing_Director_Status__c = 'Submitted' AND Managing_Director_Country_Manage__c = :currentUserId) OR
+                    (Rotex_Board_Member_Status__c = 'Submitted' AND Rotex_Board_Member__c = :currentUserId)
+                )
+                AND Discount_offered_SAP__c = true
         ];
+
     
         if (quoteLineItems.isEmpty()) {
             throw new AuraHandledException('No Quotation Line Items found with their status as "Pending"');

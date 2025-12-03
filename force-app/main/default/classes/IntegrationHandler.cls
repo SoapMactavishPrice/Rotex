@@ -43,14 +43,33 @@ public class IntegrationHandler {
             resp = UtilityCls.doGetWithBasicAuth(API_Name, 'DAILY', dateOfExc, dateOfExc,'');
             
             if (resp.getStatusCode() == 200) {
-                IntegrationRequestBuilder.CustomerMasterResponse respWrapper = IntegrationRequestBuilder.CustomerMasterResponseParse(resp.getBody());
-                List<IntegrationRequestBuilder.customersList> parentWrappers = respWrapper.d.results;
+                // IntegrationRequestBuilder.CustomerMasterResponse respWrapper = IntegrationRequestBuilder.CustomerMasterResponseParse(resp.getBody());
+                // List<IntegrationRequestBuilder.customersList> parentWrappers = respWrapper.d.results;
 
-                // Collect keys for parent matching
-                Set<String> accCodes = new Set<String>();
-                for (IntegrationRequestBuilder.customersList c : parentWrappers) {
-                    accCodes.add(c.customer_number);
+                // // Collect keys for parent matching
+                // Set<String> accCodes = new Set<String>();
+                // for (IntegrationRequestBuilder.customersList c : parentWrappers) {
+                //     accCodes.add(c.customer_number);
+                // }
+
+                IntegrationRequestBuilder.CustomerMasterResponse respWrapper = IntegrationRequestBuilder.CustomerMasterResponseParse(resp.getBody());
+                List<IntegrationRequestBuilder.customersList> allCustomers = respWrapper.d.results;
+                
+                // Use a map to store unique customers by customer_number
+                Map<String, IntegrationRequestBuilder.customersList> uniqueCustomersMap = new Map<String, IntegrationRequestBuilder.customersList>();
+                
+                // Only keep the first occurrence of each customer
+                for (IntegrationRequestBuilder.customersList customer : allCustomers) {
+                    if (String.isNotBlank(customer.customer_number) && !uniqueCustomersMap.containsKey(customer.customer_number)) {
+                        uniqueCustomersMap.put(customer.customer_number, customer);
+                    }
                 }
+                
+                // Get the deduplicated list of customers
+                List<IntegrationRequestBuilder.customersList> parentWrappers = uniqueCustomersMap.values();
+                
+                // Collect keys for parent matching
+                Set<String> accCodes = uniqueCustomersMap.keySet();
 
                 // Fetch existing Accounts
                 Map<String, Account> existingAccountsMap = new Map<String, Account>();

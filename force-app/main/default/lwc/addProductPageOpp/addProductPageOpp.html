@@ -29,8 +29,7 @@
 							<div class="slds-col" style="width:100%">
 								<div class="slds-form-element" onmouseleave={toggleResult}>
 									<div class="slds-combobox_container slds-has-selection">
-										<div class="lookupInputContainer slds-combobox slds-dropdown-trigger
-                                            slds-dropdown-trigger_click" aria-expanded="false" aria-haspopup="listbox"
+										<div class="lookupInputContainer slds-combobox slds-dropdown-trigger" aria-expanded="false" aria-haspopup="listbox"
 											role="combobox">
 											<div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_left-right"
 												role="none">
@@ -41,14 +40,19 @@
 														placeholder="Search Product here..."
 														onchange={handleSearchKeyChange} class="searchBox">
 													</lightning-input> -->
-													<lightning-input type="search" data-source="searchInputField"
+													<lightning-input type="search" data-source="searchInputField" onchange={showFilteredProducts}
 														onclick={toggleResult} value={searchKey} variant="label-hidden"
 														placeholder="Search Product here..."
-														onkeyup={showFilteredProducts} class="searchBox">
+														onkeyup={showFilteredProducts} class="searchBox" disabled={searchDisability}>
 													</lightning-input>
-													<lightning-combobox name="progress" label="Status" value={value}
+													
+													<!-- <lightning-combobox name="progress" label="Status" value={value}
 														placeholder="Select Progress" options={options}
-														onchange={handleChange}></lightning-combobox>
+														onchange={handleChange}></lightning-combobox> -->
+
+													<lightning-combobox name="itemType" label="Item Type"
+														value={itemDefault} placeholder="Select Item"
+														options={itemsOptions} onchange={handleItemOptions}></lightning-combobox>
 													<span if:true={showErrorMsg} style="color:red">First, enter keywords
 														for a product. Then add filters and click Apply.</span>
 												</div>
@@ -76,7 +80,7 @@
 																	class="slds-media__body">
 																	<span
 																		class="slds-listbox__option-text slds-listbox__option-text_entity">{obj.Name}</span>
-																	<span
+																<span
 																		class="slds-listbox__option-text slds-listbox__option-text_entity">{obj.ProductCode}</span>
 																</span>
 															</div>
@@ -136,13 +140,13 @@
 									<lightning-input type="text" value={FilterForm.ProductCode} label="Product Code"
 										name="ProductCode" onchange={handleChange}></lightning-input><br />
 									<lightning-checkbox-group name="ProductFamily" label="Product Family"
-										options={options} value={FilterForm.ProductFamily}
-										onchange={handleChange}></lightning-checkbox-group>
+										options={options} value={FilterForm.ProductFamily} onchange={handleChange}>
+									</lightning-checkbox-group>
 								</div>
 								<lightning-button class="" label="Cancel" onclick={clearFilter}></lightning-button>
 								<lightning-button class="slds-float_right slds-m-right_medium" variant="brand"
-									disabled={disabledApplayButton} onclick={ApplyFilter}
-									label="Apply"></lightning-button>
+									disabled={disabledApplayButton} onclick={ApplyFilter} label="Apply">
+								</lightning-button>
 							</div>
 						</div>
 						<!-- <div class="slds-grid slds-gutters slds-scrollable_y" style="height:23rem;"
@@ -217,8 +221,8 @@
 										</th>
 										<td>
 											<lightning-input type="text" value={product.ListPrice} placeholder="0"
-												data-target-id={product.Id} variant="label-hidden"
-												disabled></lightning-input>
+												data-target-id={product.Id} variant="label-hidden" disabled>
+											</lightning-input>
 										</td>
 										<template if:true={product.IsARC}>
 											<td></td>
@@ -289,8 +293,8 @@
 									label="First" class="slds-p-horizontal_x-small" alternative-text="first page"
 									onclick={firstPage}></lightning-button>
 								<lightning-button disabled={bDisableFirst} icon-name="utility:chevronleft"
-									label="Previous" alternative-text="Previous"
-									onclick={previousHandler}></lightning-button>
+									label="Previous" alternative-text="Previous" onclick={previousHandler}>
+								</lightning-button>
 								&nbsp;
 								<span class="slds-badge slds-badge_lightest"
 									style="margin-right: 10px;margin-left: 10px;">
@@ -301,17 +305,17 @@
 									alternative-text="Next" onclick={nextHandler} class="slds-p-horizontal_x-small"
 									icon-position="right"></lightning-button>
 								<lightning-button disabled={bDisableLast} icon-name="utility:jump_to_right" label="Last"
-									alternative-text="last page" onclick={lastPage}
-									icon-position="right"></lightning-button>
+									alternative-text="last page" onclick={lastPage} icon-position="right">
+								</lightning-button>
 							</div>
 
 							<template if:false={isFirstPage}>
-								<lightning-button class="slds-float_left" onclick={handleback}
-									label="Back"></lightning-button>
+								<lightning-button class="slds-float_left" onclick={handleback} label="Back">
+								</lightning-button>
 							</template>
 							<template if:true={isFirstPage}>
-								<lightning-button class="slds-m-left_small" onclick={goBackToRecord}
-									label="Cancel"></lightning-button>
+								<lightning-button class="slds-m-left_small" onclick={goBackToRecord} label="Cancel">
+								</lightning-button>
 							</template>
 							<template if:true={isFirstPage}>
 								<lightning-button class="slds-m-left_small" onclick={nextDetails} label="Nexttt"

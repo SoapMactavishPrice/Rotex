@@ -2,6 +2,8 @@ import { LightningElement, track, api, wire } from 'lwc';
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import { CloseActionScreenEvent } from 'lightning/actions';
 import { RefreshEvent } from 'lightning/refresh';
+import modal from "@salesforce/resourceUrl/containerCss";
+import { loadStyle } from "lightning/platformResourceLoader";
 import getQuoteLineItem from '@salesforce/apex/editDiscountQuantityController.getQuoteLineItem';
 import updateQuoteLineItem from '@salesforce/apex/editDiscountQuantityController.updateQuoteLineItem';
 
@@ -31,16 +33,17 @@ export default class EditDiscountQuantity extends LightningElement {
 
     connectedCallback() {
         this.showSpinner = true;
+        loadStyle(this, modal);
         setTimeout(() => {
             console.log('recordId ', this.recordId);
             console.log('objectApiName ', this.objectApiName);
             if (this.recordId) {
-                this.showSpinner = false;
                 this.handleGetLineItems();
+                this.showSpinner = false;
             } else {
                 this.showToast('Error', 'Invalid Record Id', 'error');
             }
-        }, 2000);
+        }, 1000);
     }
 
     handleGetLineItems() {
@@ -78,6 +81,18 @@ export default class EditDiscountQuantity extends LightningElement {
         this.quoteLineItemList = updatedItems;
     }
 
+    handlePFChargeChanges(event) {
+        const id = event.target.dataset.id;
+        const value = event.target.value;
+        const updatedItems = this.quoteLineItemList.map(item => {
+            if (item.Id === id) {
+                return { ...item, P_F_Charges__c: parseInt(value) };
+            }
+            return item;
+        });
+        this.quoteLineItemList = updatedItems;
+    }
+
     handleQuantityChange(event) {
         const id = event.target.dataset.id;
         const value = event.target.value;
@@ -92,13 +107,13 @@ export default class EditDiscountQuantity extends LightningElement {
 
     handleSave() {
         this.showSpinner = true;
-        console.log('quoteLineItemList ', this.quoteLineItemList);
 
         const itemsToUpdate = this.quoteLineItemList.map(item => ({
             Id: item.Id,
             Quantity: item.Quantity ? parseFloat(item.Quantity) : 0,
             Discount_to_be_offered__c: item.Discount_to_be_offered__c ? parseFloat(item.Discount_to_be_offered__c) : 0,
-            Customer_Part_No__c: item.Customer_Part_No__c
+            Customer_Part_No__c: item.Customer_Part_No__c,
+            P_F_Charges__c: item.P_F_Charges__c ? parseFloat(item.P_F_Charges__c) : 0
         }));
 
         updateQuoteLineItem({

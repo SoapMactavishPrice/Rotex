@@ -1,5 +1,6 @@
 import { LightningElement, wire, track } from 'lwc';
 import findProducts from '@salesforce/apex/AddProductPageOpp.findProduct';
+import findProductsOptimized from '@salesforce/apex/AddProductPageOpp.findProductsOptimized';
 import saveProducts from '@salesforce/apex/AddProductPageOpp.saveProducts';
 import getproductfamily from '@salesforce/apex/AddProductPageOpp.getproductfamily';
 import getCustomerDiscount from '@salesforce/apex/AddProductPageOpp.getCustomerDiscount';
@@ -29,6 +30,12 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
     cols = COLS;
 
     @track showSpinner = true;
+
+    @track searchDisabled = true;
+
+    get searchDisability() {
+        return this.searchDisabled || this.showSpinner;
+    }
 
     @track recId;
     @wire(CurrentPageReference)
@@ -101,7 +108,9 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         this.cols = this.cols.filter(col => col.fieldName !== 'IsARC');
 
         // this.openModal();
-        this.getProductList();
+        //this.getProductList();
+
+        this.showSpinner = false;
 
     }
 
@@ -174,6 +183,23 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         return this.prodfamilylst;
     }
 
+    get itemsOptions() {
+        let items = [
+            { label: '--None--', value: '' },
+            { label: 'Spares/Special', value: 'Spares/Special' },
+            { label: 'Coil', value: 'Coil' },
+            { label: 'SOV', value: 'SOV' },
+            { label: 'Valve', value: 'Valve' },
+            { label: 'Others', value: 'Others' }
+        ];
+
+        return items;
+    }
+
+    get itemDefault() {
+        return '';
+    }
+
     @track disabledApplayButton = true;
     handleChange(event) {
         console.log('name', event.target.name);
@@ -190,6 +216,51 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
                     this.disabledApplayButton = true;
                 }
             }
+    }
+
+    handleItemOptions(event) {
+        console.log('check item value:>>:>' + event.target.value);
+        this.showSpinner = true;
+        let option = event.target.value;
+
+        if (option == '') {
+            this.AllProductData = [];
+            this.ShowTableData = [];
+            this.showSpinner = false;
+            this.searchDisabled = true;
+            return;
+        }
+
+        findProductsOptimized({
+            recordId: this.recId,
+            searchKey: this.searchKey,
+            itemType: option
+        })
+        .then(result => {
+            let dataObj = JSON.parse(result);
+            
+            if (dataObj.error) {
+                throw new Error(dataObj.error);
+            }
+            
+            this.AllProductData = dataObj.productList;
+            this.ShowTableData = dataObj.productList;
+            this.paginiateData(JSON.stringify(this.AllProductData));
+            this.page = 1;
+            this.showSpinner = false;
+            this.searchDisabled = false;
+
+        })
+        .catch(error => {
+            console.error('Error loading products:', error);
+            this.showSpinner = false;
+            this.searchDisabled = true;
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Error',
+                message: 'Failed to load products: ' + error.message,
+                variant: 'error',
+            }));
+        });
     }
 
     @track customerSAPdiscount = 0;

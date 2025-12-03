@@ -2,7 +2,7 @@ public class editDiscountQuantityController {
     @AuraEnabled(cacheable=true)
     public static List<QuoteLineItem> getQuoteLineItem(String qId) {
         return [SELECT Id, Discount_as_per_SAP__c, Discount_to_be_offered__c, Quantity,
-            UnitPrice, ListPrice, Customer_Part_No__c, Product2.Name, Product2Id
+            UnitPrice, ListPrice, Customer_Part_No__c, Product2.Name, Product2Id, P_F_Charges__c
             FROM QuoteLineItem WHERE QuoteId = :qId
         ];
     }

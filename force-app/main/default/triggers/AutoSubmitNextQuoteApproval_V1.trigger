@@ -4,12 +4,18 @@ trigger AutoSubmitNextQuoteApproval_V1 on Quote (after update) {
     AutoApprovalHelper.isRunning = true;
 
     for (Quote q : Trigger.new) {
-
+        Quote oldQ = Trigger.oldMap.get(q.Id);
         Boolean submitted = false;
 
         // ******** LEVEL 1 ********
-        if (!submitted && q.Is_Small_Order_Handling__c == true && String.isBlank(q.Minimum_Offer_Approval_Status__c)) {
-            submitted = AutoApprovalHelper.submitApproval(q.Id, 'Quote_Minimum_Offer_Dynamic_Approval');
+       // if (!submitted && q.Is_Small_Order_Handling__c == true && String.isBlank(q.Minimum_Offer_Approval_Status__c)) {
+       //     submitted = AutoApprovalHelper.submitApproval(q.Id, 'Quote_Minimum_Offer_Dynamic_Approval');
+      //  }
+
+        // ***** LEVEL 1 *****
+        if (!submitted && oldQ.Is_Small_Order_Handling__c == true && oldQ.TotalPrice <= 20000 && String.isBlank(oldQ.Minimum_Offer_Approval_Status__c)) 
+        {
+            submitted = AutoApprovalHelper.submitApproval(oldQ.Id, 'Quote_Minimum_Offer_Dynamic_Approval');
         }
 
         // ******** LEVEL 2 ********

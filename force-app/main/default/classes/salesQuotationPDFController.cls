@@ -72,8 +72,18 @@ return;
         }
         //quoteRecord.INCOTerms = quData.INCO_Terms__c;
         INCOTerms = quData.INCO_Terms__c;
-        PaymentTerms = quData.Payment_Terms__c;
-        
+       // PaymentTerms = quData.Payment_Terms__c;
+       PaymentTerms = '';
+if (quData.Payment_Terms__c != null) {
+    for (Schema.PicklistEntry p : Quote.Payment_Terms__c.getDescribe().getPicklistValues()) {
+        if (p.getValue() == quData.Payment_Terms__c) {
+            PaymentTerms = p.getLabel();
+            break;
+        }
+    }
+}
+
+
         QuoteNumber = quData.QuoteNumber;
         pdf = Page.salesQuotationPDF;
         pdfUrl = '/apex/salesQuotationPDF?id=' + qId + '#toolbar=0';
@@ -206,10 +216,16 @@ return;
                     System.debug('totalValueINR: ' + totalValueINR);
                 }
                 
-                Integer totalValueINRInt = totalValueINR.intValue(); // Convert to Integer if needed
+               /* Integer totalValueINRInt = totalValueINR.intValue(); // Convert to Integer if needed
                 String totalValueINRWords = convertCurrencytowords.convert(totalValueINRInt);
                 
-                no2words = totalValueINRWords + ' Rupees Only.';
+                no2words = totalValueINRWords + ' Rupees Only.';*/
+                // Convert Grand Total (including GST)
+                Decimal gt = quData.GrandTotal != null ? quData.GrandTotal : 0;
+                Integer gtInt = gt.intValue();   // Converter requires integer
+                
+                String grandTotalWords = convertCurrencytowords.convert(gtInt);
+                no2words = grandTotalWords + ' Rupees Only.';
                 
                 System.debug(ql.GoodsDescription);
                 quoteRecord.lineItems.add(ql); 
@@ -329,13 +345,16 @@ return;
             System.debug(CC_Addresses);
         }
         
-        LatestPublishedVersionIds.add(contentVersion.ContentDocument.LatestPublishedVersionId);
+       /* LatestPublishedVersionIds.add(contentVersion.ContentDocument.LatestPublishedVersionId);
         
         if (LatestPublishedVersionIds.size() > 0) {
             List<String> LatestPublishedVersionIdList = new List<String>();
             LatestPublishedVersionIdList.addAll(LatestPublishedVersionIds);
             email.setEntityAttachments(LatestPublishedVersionIdList);
-        }
+        } */
+        
+        email.setEntityAttachments(new List<String>{ contentVersion.ContentDocument.LatestPublishedVersionId });
+
         
         if (String.isNotBlank(quData.Opportunity.Owner.Email)) {
             email.setReplyTo(quData.Opportunity.Owner.Email);

@@ -9,13 +9,14 @@
                 <table class="custom-table">
                     <thead>
                         <tr>
-                            <th>Product Name</th>
-                            <th>Customer Part No.</th>
-                            <th>List Price</th>
-                            <th>Discount (SAP)</th>
-                            <th>Discount Offered</th>
-                            <th>Quantity</th>
-                            <th>Sales Price</th>
+                            <th style="width:24%">Product Name</th>
+                            <th style="width:18%">Customer Part No.</th>
+                            <th style="width:10%; text-align:right;">List Price</th>
+                            <th style="width:10%; text-align:right;">Discount (SAP)</th>
+                            <th style="width:14%">Discount Offered</th>
+                            <th style="width:14%;">P&amp;F Charges</th>
+                            <th style="width:12%">Quantity</th>
+                            <th style="width:12%; text-align:right;">Sales Price</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -34,6 +35,12 @@
                                     <lightning-input type="number" data-id={item.Id} variant="label-hidden"
                                         value={item.Discount_to_be_offered__c} class="input-field"
                                         onchange={handleDiscountChange}>
+                                    </lightning-input>
+                                </td>
+                                <td>
+                                    <lightning-input type="number" data-id={item.Id} variant="label-hidden"
+                                        value={item.P_F_Charges__c} class="input-field"
+                                        onchange={handlePFChargeChanges}>
                                     </lightning-input>
                                 </td>
                                 <td>

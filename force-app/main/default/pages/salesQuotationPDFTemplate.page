@@ -34,7 +34,14 @@
             <iframe id="pdf" src="{!pdfURL}" style="width: 100%; height: 100vh"></iframe>
             
         </apex:outputText>
-        
+        <!-- ❗ ALWAYS SHOW CANCEL BUTTON -->
+        <div style="margin: 10px 5px; text-align: center">
+            <apex:form >
+                <apex:commandButton action="{!cancel}" 
+                                    value="Cancel" 
+                                    styleClass="slds-button slds-button_destructive"/>
+            </apex:form>
+        </div>
     </body>
     
 </apex:page>

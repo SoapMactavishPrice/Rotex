@@ -123,7 +123,8 @@ export default class EditDiscountQuantity extends LightningElement {
             this.closeModal();
             // window.location.reload();
         }).catch((error) => {
-            this.showToast('Error', 'Something went wrong!!!', 'error');
+            console.error(error?.body);
+            this.showToast('Error', error?.body?.message, 'error');
             this.errorResponseMessage = error;
             this.showSpinner = false;
         })

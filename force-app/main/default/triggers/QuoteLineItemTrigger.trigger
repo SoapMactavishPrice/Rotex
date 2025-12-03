@@ -164,4 +164,119 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         }
         
     }
+
+    if (Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
+        System.debug('=== NEGATIVE DISCOUNT DIRECT PRICE UPDATE START ===');
+        
+        Set<Id> qliIds = new Set<Id>();
+        for (QuoteLineItem qli : Trigger.new) {
+            if (qli.Id != null) {
+                qliIds.add(qli.Id);
+            }
+        }
+        
+        // Query full QLI details if needed (for updates)
+        Map<Id, QuoteLineItem> existingQLIMap = new Map<Id, QuoteLineItem>();
+        if (!qliIds.isEmpty()) {
+            existingQLIMap = new Map<Id, QuoteLineItem>([
+                SELECT Id, Discount_to_be_offered__c, ListPrice, PricebookEntry.UnitPrice
+                FROM QuoteLineItem
+                WHERE Id IN :qliIds
+            ]);
+        }
+        
+        for (QuoteLineItem qli : Trigger.new) {
+            QuoteLineItem oldQLI = Trigger.isUpdate ? Trigger.oldMap.get(qli.Id) : null;
+            
+            // Check if Discount_to_be_offered__c changed or is being set
+            Boolean discountChanged = Trigger.isInsert || 
+                (Trigger.isUpdate && qli.Discount_to_be_offered__c != oldQLI.Discount_to_be_offered__c);
+            
+            if (!discountChanged || qli.Discount_to_be_offered__c == null) {
+                continue;
+            }
+            
+            System.debug('--- Processing QLI: ' + qli.Id + ' ---');
+            System.debug('Discount_to_be_offered__c: ' + qli.Discount_to_be_offered__c);
+            
+            // ✅ Check if discount is NEGATIVE (markup)
+            if (qli.Discount_to_be_offered__c < 0) {
+                System.debug('✓ NEGATIVE DISCOUNT DETECTED: ' + qli.Discount_to_be_offered__c + '%');
+                System.debug('NEGATIVE DISCOUNT: No approval needed, directly updating UnitPrice');
+                
+                // Get base price
+                Decimal basePrice = qli.ListPrice;
+                
+                // For updates, query from database if ListPrice not in trigger context
+                if (basePrice == null && Trigger.isUpdate && existingQLIMap.containsKey(qli.Id)) {
+                    QuoteLineItem existingQLI = existingQLIMap.get(qli.Id);
+                    basePrice = existingQLI.ListPrice != null ? existingQLI.ListPrice :
+                            (existingQLI.PricebookEntry != null ? existingQLI.PricebookEntry.UnitPrice : null);
+                }
+                
+                if (basePrice == null || basePrice == 0) {
+                    System.debug('NEGATIVE DISCOUNT: ERROR - No valid base price found');
+                    continue;
+                }
+                
+                System.debug('NEGATIVE DISCOUNT: Base Price: ' + basePrice);
+                
+                // Calculate new UnitPrice with markup
+                Decimal discountPercent = qli.Discount_to_be_offered__c;
+                Decimal newUnitPrice = basePrice * (1 - (discountPercent / 100));
+                newUnitPrice = newUnitPrice.setScale(2);
+                
+                System.debug('NEGATIVE DISCOUNT: Calculation: ' + basePrice + ' * (1 - (' + discountPercent + '/100)) = ' + newUnitPrice);
+                System.debug('NEGATIVE DISCOUNT: Price INCREASE from ' + basePrice + ' to ' + newUnitPrice);
+                
+                // ✅ ONLY update UnitPrice (NOT the standard Discount field)
+                qli.UnitPrice = newUnitPrice;
+                
+                System.debug('NEGATIVE DISCOUNT: ✓✓ UnitPrice updated directly to ' + newUnitPrice);
+                
+                // ✅ Clear all approval status fields (no approval needed)
+                qli.Sales_Manager_Status__c = null;
+                qli.Country_Continent_Sales_H_LOB_Status__c = null;
+                qli.Global_Sales_Head_Status__c = null;
+                qli.Rotex_Board_Member_Status__c = null;
+                qli.Managing_Director_Status__c = null;
+                
+                System.debug('NEGATIVE DISCOUNT: ✓ All approval status fields cleared');
+            } else {
+                System.debug('Positive discount: ' + qli.Discount_to_be_offered__c + '% - Normal approval flow will apply');
+            }
+        }
+        
+        System.debug('=== NEGATIVE DISCOUNT DIRECT PRICE UPDATE END ===');
+    }
+
+    if (Trigger.isAfter && Trigger.isUpdate) {
+        System.debug('=== UNIT PRICE UPDATE: AFTER UPDATE TRIGGER START ===');
+        
+        List<QuoteLineItem> qlisToUpdatePrice = new List<QuoteLineItem>();
+        
+        for (QuoteLineItem qli : Trigger.new) {
+            QuoteLineItem oldQLI = Trigger.oldMap.get(qli.Id);
+            
+            // Check if any approval status just changed to 'Approved'
+            Boolean approvalJustGranted = (
+                (qli.Sales_Manager_Status__c == 'Approved' && oldQLI.Sales_Manager_Status__c != 'Approved') ||
+                (qli.Country_Continent_Sales_H_LOB_Status__c == 'Approved' && oldQLI.Country_Continent_Sales_H_LOB_Status__c != 'Approved') ||
+                (qli.Global_Sales_Head_Status__c == 'Approved' && oldQLI.Global_Sales_Head_Status__c != 'Approved') ||
+                (qli.Rotex_Board_Member_Status__c == 'Approved' && oldQLI.Rotex_Board_Member_Status__c != 'Approved') ||
+                (qli.Managing_Director_Status__c == 'Approved' && oldQLI.Managing_Director_Status__c != 'Approved')
+            );
+            
+            if (approvalJustGranted && qli.Discount_to_be_offered__c != null) {
+                qlisToUpdatePrice.add(qli);
+            }
+        }
+        
+        if (!qlisToUpdatePrice.isEmpty()) {
+            System.debug('UNIT PRICE UPDATE: Calling handler to recalculate prices for ' + qlisToUpdatePrice.size() + ' QLIs');
+            QuoteLineItemHelper.updateUnitPriceBasedOnDiscount(qlisToUpdatePrice);
+        }
+        
+        System.debug('=== UNIT PRICE UPDATE: AFTER UPDATE TRIGGER END ===');
+    }
 }

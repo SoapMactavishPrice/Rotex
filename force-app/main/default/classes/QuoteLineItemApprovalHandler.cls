@@ -9,12 +9,29 @@ public class QuoteLineItemApprovalHandler {
             return;
         }
         
+        // ✅ Filter out negative discounts (they don't need approval)
+        List<QuoteLineItem> qlisNeedingApproval = new List<QuoteLineItem>();
+        for (QuoteLineItem qli : newList) {
+            if (qli.Discount_to_be_offered__c != null && qli.Discount_to_be_offered__c < 0) {
+                System.debug('APPROVAL: Skipping QLI ' + qli.Id + ' - Negative discount (' + qli.Discount_to_be_offered__c + '%) does not need approval');
+                continue;
+            }
+            qlisNeedingApproval.add(qli);
+        }
+        
+        if (qlisNeedingApproval.isEmpty()) {
+            System.debug('APPROVAL: No QLIs need approval (all have negative discounts or no discount)');
+            return;
+        }
+        
+        System.debug('APPROVAL: Processing ' + qlisNeedingApproval.size() + ' QLIs that need approval');
+        
         Set<Id> quoteIds = new Set<Id>();
         Set<Id> productIds = new Set<Id>();
         
         // Collect Quote IDs and Product IDs
         System.debug('APPROVAL: Collecting Quote IDs and Product IDs from QLIs');
-        for (QuoteLineItem qli : newList) {
+        for (QuoteLineItem qli : qlisNeedingApproval) {
             if (qli.QuoteId != null) {
                 quoteIds.add(qli.QuoteId);
                 System.debug('  Added QuoteId: ' + qli.QuoteId + ' from QLI: ' + qli.Id);

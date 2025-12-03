@@ -6,8 +6,9 @@ import modal from "@salesforce/resourceUrl/containerCss";
 import { loadStyle } from "lightning/platformResourceLoader";
 import getQuoteLineItem from '@salesforce/apex/editDiscountQuantityController.getQuoteLineItem';
 import updateQuoteLineItem from '@salesforce/apex/editDiscountQuantityController.updateQuoteLineItem';
+import { NavigationMixin } from 'lightning/navigation';
 
-export default class EditDiscountQuantity extends LightningElement {
+export default class EditDiscountQuantity extends NavigationMixin(LightningElement) {
     @api recordId;
     @api objectApiName;
     @track showSpinner = false;
@@ -23,12 +24,20 @@ export default class EditDiscountQuantity extends LightningElement {
         this.dispatchEvent(event);
     }
 
-    closeModal(event) {
-        this.dispatchEvent(new CloseActionScreenEvent());
-        this.dispatchEvent(new RefreshEvent());
-        // setTimeout(() => {
-        //     window.location.reload();
-        // }, 250);
+    closeModal() {
+        
+        this[NavigationMixin.Navigate]({
+            type: 'standard__recordPage',
+            attributes: {
+                recordId: this.recordId,
+                objectApiName: 'Quote',
+                actionName: 'view',
+
+            }
+        });
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
     }
 
     connectedCallback() {
@@ -121,7 +130,6 @@ export default class EditDiscountQuantity extends LightningElement {
         }).then(() => {
             this.showToast('Quote Line Items Updated', '', 'success');
             this.closeModal();
-            // window.location.reload();
         }).catch((error) => {
             console.error(error?.body);
             this.showToast('Error', error?.body?.message, 'error');

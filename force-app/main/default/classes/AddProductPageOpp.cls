@@ -243,7 +243,7 @@ public without sharing class AddProductPageOpp {
             if(searchKey != null && searchKey != '') {
                 query += 'AND (Product2.Name LIKE \'%' + searchKey + '%\' OR Product2.ProductCode LIKE \'%' + searchKey + '%\')';
             }
-            query += 'ORDER BY Product2.ProductCode ASC LIMIT 12345';
+            query += 'ORDER BY Product2.ProductCode ASC';
 
             system.debug('query' + query);
             List < PricebookEntry > templstPBE = (List < PricebookEntry > ) Database.query(query);
@@ -390,133 +390,150 @@ public without sharing class AddProductPageOpp {
     }
 
     @AuraEnabled(cacheable=true)
-    public static String findProductsOptimized(String recordId, String searchKey, String itemType) {
-        // try {
-            Opportunity op = [SELECT Id, AccountId, Pricebook2Id, Pricebook2.Name 
-                            FROM Opportunity WHERE Id =: recordId];
+    public static List<String> findProductsOptimized(String recordId, String searchKey, String itemType) {
+        Opportunity op = [SELECT Id, AccountId, Pricebook2Id, Pricebook2.Name 
+                        FROM Opportunity WHERE Id =: recordId];
 
-            if (op == null) {
-                return JSON.serialize(new Map<String, Object>{'error' => 'Opportunity not found'});
-            }
+        if (op == null) {
+            return new List<String>{JSON.serialize(new Map<String, Object>{'error' => 'Opportunity not found'})};
+        }
 
-            List<Sales_Area_Item__c> salesAreaItemList = [
-                SELECT Id, Name, Sales_Org__c, Distribution_Channel__c, Division__c, Incoterms__c
-                FROM Sales_Area_Item__c WHERE Account__c =: op.AccountId
-                AND Sales_Org__c = '1100'
-                AND Division__c NOT IN ('50', '20', '00')
-            ];
+        List<Sales_Area_Item__c> salesAreaItemList = [
+            SELECT Id, Name, Sales_Org__c, Distribution_Channel__c, Division__c, Incoterms__c
+            FROM Sales_Area_Item__c WHERE Account__c =: op.AccountId
+            AND Sales_Org__c = '1100'
+            AND Division__c NOT IN ('50', '20', '00')
+        ];
 
-            if (salesAreaItemList.isEmpty()) {
-                return JSON.serialize(new Map<String, Object>{'error' => 'No Sales Area Item Found'});
-            }
+        if (salesAreaItemList.isEmpty()) {
+            return new List<String>{JSON.serialize(new Map<String, Object>{'error' => 'No Sales Area Item Found'})};
+        }
 
-            Set<Id> existingProdId = new Set<Id>();
-            for (OpportunityLineItem opr : [SELECT Product2Id FROM OpportunityLineItem 
-                                            WHERE OpportunityId =: recordId]) {
-                existingProdId.add(opr.Product2Id);
-            }
+        Set<Id> existingProdId = new Set<Id>();
+        for (OpportunityLineItem opr : [SELECT Product2Id FROM OpportunityLineItem 
+                                        WHERE OpportunityId =: recordId]) {
+            existingProdId.add(opr.Product2Id);
+        }
 
-            wrapperClass wc = new wrapperClass();
-            wc.priceBook = op.Pricebook2.Name;
+        String query = 'SELECT Id, UnitPrice, Product2Id, ' +
+            'Product2.Name, Product2.Family, ' +
+            'Product2.ProductCode, Product2.Description, Product2.Item_Type__c ' +
+            'FROM PricebookEntry ' +
+            'WHERE Distribution_Channel__c = \'' + salesAreaItemList[0].Distribution_Channel__c + '\' ' +
+            'AND Sales_Org__c = \'1100\' ' +
+            'AND Pricebook2Id = \'' + op.Pricebook2Id + '\' ' +
+            'AND Product2Id IN (SELECT Product__c FROM Plant_Data__c WHERE Plant__c = \'1100\') ' +
+            'AND Product2Id NOT IN :existingProdId ';
 
-            String query = 'SELECT Id, UnitPrice, Product2Id, ' +
-                'Product2.Name, Product2.Family, ' +
-                'Product2.ProductCode, Product2.Description, Product2.Item_Type__c ' +
-                'FROM PricebookEntry ' +
-                'WHERE Distribution_Channel__c = \'' + salesAreaItemList[0].Distribution_Channel__c + '\' ' +
-                'AND Sales_Org__c = \'1100\' ' +
-                'AND Pricebook2Id = \'' + op.Pricebook2Id + '\' ' +
-                'AND Product2Id IN (SELECT Product__c FROM Plant_Data__c WHERE Plant__c = \'1100\') ' +
-                'AND Product2Id NOT IN :existingProdId ';
+        if (String.isNotBlank(searchKey)) {
+            String escapedSearchKey = String.escapeSingleQuotes(searchKey);
+            query += 'AND (Product2.Name LIKE \'%' + escapedSearchKey + '%\' ' +
+                    'OR Product2.ProductCode LIKE \'%' + escapedSearchKey + '%\') ';
+        }
 
-            if (String.isNotBlank(searchKey)) {
-                String escapedSearchKey = String.escapeSingleQuotes(searchKey);
-                query += 'AND (Product2.Name LIKE \'%' + escapedSearchKey + '%\' ' +
-                        'OR Product2.ProductCode LIKE \'%' + escapedSearchKey + '%\') ';
-            }
+        if (String.isNotBlank(itemType)) {
+            String escapedItemType = String.escapeSingleQuotes(itemType);
+            query += 'AND Product2.Item_Type__c = \'' + escapedItemType + '\' ';
+        }
 
-            if (String.isNotBlank(itemType)) {
-                String escapedItemType = String.escapeSingleQuotes(itemType);
-                query += 'AND Product2.Item_Type__c = \'' + escapedItemType + '\' ';
-            }
+        query += 'ORDER BY Product2.ProductCode ASC';
 
-            query += 'ORDER BY Product2.ProductCode ASC LIMIT 12345';
+        List<PricebookEntry> lstPBE = Database.query(query);
 
-            List<PricebookEntry> lstPBE = Database.query(query);
+        Map<String, Customer_ARC_Pricing__c> arcProductMap = new Map<String, Customer_ARC_Pricing__c>();
+        for (Customer_ARC_Pricing__c ca : [
+            SELECT Id, Name, Customer__c, Amount__c, Material__c, Material__r.ProductCode,
+            Scale_Qty1__c, Scale_Qty2__c, Scale_Qty3__c, Scale_Qty4__c, Scale_Qty5__c,
+            Scale_Amt1__c, Scale_Amt2__c, Scale_Amt3__c, Scale_Amt4__c, Scale_Amt5__c
+            FROM Customer_ARC_Pricing__c
+            WHERE Customer__c =: op.AccountId
+            AND Material__c != null
+            AND Sales_Organization__c = '1100'
+            AND Distribution_Channel__c =: salesAreaItemList[0].Distribution_Channel__c
+        ]) {
+            arcProductMap.put(ca.Material__r.ProductCode, ca);
+        }
 
-            Map<String, Customer_ARC_Pricing__c> arcProductMap = new Map<String, Customer_ARC_Pricing__c>();
-            for (Customer_ARC_Pricing__c ca : [
-                SELECT Id, Name, Customer__c, Amount__c, Material__c, Material__r.ProductCode,
-                Scale_Qty1__c, Scale_Qty2__c, Scale_Qty3__c, Scale_Qty4__c, Scale_Qty5__c,
-                Scale_Amt1__c, Scale_Amt2__c, Scale_Amt3__c, Scale_Amt4__c, Scale_Amt5__c
-                FROM Customer_ARC_Pricing__c
-                WHERE Customer__c =: op.AccountId
-                AND Material__c != null
-                AND Sales_Organization__c = '1100'
-                AND Distribution_Channel__c =: salesAreaItemList[0].Distribution_Channel__c
-            ]) {
-                arcProductMap.put(ca.Material__r.ProductCode, ca);
-            }
+        Date todayDate = Date.today();
+        List<Incoterm__c> incotermsList = [
+            SELECT Id, Incoterm_Percent__c
+            FROM Incoterm__c
+            WHERE Name =: salesAreaItemList[0].Incoterms__c
+            AND Sales_Org__c = '1100'
+            AND Distribution_Channel__c =: salesAreaItemList[0].Distribution_Channel__c
+            AND Division__c =: salesAreaItemList[0].Division__c
+            AND Valid_From__c <=: todayDate
+            AND Valid_To__c >=: todayDate
+            LIMIT 1
+        ];
 
-            Date todayDate = Date.today();
-            List<Incoterm__c> incotermsList = [
-                SELECT Id, Incoterm_Percent__c
-                FROM Incoterm__c
-                WHERE Name =: salesAreaItemList[0].Incoterms__c
-                AND Sales_Org__c = '1100'
-                AND Distribution_Channel__c =: salesAreaItemList[0].Distribution_Channel__c
-                AND Division__c =: salesAreaItemList[0].Division__c
-                AND Valid_From__c <=: todayDate
-                AND Valid_To__c >=: todayDate
-                LIMIT 1
-            ];
-
-            List<ProductWrapper> lstProduct = new List<ProductWrapper>();
-            Integer i = 0;
+        List<ProductWrapper> lstProduct = new List<ProductWrapper>();
+        Integer i = 0;
+        
+        for (PricebookEntry pbe : lstPBE) {
+            ProductWrapper pw = new ProductWrapper();
+            pw.Id = pbe.Id;
+            pw.purl = '/lightning/r/' + pbe.Id + '/view';
+            pw.Product2Id = pbe.Product2Id;
+            pw.Name = pbe.Product2.Name;
+            pw.ProductCode = pbe.Product2.ProductCode;
+            pw.Family = pbe.Product2.Family;
+            pw.Description = pbe.Product2.Description;
+            pw.Quantity = 0;
+            pw.ARCQuantity = 0;
+            pw.itemType = pbe.Product2.Item_Type__c;
             
-            for (PricebookEntry pbe : lstPBE) {
-                ProductWrapper pw = new ProductWrapper();
-                pw.Id = pbe.Id;
-                pw.purl = '/lightning/r/' + pbe.Id + '/view';
-                pw.Product2Id = pbe.Product2Id;
-                pw.Name = pbe.Product2.Name;
-                pw.ProductCode = pbe.Product2.ProductCode;
-                pw.Family = pbe.Product2.Family;
-                pw.Description = pbe.Product2.Description;
-                pw.Quantity = 0;
-                pw.ARCQuantity = 0;
-                pw.itemType = pbe.Product2.Item_Type__c;
-                
-                // Handle ARC pricing
-                if (arcProductMap.containsKey(pbe.Product2.ProductCode)) {
-                    Customer_ARC_Pricing__c cap = arcProductMap.get(pbe.Product2.ProductCode);
-                    pw.PriceOption = buildScaleList(cap);
-                    pw.Price = cap.Scale_Amt1__c;
-                    pw.ListPrice = cap.Scale_Amt1__c;
-                    pw.IsARC = true;
-                    pw.Quantity = cap.Scale_Qty1__c;
-                    pw.ARCQuantity = cap.Scale_Qty1__c;
-                } else {
-                    pw.Price = pbe.UnitPrice;
-                    pw.ListPrice = pbe.UnitPrice;
-                    pw.IsARC = false;
+            if (arcProductMap.containsKey(pbe.Product2.ProductCode)) {
+                Customer_ARC_Pricing__c cap = arcProductMap.get(pbe.Product2.ProductCode);
+                pw.PriceOption = buildScaleList(cap);
+                pw.Price = cap.Scale_Amt1__c;
+                pw.ListPrice = cap.Scale_Amt1__c;
+                pw.IsARC = true;
+                pw.Quantity = cap.Scale_Qty1__c;
+                pw.ARCQuantity = cap.Scale_Qty1__c;
+            } else {
+                pw.Price = pbe.UnitPrice;
+                pw.ListPrice = pbe.UnitPrice;
+                pw.IsARC = false;
+            }
+            
+            pw.SalesPrice = null;
+            pw.Incoterms = incotermsList.isEmpty() ? 0 : incotermsList[0].Incoterm_Percent__c - 100;
+            pw.index = i++;
+            pw.showError = false;
+            lstProduct.add(pw);
+        }
+
+        // Split into 3 chunks to avoid heap size limit
+        Integer totalSize = lstProduct.size();
+        Integer chunkSize = (Integer)Math.ceil(totalSize / 3.0);
+        
+        List<String> chunks = new List<String>();
+        
+        for (Integer chunkIndex = 0; chunkIndex < 3; chunkIndex++) {
+            Integer startIdx = chunkIndex * chunkSize;
+            Integer endIdx = Math.min(startIdx + chunkSize, totalSize);
+            
+            if (startIdx < totalSize) {
+                List<ProductWrapper> chunkData = new List<ProductWrapper>();
+                for (Integer idx = startIdx; idx < endIdx; idx++) {
+                    chunkData.add(lstProduct[idx]);
                 }
                 
-                pw.SalesPrice = null;
-                pw.Incoterms = incotermsList.isEmpty() ? 0 : incotermsList[0].Incoterm_Percent__c - 100;
-                pw.index = i++;
-                pw.showError = false;
-                lstProduct.add(pw);
+                wrapperClass wc = new wrapperClass();
+                wc.priceBook = op.Pricebook2.Name;
+                wc.productList = chunkData;
+                wc.chunkIndex = chunkIndex;
+                wc.totalChunks = 3;
+                wc.totalRecords = totalSize;
+                
+                chunks.add(JSON.serialize(wc));
             }
-
-            wc.productList = lstProduct;
-            return JSON.serialize(wc);
-
-        // } catch (Exception e) {
-        //     System.debug('Error in findProductsOptimized: ' + e.getMessage() + ' at ' + e.getLineNumber());
-        //     return JSON.serialize(new Map<String, Object>{'error' => e.getMessage()});
-        // }
+        }
+        
+        return chunks;
     }
+
 
     // Helper method to build scale list
     private static List<Map<String, Decimal>> buildScaleList(Customer_ARC_Pricing__c cap) {
@@ -687,9 +704,13 @@ public without sharing class AddProductPageOpp {
         }
     }
 
+    // Update wrapperClass to include chunk metadata
     public with sharing class wrapperClass {
         public String priceBook;
-        public List < ProductWrapper > productList;
+        public List<ProductWrapper> productList;
+        public Integer chunkIndex;
+        public Integer totalChunks;
+        public Integer totalRecords;
     }
 
     public with sharing class ProductWrapper {

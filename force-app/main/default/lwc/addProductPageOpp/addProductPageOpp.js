@@ -186,7 +186,7 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
     get itemsOptions() {
         let items = [
             { label: '--None--', value: '' },
-            { label: 'Spares/Special', value: 'Spares/Special' },
+            { label: 'Spares / Special', value: 'Spares / Special' },
             { label: 'Coil', value: 'Coil' },
             { label: 'SOV', value: 'SOV' },
             { label: 'Valve', value: 'Valve' },
@@ -236,20 +236,46 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
             searchKey: this.searchKey,
             itemType: option
         })
-        .then(result => {
-            let dataObj = JSON.parse(result);
+        .then(chunks => {
+            console.log('Received chunks:', chunks.length);
             
-            if (dataObj.error) {
-                throw new Error(dataObj.error);
-            }
+            // Combine all chunks
+            let allProducts = [];
+            let priceBook = '';
             
-            this.AllProductData = dataObj.productList;
-            this.ShowTableData = dataObj.productList;
+            chunks.forEach(chunkStr => {
+                try {
+                    let chunkObj = JSON.parse(chunkStr);
+                    
+                    if (chunkObj.error) {
+                        throw new Error(chunkObj.error);
+                    }
+                    
+                    // Get pricebook from first chunk
+                    if (!priceBook && chunkObj.priceBook) {
+                        priceBook = chunkObj.priceBook;
+                    }
+                    
+                    // Merge products from this chunk
+                    if (chunkObj.productList && Array.isArray(chunkObj.productList)) {
+                        allProducts = allProducts.concat(chunkObj.productList);
+                    }
+                    
+                    console.log(`Chunk ${chunkObj.chunkIndex + 1}/${chunkObj.totalChunks}: ${chunkObj.productList.length} products`);
+                } catch (parseError) {
+                    console.error('Error parsing chunk:', parseError);
+                    throw parseError;
+                }
+            });
+            
+            console.log('Total products loaded:', allProducts.length);
+            
+            this.AllProductData = allProducts;
+            this.ShowTableData = allProducts;
             this.paginiateData(JSON.stringify(this.AllProductData));
             this.page = 1;
             this.showSpinner = false;
             this.searchDisabled = false;
-
         })
         .catch(error => {
             console.error('Error loading products:', error);
@@ -257,7 +283,7 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
             this.searchDisabled = true;
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Error',
-                message: 'Failed to load products: ' + error.message,
+                message: 'Failed to load products: ' + (error.body?.message || error.message),
                 variant: 'error',
             }));
         });
@@ -280,47 +306,47 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
     }
 
 
-    @wire(findProducts, { recordId: '$recId', productFamily: '$productFamily' })
-    wiredProducts({ error, data }) {
+    // @wire(findProducts, { recordId: '$recId', productFamily: '$productFamily' })
+    // wiredProducts({ error, data }) {
 
-        // console.log('HEREEE:>> ', data);
-        // console.log('HEREEE:>> ', error);
+    //     // console.log('HEREEE:>> ', data);
+    //     // console.log('HEREEE:>> ', error);
 
-        if (data) {
-            this.isModalOpen = true;
-            let lstProduct = [];
-            this.ShowTableData = [];
-            this.selectedProductCode = [];
-            this.AllProductData = [];
-            this.SelectedProductData = [];
-            data.forEach(pbe => {
-                let pw = {
-                    Id: pbe.Id,
-                    purl: `/lightning/r/${pbe.Id}/view`,
-                    Product2Id: pbe.Product2Id,
-                    Name: pbe.Product2.Name,
-                    ProductCode: pbe.Product2.ProductCode,
-                    Family: pbe.Product2.Family,
-                    Description: pbe.Product2.Description,
-                    Price: pbe.UnitPrice,
-                    SalesPrice: null,
-                    index: i++,
-                    showError: false
-                };
-                lstProduct.push(pw);
-            });
-            this.AllProductData = lstProduct;
-            this.ShowTableData = lstProduct;
-            // this.PriceBook = dataObj.priceBook;
-            const endTime = performance.now(); // End time measurement
-            this.loadTime = (endTime - this.startTime).toFixed(2); // Calculate load time
-            console.log(`Wire method load time: ${this.loadTime} ms`);
-        } else if (error) {
-            console.log('HEREEE 222');
-            this.error = error;
-            console.error(`Error fetching products: ${error.message}`);
-        }
-    }
+    //     if (data) {
+    //         this.isModalOpen = true;
+    //         let lstProduct = [];
+    //         this.ShowTableData = [];
+    //         this.selectedProductCode = [];
+    //         this.AllProductData = [];
+    //         this.SelectedProductData = [];
+    //         data.forEach(pbe => {
+    //             let pw = {
+    //                 Id: pbe.Id,
+    //                 purl: `/lightning/r/${pbe.Id}/view`,
+    //                 Product2Id: pbe.Product2Id,
+    //                 Name: pbe.Product2.Name,
+    //                 ProductCode: pbe.Product2.ProductCode,
+    //                 Family: pbe.Product2.Family,
+    //                 Description: pbe.Product2.Description,
+    //                 Price: pbe.UnitPrice,
+    //                 SalesPrice: null,
+    //                 index: i++,
+    //                 showError: false
+    //             };
+    //             lstProduct.push(pw);
+    //         });
+    //         this.AllProductData = lstProduct;
+    //         this.ShowTableData = lstProduct;
+    //         // this.PriceBook = dataObj.priceBook;
+    //         const endTime = performance.now(); // End time measurement
+    //         this.loadTime = (endTime - this.startTime).toFixed(2); // Calculate load time
+    //         console.log(`Wire method load time: ${this.loadTime} ms`);
+    //     } else if (error) {
+    //         console.log('HEREEE 222');
+    //         this.error = error;
+    //         console.error(`Error fetching products: ${error.message}`);
+    //     }
+    // }
 
 
     // openModal() {

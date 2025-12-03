@@ -111,9 +111,9 @@ public class AddProductPageOpp_Test {
         Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
         
         Test.startTest();
-        String result1 = AddProductPageOpp.findProductsOptimized(opp.Id, 'Test', 'Standard');
-        String result2 = AddProductPageOpp.findProductsOptimized(opp.Id, '', '');
-        String result3 = AddProductPageOpp.findProductsOptimized(opp.Id, 'Product', 'Standard');
+        AddProductPageOpp.findProductsOptimized(opp.Id, 'Test', 'Standard');
+        AddProductPageOpp.findProductsOptimized(opp.Id, '', '');
+        AddProductPageOpp.findProductsOptimized(opp.Id, 'Product', 'Standard');
         Test.stopTest();
     }
     
@@ -201,7 +201,7 @@ public class AddProductPageOpp_Test {
         
         Test.startTest();
         String result = AddProductPageOpp.findProduct(opp2.Id, new List<String>(), '', 1);
-        String result2 = AddProductPageOpp.findProductsOptimized(opp2.Id, '', '');
+        AddProductPageOpp.findProductsOptimized(opp2.Id, '', '');
         Test.stopTest();
     }
 }

@@ -42,16 +42,16 @@ public class UtilityCls {
             if (apiName == 'Pricing_Master_API' || apiName == 'Discount_Master_API' || apiName == 'ARCPricing_Master_API') {
 
                 if (apiName == 'Pricing_Master_API') {
-                    strUrl = '&$filter=Material%20eq%20%27'+filterData+'%27%20';
+                    strUrl = '&$filter=Material%20eq%20%27' + filterData + '%27%20';
                 } else if (apiName == 'ARCPricing_Master_API') {
-                    strUrl = '&$filter=Customer%20eq%20%27'+filterData+'%27%20';
+                    strUrl = '&$filter=Customer%20eq%20%27' + filterData + '%27%20';
                 }
-                
+
             } else {
                 // strUrl = '&$filter=created_on_date eq \'' + formattedDate + '\' or changed_on_date eq \'' + formattedDate2 + '\' ';
                 // strUrl = '&$filter= changed_on_date eq \'' + formattedDate2 + '\' &$filter=customer_number%20eq%20%271000934%27%20';
                 if (apiName == 'Customer_Master_API_2') {
-                    strUrl = '&$filter=customer_number%20eq%20%27'+filterData+'%27%20';
+                    strUrl = '&$filter=customer_number%20eq%20%27' + filterData + '%27%20';
                 } else {
                     if (apiName != 'Inco_Terms') {
                         strUrl = '&$filter=created_on_date eq \'' + formattedDate + '\' or changed_on_date eq \'' + formattedDate2 + '\' ';
@@ -185,18 +185,19 @@ public class UtilityCls {
                 Method__c = apiName.endsWith('_POST') ? 'POST' : 'GET'
             );
         }
-        
+
         // In non-test context, query the actual metadata
         try {
-            return [SELECT Id, Endpoint__c, Method__c 
-                   FROM WebService_Setting__mdt 
-                   WHERE DeveloperName = :apiName 
-                   LIMIT 1];
+            return [SELECT Id, Endpoint__c, Method__c
+                FROM WebService_Setting__mdt
+                WHERE DeveloperName =: apiName
+                LIMIT 1
+            ];
         } catch (Exception e) {
             throw new AuraHandledException('Web Service Setting not found for: ' + apiName);
         }
     }
-    
+
     public static APIparamter getAPIdetails(String apiName) {
         WebService_Setting__mdt wbs = getWebServiceSetting(apiName);
         APIparamter apiparam = new APIparamter();

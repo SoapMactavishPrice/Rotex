@@ -249,7 +249,7 @@ color: #008080; -->
     <tr>
         <td></td><td></td><td></td><td></td><td></td>
         <td style="text-align: left;" class="label-right"><strong>Total Amount (INR)</strong></td>
-        <td style="text-align: left;" class="num"><strong>{!quData.GrandTotal}</strong></td>
+        <td style="text-align: left;" class="num"><strong>{!quData.Grand_Total__c}</strong></td>
     </tr>
 
     <tr><td colspan="8"><br/><br/></td></tr>

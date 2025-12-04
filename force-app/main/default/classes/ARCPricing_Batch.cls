@@ -16,7 +16,9 @@ global class ARCPricing_Batch implements Database.Batchable<sObject>,Database.St
                 SELECT Id, SAP_Customer_Code__c
                 FROM Account
                 WHERE SAP_Customer_Code__c != null
+                // AND Id NOT IN (SELECT Account__c FROM Sales_Area_Item__c)
                 ORDER BY SAP_Customer_Code__c
+                // LIMIT 10
             ]);
         }
     }

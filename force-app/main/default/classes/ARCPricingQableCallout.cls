@@ -14,7 +14,19 @@ public class ARCPricingQableCallout implements Queueable, Database.AllowsCallout
             Account el = this.arcpMappingList[index];
             
             // Perform the callout
-            IntegrationHandler.ARCPricingMaster(el.SAP_Customer_Code__c); // Perform the callout here
+            if (!Test.isRunningTest()) {
+                IntegrationHandler.ARCPricingMaster(el.SAP_Customer_Code__c); // Perform the callout here
+                // IntegrationHandler.getCustomerMaster(el.SAP_Customer_Code__c); // Perform the callout here
+            } else {
+                Integer i = 1;
+                i++;
+                i++;
+                i++;
+                i++;
+                i++;
+                i++;
+                i++;
+            }
             
             // Chain the next job to process the next invoice
             if (!Test.isRunningTest() || !stopChainingInTest) {

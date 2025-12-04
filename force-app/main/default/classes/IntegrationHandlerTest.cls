@@ -50,7 +50,7 @@ private class IntegrationHandlerTest {
                 }
                 when 'material' {
                     return '{ "d": { "results": [ ' +
-                        '{ "item_no": "ITEM123", "item_description": "Test Item", "long_description": "Long Desc", "base_uom": "EA", "mat_group": "GRP1",' +
+                        '{ "item_no": "ITEM123", "item_description": "Test Item", "long_description": "Long Desc", "base_uom": "EA", "mat_group": "GRP1","created_on_date": "2025-12-01","changed_on_date": "2025-12-01",' +
                         '"to_plant_data": { "results": [ ' +
                         '{ "plant": "PLANT1", "hsn_code": "HSN123", ' +
                         '"to_salesarea_data": { "results": [ ' +
@@ -222,6 +222,7 @@ private class IntegrationHandlerTest {
         Test.startTest();
         Date dateOfExc = date.valueOf('2025-10-31');
         IntegrationHandler.getCustomerMaster();
+        // IntegrationHandler.getCustomerMaster('1001176');
         // IntegrationHandler.getCustomerMaster(dateOfExc);
         Test.stopTest();
         
@@ -552,7 +553,7 @@ private class IntegrationHandlerTest {
     @isTest
     static void testSalesOrderCreation() {
         // Create test data
-        Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '7000001');
+        Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
         insert acc;
         
         Opportunity opp = new Opportunity(
@@ -625,7 +626,7 @@ static void testGetQuotePayload() {
     upsert stdPb;
 
     // Step 1: Create Account
-    Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = 'CUST001');
+    Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
     insert acc;
 
     // Step 2: Create Opportunity
@@ -744,7 +745,7 @@ static void testGetQuotePayload() {
     @isTest
     static void testQuoteValidation() {
         // Create test Quote
-        Account acc = new Account(Name = 'Test Account');
+        Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
         insert acc;
         
         Opportunity opp = new Opportunity(
@@ -783,7 +784,7 @@ static void testGetLineItem() {
     upsert stdPb;
 
     // Step 1: Create Account
-    Account acc = new Account(Name = 'Test Account');
+    Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
     insert acc;
 
     // Step 2: Create Opportunity
@@ -852,7 +853,7 @@ static void testGetLineItem() {
     @isTest
     static void testUpdateQuotation() {
         // Create an Account (required for Opportunity)
-        Account acc = new Account(Name = 'Test Account');
+        Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
         insert acc;
         
         // Create an Opportunity
@@ -916,6 +917,7 @@ static void testGetLineItem() {
         // These should handle exceptions gracefully
         Date dateOfExc = date.valueOf('2025-10-31');
         IntegrationHandler.getCustomerMaster();
+        // IntegrationHandler.getCustomerMaster('1001176');
         // IntegrationHandler.getMaterialMaster(dateOfExc);
         // IntegrationHandler.getMaterialMaster('93000036695');
         IntegrationHandler.getMaterialMaster();

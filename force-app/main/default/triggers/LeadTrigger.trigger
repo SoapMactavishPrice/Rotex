@@ -80,11 +80,12 @@ system.debug(countryMap.get(lead.Country));
         
         // Map to store status-specific DateTime fields
         Map<String, String> statusFieldMap = new Map<String, String>{
-            'New' => 'New_Date_Time__c',
+                'New' => 'New_Date_Time__c',
                 'Contacted' => 'Contacted_Date_Time__c',
                 'Forward to Dealer' => 'Forward_to_Dealer_Date_Time__c',
                 'Work In Progress' => 'Work_In_Progress_Date_Time__c',
                 'Qualified' => 'Qualified_Date_Time__c',
+                'Future Prospect' => 'Future_Prospect_Date_Time__c',
                 'Regret' => 'Regret_Date_Time__c'
                 };
                     

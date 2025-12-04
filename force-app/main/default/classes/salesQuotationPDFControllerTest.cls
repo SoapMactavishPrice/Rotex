@@ -32,7 +32,8 @@ static void setupTestData() {
         Minimum_Offer_Approval_Status__c = 'Submitted',
         Payment_Terms_Approval_Status__c = 'Submitted',
         Warranty_Terms_Approval_Status__c = 'Submitted',
-        Approval_Status__c = 'Submitted'
+        Approval_Status__c = 'Submitted',
+        Payment_Terms__c = 'Open Credit upto 180 days'
     );
     insert testQuote;
     testQuote.Is_Small_Order_Handling__c = true;
@@ -41,6 +42,8 @@ static void setupTestData() {
     testQuote.Warranty_Terms_Approval_Status__c = 'Approved';
     testQuote.Approval_Status__c = 'Approved';
     Update testQuote;
+    testQuote.Minimum_Offer_Approval_Status__c = 'Approved';
+
     QuoteLineItem qli = new QuoteLineItem(QuoteId = testQuote.Id, PricebookEntryId = standardPricebookEntry.Id, Quantity = 10, UnitPrice = 100);
     insert qli;
 }

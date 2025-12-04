@@ -1,18 +1,16 @@
 public class LeadSharingHandler {
-
+    
     public static void handleOwnerChange(List<Lead> newList, Map<Id, Lead> oldMap) {
-
+        
         List<LeadShare> sharesToInsert = new List<LeadShare>();
-
+        
         for (Lead ld : newList) {
             Lead oldRec = oldMap.get(ld.Id);
-
-            // check ownership change
+            
             if (ld.OwnerId != oldRec.OwnerId) {
-
+                
                 Id creatorId = ld.CreatedById;
-
-                // prevent sharing if creator is new owner
+                
                 if (creatorId != ld.OwnerId) {
                     LeadShare ls = new LeadShare();
                     ls.LeadId = ld.Id;
@@ -23,9 +21,9 @@ public class LeadSharingHandler {
                 }
             }
         }
-
-       // if (!sharesToInsert.isEmpty()) {
-          //  insert sharesToInsert;
-//        }
+        
+        if (!sharesToInsert.isEmpty()) {
+            insert sharesToInsert;
+        }
     }
 }

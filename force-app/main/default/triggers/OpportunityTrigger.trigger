@@ -5,6 +5,10 @@ trigger OpportunityTrigger on Opportunity (After Update, before update) {
         system.debug(trigger.new);
     }
     
+     if (Trigger.isAfter && Trigger.isUpdate) {
+        OpportunityTriggerHandler.handleOwnerChange(Trigger.new, Trigger.oldMap);
+    }
+    
     if(Trigger.isBefore && Trigger.isUpdate) {
         Set<Id> oppIds = new Set<Id>();
         

@@ -62,7 +62,8 @@ return;
                       Total_CGST_Amount__c,Total_SGST_Amount__c,Payment_Terms_Approval_Status__c,Warranty_Terms_Approval_Status__c,
                       Is_Small_Order_Handling__c,Minimum_Offer_Approval_Status__c,
                       Bill_To_Street__c,Bill_To_City__c,Bill_To_Postal_Code__c,Bill_To_State__c,Bill_To_Country__c,
-                      Ship_To_Street__c,Ship_To_City__c,Ship_To_Postal_Code__c,Ship_To_State__c,Ship_To_Country__c
+                      Ship_To_Street__c,Ship_To_City__c,Ship_To_Postal_Code__c,Ship_To_State__c,Ship_To_Country__c,
+                      Grand_Total__c
                       FROM Quote WHERE Id = :qId];
         } catch (Exception e) {
             System.debug('Error querying Quote data: ' + e.getMessage());
@@ -72,16 +73,16 @@ return;
         }
         //quoteRecord.INCOTerms = quData.INCO_Terms__c;
         INCOTerms = quData.INCO_Terms__c;
-       // PaymentTerms = quData.Payment_Terms__c;
-       PaymentTerms = '';
-if (quData.Payment_Terms__c != null) {
-    for (Schema.PicklistEntry p : Quote.Payment_Terms__c.getDescribe().getPicklistValues()) {
-        if (p.getValue() == quData.Payment_Terms__c) {
-            PaymentTerms = p.getLabel();
-            break;
+        // PaymentTerms = quData.Payment_Terms__c;
+        PaymentTerms = '';
+        if (quData.Payment_Terms__c != null) {
+            for (Schema.PicklistEntry p : Quote.Payment_Terms__c.getDescribe().getPicklistValues()) {
+                if (p.getValue() == quData.Payment_Terms__c) {
+                    PaymentTerms = p.getLabel();
+                    break;
+                }
+            }
         }
-    }
-}
 
 
         QuoteNumber = quData.QuoteNumber;
@@ -157,9 +158,9 @@ if (quData.Payment_Terms__c != null) {
                      Estimated_Commission_Per_Kgs__c, Estimated_Ocean_Freight_Per_Kgs__c, Estimated_Inspection_Fee_Per_Kgs__c, LC_Confirmation_Charges_Per_Kgs__c, 
                      Other_Incidental_Expenses_Per_Kgs__c, Unit_Price_Excl_VAT_Rate_per_Kgs__c, Line_Amount_Excl_VAT_Qty_Rate__c, 
                      Product2.ProductCode,Product2.Base_UOM__c,Customer_Part_No__c,Sales_Rep_Status__c,Sales_Manager_Status__c,
-                     Country_Continent_Sales_H_LOB_Status__c,Global_Sales_Head_Status__c,Rotex_Board_Member_Status__c,Managing_Director_Status__c
-                     FROM QuoteLineItem 
-                     WHERE QuoteId = :quData.Id];
+                     Country_Continent_Sales_H_LOB_Status__c,Global_Sales_Head_Status__c,Rotex_Board_Member_Status__c,Managing_Director_Status__c,
+                     Unit_Price__c,Total_Value__c
+                     FROM QuoteLineItem WHERE QuoteId = :quData.Id];
         } catch (Exception e) {
             System.debug('Error querying QuoteLineItems: ' + e.getMessage());
             ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Error retrieving Quote Line Items.'));
@@ -206,8 +207,9 @@ if (quData.Payment_Terms__c != null) {
                 ql.GoodsDescription = qli.Product2.Name;              
                 ql.Quantity = qli.Quantity;
                 ql.UoM = qli.Product2.Base_UOM__c;
-                ql.Rate = qli.UnitPrice;
-                ql.Totalvalue = qli.TotalPrice;
+              //ql.Rate = qli.UnitPrice;
+              ql.Rate = qli.Unit_Price__c;
+                ql.Totalvalue = qli.Total_Value__c;
                 ql.CustomerPartNo =qli.Customer_Part_No__c;
                 totalQuantity += qli.Quantity;
                 if (ql.Totalvalue != null) {
@@ -221,7 +223,7 @@ if (quData.Payment_Terms__c != null) {
                 
                 no2words = totalValueINRWords + ' Rupees Only.';*/
                 // Convert Grand Total (including GST)
-                Decimal gt = quData.GrandTotal != null ? quData.GrandTotal : 0;
+                Decimal gt = quData.Grand_Total__c != null ? quData.Grand_Total__c : 0;
                 Integer gtInt = gt.intValue();   // Converter requires integer
                 
                 String grandTotalWords = convertCurrencytowords.convert(gtInt);
@@ -230,6 +232,23 @@ if (quData.Payment_Terms__c != null) {
                 System.debug(ql.GoodsDescription);
                 quoteRecord.lineItems.add(ql); 
             }
+            // === ALWAYS MOVE SMALL ORDER HANDLING TO LAST ===
+            List<QuoteLineItemWrapper> normalItems = new List<QuoteLineItemWrapper>();
+            List<QuoteLineItemWrapper> handlingItems = new List<QuoteLineItemWrapper>();
+            
+            for (QuoteLineItemWrapper li : quoteRecord.lineItems) {
+                if (li.GoodsDescription != null &&
+                    li.GoodsDescription.trim().toUpperCase() == 'SMALL ORDER HANDLING') {
+                        handlingItems.add(li);
+                    } else {
+                        normalItems.add(li);
+                    }
+            }
+            
+            // Rebuild list: normal first, SOH last
+            quoteRecord.lineItems.clear();
+            quoteRecord.lineItems.addAll(normalItems);
+            quoteRecord.lineItems.addAll(handlingItems);
         } else {
             ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Before making a Quote PDF, please add at least one product.'));
             isValid = false;

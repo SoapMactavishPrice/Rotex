@@ -1,0 +1,6 @@
+<aura:component implements="lightning:isUrlAddressable,forceCommunity:availableForAllPageTypes">
+    <aura:attribute name="refRecordId" type="String" />
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+    <aura:handler name="change" value="{!v.pageReference}" action="{!c.reInit}" />
+    <c:submitQuote recordId="{!v.refRecordId}" />
+</aura:component>

@@ -3,8 +3,8 @@ global class DailyApiBatchTemp implements Database.Batchable<Date>, Database.All
     // STEP 1: Create list of dates to iterate over
     global Iterable<Date> start(Database.BatchableContext bc) {
         List<Date> dateList = new List<Date>();
-        Date startDate = Date.newInstance(2024, 1, 1);
-        Date endDate = Date.newInstance(2024, 12, 31);
+        Date startDate = Date.newInstance(2025, 4, 1);
+        Date endDate = Date.newInstance(2025, 12, 15);
         // Date endDate = Date.today();
 
         if(test.isRunningTest()){
@@ -25,6 +25,7 @@ global class DailyApiBatchTemp implements Database.Batchable<Date>, Database.All
             try {
                 // IntegrationHandler.getMaterialMaster();
                 // IntegrationHandler.getCustomerMaster(dateParam);
+                IntegrationHandler.getSalesOrderMaster(dateParam);
             } catch (Exception e) {
                 System.debug('Error for date ' + dateParam + ': ' + e.getMessage());
                 // Optionally log to a custom object or use Platform Events

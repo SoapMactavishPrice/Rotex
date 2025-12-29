@@ -1,8 +1,6 @@
 trigger QuoteOwnerHierarchyTrigger on Quote (after insert, after update) {
     if (Trigger.isAfter && (Trigger.isInsert || Trigger.isUpdate)) {
-        if (!Test.isRunningTest()) {
-            QuoteHierarchyHandler.updateQuoteHierarchy(Trigger.new, Trigger.oldMap);
-        }
+        QuoteHierarchyHandler.updateQuoteHierarchy(Trigger.new, Trigger.oldMap);
     }
 
     if (Trigger.isAfter && Trigger.isUpdate) {

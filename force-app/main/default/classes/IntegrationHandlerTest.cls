@@ -325,6 +325,7 @@ private class IntegrationHandlerTest {
         Test.setMock(HttpCalloutMock.class, new MockHttpResponseGenerator('salesorder'));
     
         Test.startTest();
+        Date dateOfExc = date.valueOf('2025-10-31');
         IntegrationHandler.getSalesOrderMaster();
         Test.stopTest();
     

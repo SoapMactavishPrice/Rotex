@@ -280,6 +280,7 @@ public class IntegrationHandler {
                     prod.Base_UOM__c = parent.base_uom;
                     prod.Mat_Group__c = parent.mat_group;
                     prod.SAP_Integration__c = true;
+                    prod.IsActive = true;
                     prod.SAP_Created_On_Date__c = Date.valueOf(parent.created_on_date);
                     prod.SAP_Changed_On_Date__c = Date.valueOf(parent.changed_on_date);
 
@@ -351,7 +352,13 @@ public class IntegrationHandler {
         } catch (Exception e) {
             System.debug('Exception: ' + e.getMessage());
         } finally {
-            UtilityCls.logApiCall('Material_Master_API', '', '', resp != null ? resp.getBody() : '', '', resp != null ? resp.getStatusCode() : 0);
+            String body = '';
+            if (resp != null) {
+                body = resp.getBody();
+            }
+            Integer maxLength = 10000;
+            Integer safeLength = Math.min(body.length(), maxLength);
+            UtilityCls.logApiCall('Material_Master_API', '', '', body != null ? body.substring(0, safeLength) : '', '', resp != null ? resp.getStatusCode() : 0);
             // UtilityCls.logApiCall('Material_Master_API', '', '', '', '', resp != null ? resp.getStatusCode() : 0);
         }
     }
@@ -485,9 +492,10 @@ public class IntegrationHandler {
                     pRecord.Sold_To__c = (String) parent.sold_to;
                     pRecord.Ship_To__c = (String) parent.ship_to;
                     pRecord.Bill_To__c = (String) parent.bill_to;
+                    pRecord.Bill_To_Customer_Name__c = (String) accId.get(String.valueOf(parent.bill_to));
                     pRecord.Cust_Ref__c = (String) parent.cust_ref;
                     pRecord.Cust_Ref_Date__c = Date.valueOf(parent.custref_date);
-                    pRecord.EffectiveDate = Date.valueOf(parent.custref_date);
+                    pRecord.EffectiveDate = Date.valueOf(parent.created_on_date);
                     pRecord.Req_Del_Date__c = Date.valueOf(parent.reqdel_date);
                     pRecord.Sales_Org__c = (String) parent.sales_org;
                     pRecord.Distribution_Channel__c = (String) parent.distribution_channel;
@@ -613,8 +621,14 @@ public class IntegrationHandler {
             System.debug('Exception: ' + e.getMessage() + ' || ' + e.getLineNumber());
         } finally {
             // Log the API call
+            String body = '';
             if (resp != null) {
-                UtilityCls.logApiCall('Sales_Order_API', '', '', resp.getBody(), '', resp.getStatusCode());
+                body = resp.getBody();
+            }
+            Integer maxLength = 10000;
+            Integer safeLength = Math.min(body.length(), maxLength);
+            if (resp != null) {
+                UtilityCls.logApiCall('Sales_Order_API', '', '', body != null ? body.substring(0, safeLength) : '', '', resp.getStatusCode());
             } else {
                 UtilityCls.logApiCall('Sales_Order_API', '', '', '', 'No response from API', 0);
             }
@@ -1687,14 +1701,24 @@ public class IntegrationHandler {
         return jsonPayload;
     }
 
+    // public static String convertDateToMicrosoftJsonFormat(Date inputDate) {
+    //     // Step 1: Convert Date to DateTime (start of the day)
+    //     DateTime dt = DateTime.newInstance(inputDate, Time.newInstance(0, 0, 0, 0));
+
+    //     // Step 2: Convert to milliseconds since epoch
+    //     Long millis = dt.getTime(); // getTime() gives milliseconds since 1970
+
+    //     // Step 3: Format as Microsoft JSON date
+    //     return '/Date(' + millis + ')/';
+    // }
+
     public static String convertDateToMicrosoftJsonFormat(Date inputDate) {
-        // Step 1: Convert Date to DateTime (start of the day)
-        DateTime dt = DateTime.newInstance(inputDate, Time.newInstance(0, 0, 0, 0));
+        // Create UTC midnight instead of local midnight
+        DateTime dt = DateTime.newInstanceGMT(inputDate.year(), inputDate.month(), inputDate.day());
 
-        // Step 2: Convert to milliseconds since epoch
-        Long millis = dt.getTime(); // getTime() gives milliseconds since 1970
+        // Milliseconds since epoch (UTC)
+        Long millis = dt.getTime();
 
-        // Step 3: Format as Microsoft JSON date
         return '/Date(' + millis + ')/';
     }
 
@@ -1719,11 +1743,11 @@ public class IntegrationHandler {
                 retResData.put('sync', 'false');
                 retResData.put('message', 'Quote status is not Accepted');
             } else
-                // if(q.CustomerPurchaseOrderDate__c == null || q.RequestedDeliveryDate__c == null || q.Quote_Date__c == null || q.Quote_Valid_Till__c == null){
-                //     retResData.put('status', 'false');
-                //     retResData.put('sync', 'false');
-                //     retResData.put('message', 'Customer Purchase Order Date, Requested Delivery Date, Quote Date, Quote Valid Till Date cannot be blank');
-                // } else
+            //     if(q.CustomerPurchaseOrderDate__c == null || q.RequestedDeliveryDate__c == null || q.Quote_Date__c == null || q.Quote_Valid_Till__c == null){
+            //         retResData.put('status', 'false');
+            //         retResData.put('sync', 'false');
+            //         retResData.put('message', 'Customer Purchase Order Date, Requested Delivery Date, Quote Date, Quote Valid Till Date cannot be blank');
+            //     } else
                 if (q.SAP_Quotation_Number__c != null) {
                     retResData.put('status', 'false');
                     retResData.put('sync', 'false');

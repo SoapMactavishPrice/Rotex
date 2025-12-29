@@ -63,7 +63,7 @@ return;
                       Is_Small_Order_Handling__c,Minimum_Offer_Approval_Status__c,
                       Bill_To_Street__c,Bill_To_City__c,Bill_To_Postal_Code__c,Bill_To_State__c,Bill_To_Country__c,
                       Ship_To_Street__c,Ship_To_City__c,Ship_To_Postal_Code__c,Ship_To_State__c,Ship_To_Country__c,
-                      Grand_Total__c
+                      Grand_Total__c,Customer_Reference_No__c,Project_Details__c
                       FROM Quote WHERE Id = :qId];
         } catch (Exception e) {
             System.debug('Error querying Quote data: ' + e.getMessage());
@@ -89,7 +89,8 @@ return;
         pdf = Page.salesQuotationPDF;
         pdfUrl = '/apex/salesQuotationPDF?id=' + qId + '#toolbar=0';
         pdfName = quData.Name;
-        subject = 'Sales Quotation for Enquiry No: ' + quData.Opportunity.Customer_Enquiry_Ref_No__c + ' - ' + quData.Account.Name;
+        //subject = 'Sales Quotation for Enquiry No: ' + quData.Opportunity.Customer_Enquiry_Ref_No__c + ' - ' + quData.Account.Name;
+        subject = 'Sales Quotation for Customer Ref No: ' + quData.Customer_Reference_No__c + ' - ' + quData.Account.Name;
         // QuotationNo = qudata.QuoteNumber;
         
         isValid = true;
@@ -113,6 +114,20 @@ return;
             ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Please Fill Email'));
             isValid = false;
         }  
+        if (quData.Warranty_Terms__c == null) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Please Fill Warranty Terms'
+            ));
+            isValid = false;
+        }
+        if (quData.Liquidate_Terms__c == null) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Please Fill Liquidate Terms'
+            ));
+            isValid = false;
+        }
         // Small Order Handling condition
         if (quData.Is_Small_Order_Handling__c == true) {
             if (quData.Minimum_Offer_Approval_Status__c == 'Submitted') {
@@ -159,7 +174,7 @@ return;
                      Other_Incidental_Expenses_Per_Kgs__c, Unit_Price_Excl_VAT_Rate_per_Kgs__c, Line_Amount_Excl_VAT_Qty_Rate__c, 
                      Product2.ProductCode,Product2.Base_UOM__c,Customer_Part_No__c,Sales_Rep_Status__c,Sales_Manager_Status__c,
                      Country_Continent_Sales_H_LOB_Status__c,Global_Sales_Head_Status__c,Rotex_Board_Member_Status__c,Managing_Director_Status__c,
-                     Unit_Price__c,Total_Value__c
+                     Unit_Price__c,Total_Value__c,HSN_Code__c
                      FROM QuoteLineItem WHERE QuoteId = :quData.Id];
         } catch (Exception e) {
             System.debug('Error querying QuoteLineItems: ' + e.getMessage());
@@ -205,6 +220,7 @@ return;
                 ql.Name = qli.LineNumber;
                 ql.ItemCode = qli.Product2.ProductCode;
                 ql.GoodsDescription = qli.Product2.Name;              
+                ql.HSNCODE = qli.HSN_Code__c;
                 ql.Quantity = qli.Quantity;
                 ql.UoM = qli.Product2.Base_UOM__c;
               //ql.Rate = qli.UnitPrice;
@@ -458,7 +474,7 @@ public String CSwiftCode {get;set;}*/
         // public String Part_No_c {get;set;}
         // public String Product_Description {get;set;}
         public String getWrappedDescription() {
-    return salesQuotationPDFController.forceWrap(this.GoodsDescription, 30);
+    return salesQuotationPDFController.forceWrap(this.GoodsDescription, 20);
 }
 
     }

@@ -42,7 +42,8 @@ public class UtilityCls {
             if (apiName == 'Pricing_Master_API' || apiName == 'Discount_Master_API' || apiName == 'ARCPricing_Master_API') {
 
                 if (apiName == 'Pricing_Master_API') {
-                    strUrl = '&$filter=Material%20eq%20%27' + filterData + '%27%20';
+                    // strUrl = '&$filter=Material%20eq%20%27' + filterData + '%27%20';
+                    strUrl = '&$filter=Valid_from%20eq%20%27' + formattedDate + '%27%20';
                 } else if (apiName == 'ARCPricing_Master_API') {
                     strUrl = '&$filter=Customer%20eq%20%27' + filterData + '%27%20';
                 }
@@ -59,11 +60,12 @@ public class UtilityCls {
                     }
                 }
             }
-
+            
             //String strUrl ='&$filter= changed_on_date eq \''+formattedDate2+'\' ';
             if (apiName == 'Sales_Order_API') {
                 // strUrl = '&$filter= changed_on_date eq \'' + formattedDate2 + '\' ';
-                strUrl = '&$filter= created_on_date eq \'' + formattedDate2 + '\' ';
+                strUrl = '&$filter=created_on_date eq \'' + formattedDate + '\' or changed_on_date eq \'' + formattedDate2 + '\' ';
+                // strUrl = '&$filter=created_on_date eq \'' + formattedDate2 + '\' ';
             }
 
             if (apiName == 'Clearing_Payment_API') {

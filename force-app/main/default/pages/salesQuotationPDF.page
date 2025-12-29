@@ -90,6 +90,15 @@ color: #008080; -->
         padding-right: 6px;
     }
 </style>
+<style>
+    .terms-label span,
+    .terms-value span {
+        line-height: 1.4;       
+        display: block;
+        margin-bottom: 4px;      
+    }
+</style>
+        
     </head>
     
     <body style="width: 100%">
@@ -131,49 +140,101 @@ color: #008080; -->
         </div>
         
         
-        <table>
-            <tr >
-                <td style = "width: 70%;font-size: 12px;"> 
-                    <div  class="normalText" style="text-align: left;  line-height: 6px;">
-                        <p><strong>{!quData.Account.SAP_Customer_Code__c}</strong> </p>
-                        <p><strong>{!quData.Account.Name}</strong> </p>
-                        <p>{!quData.Account.Street__c}</p>
-                        <p>{!quData.Account.City__c} {!quData.Account.District__c} {!quData.Account.Postal_Code__c} {!quData.Account.State__c} {!quData.Account.Country__c} </p>
-                        <p>Email: {!quData.Account.Email_Id__c} </p>
-                        <p><strong>GST No : {!quData.Account.GSTIN_No__c} </strong></p>
-                        
+        <table style="width:100%; font-size:12px; border-collapse:collapse;">
+            <tr>
+                <!-- LEFT SIDE -->
+                <td style="width:60%; vertical-align:top;">
+                    <div class="normalText" style="line-height:14px;">
+                        <strong>{!quData.Account.SAP_Customer_Code__c}</strong><br/>
+                        <strong>{!quData.Account.Name}</strong><br/>
+                        {!quData.Account.Street__c}<br/>
+                        {!quData.Account.City__c} {!quData.Account.District__c} {!quData.Account.Postal_Code__c}
+                        {!quData.Account.State__c} {!quData.Account.Country__c}<br/>
+                        Email: {!quData.Account.Email_Id__c}<br/>
+                        <strong>GST No : {!quData.Account.GSTIN_No__c}</strong>
                     </div>
                 </td>
                 
-                <td style = "width: 15%;font-size: 12px; line-height: 0px;">
-                    <p><strong>Quotation No</strong></p><br/>
-                    <p><strong>Rev. No. </strong></p><br/>
-                    <p><strong>Rev. Date</strong></p><br/>
-                    <p><strong>Valid Till</strong></p><br/>
-                    <p><strong>RFQ No</strong></p><br/>
-                    <p><strong>RFQ Date</strong></p><br/>
-                    <p><strong>RFQ. Due Date</strong></p>
+                <!-- RIGHT SIDE -->
+                <td style="width:40%; vertical-align:top; text-align:left;">
+                    <table style="border-collapse:collapse; font-size:12px; width:100%;">
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">Quotation No &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td style="white-space:nowrap;">{!quData.QuoteNumber}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">Rev. No. &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>{!quData.Rev_No__c}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">Rev. Date &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>
+                                <apex:outputText value=" {!quData.Rev_Date__c}"><apex:param value="dd/MM/yyyy" /></apex:outputText>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">Valid Till &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>
+                                <apex:outputText value=" {!quData.ExpirationDate}"><apex:param value="dd/MM/yyyy" /></apex:outputText>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">RFQ No &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>{!quData.RFQ_No__c}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">RFQ Date &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>
+                                <apex:outputText value=" {!quData.RFQ_Date__c}"><apex:param value="dd/MM/yyyy" /></apex:outputText>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">RFQ Due Date &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>
+                                <apex:outputText value=" {!quData.RFQ_Due_Date__c}"><apex:param value="dd/MM/yyyy" /></apex:outputText>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
-                <td style = "width: 15%;font-size: 12px; line-height: 0px;">
-                    <p><strong>:&nbsp;</strong>{!quData.QuoteNumber}</p><br/>
-                    <p><strong>:&nbsp;</strong>{!quData.Rev_No__c}</p><br/> 
-                    <p><strong>:&nbsp;</strong><apex:outputText value=" {!quData.Rev_Date__c}"><apex:param value="dd/MM/yyyy" /></apex:outputText></p><br/>
-                    <p><strong>:&nbsp;</strong><apex:outputText value=" {!quData.ExpirationDate}"><apex:param value="dd/MM/yyyy" /></apex:outputText></p><br/>
-                    <p><strong>:&nbsp;</strong>{!quData.RFQ_No__c}</p><br/>
-                    <p><strong>:&nbsp;</strong><apex:outputText value=" {!quData.RFQ_Date__c}"><apex:param value="dd/MM/yyyy" /></apex:outputText></p><br/>
-                    <p><strong>:&nbsp;</strong><apex:outputText value=" {!quData.RFQ_Due_Date__c}"><apex:param value="dd/MM/yyyy" /></apex:outputText></p>
-                </td> 
+                
+            </tr>
+            
+            <!-- EXTRA DETAILS -->
+            <tr>
+                <td colspan="2" style="padding-top:8px;">
+                    <strong>Customer Reference No :</strong>&nbsp;{!quData.Customer_Reference_No__c}
+                </td>
             </tr>
             <tr>
-                <td style="font-size: 12px; width: 100%;" colspan="3">
+                <td colspan="2" style="padding-top:8px;">
+                    <strong>Project Details :</strong>&nbsp;{!quData.Project_Details__c}
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="padding-top:10px;">
                     <strong>
                         Kind Attn:<br/><br/>
-                        We thank you for your inquiry and have the pleasure to submit our techno-commercial offer in accordance with our standard terms and conditions of sales.
+                        We thank you for your inquiry and have the pleasure to submit our
+                        techno-commercial offer in accordance with our standard terms and
+                        conditions of sales.
                     </strong>
                 </td>
             </tr>
-            <br/>
-        </table> 
+        </table>
+
         
     
 
@@ -189,10 +250,11 @@ color: #008080; -->
         <th style="width: 10%; font-size: 12px; text-align: left;">Sr. No.</th>
         <th style="width: 15%; font-size: 12px; text-align: left;">Item Code</th>
         <th style="width: 25%; font-size: 12px; text-align: left;">Description</th>
-        <th style="width: 10%; font-size: 12px; text-align: left;">Quantity</th>
-        <th style="width: 10%; font-size: 12px; text-align: left;">UoM</th>
-        <th style="width: 10%; font-size: 12px; text-align: left;">Unit Price (INR)</th>
-        <th style="width: 10%; font-size: 12px; text-align: left;">Total (INR)</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">HSN Code</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">Quantity</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">UoM</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">Unit Price (INR)</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">Total (INR)</th>
     </tr>
 
     <apex:variable var="rows" value="{!0}"/>
@@ -210,7 +272,7 @@ color: #008080; -->
                     Cust Part No.: {!lineItem.CustomerPartNo}
                 </apex:outputPanel>
             </td>
-
+            <td style="text-align: left;">{!lineItem.HSNCODE}</td>
             <td style="text-align: left;">{!lineItem.Quantity}</td>
             <td style="text-align: left;">{!lineItem.UoM}</td>
 
@@ -221,25 +283,25 @@ color: #008080; -->
 
     <!-- TOTALS -->
     <tr>
-        <td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td><td></td><td></td>
         <td style="text-align: left;" class="label-right"><strong>Gross Price (INR)</strong></td>
         <td style="text-align: left;" class="num"><strong>{!totalValueINR}</strong></td>
     </tr>
 
     <tr>
-        <td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td><td></td><td></td>
         <td style="text-align: left;" class="label-right"><strong>{!IF(quData.Total_IGST_Amount__c>0,'IGST','')}</strong></td>
         <td style="text-align: left;" class="num">{!IF(quData.Total_IGST_Amount__c>0,TEXT(quData.Total_IGST_Amount__c),'')}</td>
     </tr>
 
     <tr>
-        <td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td><td></td><td></td>
         <td style="text-align: left;" class="label-right"><strong>{!IF(quData.Total_CGST_Amount__c>0,'CGST','')}</strong></td>
         <td style="text-align: left;" class="num">{!IF(quData.Total_CGST_Amount__c>0,TEXT(quData.Total_CGST_Amount__c),'')}</td>
     </tr>
 
     <tr>
-        <td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td><td></td><td></td>
         <td style="text-align: left;" class="label-right"><strong>{!IF(quData.Total_SGST_Amount__c>0,'SGST','')}</strong></td>
         <td style="text-align: left;" class="num">{!IF(quData.Total_SGST_Amount__c>0,TEXT(quData.Total_SGST_Amount__c),'')}</td>
     </tr>
@@ -247,7 +309,7 @@ color: #008080; -->
     <tr><td colspan="7"><br/></td></tr>
 
     <tr>
-        <td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td><td></td><td></td>
         <td style="text-align: left;" class="label-right"><strong>Total Amount (INR)</strong></td>
         <td style="text-align: left;" class="num"><strong>{!quData.Grand_Total__c}</strong></td>
     </tr>
@@ -279,65 +341,65 @@ color: #008080; -->
                 </td>
             </tr>
             <tr>
-                <td style="width: 20%; vertical-align: middle; font-size: 12px; ">
+                <td class="terms-label" style="width: 20%; vertical-align: middle; font-size: 12px; ">
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Period__c))}">
-                    <span><strong>Delivery Period</strong></span><br/>
+                    <span><strong>Delivery Period</strong></span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(INCOTerms))}">
-                    <span><strong>Incoterm</strong></span><br/>
+                    <span><strong>Incoterm</strong></span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(PaymentTerms))}">
-                    <span><strong>Payment Terms</strong></span><br/>
+                    <span><strong>Payment Terms</strong></span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Prices__c))}">
-                    <span><strong>Prices</strong></span><br/>
+                    <span><strong>Prices</strong></span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Warranty_Terms__c))}">
-                    <span><strong>Warranty Terms</strong></span><br/>
+                    <span><strong>Warranty Terms</strong></span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Liquidate_Terms__c))}">
-                    <span><strong>Liquidate Terms</strong></span><br/>
+                    <span><strong>Liquidate Terms</strong></span>
                </apex:outputPanel>
                <apex:outputPanel rendered="{!LEN(shipToAddress) > 0}">
-                    <span><strong>Ship to Address</strong></span><br/>
+                    <span><strong>Ship to Address</strong></span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Transport_Details__c))}">
-                    <span><strong>Transport Details</strong></span><br/>
+                    <span><strong>Transport Details</strong></span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Location__c))}">
-                    <span><strong>Delivery Location</strong></span><br/>
+                    <span><strong>Delivery Location</strong></span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Special_Remarks__c))}">
                     <span><strong>Special Remarks</strong></span>
                </apex:outputPanel>
                 </td>
-                <td style="width: 80%; vertical-align: middle; font-size: 12px;">
+                <td class="terms-value" style="width: 80%; vertical-align: middle; font-size: 12px;">
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Period__c))}">
-                    <span>:&nbsp;{!quData.Delivery_Period__c}</span><br/>
+                    <span>:&nbsp;{!quData.Delivery_Period__c}</span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(INCOTerms))}">
-                    <span>:&nbsp;{!INCOTerms}</span><br/>
+                    <span>:&nbsp;{!INCOTerms}</span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(PaymentTerms))}">
-                    <span>:&nbsp;{!PaymentTerms}</span><br/>
+                    <span>:&nbsp;{!PaymentTerms}</span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Prices__c))}">
-                    <span>:&nbsp;{!quData.Prices__c}</span><br/>
+                    <span>:&nbsp;{!quData.Prices__c}</span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Warranty_Terms__c))}">
-                    <span>:&nbsp;{!quData.Warranty_Terms__c}</span><br/>
+                    <span>:&nbsp;{!quData.Warranty_Terms__c}</span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Liquidate_Terms__c))}">
-                    <span>:&nbsp;{!quData.Liquidate_Terms__c}</span><br/>
+                    <span>:&nbsp;{!quData.Liquidate_Terms__c}</span>
                </apex:outputPanel>
                <apex:outputPanel rendered="{!LEN(shipToAddress) > 0}">
-                    <span>:&nbsp;</span>{!shipToAddress}<br/>
+                    <span>:&nbsp;{!shipToAddress}</span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Transport_Details__c))}">
-                    <span>:&nbsp;{!quData.Transport_Details__c}</span><br/>
+                    <span>:&nbsp;{!quData.Transport_Details__c}</span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Location__c))}">
-                    <span>:&nbsp;{!quData.Delivery_Location__c}</span><br/>
+                    <span>:&nbsp;{!quData.Delivery_Location__c}</span>
                </apex:outputPanel>
                 <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Special_Remarks__c))}">
                     <span>:&nbsp;{!quData.Special_Remarks__c}</span>

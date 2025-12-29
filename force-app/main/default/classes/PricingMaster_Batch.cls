@@ -1,4 +1,4 @@
-global class PricingMaster_Batch implements Database.Batchable<sObject>,Database.Stateful,Database.AllowsCallouts, Schedulable {
+global class PricingMaster_Batch implements Database.Batchable < sObject > , Database.Stateful, Database.AllowsCallouts, Schedulable {
 
     global database.QueryLocator start(database.BatchableContext bc) {
         string todayDate = Datetime.now().format();
@@ -11,21 +11,27 @@ global class PricingMaster_Batch implements Database.Batchable<sObject>,Database
                 ORDER BY ProductCode
                 LIMIT 1
             ]);
-            } else {
-                return database.getQueryLocator([
+        } else {
+            return database.getQueryLocator([
                 SELECT Id, ProductCode
                 FROM Product2
                 WHERE ProductCode != null
                 // AND CreatedDate >2025-07-17T16:05:37.990+05:30
                 ORDER BY ProductCode
-                LIMIT 100
+                LIMIT 1
             ]);
+            // return database.getQueryLocator([
+            //     SELECT Id, Name, ProductCode, Family, IsActive 
+            //     FROM Product2 
+            //     WHERE Id IN (SELECT Product2Id FROM PricebookEntry WHERE Pricebook2.IsStandard = true)
+            //     AND Id NOT IN (SELECT Product2Id FROM PricebookEntry WHERE Pricebook2.IsStandard = false)
+            // ]);
         }
     }
 
     global void Execute(database.BatchableContext bc, List < Product2 > scope) {
 
-        List<Product2> cspMappingList = new List<Product2>();
+        List < Product2 > cspMappingList = new List < Product2 > ();
         cspMappingList.addAll(scope);
 
         if (!cspMappingList.isEmpty()) {

@@ -1,0 +1,150 @@
+<template>
+    <lightning-card title="Create Task from Task" icon-name="standard:task">
+        <div class="slds-p-around_medium">
+            
+            <template if:true={isLoading}>
+                <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+            </template>
+
+            <template if:true={errorMessage}>
+                <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_medium" role="alert">
+                    <span class="slds-assistive-text">error</span>
+                    <h2>{errorMessage}</h2>
+                </div>
+            </template>
+
+            <template if:false={isLoading}>
+                <div class="slds-form">
+                    <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning-input
+                                label="Subject"
+                                value={subject}
+                                onchange={handleSubjectChange}
+                                required>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning-record-picker
+                                label="Assigned To"
+                                object-api-name="User"
+                                value={ownerId}
+                                onchange={handleOwnerChange}>
+                            </lightning-record-picker>
+                        </div>
+                    </div>
+
+                    <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning-input
+                                type="date"
+                                label="Due Date"
+                                value={dueDate}
+                                min={minDate}
+                                onchange={handleDueDateChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning-combobox
+                                label="Status"
+                                value={status}
+                                options={statusOptions}
+                                onchange={handleStatusChange}
+                                disabled="true">
+                            </lightning-combobox>
+                        </div>
+                    </div>
+
+                    <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning-combobox
+                                label="Name Type"
+                                value={nameType}
+                                options={nameTypeOptions}
+                                onchange={handleNameTypeChange}
+                                placeholder="Select Contact or Lead">
+                            </lightning-combobox>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <template if:true={isLead}>
+                                <lightning-record-picker
+                                    label="Lead"
+                                    object-api-name="Lead"
+                                    value={whoId}
+                                    onchange={handleWhoIdChange}>
+                                </lightning-record-picker>
+                            </template>
+                            <template if:true={isContact}>
+                                <lightning-record-picker
+                                    label="Contact"
+                                    object-api-name="Contact"
+                                    value={whoId}
+                                    onchange={handleWhoIdChange}>
+                                </lightning-record-picker>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning-combobox
+                                label="Related To"
+                                value={relatedToType}
+                                options={relatedToOptions}
+                                onchange={handleRelatedToTypeChange}
+                                placeholder="Select Object Type" disabled={isLead}>
+                            </lightning-combobox>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2" if:true={relatedToType}>
+                            <lightning-record-picker
+                                label={relatedToRecordLabel}
+                                object-api-name={relatedToObjectApiName}
+                                value={whatId}
+                                onchange={handleWhatIdChange} disabled={isLead}>
+                            </lightning-record-picker>
+                        </div>
+                        
+                    </div>
+
+                    <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning-combobox
+                                label="Priority"
+                                value={priority}
+                                options={priorityOptions}
+                                onchange={handlePriorityChange}
+                                required>
+                            </lightning-combobox>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2"></div>
+                    </div>
+
+                    <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                        <div class="slds-col slds-size_1-of-1">
+                            <lightning-textarea
+                                label="Owner Comments"
+                                value={description}
+                                onchange={handleDescriptionChange}
+                                rows="4">
+                            </lightning-textarea>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div slot="footer" class="slds-text-align_right">
+            <lightning-button
+                label="Cancel"
+                onclick={handleCancel}
+                class="slds-m-right_x-small">
+            </lightning-button>
+            <lightning-button
+                variant="brand"
+                label="Save"
+                onclick={handleSave}
+                disabled={isLoading}>
+            </lightning-button>
+        </div>
+    </lightning-card>
+</template>

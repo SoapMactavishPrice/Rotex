@@ -1,0 +1,59 @@
+<template>
+    <lightning-card title="Follow-up Tasks" icon-name="standard:hierarchy">
+        <div class="slds-p-around_medium">
+            
+            <template if:true={isLoading}>
+                <div class="slds-align_absolute-center" style="height: 5rem;">
+                    <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                </div>
+            </template>
+
+            <template if:true={errorMessage}>
+                <div class="slds-notify slds-notify_alert slds-alert_error" role="alert">
+                    <span class="slds-assistive-text">error</span>
+                    <h2>{errorMessage}</h2>
+                </div>
+            </template>
+
+            <template if:true={showEmptyState}>
+                <div class="slds-align_absolute-center slds-p-around_large">
+                    <div class="slds-text-align_center">
+                        <lightning-icon 
+                            icon-name="utility:info" 
+                            size="small" 
+                            alternative-text="Info"
+                            class="slds-m-bottom_small">
+                        </lightning-icon>
+                        <p class="slds-text-color_weak">{emptyStateMessage}</p>
+                    </div>
+                </div>
+            </template>
+
+            <template if:true={showTree}>
+                <div class="slds-m-bottom_small">
+                    <lightning-button 
+                        icon-name="utility:expand_alt" 
+                        label="Expand All"
+                        onclick={expandAllRows} 
+                        variant="neutral"
+                        class="slds-m-right_x-small">
+                    </lightning-button>
+                    <lightning-button 
+                        icon-name="utility:collapse_all" 
+                        label="Collapse All"
+                        onclick={collapseAllRows} 
+                        variant="neutral">
+                    </lightning-button>
+                </div>
+                <lightning-tree-grid
+                    columns={columns}
+                    data={treeData}
+                    key-field="taskId"
+                    expanded-rows={expandedRows}
+                    ontoggle={handleOnToggle}
+                    hide-checkbox-column>
+                </lightning-tree-grid>
+            </template>
+        </div>
+    </lightning-card>
+</template>

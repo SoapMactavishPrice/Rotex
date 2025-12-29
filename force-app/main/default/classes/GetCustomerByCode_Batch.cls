@@ -8,6 +8,7 @@ global class GetCustomerByCode_Batch implements Database.Batchable<sObject>,Data
             WHERE Account__c != null
             AND Customer__c != null
             AND Sales_Area_Item__c != null
+            AND (Account__r.CreatedDate = TODAY OR Account__r.LastModifiedDate = TODAY)
             // LIMIT 10
         ]);
     }

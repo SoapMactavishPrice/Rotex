@@ -103,7 +103,7 @@ export default class CreateTaskFromTask extends NavigationMixin(LightningElement
                 this.ownerId = result.OwnerId || '';
                 this.whoId = result.WhoId || '';
                 this.whatId = result.WhatId || '';
-                this.description = result.Description || '';
+                // this.description = result.Description || '';
                 this.status = 'Open';
 
                 this.determineNameType(result.WhoId);
@@ -279,6 +279,11 @@ export default class CreateTaskFromTask extends NavigationMixin(LightningElement
 
         if (!this.status) {
             this.errorMessage = 'Status is required';
+            return false;
+        }
+
+        if (!this.dueDate) {
+            this.errorMessage = 'Due Date is required'
             return false;
         }
 

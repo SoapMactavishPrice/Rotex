@@ -1,10 +1,222 @@
-<apex:page standardController="Case" extensions="CaseToLeadVFController" action="{!process}">
-    
-    <apex:pageMessages />
-    
-    <!-- Optional fallback UI (in case redirect fails) -->
-    <apex:outputPanel >
-        Processing Case to Lead...
-    </apex:outputPanel>
-    
+<apex:page standardController="Case" extensions="CaseToLeadVFController" showHeader="false" sidebar="false" docType="html-5.0">
+    <head>
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+    </head>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #f4f6f9;
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 40px;   /* was 40px 16px */
+        }
+
+        .card {
+            background: #fff;
+            width: 900px;        /* set whatever fixed width you want */
+            border-radius: 10px;
+            border: 1px solid #dde1e7;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            padding: 32px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .field { margin-bottom: 16px; }
+
+        .label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 5px;
+        }
+
+        .required-star { color: #ef4444; margin-left: 2px; }
+
+        .input-box,
+        .text-area {
+            width: 100%;
+            padding: 9px 12px;
+            font-size: 14px;
+            font-family: 'DM Sans', sans-serif;
+            color: #111827;
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .input-box:focus, .text-area:focus {
+            border-color: #0176d3;
+            box-shadow: 0 0 0 3px rgba(1,118,211,0.12);
+        }
+
+        .input-box.has-error {
+            border-color: #f87171;
+        }
+
+        .input-box.has-error:focus {
+            box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
+        }
+
+        .text-area {
+            min-height: 100px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .error-msg {
+            font-size: 12px;
+            color: #dc2626;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .error-msg::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: #dc2626;
+            border-radius: 50%;
+            flex-shrink: 0;
+            -webkit-mask: url("data:image/svg+xml,%3Csvg viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 2a8 8 0 100 16A8 8 0 0010 2zm1 11H9v-2h2v2zm0-4H9V6h2v4z'/%3E%3C/svg%3E") center/contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 2a8 8 0 100 16A8 8 0 0010 2zm1 11H9v-2h2v2zm0-4H9V6h2v4z'/%3E%3C/svg%3E") center/contain no-repeat;
+        }
+
+        .divider {
+            height: 1px;
+            background: #f3f4f6;
+            margin: 24px 0 20px;
+        }
+
+        .button-row {
+            display: flex;
+            justify-content: center;  /* was flex-end */
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 9px 20px;
+            font-size: 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+            line-height: 1;
+        }
+
+        .btn-cancel {
+            background: #fff;
+            color: #4b5563;
+            border: 1px solid #d1d5db;
+        }
+        .btn-cancel:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+        .btn-cancel:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background: #0176d3;
+            color: #fff;
+            border: 1px solid #0176d3;
+        }
+        .btn-primary:hover {
+            background: #0265b3;
+            border-color: #0265b3;
+            box-shadow: 0 2px 8px rgba(1,118,211,0.28);
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
+            background: #0255a3;
+        }
+    </style>
+
+    <apex:form>
+        <apex:slds />
+        <div class="card">
+            <div class="card-title">Create Lead</div>
+
+            <apex:pageMessages />
+
+            <div class="row">
+                <div class="field">
+                    <label class="label">Name <span class="required-star">*</span></label>
+                    <apex:inputText
+                        value="{!leadName}"
+                        styleClass="{!IF(nameError, 'input-box has-error', 'input-box')}"
+                        html-placeholder="Full name"/>
+                    <apex:outputPanel rendered="{!nameError}">
+                        <div class="error-msg">Name is required.</div>
+                    </apex:outputPanel>
+                </div>
+
+                <div class="field">
+                    <label class="label">Email</label>
+                    <apex:inputText
+                        value="{!leadEmail}"
+                        styleClass="{!IF(emailError, 'input-box has-error', 'input-box')}"
+                        html-placeholder="email@example.com"/>
+                    <apex:outputPanel rendered="{!emailError}">
+                        <div class="error-msg">
+                            <apex:outputText value="{!emailErrorMsg}"/>
+                        </div>
+                    </apex:outputPanel>
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="label">Company Name</label>
+                <apex:inputText value="{!companyName}" styleClass="input-box" html-placeholder="Company or organisation"/>
+            </div>
+
+            <div class="field">
+                <label class="label">Subject</label>
+                <apex:inputText value="{!leadSubject}" styleClass="input-box"/>
+            </div>
+
+            <div class="field">
+                <label class="label">Description</label>
+                <apex:inputTextarea value="{!leadDescription}" styleClass="text-area"/>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="button-row">
+                <apex:commandButton 
+                    value="Cancel" 
+                    action="{!cancel}" 
+                    immediate="true" 
+                    styleClass="slds-button slds-button_neutral"/>
+
+                <apex:commandButton 
+                    value="Create Lead" 
+                    action="{!process}" 
+                    styleClass="slds-button slds-button_brand"/>
+            </div>
+        </div>
+    </apex:form>
 </apex:page>

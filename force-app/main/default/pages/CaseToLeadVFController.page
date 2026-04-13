@@ -1,0 +1,10 @@
+<apex:page standardController="Case" extensions="CaseToLeadVFController" action="{!process}">
+    
+    <apex:pageMessages />
+    
+    <!-- Optional fallback UI (in case redirect fails) -->
+    <apex:outputPanel >
+        Processing Case to Lead...
+    </apex:outputPanel>
+    
+</apex:page>

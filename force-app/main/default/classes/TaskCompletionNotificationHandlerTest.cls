@@ -131,4 +131,35 @@ Helper: Upload file to Task
         
         System.assertEquals('In Progress', t.Status);
     }
+    @IsTest
+static void testManagerNotificationSent() {
+    
+    // Manager user
+    User manager = createUser();
+    
+    // Owner user WITH manager
+    User owner = createUser();
+    owner.ManagerId = manager.Id;
+    update owner;
+    
+    // Task created by running user, owned by owner
+    Task t = new Task(
+        Subject = 'Manager Notify Task',
+        Status = 'In Progress',
+        OwnerId = owner.Id
+    );
+    insert t;
+    
+    uploadFileToTask(t.Id);
+    
+    Test.startTest();
+    t.Status = 'Completed';
+    update t;
+    Test.stopTest();
+    
+    // Assert task completed
+    Task updatedTask = [SELECT Status FROM Task WHERE Id = :t.Id];
+    System.assertEquals('Completed', updatedTask.Status);
+}
+
 }

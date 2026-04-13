@@ -11,7 +11,7 @@ trigger LeadTrigger on Lead (after insert, after update, before update) {
             if (ld.IsConverted && !oldLead.IsConverted) {
                 if (ld.ConvertedOpportunityId != null && ld.ConvertedContactId != null) {
                     Opportunity opp = new Opportunity( Id = ld.ConvertedOpportunityId, Project_Contact__c  = ld.ConvertedContactId
-                    ); oppsToUpdate.add(opp);
+                                                     ); oppsToUpdate.add(opp);
                 }
             }
         }
@@ -80,7 +80,7 @@ system.debug(countryMap.get(lead.Country));
         
         // Map to store status-specific DateTime fields
         Map<String, String> statusFieldMap = new Map<String, String>{
-                'New' => 'New_Date_Time__c',
+            'New' => 'New_Date_Time__c',
                 'Contacted' => 'Contacted_Date_Time__c',
                 'Forward to Dealer' => 'Forward_to_Dealer_Date_Time__c',
                 'Work In Progress' => 'Work_In_Progress_Date_Time__c',
@@ -118,4 +118,57 @@ system.debug(countryMap.get(lead.Country));
     if (Trigger.isAfter && Trigger.isUpdate) {
         LeadSharingHandler.handleOwnerChange(Trigger.new, Trigger.oldMap);
     }
+    
+    if(Trigger.isBefore && Trigger.isUpdate) {
+        
+        Set<Id> convertedAccountIds = new Set<Id>();
+        
+        // 1️⃣ Identify Leads being converted
+        for (Lead ld : Trigger.new) {
+            Lead oldLd = Trigger.oldMap.get(ld.Id);
+            
+            if (!oldLd.IsConverted && ld.IsConverted && ld.ConvertedAccountId != null) {
+                convertedAccountIds.add(ld.ConvertedAccountId);
+            }
+        }
+        
+        if (convertedAccountIds.isEmpty()) return;
+        
+        // 2️⃣ Fetch selected Accounts
+        Map<Id, Account> accMap = new Map<Id, Account>(
+            [
+                SELECT Id, SAP_Customer_Code__c
+                FROM Account
+                WHERE Id IN :convertedAccountIds
+            ]
+        );
+        
+        // 3️⃣ Validate SAP code prefix
+        for (Lead ld : Trigger.new) {
+            Lead oldLd = Trigger.oldMap.get(ld.Id);
+            
+            if (!oldLd.IsConverted && ld.IsConverted && ld.ConvertedAccountId != null) {
+                
+                Account acc = accMap.get(ld.ConvertedAccountId);
+                
+                // 🚫 New Account OR missing SAP
+                if (acc == null || String.isBlank(acc.SAP_Customer_Code__c)) {
+                    ld.addError(
+                        'Lead conversion blocked. Please select an existing Account with a SAP Customer Code that starts with "10" or "9".'
+                    );
+                    continue;
+                }
+                
+                String sapCode = acc.SAP_Customer_Code__c.trim();
+                
+                // 🚫 Must start with "10" OR "9"
+                if (!(sapCode.startsWith('10') || sapCode.startsWith('9'))) {
+                    ld.addError(
+                        'Lead conversion blocked. Selected Account SAP Customer Code must start with "10" or "9".'
+                    );
+                }
+            }
+        }
+    }
+    
 }

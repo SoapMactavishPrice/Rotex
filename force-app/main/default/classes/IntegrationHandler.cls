@@ -1608,6 +1608,7 @@ public class IntegrationHandler {
                 AND Division__c != '50'
                 AND Division__c != '20'
                 AND Division__c != '00'
+                AND Distribution_Channel__c = '10'
                 AND Account__c =: quoteList[0].AccountId
             ];
 
@@ -1675,9 +1676,18 @@ public class IntegrationHandler {
                         if (qli.Discount_to_be_offered__c > 0) {
                             lineItemWrapper.to_PricingElement = new List < PricingElementWrapper > ();
                             PricingElementWrapper pricingElementWrapper = new PricingElementWrapper();
-                            pricingElementWrapper.PricingProcedureStep = '41';
-                            pricingElementWrapper.PricingProcedureCounter = '1';
-                            pricingElementWrapper.ConditionType = 'ZDIS';
+                            
+                            // if discount availble in Account then pass ZDFX
+                            if(q.Account.Discount__c !=null){
+                                pricingElementWrapper.PricingProcedureStep = '40';
+                                pricingElementWrapper.PricingProcedureCounter = '1';
+                                pricingElementWrapper.ConditionType = 'ZDFX';
+                            }else{
+                                pricingElementWrapper.PricingProcedureStep = '41';
+                                pricingElementWrapper.PricingProcedureCounter = '1';
+                                pricingElementWrapper.ConditionType = 'ZDIS';
+                            }
+                            
                             pricingElementWrapper.ConditionRateValue = String.valueOf(qli.Discount_to_be_offered__c);
                             pricingElementWrapper.ConditionCurrency = qli.Quote.CurrencyISOCode;
                             lineItemWrapper.to_PricingElement.add(pricingElementWrapper);

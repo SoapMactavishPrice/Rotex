@@ -108,7 +108,7 @@ public class OrderTargetHandler {
                     tgtUpd.Qtr_3_Actual__c =
                         (tgtUpd.Qtr_3_Actual__c == null ? 0 : tgtUpd.Qtr_3_Actual__c) + netValue;
 
-                } else { // Jan–Mar
+                } else {
                     tgtUpd.Qtr_4_Actual__c =
                         (tgtUpd.Qtr_4_Actual__c == null ? 0 : tgtUpd.Qtr_4_Actual__c) + netValue;
                 }

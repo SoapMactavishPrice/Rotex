@@ -1,8 +1,7 @@
 <template>
     <lightning-card>
-        <h4 style="text-align: center; font-size: 24px; font-weight: bold; padding-bottom: 20px;">Quote Discount
-            Approval</h4>
-        
+        <h4 style="text-align: center; font-size: 24px; font-weight: bold; padding-bottom: 20px;">Quote Discount Approval</h4>
+
         <template if:true={isLoading}>
             <lightning-spinner alternative-text="Loading" size="large"></lightning-spinner>
         </template>
@@ -14,87 +13,102 @@
                         <div style="display: flex; justify-content: space-between;">
                             <span style="flex: 1;"><b>Account Name:</b> {quote.accountName}</span>
                             <span style="flex: 1;"><b>Quote Owner:</b> {quote.quoteOwnerName}</span>
-                            <span style="flex: 1;"><b>Quote Number:</b> {quote.quoteNumber}</span>
+                            <span style="flex: 1;">
+                                <b>Quote Number:&nbsp;</b>
+                                <a href={quote.quoteRecordUrl} target="_blank"
+                                    style="color: #0070d2; text-decoration: underline;">
+                                    {quote.quoteNumber} (click here to view)
+                                </a>
+                            </span>
                             <span style="flex: 1;"><b>Quote Name:</b> {quote.quoteName}</span>
                         </div>
                     </h3>
 
-                    <div class="table-container">
-                        <table style="width: 100%;" class="slds-table slds-table_cell-buffer slds-table_bordered">
+                    <div class="table-container" style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;"
+                            class="slds-table slds-table_cell-buffer slds-table_bordered">
                             <thead>
                                 <tr>
                                     <th scope="col" style="width: 220px; min-width: 220px;">Product Name</th>
+                                    <th scope="col" style="width: 110px; min-width: 110px; text-align: center;">List Price</th>
                                     <th scope="col" style="width: 80px; min-width: 80px; text-align: center;">Quantity</th>
                                     <th scope="col" style="width: 120px; min-width: 120px; text-align: center;">Discount (SAP)</th>
                                     <th scope="col" style="width: 100px; min-width: 100px; text-align: center;">Discount</th>
-                                    <th scope="col" style="width: 120px; min-width: 120px;">Approver Status</th>
-                                    <th scope="col" style="width: 150px; min-width: 150px;">Sales Manager Name</th>
-                                    <th scope="col" style="width: 180px; min-width: 180px;">Sales Manager Comments</th>
-                                    <th scope="col" style="width: 180px; min-width: 180px;">Country / Continent Sales / LOB Name</th>
-                                    <th scope="col" style="width: 180px; min-width: 180px;">Country / Continent Sales / LOB Comments</th>
-                                    <th scope="col" style="width: 180px; min-width: 180px;">Rotex Board Member Name</th>
-                                    <th scope="col" style="width: 180px; min-width: 180px;">Rotex Board Member Comments</th>
-                                    <th scope="col" style="width: 180px; min-width: 180px;">Managing Director Name</th>
-                                    <th scope="col" style="width: 180px; min-width: 180px;">Managing Director Comments</th>
-                                    <th scope="col" style="width: 180px; min-width: 180px;">Global Sales Head Name</th>
-                                    <th scope="col" style="width: 180px; min-width: 180px;">Global Sales Head Comments</th>
+                                    <th scope="col" style="width: 180px; min-width: 180px;">SOA</th>
+                                    <th scope="col" style="width: 160px; min-width: 160px;">Status</th>
+                                    <th scope="col" style="width: 160px; min-width: 160px;">Date/Time</th>
+                                    <th scope="col" style="width: 200px; min-width: 200px;">Comments</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <template for:each={quote.quoteLineItems} for:item="item">
-                                    <tr key={item.quoteLineItemId}>
-                                        <td style="white-space: normal; word-wrap: break-word;">{item.productName}</td>
-                                        <td style="text-align: center;">{item.quantity}</td>
-                                        <td style="text-align: center;">{item.d1}</td>
-                                        <td style="text-align: center;">{item.d2}</td>
+                                <template for:each={quote.displayRows} for:item="row">
+                                    <tr key={row.key} style={row.rowStyle}>
+                                        <template if:true={row.isFirstRow}>
+                                            <td rowspan={row.soaCount}
+                                                style="white-space: normal; word-wrap: break-word; vertical-align: middle;">
+                                                {row.productName}
+                                            </td>
+                                            <td rowspan={row.soaCount}
+                                                style="text-align: center; vertical-align: middle;">
+                                                {row.listPrice}
+                                            </td>
+                                            <td rowspan={row.soaCount}
+                                                style="text-align: center; vertical-align: middle;">
+                                                {row.quantity}
+                                            </td>
+                                            <td rowspan={row.soaCount}
+                                                style="text-align: center; vertical-align: middle;">
+                                                {row.d1}
+                                            </td>
+                                            <td rowspan={row.soaCount}
+                                                style="text-align: center; vertical-align: middle;">
+                                                {row.d2}
+                                            </td>
+                                        </template>
+
+                                        <!-- SOA Label -->
+                                        <td style="white-space: normal; word-wrap: break-word;">{row.soaDisplay}</td>
+
+                                        <!-- Status: combobox for current user editable row, plain text otherwise -->
                                         <td>
-                                            <lightning-combobox name="ApprovalStatus" data-parent={item.parentId}
-                                                data-id={item.quoteLineItemId} data-field="approvalStatus"
-                                                value={item.approvalStatus} options={statusOptions}
-                                                onchange={handleLineItemChanges} variant="label-hidden" dropdown-alignment="auto">
-                                            </lightning-combobox>
+                                            <template if:true={row.showStatusCombobox}>
+                                                <lightning-combobox
+                                                    name="ApprovalStatus"
+                                                    data-parent={row.parentId}
+                                                    data-id={row.quoteLineItemId}
+                                                    data-field="approvalStatus"
+                                                    value={row.approvalStatus}
+                                                    options={statusOptions}
+                                                    onchange={handleLineItemChanges}
+                                                    variant="label-hidden"
+                                                    dropdown-alignment="auto">
+                                                </lightning-combobox>
+                                            </template>
+                                            <template if:true={row.showStatusText}>
+                                                <span>{row.soaStatus}</span>
+                                            </template>
                                         </td>
-                                        <td style="white-space: normal; word-wrap: break-word;">{item.salesManagerName}</td>
-                                        <td>
-                                            <lightning-input disabled={item.bcheck1} value={item.Sales_Manager_Comments}
-                                                data-parent={item.parentId} data-field="Sales_Manager_Comments"
-                                                data-id={item.quoteLineItemId} onchange={handleLineItemChanges}
-                                                variant="label-hidden">
-                                            </lightning-input>
-                                        </td>
-                                        <td style="white-space: normal; word-wrap: break-word;">{item.countryContinentSalesName}</td>
-                                        <td>
-                                            <lightning-input disabled={item.bcheck2}
-                                                value={item.Country_Continent_Sales_LOB_Comments}
-                                                data-parent={item.parentId}
-                                                data-field="Country_Continent_Sales_LOB_Comments"
-                                                data-id={item.quoteLineItemId} onchange={handleLineItemChanges}
-                                                variant="label-hidden">
-                                            </lightning-input>
-                                        </td>
-                                        <td style="white-space: normal; word-wrap: break-word;">{item.rotexBoardMemberName}</td>
-                                        <td>
-                                            <lightning-input disabled={item.bcheck3}
-                                                value={item.Rotex_Board_Member_Comments} data-parent={item.parentId}
-                                                data-field="Rotex_Board_Member_Comments" data-id={item.quoteLineItemId}
-                                                onchange={handleLineItemChanges} variant="label-hidden">
-                                            </lightning-input>
-                                        </td>
-                                        <td style="white-space: normal; word-wrap: break-word;">{item.managingDirectorName}</td>
-                                        <td>
-                                            <lightning-input disabled={item.bcheck4}
-                                                value={item.Managing_Director_Comments} data-parent={item.parentId}
-                                                data-field="Managing_Director_Comments" data-id={item.quoteLineItemId}
-                                                onchange={handleLineItemChanges} variant="label-hidden">
-                                            </lightning-input>
-                                        </td>
-                                        <td style="white-space: normal; word-wrap: break-word;">{item.globalSalesHeadName}</td>
-                                        <td>
-                                            <lightning-input disabled={item.bcheck5}
-                                                value={item.Global_Sales_Head_Comments} data-parent={item.parentId}
-                                                data-field="Global_Sales_Head_Comments" data-id={item.quoteLineItemId}
-                                                onchange={handleLineItemChanges} variant="label-hidden">
-                                            </lightning-input>
+
+                                        <!-- Date/Time -->
+                                        <td style="white-space: normal; word-wrap: break-word;">{row.soaDateTime}</td>
+
+                                        <!-- Comments: textarea for current user row, plain text for others -->
+                                        <td style="white-space: normal; word-wrap: break-word;">
+                                            <template if:true={row.showCommentInput}>
+                                                <lightning-textarea
+                                                    disabled={row.soaCommentsDisabled}
+                                                    value={row.soaComments}
+                                                    data-parent={row.parentId}
+                                                    data-field={row.soaCommentsField}
+                                                    data-id={row.quoteLineItemId}
+                                                    onchange={handleLineItemChanges}
+                                                    variant="label-hidden"
+                                                    style="width: 100%;">
+                                                </lightning-textarea>
+                                            </template>
+                                            <template if:false={row.showCommentInput}>
+                                                <span style="white-space: pre-wrap; word-wrap: break-word; display: block;">{row.soaComments}</span>
+                                            </template>
                                         </td>
                                     </tr>
                                 </template>
@@ -103,10 +117,11 @@
                     </div>
                 </div>
             </template>
+
             <div class="slds-m-top_medium slds-text-align_center">
                 <lightning-button label="Cancel" onclick={redirectToHome} variant="neutral"></lightning-button>
-                <lightning-button class="slds-m-left_small" label="Save Changes" onclick={saveChanges} variant="brand"
-                    disabled={isSaveDisabled}></lightning-button>
+                <lightning-button class="slds-m-left_small" label="Submit" onclick={saveChanges}
+                    variant="brand" disabled={isSaveDisabled}></lightning-button>
             </div>
         </template>
     </lightning-card>

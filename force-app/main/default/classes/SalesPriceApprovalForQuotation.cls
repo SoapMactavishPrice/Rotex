@@ -13,23 +13,10 @@ public without sharing class SalesPriceApprovalForQuotation {
     @AuraEnabled
     public static List<QuotationWrapper> getAllQuotations() {
         Id currentUserId = UserInfo.getUserId();
-    
-        // Fetch all pending line items first
-        List<QuoteLineItem> quoteLineItems = [
-            SELECT Approval_Comments__c, Approval_Status__c, Approver__c, CreatedById, ServiceDate,
-                Discount, LastModifiedById, Description, LineNumber, ListPrice,
-                Product2Id, Product2.Name, Quantity, QuoteId, Discount_as_per_SAP__c, Global_Sales_Head__c,
-                Global_Sales_Head_Status__c, Reject_Reason__c, UnitPrice, SortOrder, Subtotal, TotalPrice,
-                Discount_to_be_offered__c, Sales_Rep__c, Sales_Rep_Status__c, Sales_Manager__c,
-                Sales_Manager_Status__c, Country_Continent_Sales_Head_LOB_Head__c,
-                Country_Continent_Sales_H_LOB_Status__c, Managing_Director_Country_Manage__c,
-                Managing_Director_Status__c, Rotex_Board_Member__c, Rotex_Board_Member_Status__c,
-                Country_Continent_Sales_LOB_Comments__c, Global_Sales_Head_Comments__c,
-                Managing_Director_Comments__c, Rotex_Board_Member_Comments__c,
-                Sales_Manager_Comments__c,
-                Sales_Manager__r.Name, Country_Continent_Sales_Head_LOB_Head__r.Name,
-                Rotex_Board_Member__r.Name, Managing_Director_Country_Manage__r.Name,
-                Global_Sales_Head__r.Name
+
+        // Step 1 — find QuoteIds where current user has at least one Submitted QLI
+        List<QuoteLineItem> submittedQlis = [
+            SELECT QuoteId
             FROM QuoteLineItem
             WHERE (
                     (Sales_Rep_Status__c = 'Submitted' AND Sales_Rep__c = :currentUserId) OR
@@ -42,46 +29,70 @@ public without sharing class SalesPriceApprovalForQuotation {
                 AND Discount_offered_SAP__c = true
         ];
 
-    
-        if (quoteLineItems.isEmpty()) {
+        if (submittedQlis.isEmpty()) {
             throw new AuraHandledException('No Quotation Line Items found with their status as "Pending"');
         }
-    
-        // collect Quote Ids
+
+        Set<Id> quoteIdsWithSubmitted = new Set<Id>();
+        for (QuoteLineItem qli : submittedQlis) {
+            quoteIdsWithSubmitted.add(qli.QuoteId);
+        }
+
+        // Step 2 — fetch ALL QLIs for those quotes (not just Submitted ones)
+        List<QuoteLineItem> quoteLineItems = [
+            SELECT Approval_Comments__c, Approval_Status__c, Approver__c, CreatedById, ServiceDate,
+                Discount, LastModifiedById, Description, LineNumber, ListPrice,
+                Product2Id, Product2.Name, Quantity, QuoteId, Discount_as_per_SAP__c, Global_Sales_Head__c,
+                Global_Sales_Head_Status__c, Reject_Reason__c, UnitPrice, SortOrder, Subtotal, TotalPrice,
+                Discount_to_be_offered__c, Sales_Rep__c, Sales_Rep_Status__c, Sales_Manager__c,
+                Sales_Manager_Status__c, Country_Continent_Sales_Head_LOB_Head__c,
+                Country_Continent_Sales_H_LOB_Status__c, Managing_Director_Country_Manage__c,
+                Managing_Director_Status__c, Rotex_Board_Member__c, Rotex_Board_Member_Status__c,
+                Country_Continent_Sales_LOB_Comments__c, Global_Sales_Head_Comments__c,
+                Managing_Director_Comments__c, Rotex_Board_Member_Comments__c,
+                Sales_Manager_Comments__c, Sales_Manager__r.Name, Country_Continent_Sales_Head_LOB_Head__r.Name,
+                Rotex_Board_Member__r.Name, Managing_Director_Country_Manage__r.Name,
+                Global_Sales_Head__r.Name,
+                Sales_Manager_Date_Time__c, Country_Head_Date_Time__c,
+                Global_Sales_Head_Date_Time__c, Managing_Director_Date_Time__c
+            FROM QuoteLineItem
+            WHERE QuoteId IN :quoteIdsWithSubmitted
+                AND Discount_offered_SAP__c = true
+        ];
+
+        // Collect Quote Ids from fetched QLIs
         Set<Id> quoteIds = new Set<Id>();
         for (QuoteLineItem eachQli : quoteLineItems) {
             quoteIds.add(eachQli.QuoteId);
         }
-    
-        // fetch only those Quotes that belong to the user (owner) or where user is HOD
+
+        // Fetch Quote records — no extra user filter needed since quoteIdsWithSubmitted
+        // already guarantees the current user is an approver on at least one QLI per quote
         Map<Id, Quote> quoteMap = new Map<Id, Quote>(
-            [SELECT Id, Name, Owner.Email, Owner.Name, OwnerId, Account.Name, QuoteNumber, Sales_Rep__c,Sales_Manager__c,Sales_Manager_Status__c,Sales_Rep_Status__c,
-             Country_Continent_Sales_Head_LOB_Head__c,Country_Continent_Sales_H_LOB_Status__c,Managing_Director_Country_Manager__c,Managing_Director_Status__c,Rotex_Board_Member__c,Rotex_Board_Member_Status__c
-             FROM Quote
-             WHERE Id IN :quoteIds
-               AND (OwnerId = :currentUserId OR Sales_Rep__c = :currentUserId or Global_Sales_Head__c =: currentUserId or
-                   Sales_Manager__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__c = :currentUserId or 
-                    Managing_Director_Country_Manager__c = :currentUserId OR Rotex_Board_Member__c = :currentUserId 
-                   )]
+            [SELECT Id, Name, Owner.Email, Owner.Name, OwnerId, Account.Name, QuoteNumber,
+                    Sales_Rep__c, Sales_Manager__c, Sales_Manager_Status__c, Sales_Rep_Status__c,
+                    Country_Continent_Sales_Head_LOB_Head__c, Country_Continent_Sales_H_LOB_Status__c,
+                    Managing_Director_Country_Manager__c, Managing_Director_Status__c,
+                    Rotex_Board_Member__c, Rotex_Board_Member_Status__c
+            FROM Quote
+            WHERE Id IN :quoteIds]
         );
-    
-        // map line items to their parent Quote
+
+        // Map line items to their parent Quote
         Map<Id, List<QuoteLineItem>> quoteToQuoteLineItemMap = new Map<Id, List<QuoteLineItem>>();
         for (QuoteLineItem eachLine : quoteLineItems) {
-            if (quoteMap.containsKey(eachLine.QuoteId)) {
-                if (!quoteToQuoteLineItemMap.containsKey(eachLine.QuoteId)) {
-                    quoteToQuoteLineItemMap.put(eachLine.QuoteId, new List<QuoteLineItem>());
-                }
-                quoteToQuoteLineItemMap.get(eachLine.QuoteId).add(eachLine);
+            if (!quoteToQuoteLineItemMap.containsKey(eachLine.QuoteId)) {
+                quoteToQuoteLineItemMap.put(eachLine.QuoteId, new List<QuoteLineItem>());
             }
+            quoteToQuoteLineItemMap.get(eachLine.QuoteId).add(eachLine);
         }
-    
-        // build wrapper list
+
+        // Build wrapper list
         List<QuotationWrapper> quotations = new List<QuotationWrapper>();
         for (Id eachQuoteId : quoteToQuoteLineItemMap.keySet()) {
             quotations.add(new QuotationWrapper(quoteMap.get(eachQuoteId), quoteToQuoteLineItemMap.get(eachQuoteId)));
         }
-    
+
         return quotations;
     }
 
@@ -104,30 +115,29 @@ public without sharing class SalesPriceApprovalForQuotation {
                         QuoteLineItem quoteLineItem = new QuoteLineItem();
                         quoteLineItem.Id = eachQuoteLineItem.quoteLineItemId;
 
-                        if(eachQuoteLineItem.currentStageField =='Sales_Rep_Status__c'){
-                            quoteLineItem.Sales_Rep_Status__c = eachQuoteLineItem.approvalStatus;
-                            quoteLineItem.Approval_Comments__c= eachQuoteLineItem.approvalComments;
-                        }
-                        if(eachQuoteLineItem.currentStageField =='Sales_Manager_Status__c'){
+                        if(eachQuoteLineItem.currentStageField == 'Sales_Manager_Status__c'){
                             quoteLineItem.Sales_Manager_Status__c = eachQuoteLineItem.approvalStatus;
-                            quoteLineItem.Sales_Manager_Comments__c= eachQuoteLineItem.Sales_Manager_Comments;
+                            quoteLineItem.Sales_Manager_Comments__c = eachQuoteLineItem.Sales_Manager_Comments;
+                            quoteLineItem.Sales_Manager_Date_Time__c = DateTime.now(); // ✅
                         } 
-                        if(eachQuoteLineItem.currentStageField =='Country_Continent_Sales_H_LOB_Status__c'){
+                        if(eachQuoteLineItem.currentStageField == 'Country_Continent_Sales_H_LOB_Status__c'){
                             quoteLineItem.Country_Continent_Sales_H_LOB_Status__c = eachQuoteLineItem.approvalStatus;
-                            quoteLineItem.Country_Continent_Sales_LOB_Comments__c= eachQuoteLineItem.Country_Continent_Sales_LOB_Comments;
+                            quoteLineItem.Country_Continent_Sales_LOB_Comments__c = eachQuoteLineItem.Country_Continent_Sales_LOB_Comments;
+                            quoteLineItem.Country_Head_Date_Time__c = DateTime.now(); // ✅
                         } 
-                        if(eachQuoteLineItem.currentStageField =='Managing_Director_Status__c'){
-                            quoteLineItem.Managing_Director_Status__c = eachQuoteLineItem.approvalStatus;
-                            quoteLineItem.Managing_Director_Comments__c= eachQuoteLineItem.Managing_Director_Comments;
-                        } 
+                        if(eachQuoteLineItem.currentStageField == 'Global_Sales_Head_Status__c'){
+                            quoteLineItem.Global_Sales_Head_Status__c = eachQuoteLineItem.approvalStatus;
+                            quoteLineItem.Global_Sales_Head_Comments__c = eachQuoteLineItem.Global_Sales_Head_Comments;
+                            quoteLineItem.Global_Sales_Head_Date_Time__c = DateTime.now(); // ✅
+                        }
                         if(eachQuoteLineItem.currentStageField =='Rotex_Board_Member_Status__c'){
                             quoteLineItem.Rotex_Board_Member_Status__c = eachQuoteLineItem.approvalStatus;
                             quoteLineItem.Rotex_Board_Member_Comments__c= eachQuoteLineItem.Rotex_Board_Member_Comments;
                         } 
-                        
-                        if(eachQuoteLineItem.currentStageField =='Global_Sales_Head_Status__c'){
-                            quoteLineItem.Global_Sales_Head_Status__c = eachQuoteLineItem.approvalStatus;
-                            quoteLineItem.Global_Sales_Head_Comments__c= eachQuoteLineItem.Global_Sales_Head_Comments;
+                        if(eachQuoteLineItem.currentStageField == 'Managing_Director_Status__c'){
+                            quoteLineItem.Managing_Director_Status__c = eachQuoteLineItem.approvalStatus;
+                            quoteLineItem.Managing_Director_Comments__c = eachQuoteLineItem.Managing_Director_Comments;
+                            quoteLineItem.Managing_Director_Date_Time__c = DateTime.now(); // ✅
                         } 
                         
                         quotationLineItemsToBeUpdated.add(quoteLineItem);
@@ -311,6 +321,19 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String rotexBoardMemberName;
         @AuraEnabled public String managingDirectorName;
         @AuraEnabled public String globalSalesHeadName;
+
+        // Per-SOA status fields (for displaying each approver's current status)
+        @AuraEnabled public String salesManagerStatus;
+        @AuraEnabled public String countryContinentSalesStatus;
+        @AuraEnabled public String rotexBoardMemberStatus;
+        @AuraEnabled public String managingDirectorStatus;
+        @AuraEnabled public String globalSalesHeadStatus;
+
+        // Per-SOA date/time fields
+        @AuraEnabled public DateTime salesManagerDateTime;
+        @AuraEnabled public DateTime countryHeadDateTime;
+        @AuraEnabled public DateTime managingDirectorDateTime;
+        @AuraEnabled public DateTime globalSalesHeadDateTime;
         
         @AuraEnabled public Decimal quantity;
         @AuraEnabled public Decimal listPrice;
@@ -414,6 +437,19 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.approvalStatus = currentStage;
             this.approvalComments = approvalComments;
             this.updated = false;
+
+            // Map per-SOA statuses
+            this.salesManagerStatus          = quoteLineItem.Sales_Manager_Status__c;
+            this.countryContinentSalesStatus = quoteLineItem.Country_Continent_Sales_H_LOB_Status__c;
+            this.rotexBoardMemberStatus      = quoteLineItem.Rotex_Board_Member_Status__c;
+            this.managingDirectorStatus      = quoteLineItem.Managing_Director_Status__c;
+            this.globalSalesHeadStatus       = quoteLineItem.Global_Sales_Head_Status__c;
+
+            // Map per-SOA date/times
+            this.salesManagerDateTime    = quoteLineItem.Sales_Manager_Date_Time__c;
+            this.countryHeadDateTime     = quoteLineItem.Country_Head_Date_Time__c;
+            this.managingDirectorDateTime = quoteLineItem.Managing_Director_Date_Time__c;
+            this.globalSalesHeadDateTime  = quoteLineItem.Global_Sales_Head_Date_Time__c;
         }
     }
 }

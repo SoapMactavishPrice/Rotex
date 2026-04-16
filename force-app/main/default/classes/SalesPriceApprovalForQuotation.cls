@@ -59,7 +59,7 @@ public without sharing class SalesPriceApprovalForQuotation {
              Country_Continent_Sales_Head_LOB_Head__c,Country_Continent_Sales_H_LOB_Status__c,Managing_Director_Country_Manager__c,Managing_Director_Status__c,Rotex_Board_Member__c,Rotex_Board_Member_Status__c
              FROM Quote
              WHERE Id IN :quoteIds
-               AND (OwnerId = :currentUserId OR Sales_Rep__c = :currentUserId or 
+               AND (OwnerId = :currentUserId OR Sales_Rep__c = :currentUserId or Global_Sales_Head__c =: currentUserId or
                    Sales_Manager__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__c = :currentUserId or 
                     Managing_Director_Country_Manager__c = :currentUserId OR Rotex_Board_Member__c = :currentUserId 
                    )]

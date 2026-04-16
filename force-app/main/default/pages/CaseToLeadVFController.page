@@ -155,7 +155,7 @@
         }
     </style>
 
-    <apex:form>
+    <apex:form >
         <apex:slds />
         <div class="card">
             <div class="card-title">Create Lead</div>
@@ -165,8 +165,7 @@
             <div class="row">
                 <div class="field">
                     <label class="label">Name <span class="required-star">*</span></label>
-                    <apex:inputText
-                        value="{!leadName}"
+                    <apex:inputText value="{!leadName}"
                         styleClass="{!IF(nameError, 'input-box has-error', 'input-box')}"
                         html-placeholder="Full name"/>
                     <apex:outputPanel rendered="{!nameError}">
@@ -176,8 +175,7 @@
 
                 <div class="field">
                     <label class="label">Email</label>
-                    <apex:inputText
-                        value="{!leadEmail}"
+                    <apex:inputText value="{!leadEmail}"
                         styleClass="{!IF(emailError, 'input-box has-error', 'input-box')}"
                         html-placeholder="email@example.com"/>
                     <apex:outputPanel rendered="{!emailError}">
@@ -206,14 +204,12 @@
             <div class="divider"></div>
 
             <div class="button-row">
-                <apex:commandButton 
-                    value="Cancel" 
+                <apex:commandButton value="Cancel" 
                     action="{!cancel}" 
                     immediate="true" 
                     styleClass="slds-button slds-button_neutral"/>
 
-                <apex:commandButton 
-                    value="Create Lead" 
+                <apex:commandButton value="Create Lead" 
                     action="{!process}" 
                     styleClass="slds-button slds-button_brand"/>
             </div>

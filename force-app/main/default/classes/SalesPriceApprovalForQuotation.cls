@@ -54,7 +54,8 @@ public without sharing class SalesPriceApprovalForQuotation {
                 Rotex_Board_Member__r.Name, Managing_Director_Country_Manage__r.Name,
                 Global_Sales_Head__r.Name,
                 Sales_Manager_Date_Time__c, Country_Head_Date_Time__c,
-                Global_Sales_Head_Date_Time__c, Managing_Director_Date_Time__c
+                Global_Sales_Head_Date_Time__c, Rotex_Board_Member_Date_Time__c,
+                Managing_Director_Date_Time__c
             FROM QuoteLineItem
             WHERE QuoteId IN :quoteIdsWithSubmitted
                 AND Discount_offered_SAP__c = true
@@ -72,6 +73,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             [SELECT Id, Name, Owner.Email, Owner.Name, OwnerId, Account.Name, QuoteNumber,
                     Sales_Rep__c, Sales_Manager__c, Sales_Manager_Status__c, Sales_Rep_Status__c,
                     Country_Continent_Sales_Head_LOB_Head__c, Country_Continent_Sales_H_LOB_Status__c,
+                    Global_Sales_Head__c,
                     Managing_Director_Country_Manager__c, Managing_Director_Status__c,
                     Rotex_Board_Member__c, Rotex_Board_Member_Status__c
             FROM Quote
@@ -115,6 +117,10 @@ public without sharing class SalesPriceApprovalForQuotation {
                         QuoteLineItem quoteLineItem = new QuoteLineItem();
                         quoteLineItem.Id = eachQuoteLineItem.quoteLineItemId;
 
+                        if(eachQuoteLineItem.currentStageField == 'Sales_Rep_Status__c'){
+                            quoteLineItem.Sales_Rep_Status__c = eachQuoteLineItem.approvalStatus;
+                            quoteLineItem.Approval_Comments__c = eachQuoteLineItem.approvalComments;
+                        }
                         if(eachQuoteLineItem.currentStageField == 'Sales_Manager_Status__c'){
                             quoteLineItem.Sales_Manager_Status__c = eachQuoteLineItem.approvalStatus;
                             quoteLineItem.Sales_Manager_Comments__c = eachQuoteLineItem.Sales_Manager_Comments;
@@ -133,6 +139,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                         if(eachQuoteLineItem.currentStageField =='Rotex_Board_Member_Status__c'){
                             quoteLineItem.Rotex_Board_Member_Status__c = eachQuoteLineItem.approvalStatus;
                             quoteLineItem.Rotex_Board_Member_Comments__c= eachQuoteLineItem.Rotex_Board_Member_Comments;
+                            quoteLineItem.Rotex_Board_Member_Date_Time__c = DateTime.now(); // ✅
                         } 
                         if(eachQuoteLineItem.currentStageField == 'Managing_Director_Status__c'){
                             quoteLineItem.Managing_Director_Status__c = eachQuoteLineItem.approvalStatus;
@@ -252,6 +259,24 @@ public without sharing class SalesPriceApprovalForQuotation {
         return (List<QuotationWrapper>)system.JSON.deserialize(js,List<QuotationWrapper>.class);
     }
 
+    private static String getStringFieldSafely(SObject record, String fieldApiName) {
+        try {
+            Object value = record.get(fieldApiName);
+            return value == null ? null : String.valueOf(value);
+        } catch (SObjectException e) {
+            return null;
+        }
+    }
+
+    private static Datetime getDateTimeFieldSafely(SObject record, String fieldApiName) {
+        try {
+            Object value = record.get(fieldApiName);
+            return value == null ? null : (Datetime)value;
+        } catch (SObjectException e) {
+            return null;
+        }
+    }
+
     public class QuotationWrapper {
         @AuraEnabled public String quoteId;
         @AuraEnabled public String quoteName;
@@ -285,10 +310,12 @@ public without sharing class SalesPriceApprovalForQuotation {
                 hodUserId = quote.Sales_Manager__c;
             } else if (quote.Country_Continent_Sales_Head_LOB_Head__c == currentUserId) {
                 hodUserId = quote.Country_Continent_Sales_Head_LOB_Head__c;
-            } else if (quote.Managing_Director_Country_Manager__c == currentUserId) {
-                hodUserId = quote.Managing_Director_Country_Manager__c;
+            } else if (quote.Global_Sales_Head__c == currentUserId) {
+                hodUserId = quote.Global_Sales_Head__c;
             } else if (quote.Rotex_Board_Member__c == currentUserId) {
                 hodUserId = quote.Rotex_Board_Member__c;
+            } else if (quote.Managing_Director_Country_Manager__c == currentUserId) {
+                hodUserId = quote.Managing_Director_Country_Manager__c;
             }
             
             this.hodUserId = hodUserId;
@@ -334,6 +361,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public DateTime countryHeadDateTime;
         @AuraEnabled public DateTime managingDirectorDateTime;
         @AuraEnabled public DateTime globalSalesHeadDateTime;
+        @AuraEnabled public DateTime rotexBoardMemberDateTime;
         
         @AuraEnabled public Decimal quantity;
         @AuraEnabled public Decimal listPrice;
@@ -407,6 +435,12 @@ public without sharing class SalesPriceApprovalForQuotation {
                 currentStage = quoteLineItem.Country_Continent_Sales_H_LOB_Status__c;
                 currentStageField = 'Country_Continent_Sales_H_LOB_Status__c';
                 approvalComments = quoteLineItem.Country_Continent_Sales_LOB_Comments__c;
+            } else if (quoteLineItem.Global_Sales_Head__c == currentUserId) {
+                hodUserId = quoteLineItem.Global_Sales_Head__c;
+                this.bcheck5 = false;
+                currentStage = quoteLineItem.Global_Sales_Head_Status__c;
+                currentStageField = 'Global_Sales_Head_Status__c';
+                approvalComments = quoteLineItem.Global_Sales_Head_Comments__c;
             } else if (quoteLineItem.Rotex_Board_Member__c == currentUserId) {
                 hodUserId = quoteLineItem.Rotex_Board_Member__c;
                 this.bcheck3 = false;
@@ -421,12 +455,6 @@ public without sharing class SalesPriceApprovalForQuotation {
                 currentStageField = 'Managing_Director_Status__c';
                 this.approvalStatus = currentStage;
                 approvalComments = quoteLineItem.Managing_Director_Comments__c;
-            } else if (quoteLineItem.Global_Sales_Head__c == currentUserId) {
-                hodUserId = quoteLineItem.Global_Sales_Head__c;
-                this.bcheck5 = false;
-                currentStage = quoteLineItem.Global_Sales_Head_Status__c;
-                currentStageField = 'Global_Sales_Head_Status__c';
-                approvalComments = quoteLineItem.Global_Sales_Head_Comments__c;
             }
             
             this.hodUserId = hodUserId;
@@ -439,17 +467,18 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.updated = false;
 
             // Map per-SOA statuses
-            this.salesManagerStatus          = quoteLineItem.Sales_Manager_Status__c;
-            this.countryContinentSalesStatus = quoteLineItem.Country_Continent_Sales_H_LOB_Status__c;
-            this.rotexBoardMemberStatus      = quoteLineItem.Rotex_Board_Member_Status__c;
-            this.managingDirectorStatus      = quoteLineItem.Managing_Director_Status__c;
-            this.globalSalesHeadStatus       = quoteLineItem.Global_Sales_Head_Status__c;
+            this.salesManagerStatus          = SalesPriceApprovalForQuotation.getStringFieldSafely(quoteLineItem, 'Sales_Manager_Status__c');
+            this.countryContinentSalesStatus = SalesPriceApprovalForQuotation.getStringFieldSafely(quoteLineItem, 'Country_Continent_Sales_H_LOB_Status__c');
+            this.rotexBoardMemberStatus      = SalesPriceApprovalForQuotation.getStringFieldSafely(quoteLineItem, 'Rotex_Board_Member_Status__c');
+            this.managingDirectorStatus      = SalesPriceApprovalForQuotation.getStringFieldSafely(quoteLineItem, 'Managing_Director_Status__c');
+            this.globalSalesHeadStatus       = SalesPriceApprovalForQuotation.getStringFieldSafely(quoteLineItem, 'Global_Sales_Head_Status__c');
 
             // Map per-SOA date/times
-            this.salesManagerDateTime    = quoteLineItem.Sales_Manager_Date_Time__c;
-            this.countryHeadDateTime     = quoteLineItem.Country_Head_Date_Time__c;
-            this.managingDirectorDateTime = quoteLineItem.Managing_Director_Date_Time__c;
-            this.globalSalesHeadDateTime  = quoteLineItem.Global_Sales_Head_Date_Time__c;
+            this.salesManagerDateTime     = SalesPriceApprovalForQuotation.getDateTimeFieldSafely(quoteLineItem, 'Sales_Manager_Date_Time__c');
+            this.countryHeadDateTime      = SalesPriceApprovalForQuotation.getDateTimeFieldSafely(quoteLineItem, 'Country_Head_Date_Time__c');
+            this.managingDirectorDateTime = SalesPriceApprovalForQuotation.getDateTimeFieldSafely(quoteLineItem, 'Managing_Director_Date_Time__c');
+            this.globalSalesHeadDateTime  = SalesPriceApprovalForQuotation.getDateTimeFieldSafely(quoteLineItem, 'Global_Sales_Head_Date_Time__c');
+            this.rotexBoardMemberDateTime = SalesPriceApprovalForQuotation.getDateTimeFieldSafely(quoteLineItem, 'Rotex_Board_Member_Date_Time__c');
         }
     }
 }

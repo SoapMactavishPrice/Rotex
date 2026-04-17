@@ -66,6 +66,14 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                                 isCurrentUserRow: !item.bcheck5
                             },
                             {
+                                label: 'BM', name: item.rotexBoardMemberName,
+                                status: item.rotexBoardMemberStatus,
+                                dateTime: item.rotexBoardMemberDateTime,
+                                commentsField: 'Rotex_Board_Member_Comments',
+                                commentsValue: item.Rotex_Board_Member_Comments,
+                                isCurrentUserRow: !item.bcheck3
+                            },
+                            {
                                 label: 'MD', name: item.managingDirectorName,
                                 status: item.managingDirectorStatus,
                                 dateTime: item.managingDirectorDateTime,
@@ -73,7 +81,6 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                                 commentsValue: item.Managing_Director_Comments,
                                 isCurrentUserRow: !item.bcheck4
                             }
-                            
                         ];
 
                         soaLevels.forEach((soa, idx) => {

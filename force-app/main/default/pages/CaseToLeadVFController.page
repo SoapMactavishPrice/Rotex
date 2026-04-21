@@ -37,6 +37,10 @@
             gap: 16px;
         }
 
+        .row-three {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
         .field { margin-bottom: 16px; }
 
         .label {
@@ -189,6 +193,31 @@
             <div class="field">
                 <label class="label">Company Name</label>
                 <apex:inputText value="{!companyName}" styleClass="input-box" html-placeholder="Company or organisation"/>
+            </div>
+
+            <div class="row row-three">
+
+                <div class="field">
+                    <label class="label">Country</label>
+                    <apex:selectList value="{!countryCode}" size="1" styleClass="input-box">
+                        <apex:selectOptions value="{!countryOptions}"/>
+                        <apex:actionSupport event="onchange" action="{!updateStates}" rerender="stateBlock"/>
+                    </apex:selectList>
+                </div>
+
+                <apex:outputPanel id="stateBlock" layout="block" styleClass="field">
+                    <label class="label">State</label>
+                    <apex:selectList value="{!stateCode}" size="1" styleClass="input-box"
+                        disabled="{!NOT(isIndiaSelected)}">
+                        <apex:selectOptions value="{!stateOptions}"/>
+                    </apex:selectList>
+                </apex:outputPanel>
+
+                <div class="field">
+                    <label class="label">City</label>
+                    <apex:inputText value="{!city}" styleClass="input-box"/>
+                </div>
+
             </div>
 
             <div class="field">

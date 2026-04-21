@@ -1,0 +1,33 @@
+<template>
+    <lightning-quick-action-panel header="Mark Case as Non Potential">
+        <div class="slds-p-around_small">
+            <template if:true={isSaving}>
+                <lightning-spinner alternative-text="Saving case" size="small"></lightning-spinner>
+            </template>
+
+            <lightning-textarea
+                name="nonPotentialRemarks"
+                label="Non Potential Remarks"
+                value={remarks}
+                onchange={handleRemarksChange}
+                disabled={isSaving}
+                placeholder="Enter remarks">
+            </lightning-textarea>
+        </div>
+
+        <div slot="footer">
+            <lightning-button
+                label="Cancel"
+                onclick={handleCancel}
+                disabled={isSaving}
+                class="slds-m-right_small">
+            </lightning-button>
+            <lightning-button
+                variant="brand"
+                label="Save"
+                onclick={handleSave}
+                disabled={isSaving}>
+            </lightning-button>
+        </div>
+    </lightning-quick-action-panel>
+</template>

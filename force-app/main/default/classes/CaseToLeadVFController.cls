@@ -12,6 +12,14 @@ public with sharing class CaseToLeadVFController {
     public Boolean emailError    { get; set; }
     public String  emailErrorMsg { get; set; }
 
+    public String countryCode {get; set;}
+    public String stateCode   {get; set;}
+    public String city        {get; set;}
+
+    public List<SelectOption> countryOptions {get; set;}
+    public List<SelectOption> stateOptions   {get; set;}
+
+    private static final String INDIA_COUNTRY_CODE = 'IN';
     private static final Pattern EMAIL_PATTERN =
         Pattern.compile('^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$');
 
@@ -21,6 +29,18 @@ public with sharing class CaseToLeadVFController {
         emailError    = false;
         emailErrorMsg = '';
         loadCaseDetails();
+
+        countryOptions = new List<SelectOption>();
+        countryOptions.add(new SelectOption('', '--None--'));
+
+        for (Schema.PicklistEntry p : Lead.CountryCode.getDescribe().getPicklistValues()) {
+            if (p.isActive()) {
+                countryOptions.add(new SelectOption(p.getValue(), p.getLabel()));
+            }
+        }
+
+        stateOptions = new List<SelectOption>();
+        stateOptions.add(new SelectOption('', '--None--'));
     }
 
     private void loadCaseDetails() {
@@ -110,7 +130,7 @@ public with sharing class CaseToLeadVFController {
                 SELECT Id, OwnerId, Email, Case__c
                 FROM   Lead
                 WHERE  Email = :email
-                ORDER  BY CreatedDate DESC
+                ORDER BY CreatedDate DESC
                 LIMIT  1
             ];
 
@@ -123,9 +143,18 @@ public with sharing class CaseToLeadVFController {
                     Requirement__c = leadDescription,
                     LeadSource     = leadSource,
                     Subject__c     = leadSubject,
-                    Case__c        = caseId
+                    Case__c        = caseId,
+                    CountryCode = countryCode,
+                    StateCode   = stateCode,
+                    City        = city
                 );
                 insert l;
+
+                Case currentCase = new Case();
+                currentCase.Id = caseId;
+                currentCase.Status = 'Potential';
+                update currentCase;
+
                 PageReference pr = new PageReference('/' + l.Id);
                 pr.setRedirect(true);
                 return pr;
@@ -135,10 +164,17 @@ public with sharing class CaseToLeadVFController {
                     existingLead.Case__c = caseId;
                     update existingLead;
                 }
+
+                Case currentCase = new Case();
+                currentCase.Id = caseId;
+                currentCase.Status = 'Potential';
+                update currentCase;
+
                 PageReference pr = new PageReference('/' + existingLead.Id);
                 pr.setRedirect(true);
                 return pr;
             }
+
         } catch (Exception e) {
             ApexPages.addMessage(new ApexPages.Message(
                 ApexPages.Severity.ERROR, 'Error: ' + e.getMessage()
@@ -146,4 +182,67 @@ public with sharing class CaseToLeadVFController {
             return null;
         }
     }
+
+    public void updateStates() {
+        stateOptions = new List<SelectOption>();
+        stateOptions.add(new SelectOption('', '--None--'));
+
+        if (this.getIsIndiaSelected()) {
+
+            Integer indiaIndex = -1;
+            List<Schema.PicklistEntry> countryEntries =
+                Lead.CountryCode.getDescribe().getPicklistValues();
+
+            for (Integer i = 0; i < countryEntries.size(); i++) {
+                if (countryEntries[i].getValue() == INDIA_COUNTRY_CODE) {
+                    indiaIndex = i;
+                    break;
+                }
+            }
+
+            if (indiaIndex >= 0) {
+                for (Schema.PicklistEntry s : Lead.StateCode.getDescribe().getPicklistValues()) {
+                    if (s.isActive() && isValidForIndex(s, indiaIndex)) {
+                        stateOptions.add(new SelectOption(s.getValue(), s.getLabel()));
+                    }
+                }
+            }
+        } else {
+            stateCode = '';
+        }
+    }
+
+    public Boolean getIsIndiaSelected() {
+        return countryCode == INDIA_COUNTRY_CODE;
+    }
+    
+    private Boolean isValidForIndex(Schema.PicklistEntry entry, Integer index) {
+        Map<String, Object> entryMap = 
+            (Map<String, Object>) JSON.deserializeUntyped(JSON.serialize(entry));
+
+        String validForEncoded = (String) entryMap.get('validFor');
+        if (String.isBlank(validForEncoded)) return false;
+
+        Blob   validForBlob = EncodingUtil.base64Decode(validForEncoded);
+        String hexString    = EncodingUtil.convertToHex(validForBlob);
+
+        Integer byteIndex = index / 8;
+        Integer bitIndex  = 7 - Math.mod(index, 8);
+
+        if (byteIndex * 2 + 2 > hexString.length()) return false;
+
+        String  hexByte = hexString.substring(byteIndex * 2, byteIndex * 2 + 2).toUpperCase();
+        Integer byteVal = hexCharToInt(hexByte.charAt(0)) * 16 
+                        + hexCharToInt(hexByte.charAt(1));
+
+        return (byteVal & (1 << bitIndex)) != 0;
+    }
+
+    private Integer hexCharToInt(Integer c) {
+        if (c >= 48 && c <= 57)  return c - 48;       // '0'–'9'
+        if (c >= 65 && c <= 70)  return c - 55;       // 'A'–'F'
+        if (c >= 97 && c <= 102) return c - 87;       // 'a'–'f'
+        return 0;
+    }
+
 }

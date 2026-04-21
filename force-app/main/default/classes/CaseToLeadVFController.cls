@@ -52,12 +52,21 @@ public with sharing class CaseToLeadVFController {
         }
         try {
             Case c = [
-                SELECT Id, SuppliedName, SuppliedEmail, Subject, Description, Origin, Account.Name
+                SELECT Id, SuppliedName, SuppliedEmail, Subject, Description, Origin, Account.Name, Status
                 FROM   Case
                 WHERE  Id = :caseId
                 WITH   SECURITY_ENFORCED
                 LIMIT  1
             ];
+            
+            if (c.Status == 'Potential' || c.Status == 'Non Potential') {
+                ApexPages.addMessage(new ApexPages.Message(
+                    ApexPages.Severity.ERROR,
+                    'Status already set to ' + c.Status + '. Cannot create lead.'
+                ));
+                return;
+            }
+            
             leadName        = c.SuppliedName;
             leadEmail       = c.SuppliedEmail;
             companyName     = (c.Account != null) ? c.Account.Name : '';

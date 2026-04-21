@@ -141,4 +141,139 @@ public class CaseToLeadVFControllerTest {
         List<Lead> leads = [SELECT Id FROM Lead];
         //System.assertEquals(0, leads.size(), 'Lead should NOT be created');
     }
+    
+    // 🔹 Test: Status Already Potential
+    @isTest
+    static void testStatusAlreadyPotential() {
+        
+        Case c = new Case(
+            Subject = 'Potential Case',
+            SuppliedName = 'Test User',
+            SuppliedEmail = 'potential@test.com',
+            Origin = 'Email',
+            Status = 'Potential'
+        );
+        insert c;
+        
+        createEmailMessage(c.Id, 'potential@test.com', 'support@test.com');
+        
+        Test.startTest();
+        
+        ApexPages.StandardController sc = new ApexPages.StandardController(c);
+        CaseToLeadVFController controller = new CaseToLeadVFController(sc);
+        
+        Test.stopTest();
+    }
+    
+    // 🔹 Test: Status Already Non Potential
+    @isTest
+    static void testStatusAlreadyNonPotential() {
+        
+        Case c = new Case(
+            Subject = 'Non Potential Case',
+            SuppliedName = 'Test User',
+            SuppliedEmail = 'nonpotential@test.com',
+            Origin = 'Email',
+            Status = 'Non Potential'
+        );
+        insert c;
+        
+        createEmailMessage(c.Id, 'nonpotential@test.com', 'support@test.com');
+        
+        Test.startTest();
+        
+        ApexPages.StandardController sc = new ApexPages.StandardController(c);
+        CaseToLeadVFController controller = new CaseToLeadVFController(sc);
+        
+        Test.stopTest();
+    }
+    
+    // 🔹 Test: updateStates method coverage
+    @isTest
+    static void testUpdateStates() {
+        
+        Case c = new Case(
+            Subject = 'Test Case',
+            SuppliedName = 'Test User',
+            SuppliedEmail = 'test@test.com',
+            Origin = 'Email'
+        );
+        insert c;
+        
+        Test.startTest();
+        
+        ApexPages.StandardController sc = new ApexPages.StandardController(c);
+        CaseToLeadVFController controller = new CaseToLeadVFController(sc);
+        
+        // Test with India country code
+        controller.countryCode = 'IN';
+        controller.updateStates();
+        
+        // Test with non-India country code
+        controller.countryCode = 'US';
+        controller.updateStates();
+        
+        // Test getIsIndiaSelected
+        controller.countryCode = 'IN';
+        controller.getIsIndiaSelected();
+        
+        controller.countryCode = 'US';
+        controller.getIsIndiaSelected();
+        
+        Test.stopTest();
+    }
+    
+    // 🔹 Test: Validation errors coverage
+    @isTest
+    static void testValidationErrors() {
+        
+        Case c = new Case(
+            Subject = 'Test Case',
+            SuppliedName = 'Test User',
+            SuppliedEmail = 'test@test.com',
+            Origin = 'Email'
+        );
+        insert c;
+        
+        Test.startTest();
+        
+        ApexPages.StandardController sc = new ApexPages.StandardController(c);
+        CaseToLeadVFController controller = new CaseToLeadVFController(sc);
+        
+        // Test missing name
+        controller.leadName = '';
+        controller.process();
+        
+        // Test missing email
+        controller.leadName = 'Test Name';
+        controller.leadEmail = '';
+        controller.process();
+        
+        // Test invalid email
+        controller.leadEmail = 'invalid-email';
+        controller.process();
+        
+        Test.stopTest();
+    }
+    
+    // 🔹 Test: Cancel method
+    @isTest
+    static void testCancel() {
+        
+        Case c = new Case(
+            Subject = 'Test Case',
+            SuppliedName = 'Test User',
+            SuppliedEmail = 'test@test.com',
+            Origin = 'Email'
+        );
+        insert c;
+        
+        Test.startTest();
+        
+        ApexPages.StandardController sc = new ApexPages.StandardController(c);
+        CaseToLeadVFController controller = new CaseToLeadVFController(sc);
+        controller.cancel();
+        
+        Test.stopTest();
+    }
 }

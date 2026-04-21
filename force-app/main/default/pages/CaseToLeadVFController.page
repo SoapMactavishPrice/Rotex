@@ -239,7 +239,7 @@
                     styleClass="slds-button slds-button_neutral"/>
 
                 <apex:commandButton value="Create Lead" 
-                    action="{!process}" 
+                    action="{!process}" disabled="{!Case.Status == 'Potential' || Case.Status == 'Non Potential'}"
                     styleClass="slds-button slds-button_brand"/>
             </div>
         </div>

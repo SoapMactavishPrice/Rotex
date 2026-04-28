@@ -27,6 +27,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return this.isSaveDisabled;
     }
 
+    get isSubmitDisabled() {
+        return this.isSaveDisabled || this.requiresNonFinalApproverComment();
+    }
+
     fetchQuotes() {
         getAllQuotations()
             .then(result => {
@@ -152,68 +156,81 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         specificQuoteLineItem[field] = value;
         specificQuoteLineItem['updated'] = true;
         specificQuote['updated'] = true;
+        this.quotes = [...this.quotes];
     }
 
-validateQuoteData() {
-    let isValid = true;
+    validateQuoteData() {
+        if (!this.requiresNonFinalApproverComment()) {
+            return true;
+        }
 
-    outerLoop: // allows breaking both loops
-    for (let quote of this.quotes) {
-        for (let item of quote.quoteLineItems) {
-            if (!item.updated) continue;
-            if (item.approvalStatus === 'Approved') {
-                if (item.bcheck1 === false && (!item.Sales_Manager_Comments || item.Sales_Manager_Comments.trim() === '')) {
-                    // show error toast
-                    this.showToast('Error', `Sales Manager Comments are required for product "${item.productName}"`, 'error');
-                    
-                    isValid = false;
-                    break outerLoop; // stop checking other items or quotes
+        this.showToast('Error', 'Enter at least one comment before submitting.', 'error');
+        return false;
+    }
+
+    requiresNonFinalApproverComment() {
+        if (!this.quotes) {
+            return false;
+        }
+
+        let hasCommentOnlyLine = false;
+        let hasCurrentUserComment = false;
+
+        for (let quote of this.quotes) {
+            for (let item of quote.quoteLineItems || []) {
+                const currentUserComment = this.getCurrentUserComment(item);
+                if (!currentUserComment || item.isFinalDiscountApprover || !item.isEditable) {
+                    continue;
                 }
 
-                if (item.bcheck2 === false && (!item.Country_Continent_Sales_LOB_Comments || item.Country_Continent_Sales_LOB_Comments.trim() === '')) {
-                    // show error toast
-                    this.showToast('Error', `Country / Continent Sales / LOB Comments are required for product "${item.productName}"`, 'error');
-                    
-                    isValid = false;
-                    break outerLoop; // stop checking other items or quotes
-                }
-
-
-                if (item.bcheck3 === false && (!item.Rotex_Board_Member_Comments || item.Rotex_Board_Member_Comments.trim() === '')) {
-                    // show error toast
-                    this.showToast('Error', `Rotex Board Member Comments are required for product "${item.productName}"`, 'error');
-                    
-                    isValid = false;
-                    break outerLoop; // stop checking other items or quotes
-                }
-
-                if (item.bcheck4 === false && (!item.Managing_Director_Comments || item.Managing_Director_Comments.trim() === '')) {
-                    // show error toast
-                    this.showToast('Error', `Managing Director Comments are required for product "${item.productName}"`, 'error');
-                    
-                    isValid = false;
-                    break outerLoop; // stop checking other items or quotes
-                }
-
-                 if (item.bcheck5 === false && (!item.Global_Sales_Head_Comments || item.Global_Sales_Head_Comments.trim() === '')) {
-                    // show error toast
-                    this.showToast('Error', `Global Sales Head Comments are required for product "${item.productName}"`, 'error');
-                    
-                    isValid = false;
-                    break outerLoop; // stop checking other items or quotes
+                hasCommentOnlyLine = true;
+                if (this.hasValue(item[currentUserComment.fieldName])) {
+                    hasCurrentUserComment = true;
+                    break;
                 }
             }
+
+            if (hasCurrentUserComment) {
+                break;
+            }
         }
+
+        return hasCommentOnlyLine && !hasCurrentUserComment;
     }
 
-    return isValid;
-}
+    getCurrentUserComment(item) {
+        if (item.bcheck1 === false) {
+            return { fieldName: 'Sales_Manager_Comments' };
+        }
+
+        if (item.bcheck2 === false) {
+            return { fieldName: 'Country_Continent_Sales_LOB_Comments' };
+        }
+
+        if (item.bcheck3 === false) {
+            return { fieldName: 'Rotex_Board_Member_Comments' };
+        }
+
+        if (item.bcheck4 === false) {
+            return { fieldName: 'Managing_Director_Comments' };
+        }
+
+        if (item.bcheck5 === false) {
+            return { fieldName: 'Global_Sales_Head_Comments' };
+        }
+
+        return null;
+    }
+
+    hasValue(value) {
+        return value && value.trim() !== '';
+    }
 
 
     saveChanges() {
         this.isSaveDisabled = true;
-        let temp =false;
-        temp =  this.validateQuoteData(this.quotes);
+        let temp = false;
+        temp = this.validateQuoteData();
         
         console.log('Final Quote List', JSON.stringify(this.quotes));
 

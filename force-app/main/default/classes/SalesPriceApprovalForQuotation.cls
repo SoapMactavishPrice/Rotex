@@ -71,7 +71,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         // Fetch Quote records — no extra user filter needed since quoteIdsWithSubmitted
         // already guarantees the current user is an approver on at least one QLI per quote
         Map<Id, Quote> quoteMap = new Map<Id, Quote>(
-            [SELECT Id, Name, Owner.Email, Owner.Name, OwnerId, Account.Name, QuoteNumber,
+            [SELECT Id, Name, Owner.Email, Owner.Name, OwnerId, Account.Name, QuoteNumber, Account.OwnerId,
                     Sales_Rep__c, Sales_Manager__c, Sales_Manager_Status__c, Sales_Rep_Status__c,
                     Country_Continent_Sales_Head_LOB_Head__c, Country_Continent_Sales_H_LOB_Status__c,
                     Global_Sales_Head__c,
@@ -132,7 +132,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                 WHERE Id IN :updatedQuoteLineItemIds
             ]);
         }
-
+        List<Quote> quotesToUpdate = new List<Quote>();
         for (QuotationWrapper eachQuotation : quotations) {
             if (eachQuotation.updated && eachQuotation.quoteLineItems != null && !eachQuotation.quoteLineItems.isEmpty()) {
                 for (QuotationLineItemWrapper eachQuoteLineItem : eachQuotation.quoteLineItems) {
@@ -200,6 +200,21 @@ public without sharing class SalesPriceApprovalForQuotation {
                             quoteLineItem.Managing_Director_Comments__c = eachQuoteLineItem.Managing_Director_Comments;
                             quoteLineItem.Managing_Director_Date_Time__c = DateTime.now(); // ✅
                         } 
+
+                        if (eachQuoteLineItem.isFinalDiscountApprover && eachQuoteLineItem.approvalStatus == 'Rejected') {
+                            Quote quote = new Quote();
+                            quote.Id = eachQuotation.quoteId;
+                            quote.OwnerId = eachQuotation.accountOwner;
+                            quote.Status = eachQuoteLineItem.approvalStatus;
+                            quotesToUpdate.add(quote);
+                        } else if (eachQuoteLineItem.isFinalDiscountApprover) {
+                            Quote quote = new Quote();
+                            quote.Id = eachQuotation.quoteId;
+                            quote.OwnerId = eachQuotation.accountOwner;
+                            quotesToUpdate.add(quote);
+                        }
+
+                        
                         
                         quotationLineItemsToBeUpdated.add(quoteLineItem);
                     }
@@ -208,6 +223,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
 
         UPDATE quotationLineItemsToBeUpdated;
+        UPDATE quotesToUpdate;
 
         for (QuotationWrapper eachQuotation : quotations) {
             SalesPriceApprovalForQuotation controller = new SalesPriceApprovalForQuotation(eachQuotation);
@@ -344,6 +360,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String quoteName;
         @AuraEnabled public String quoteNumber;
         @AuraEnabled public String accountName;
+        @AuraEnabled public String accountOwner;
         @AuraEnabled public String quoteOwnerId;
         @AuraEnabled public String quoteOwnerEmail;
         @AuraEnabled public String quoteOwnerName;
@@ -358,6 +375,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.quoteId = quote.Id;
             this.quoteName = quote.Name;
             this.accountName = quote.Account.Name;
+            this.accountOwner = quote.Account.OwnerId;
             this.quoteNumber = quote.QuoteNumber;
             this.quoteOwnerId = quote.OwnerId;
             this.quoteOwnerEmail = quote.Owner.Email;

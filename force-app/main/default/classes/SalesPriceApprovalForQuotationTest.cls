@@ -117,6 +117,26 @@ private class SalesPriceApprovalForQuotationTest {
             IsActive = true
         );
         insert testProduct;
+
+        List<PricebookEntry> standardEntries = [
+            SELECT Id
+            FROM PricebookEntry
+            WHERE Pricebook2Id = :standardPricebookId
+            AND Product2Id = :testProduct.Id
+            LIMIT 1
+        ];
+        PricebookEntry testPBE;
+        if (standardEntries.isEmpty()) {
+            testPBE = new PricebookEntry(
+                Pricebook2Id = standardPricebookId,
+                Product2Id = testProduct.Id,
+                UnitPrice = 1000,
+                IsActive = true
+            );
+            insert testPBE;
+        } else {
+            testPBE = standardEntries[0];
+        }
         
         
         // Create Quote with approval hierarchy
@@ -133,15 +153,6 @@ private class SalesPriceApprovalForQuotationTest {
         );
         insert testQuote;
         
-        // Create Quote Line Items with different statuses
-        PricebookEntry testPBE = [
-            SELECT Id, Name, UnitPrice, IsActive, Pricebook2Id, Product2Id
-            FROM PricebookEntry
-            WHERE Pricebook2Id = :standardPricebookId
-            AND Product2Id = :testProduct.Id
-            LIMIT 1
-        ];
-
         QuoteLineItem qli1 = new QuoteLineItem(
             QuoteId = testQuote.Id,
             Product2Id = testProduct.Id,
@@ -161,9 +172,41 @@ private class SalesPriceApprovalForQuotationTest {
             Rotex_Board_Member__c = boardMember.Id,
             Rotex_Board_Member_Status__c = 'Submitted',
             Global_Sales_Head__c = globalHead.Id,
-            Global_Sales_Head_Status__c = 'Submitted'
+            Global_Sales_Head_Status__c = 'Submitted',
+            Final_Discount_Approver__c = salesRep.Id
         );
         insert qli1;
+    }
+
+    private static SalesPriceApprovalForQuotation.QuotationWrapper buildWrapper(
+        QuoteLineItem qli,
+        String currentStageField,
+        String approvalStatus
+    ) {
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            new SalesPriceApprovalForQuotation.QuotationWrapper();
+        wrapper.quoteId = qli.QuoteId;
+        wrapper.quoteOwnerId = UserInfo.getUserId();
+        wrapper.quoteOwnerEmail = 'owner@test.com';
+        wrapper.quoteOwnerName = 'Test Owner';
+        wrapper.quoteName = 'Test Quote';
+        wrapper.accountOwner = UserInfo.getUserId();
+        wrapper.updated = true;
+
+        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper =
+            new SalesPriceApprovalForQuotation.QuotationLineItemWrapper();
+        lineWrapper.quoteLineItemId = qli.Id;
+        lineWrapper.approvalStatus = approvalStatus;
+        lineWrapper.currentStageField = currentStageField;
+        lineWrapper.updated = true;
+        lineWrapper.isFinalDiscountApprover = true;
+
+        wrapper.quoteLineItems = new List<SalesPriceApprovalForQuotation.QuotationLineItemWrapper>{lineWrapper};
+        return wrapper;
+    }
+
+    private static String serializeWrapper(SalesPriceApprovalForQuotation.QuotationWrapper wrapper) {
+        return JSON.serialize(new List<SalesPriceApprovalForQuotation.QuotationWrapper>{wrapper});
     }
     
     @isTest
@@ -218,29 +261,20 @@ private class SalesPriceApprovalForQuotationTest {
     static void testUpdateQuoteLineItem_Approved() {
         User salesRep = [SELECT Id FROM User WHERE Email = 'salesrep@test.com' LIMIT 1];
         QuoteLineItem qli = [SELECT Id, QuoteId FROM QuoteLineItem LIMIT 1];
+        qli.Final_Discount_Approver__c = salesRep.Id;
+        update qli;
         
-        // Create wrapper for update
-        SalesPriceApprovalForQuotation.QuotationWrapper wrapper = 
-            new SalesPriceApprovalForQuotation.QuotationWrapper();
-        wrapper.quoteId = qli.QuoteId;
-        wrapper.updated = true;
-        
-        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper = 
-            new SalesPriceApprovalForQuotation.QuotationLineItemWrapper();
-        lineWrapper.quoteLineItemId = qli.Id;
-        lineWrapper.approvalStatus = 'Approved';
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            buildWrapper(qli, 'Sales_Rep_Status__c', 'Approved');
+        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper = wrapper.quoteLineItems[0];
         lineWrapper.approvalComments = 'Test Approval';
-        lineWrapper.currentStageField = 'Sales_Rep_Status__c';
-        lineWrapper.updated = true;
-        
-        wrapper.quoteLineItems = new List<SalesPriceApprovalForQuotation.QuotationLineItemWrapper>{lineWrapper};
-        
-        String jsonString = JSON.serialize(new List<SalesPriceApprovalForQuotation.QuotationWrapper>{wrapper});
+        String jsonString = serializeWrapper(wrapper);
         
         System.runAs(salesRep) {
             Test.startTest();
             String result = SalesPriceApprovalForQuotation.updateQuoteLineItem(jsonString);
             Test.stopTest();
+            System.assertEquals('Success', result);
         }
     }
     
@@ -248,28 +282,20 @@ private class SalesPriceApprovalForQuotationTest {
     static void testUpdateQuoteLineItem_Rejected() {
         User salesManager = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
         QuoteLineItem qli = [SELECT Id, QuoteId FROM QuoteLineItem LIMIT 1];
+        qli.Final_Discount_Approver__c = salesManager.Id;
+        update qli;
         
-        SalesPriceApprovalForQuotation.QuotationWrapper wrapper = 
-            new SalesPriceApprovalForQuotation.QuotationWrapper();
-        wrapper.quoteId = qli.QuoteId;
-        wrapper.updated = true;
-        
-        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper = 
-            new SalesPriceApprovalForQuotation.QuotationLineItemWrapper();
-        lineWrapper.quoteLineItemId = qli.Id;
-        lineWrapper.approvalStatus = 'Rejected';
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            buildWrapper(qli, 'Sales_Manager_Status__c', 'Rejected');
+        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper = wrapper.quoteLineItems[0];
         lineWrapper.Sales_Manager_Comments = 'Test Rejection';
-        lineWrapper.currentStageField = 'Sales_Manager_Status__c';
-        lineWrapper.updated = true;
-        
-        wrapper.quoteLineItems = new List<SalesPriceApprovalForQuotation.QuotationLineItemWrapper>{lineWrapper};
-        
-        String jsonString = JSON.serialize(new List<SalesPriceApprovalForQuotation.QuotationWrapper>{wrapper});
+        String jsonString = serializeWrapper(wrapper);
         
         System.runAs(salesManager) {
             Test.startTest();
             String result = SalesPriceApprovalForQuotation.updateQuoteLineItem(jsonString);
             Test.stopTest();
+            System.assertEquals('Success', result);
         }
     }
     
@@ -277,29 +303,21 @@ private class SalesPriceApprovalForQuotationTest {
     static void testUpdateQuoteLineItem_AllApprovalLevels() {
         User countryHead = [SELECT Id FROM User WHERE Email = 'countryhead@test.com' LIMIT 1];
         QuoteLineItem qli = [SELECT Id, QuoteId FROM QuoteLineItem LIMIT 1];
+        qli.Final_Discount_Approver__c = countryHead.Id;
+        update qli;
         
         // Test Country Head approval
-        SalesPriceApprovalForQuotation.QuotationWrapper wrapper1 = 
-            new SalesPriceApprovalForQuotation.QuotationWrapper();
-        wrapper1.quoteId = qli.QuoteId;
-        wrapper1.updated = true;
-        
-        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper1 = 
-            new SalesPriceApprovalForQuotation.QuotationLineItemWrapper();
-        lineWrapper1.quoteLineItemId = qli.Id;
-        lineWrapper1.approvalStatus = 'Approved';
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper1 =
+            buildWrapper(qli, 'Country_Continent_Sales_H_LOB_Status__c', 'Approved');
+        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper1 = wrapper1.quoteLineItems[0];
         lineWrapper1.Country_Continent_Sales_LOB_Comments = 'Country Head Approval';
-        lineWrapper1.currentStageField = 'Country_Continent_Sales_H_LOB_Status__c';
-        lineWrapper1.updated = true;
-        
-        wrapper1.quoteLineItems = new List<SalesPriceApprovalForQuotation.QuotationLineItemWrapper>{lineWrapper1};
-        
-        String jsonString1 = JSON.serialize(new List<SalesPriceApprovalForQuotation.QuotationWrapper>{wrapper1});
+        String jsonString1 = serializeWrapper(wrapper1);
         
         System.runAs(countryHead) {
             Test.startTest();
             String result = SalesPriceApprovalForQuotation.updateQuoteLineItem(jsonString1);
             Test.stopTest();
+            System.assertEquals('Success', result);
         }
     }
     
@@ -307,28 +325,20 @@ private class SalesPriceApprovalForQuotationTest {
     static void testUpdateQuoteLineItem_ManagingDirector() {
         User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
         QuoteLineItem qli = [SELECT Id, QuoteId FROM QuoteLineItem LIMIT 1];
+        qli.Final_Discount_Approver__c = md.Id;
+        update qli;
         
-        SalesPriceApprovalForQuotation.QuotationWrapper wrapper = 
-            new SalesPriceApprovalForQuotation.QuotationWrapper();
-        wrapper.quoteId = qli.QuoteId;
-        wrapper.updated = true;
-        
-        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper = 
-            new SalesPriceApprovalForQuotation.QuotationLineItemWrapper();
-        lineWrapper.quoteLineItemId = qli.Id;
-        lineWrapper.approvalStatus = 'Approved';
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            buildWrapper(qli, 'Managing_Director_Status__c', 'Approved');
+        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper = wrapper.quoteLineItems[0];
         lineWrapper.Managing_Director_Comments = 'MD Approval';
-        lineWrapper.currentStageField = 'Managing_Director_Status__c';
-        lineWrapper.updated = true;
-        
-        wrapper.quoteLineItems = new List<SalesPriceApprovalForQuotation.QuotationLineItemWrapper>{lineWrapper};
-        
-        String jsonString = JSON.serialize(new List<SalesPriceApprovalForQuotation.QuotationWrapper>{wrapper});
+        String jsonString = serializeWrapper(wrapper);
         
         System.runAs(md) {
             Test.startTest();
             String result = SalesPriceApprovalForQuotation.updateQuoteLineItem(jsonString);
             Test.stopTest();
+            System.assertEquals('Success', result);
         }
     }
     
@@ -336,28 +346,20 @@ private class SalesPriceApprovalForQuotationTest {
     static void testUpdateQuoteLineItem_BoardMember() {
         User board = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
         QuoteLineItem qli = [SELECT Id, QuoteId FROM QuoteLineItem LIMIT 1];
+        qli.Final_Discount_Approver__c = board.Id;
+        update qli;
         
-        SalesPriceApprovalForQuotation.QuotationWrapper wrapper = 
-            new SalesPriceApprovalForQuotation.QuotationWrapper();
-        wrapper.quoteId = qli.QuoteId;
-        wrapper.updated = true;
-        
-        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper = 
-            new SalesPriceApprovalForQuotation.QuotationLineItemWrapper();
-        lineWrapper.quoteLineItemId = qli.Id;
-        lineWrapper.approvalStatus = 'Approved';
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            buildWrapper(qli, 'Rotex_Board_Member_Status__c', 'Approved');
+        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper = wrapper.quoteLineItems[0];
         lineWrapper.Rotex_Board_Member_Comments = 'Board Approval';
-        lineWrapper.currentStageField = 'Rotex_Board_Member_Status__c';
-        lineWrapper.updated = true;
-        
-        wrapper.quoteLineItems = new List<SalesPriceApprovalForQuotation.QuotationLineItemWrapper>{lineWrapper};
-        
-        String jsonString = JSON.serialize(new List<SalesPriceApprovalForQuotation.QuotationWrapper>{wrapper});
+        String jsonString = serializeWrapper(wrapper);
         
         System.runAs(board) {
             Test.startTest();
             String result = SalesPriceApprovalForQuotation.updateQuoteLineItem(jsonString);
             Test.stopTest();
+            System.assertEquals('Success', result);
         }
     }
     
@@ -365,28 +367,20 @@ private class SalesPriceApprovalForQuotationTest {
     static void testUpdateQuoteLineItem_GlobalHead() {
         User globalUser = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
         QuoteLineItem qli = [SELECT Id, QuoteId FROM QuoteLineItem LIMIT 1];
+        qli.Final_Discount_Approver__c = globalUser.Id;
+        update qli;
         
-        SalesPriceApprovalForQuotation.QuotationWrapper wrapper = 
-            new SalesPriceApprovalForQuotation.QuotationWrapper();
-        wrapper.quoteId = qli.QuoteId;
-        wrapper.updated = true;
-        
-        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper = 
-            new SalesPriceApprovalForQuotation.QuotationLineItemWrapper();
-        lineWrapper.quoteLineItemId = qli.Id;
-        lineWrapper.approvalStatus = 'Approved';
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            buildWrapper(qli, 'Global_Sales_Head_Status__c', 'Approved');
+        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper = wrapper.quoteLineItems[0];
         lineWrapper.Global_Sales_Head_Comments = 'Global Head Approval';
-        lineWrapper.currentStageField = 'Global_Sales_Head_Status__c';
-        lineWrapper.updated = true;
-        
-        wrapper.quoteLineItems = new List<SalesPriceApprovalForQuotation.QuotationLineItemWrapper>{lineWrapper};
-        
-        String jsonString = JSON.serialize(new List<SalesPriceApprovalForQuotation.QuotationWrapper>{wrapper});
+        String jsonString = serializeWrapper(wrapper);
         
         System.runAs(globalUser) {
             Test.startTest();
             String result = SalesPriceApprovalForQuotation.updateQuoteLineItem(jsonString);
             Test.stopTest();
+            System.assertEquals('Success', result);
         }
     }
     
@@ -397,6 +391,7 @@ private class SalesPriceApprovalForQuotationTest {
                 Name,
                 QuoteNumber,
                 Account.Name,
+                Account.OwnerId,
                 OwnerId,
                 Owner.Name,
                 Owner.Email,
@@ -428,6 +423,7 @@ private class SalesPriceApprovalForQuotationTest {
                                      Sales_Manager_Date_Time__c, Country_Head_Date_Time__c,
                                      Global_Sales_Head_Date_Time__c, Rotex_Board_Member_Date_Time__c,
                                      Managing_Director_Date_Time__c,
+                                     Final_Discount_Approver__c,
                                      Sales_Manager__r.Name, Country_Continent_Sales_Head_LOB_Head__r.Name, Rotex_Board_Member__r.Name, Managing_Director_Country_Manage__r.Name, Global_Sales_Head__r.Name
                                      FROM QuoteLineItem WHERE QuoteId = :quote.Id];
         
@@ -458,6 +454,7 @@ private class SalesPriceApprovalForQuotationTest {
                              Sales_Manager_Date_Time__c, Country_Head_Date_Time__c,
                              Global_Sales_Head_Date_Time__c, Rotex_Board_Member_Date_Time__c,
                              Managing_Director_Date_Time__c,
+                             Final_Discount_Approver__c,
                              Sales_Manager__r.Name, Country_Continent_Sales_Head_LOB_Head__r.Name, Rotex_Board_Member__r.Name, Managing_Director_Country_Manage__r.Name, Global_Sales_Head__r.Name
                              FROM QuoteLineItem LIMIT 1];
         
@@ -476,6 +473,7 @@ private class SalesPriceApprovalForQuotationTest {
                 Name,
                 QuoteNumber,
                 Account.Name,
+                Account.OwnerId,
                 OwnerId,
                 Owner.Name,
                 Owner.Email,
@@ -508,6 +506,7 @@ private class SalesPriceApprovalForQuotationTest {
                 Sales_Manager_Date_Time__c, Country_Head_Date_Time__c,
                 Global_Sales_Head_Date_Time__c, Rotex_Board_Member_Date_Time__c,
                 Managing_Director_Date_Time__c,
+                Final_Discount_Approver__c,
                 Sales_Manager__r.Name, Country_Continent_Sales_Head_LOB_Head__r.Name,
                 Rotex_Board_Member__r.Name, Managing_Director_Country_Manage__r.Name,
                 Global_Sales_Head__r.Name
@@ -545,6 +544,7 @@ private class SalesPriceApprovalForQuotationTest {
                 Sales_Manager_Date_Time__c, Country_Head_Date_Time__c,
                 Global_Sales_Head_Date_Time__c, Rotex_Board_Member_Date_Time__c,
                 Managing_Director_Date_Time__c,
+                Final_Discount_Approver__c,
                 Sales_Manager__r.Name, Country_Continent_Sales_Head_LOB_Head__r.Name,
                 Rotex_Board_Member__r.Name, Managing_Director_Country_Manage__r.Name,
                 Global_Sales_Head__r.Name

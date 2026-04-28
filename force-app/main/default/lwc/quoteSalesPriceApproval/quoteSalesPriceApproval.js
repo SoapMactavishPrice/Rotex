@@ -35,6 +35,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
                     const processedLineItems = (q.quoteLineItems || []).map(item => ({
                         ...item,
+                        isFinalDiscountApprover: item.finalDiscountApproverId === this.userId,
                         isEditable: item.approvalStatus === 'Submitted'
                     }));
 
@@ -112,8 +113,8 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                                 soaDateTime: formattedDateTime,
                                 soaComments: soa.commentsValue || '',
                                 soaCommentsField: soa.commentsField,
-                                showStatusCombobox: soa.isCurrentUserRow && item.isEditable,
-                                showStatusText: !soa.isCurrentUserRow || !item.isEditable,
+                                showStatusCombobox: item.isFinalDiscountApprover && soa.isCurrentUserRow && item.isEditable,
+                                showStatusText: false,
                                 showCommentInput: soa.isCurrentUserRow,
                                 soaCommentsDisabled: !item.isEditable,
                                 // Top border to visually separate QLI groups
@@ -218,7 +219,6 @@ validateQuoteData() {
 
     setTimeout(() => {
         if(temp){
-            
             updateQuoteLineItem({quotationListStringObject: JSON.stringify(this.quotes)}).then((result) => {
                 if (result == 'Success') {
                     this.showToast('Success', 'Quotation Line Items updated successfully', 'success');

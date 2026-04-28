@@ -48,6 +48,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                 Sales_Manager_Status__c, Country_Continent_Sales_Head_LOB_Head__c,
                 Country_Continent_Sales_H_LOB_Status__c, Managing_Director_Country_Manage__c,
                 Managing_Director_Status__c, Rotex_Board_Member__c, Rotex_Board_Member_Status__c,
+                Final_Discount_Approver__c,
                 Country_Continent_Sales_LOB_Comments__c, Global_Sales_Head_Comments__c,
                 Managing_Director_Comments__c, Rotex_Board_Member_Comments__c,
                 Sales_Manager_Comments__c, Sales_Manager__r.Name, Country_Continent_Sales_Head_LOB_Head__r.Name,
@@ -109,40 +110,93 @@ public without sharing class SalesPriceApprovalForQuotation {
         List<QuotationWrapper> quotations = parseHeaderAndLine(quotationListStringObject);
 
         List<QuoteLineItem> quotationLineItemsToBeUpdated = new List<QuoteLineItem>();
+        Set<Id> updatedQuoteLineItemIds = new Set<Id>();
+
+        for (QuotationWrapper eachQuotation : quotations) {
+            if (eachQuotation.updated && eachQuotation.quoteLineItems != null && !eachQuotation.quoteLineItems.isEmpty()) {
+                for (QuotationLineItemWrapper eachQuoteLineItem : eachQuotation.quoteLineItems) {
+                    if (eachQuoteLineItem.updated && String.isNotBlank(eachQuoteLineItem.quoteLineItemId)) {
+                        updatedQuoteLineItemIds.add((Id)eachQuoteLineItem.quoteLineItemId);
+                    }
+                }
+            }
+        }
+
+        Map<Id, QuoteLineItem> existingQuoteLineItems = new Map<Id, QuoteLineItem>();
+        if (!updatedQuoteLineItemIds.isEmpty()) {
+            existingQuoteLineItems = new Map<Id, QuoteLineItem>([
+                SELECT Id, Final_Discount_Approver__c, Sales_Rep_Status__c, Sales_Manager_Status__c,
+                    Country_Continent_Sales_H_LOB_Status__c, Global_Sales_Head_Status__c,
+                    Rotex_Board_Member_Status__c, Managing_Director_Status__c
+                FROM QuoteLineItem
+                WHERE Id IN :updatedQuoteLineItemIds
+            ]);
+        }
 
         for (QuotationWrapper eachQuotation : quotations) {
             if (eachQuotation.updated && eachQuotation.quoteLineItems != null && !eachQuotation.quoteLineItems.isEmpty()) {
                 for (QuotationLineItemWrapper eachQuoteLineItem : eachQuotation.quoteLineItems) {
                     if (eachQuoteLineItem.updated) {
+                        QuoteLineItem existingQuoteLineItem = existingQuoteLineItems.get((Id)eachQuoteLineItem.quoteLineItemId);
+                        String existingStageStatus = getStageStatus(existingQuoteLineItem, eachQuoteLineItem.currentStageField);
+                        Boolean statusChanged = eachQuoteLineItem.approvalStatus != existingStageStatus;
+                        if (statusChanged && (existingQuoteLineItem == null || existingQuoteLineItem.Final_Discount_Approver__c != UserInfo.getUserId())) {
+                            throw new AuraHandledException('Only the Final Discount Approver can change the approval status of a Quote Line Item.');
+                        }
+
                         QuoteLineItem quoteLineItem = new QuoteLineItem();
                         quoteLineItem.Id = eachQuoteLineItem.quoteLineItemId;
 
                         if(eachQuoteLineItem.currentStageField == 'Sales_Rep_Status__c'){
-                            quoteLineItem.Sales_Rep_Status__c = eachQuoteLineItem.approvalStatus;
+                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                                quoteLineItem.Sales_Rep_Status__c = eachQuoteLineItem.approvalStatus;
+                            } else {
+                                quoteLineItem.Sales_Rep_Status__c = 'Approved';
+                            }
                             quoteLineItem.Approval_Comments__c = eachQuoteLineItem.approvalComments;
                         }
                         if(eachQuoteLineItem.currentStageField == 'Sales_Manager_Status__c'){
-                            quoteLineItem.Sales_Manager_Status__c = eachQuoteLineItem.approvalStatus;
+                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                                quoteLineItem.Sales_Manager_Status__c = eachQuoteLineItem.approvalStatus;
+                            } else {
+                                quoteLineItem.Sales_Manager_Status__c = 'Approved';
+                            }
                             quoteLineItem.Sales_Manager_Comments__c = eachQuoteLineItem.Sales_Manager_Comments;
                             quoteLineItem.Sales_Manager_Date_Time__c = DateTime.now(); // ✅
                         } 
                         if(eachQuoteLineItem.currentStageField == 'Country_Continent_Sales_H_LOB_Status__c'){
-                            quoteLineItem.Country_Continent_Sales_H_LOB_Status__c = eachQuoteLineItem.approvalStatus;
+                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                                quoteLineItem.Country_Continent_Sales_H_LOB_Status__c = eachQuoteLineItem.approvalStatus;
+                            } else {
+                                quoteLineItem.Country_Continent_Sales_H_LOB_Status__c = 'Approved';
+                            }
                             quoteLineItem.Country_Continent_Sales_LOB_Comments__c = eachQuoteLineItem.Country_Continent_Sales_LOB_Comments;
                             quoteLineItem.Country_Head_Date_Time__c = DateTime.now(); // ✅
                         } 
                         if(eachQuoteLineItem.currentStageField == 'Global_Sales_Head_Status__c'){
-                            quoteLineItem.Global_Sales_Head_Status__c = eachQuoteLineItem.approvalStatus;
+                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                                quoteLineItem.Global_Sales_Head_Status__c = eachQuoteLineItem.approvalStatus;
+                            } else {
+                                quoteLineItem.Global_Sales_Head_Status__c = 'Approved';
+                            }
                             quoteLineItem.Global_Sales_Head_Comments__c = eachQuoteLineItem.Global_Sales_Head_Comments;
                             quoteLineItem.Global_Sales_Head_Date_Time__c = DateTime.now(); // ✅
                         }
                         if(eachQuoteLineItem.currentStageField =='Rotex_Board_Member_Status__c'){
-                            quoteLineItem.Rotex_Board_Member_Status__c = eachQuoteLineItem.approvalStatus;
+                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                                quoteLineItem.Rotex_Board_Member_Status__c = eachQuoteLineItem.approvalStatus;
+                            } else {
+                                quoteLineItem.Rotex_Board_Member_Status__c = 'Approved';
+                            }
                             quoteLineItem.Rotex_Board_Member_Comments__c= eachQuoteLineItem.Rotex_Board_Member_Comments;
                             quoteLineItem.Rotex_Board_Member_Date_Time__c = DateTime.now(); // ✅
                         } 
                         if(eachQuoteLineItem.currentStageField == 'Managing_Director_Status__c'){
-                            quoteLineItem.Managing_Director_Status__c = eachQuoteLineItem.approvalStatus;
+                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                                quoteLineItem.Managing_Director_Status__c = eachQuoteLineItem.approvalStatus;
+                            } else {
+                                quoteLineItem.Managing_Director_Status__c = 'Approved';
+                            }
                             quoteLineItem.Managing_Director_Comments__c = eachQuoteLineItem.Managing_Director_Comments;
                             quoteLineItem.Managing_Director_Date_Time__c = DateTime.now(); // ✅
                         } 
@@ -277,6 +331,14 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
     }
 
+    private static String getStageStatus(QuoteLineItem quoteLineItem, String currentStageField) {
+        if (quoteLineItem == null || String.isBlank(currentStageField)) {
+            return null;
+        }
+
+        return getStringFieldSafely(quoteLineItem, currentStageField);
+    }
+
     public class QuotationWrapper {
         @AuraEnabled public String quoteId;
         @AuraEnabled public String quoteName;
@@ -380,6 +442,8 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String hodUserId; 
         @AuraEnabled public String currentStage; 
         @AuraEnabled public String currentStageField; 
+        @AuraEnabled public String finalDiscountApproverId;
+        @AuraEnabled public Boolean isFinalDiscountApprover;
 
         public QuotationLineItemWrapper() {}
 
@@ -397,6 +461,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.bcheck3 = true;
             this.bcheck4 = true;
             this.bcheck5 = true;
+            this.finalDiscountApproverId = quoteLineItem.Final_Discount_Approver__c;
             
             this.Country_Continent_Sales_LOB_Comments = quoteLineItem.Country_Continent_Sales_LOB_Comments__c;
             this.Global_Sales_Head_Comments = quoteLineItem.Global_Sales_Head_Comments__c;

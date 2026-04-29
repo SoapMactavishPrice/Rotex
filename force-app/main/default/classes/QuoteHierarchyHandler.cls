@@ -2,18 +2,41 @@ public class QuoteHierarchyHandler {
     
     public static void updateQuoteHierarchy(List<Quote> newList, Map<Id, Quote> oldMap) {
         
+        Boolean isInsert = (oldMap == null);
+        
+        // 🔹 1. Identify records to process (V1 logic)
         Set<Id> accIds = new Set<Id>();
+        Map<Id, Quote> quotesToProcess = new Map<Id, Quote>();
+        
         for (Quote q : newList) {
-            if (q.AccountId != null) {
+            Boolean shouldRun = false;
+            
+            if (isInsert) {
+                // Insert: run only if Account exists & Sales Rep not yet set
+                shouldRun = (q.AccountId != null && q.Sales_Rep__c == null);
+            } else {
+                Quote oldQ = oldMap.get(q.Id);
+                // Update: run if Account changed OR Sales Rep is blank
+                shouldRun = (
+                    q.AccountId != null &&
+                    (q.Sales_Rep__c == null || q.AccountId != oldQ.AccountId)
+                );
+            }
+            
+            if (shouldRun) {
+                quotesToProcess.put(q.Id, q);
                 accIds.add(q.AccountId);
             }
         }
-        if (accIds.isEmpty()) return;
         
+        if (quotesToProcess.isEmpty()) return;
+        
+        // 🔹 2. Fetch Accounts
         Map<Id, Account> accMap = new Map<Id, Account>(
             [SELECT Id, OwnerId FROM Account WHERE Id IN :accIds]
         );
         
+        // 🔹 3. Collect Account Owner Ids
         Set<Id> ownerIds = new Set<Id>();
         for (Account acc : accMap.values()) {
             if (acc.OwnerId != null) {
@@ -22,12 +45,12 @@ public class QuoteHierarchyHandler {
         }
         if (ownerIds.isEmpty()) return;
         
+        // 🔹 4. Fetch base Users
         Map<Id, User> hierarchyUsers = new Map<Id, User>(
-            [SELECT Id, Name, ManagerId, SOA_Profile__c
-             FROM User
-             WHERE Id IN :ownerIds]
+            [SELECT Id, Name, ManagerId, SOA_Profile__c FROM User WHERE Id IN :ownerIds]
         );
         
+        // 🔹 5. Fetch hierarchy up to 5 levels (CPU-safe)
         Set<Id> nextLevelIds = new Set<Id>();
         for (User u : hierarchyUsers.values()) {
             if (u.ManagerId != null) {
@@ -48,28 +71,29 @@ public class QuoteHierarchyHandler {
             for (User manager : managers) {
                 if (!hierarchyUsers.containsKey(manager.Id)) {
                     hierarchyUsers.put(manager.Id, manager);
-                    
                     if (manager.ManagerId != null) {
                         nextLevelIds.add(manager.ManagerId);
                     }
                 }
             }
-            
             depth++;
         }
         
+        // 🔹 6. Populate hierarchy fields on filtered Quotes
         Set<Id> quoteIdsToUpdateLineItems = new Set<Id>();
         Map<Id, Quote> hierarchyByQuoteId = new Map<Id, Quote>();
         
-        for (Quote q : newList) {
+        for (Quote q : quotesToProcess.values()) {
             Account acc = accMap.get(q.AccountId);
             if (acc == null || acc.OwnerId == null) continue;
             
             User baseUser = hierarchyUsers.get(acc.OwnerId);
             if (baseUser == null) continue;
             
+            // ✅ Sales Rep = Account Owner
             q.Sales_Rep__c = baseUser.Id;
             
+            // 🔁 Traverse hierarchy
             User currentMgr = baseUser;
             Integer level = 0;
             
@@ -118,6 +142,7 @@ public class QuoteHierarchyHandler {
             }
         }
         
+        // 🔹 7. Sync hierarchy fields down to Quote Line Items (V2 logic)
         if (!quoteIdsToUpdateLineItems.isEmpty()) {
             List<QuoteLineItem> qliToUpdate = new List<QuoteLineItem>();
             

@@ -59,6 +59,7 @@ public with sharing class CaseToLeadVFController {
                 LIMIT  1
             ];
             
+            // Check if case status is already Potential or Non Potential
             if (c.Status == 'Potential' || c.Status == 'Non Potential') {
                 ApexPages.addMessage(new ApexPages.Message(
                     ApexPages.Severity.ERROR,
@@ -135,15 +136,15 @@ public with sharing class CaseToLeadVFController {
                 }
             }
 
-            List<Lead> leads = [
+        /*    List<Lead> leads = [
                 SELECT Id, OwnerId, Email, Case__c
                 FROM   Lead
                 WHERE  Email = :email
                 ORDER BY CreatedDate DESC
                 LIMIT  1
-            ];
+            ]; */
 
-            if (leads.isEmpty()) {
+         //   if (leads.isEmpty()) {
                 Lead l = new Lead(
                     FirstName = firstName,
                     LastName  = lastName,
@@ -167,7 +168,7 @@ public with sharing class CaseToLeadVFController {
                 PageReference pr = new PageReference('/' + l.Id);
                 pr.setRedirect(true);
                 return pr;
-            } else {
+          /*  } else {
                 Lead existingLead = leads[0];
                 if (existingLead.Case__c != caseId) {
                     existingLead.Case__c = caseId;
@@ -182,7 +183,7 @@ public with sharing class CaseToLeadVFController {
                 PageReference pr = new PageReference('/' + existingLead.Id);
                 pr.setRedirect(true);
                 return pr;
-            }
+            }	*/
 
         } catch (Exception e) {
             ApexPages.addMessage(new ApexPages.Message(

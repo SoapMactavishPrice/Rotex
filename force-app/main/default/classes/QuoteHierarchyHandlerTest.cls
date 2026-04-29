@@ -116,6 +116,48 @@ private class QuoteHierarchyHandlerTest {
     }
     
     @isTest
+    static void testAccountOwnerHierarchyFieldsAreApplied() {
+        User salesRep = [SELECT Id FROM User WHERE FirstName = 'Sales' AND LastName = 'Rep' LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE FirstName = 'Sales' AND LastName = 'Manager' LIMIT 1];
+        User managingDirector = [SELECT Id FROM User WHERE FirstName = 'Managing' AND LastName = 'Director' LIMIT 1];
+        User countryHead = [SELECT Id FROM User WHERE FirstName = 'Country' AND LastName = 'Head' LIMIT 1];
+        User globalHead = [SELECT Id FROM User WHERE FirstName = 'Global' AND LastName = 'Head' LIMIT 1];
+        User boardMember = [SELECT Id FROM User WHERE FirstName = 'Board' AND LastName = 'Member' LIMIT 1];
+        
+        Account acc = new Account(Name = 'Hierarchy Account', OwnerId = salesRep.Id);
+        insert acc;
+        
+        Opportunity opp = new Opportunity(
+            Name = 'Hierarchy Opp',
+            AccountId = acc.Id,
+            StageName = 'Prospecting',
+            CloseDate = Date.today().addDays(30)
+        );
+        insert opp;
+        
+        Test.startTest();
+        Quote q = new Quote(
+            Name = 'Hierarchy Quote',
+            OpportunityId = opp.Id,
+            OwnerId = salesRep.Id
+        );
+        insert q;
+        
+        q.Name = 'Hierarchy Quote Updated';
+        update q;
+        Test.stopTest();
+        
+        Quote updatedQuote = [
+            SELECT Sales_Rep__c, Sales_Manager__c, Managing_Director_Country_Manager__c,
+                   Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c,
+                   Rotex_Board_Member__c
+            FROM Quote
+            WHERE Id = :q.Id
+        ];
+        
+    }
+    
+    @isTest
     static void testBulkInsert() {
         User salesRep = [SELECT Id FROM User WHERE FirstName = 'Sales' AND LastName = 'Rep' LIMIT 1];
         

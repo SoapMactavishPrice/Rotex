@@ -23,6 +23,8 @@ public with sharing class SubmitQuoteController {
         
         quoteRecord.OwnerId = newOwnerId;
         
+        quoteRecord.Quote_Submitted__c = System.now();
+        
         update quoteRecord;
         
         sendEmailToAccountOwner(quoteRecord, newOwnerId);

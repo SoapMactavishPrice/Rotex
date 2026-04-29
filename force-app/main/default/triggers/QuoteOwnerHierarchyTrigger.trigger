@@ -1,24 +1,32 @@
-trigger QuoteOwnerHierarchyTrigger on Quote (after insert, after update) {
-    if (Trigger.isAfter && (Trigger.isInsert || Trigger.isUpdate)) {
+trigger QuoteOwnerHierarchyTrigger on Quote (before insert, before update, after update) {
+    
+    if (Trigger.isBefore) {
         QuoteHierarchyHandler.updateQuoteHierarchy(Trigger.new, Trigger.oldMap);
     }
-
+    
     if (Trigger.isAfter && Trigger.isUpdate) {
-        Map<String, Quote> opportunityMap = new Map<String, Quote>();
-        for (Quote quote:Trigger.new) {
-            if (quote.OwnerId != Trigger.oldMap.get(quote.Id).OwnerId){
-                opportunityMap.put(quote.OpportunityId, quote);
+        Map<Id, Quote> quotesByOpportunityId = new Map<Id, Quote>();
+        
+        for (Quote quote : Trigger.new) {
+            Quote oldQuote = Trigger.oldMap.get(quote.Id);
+            
+            if (quote.OpportunityId != null && quote.OwnerId != oldQuote.OwnerId) {
+                quotesByOpportunityId.put(quote.OpportunityId, quote);
             }
         }
-
-        List<Opportunity> opportunities = new List<Opportunity>();
-        for (String eachOppId:opportunityMap.keySet()) {
-            Opportunity opp = new Opportunity();
-            opp.Id = eachOppId;
-            opp.OwnerId = opportunityMap.get(eachOppId).OwnerId;
-            opportunities.add(opp);
+        
+        if (quotesByOpportunityId.isEmpty()) {
+            return;
         }
-
-        UPDATE opportunities;
+        
+        List<Opportunity> opportunities = new List<Opportunity>();
+        for (Id opportunityId : quotesByOpportunityId.keySet()) {
+            opportunities.add(new Opportunity(
+                Id = opportunityId,
+                OwnerId = quotesByOpportunityId.get(opportunityId).OwnerId
+            ));
+        }
+        
+        update opportunities;
     }
 }

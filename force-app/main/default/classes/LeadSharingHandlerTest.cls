@@ -71,4 +71,29 @@ public class LeadSharingHandlerTest {
         
         
     }
+@isTest
+static void testLeadInsertEnquiryNumber() {
+
+    Code_Master__c cm = new Code_Master__c(
+        Name = 'Enquiry No',
+        Starting_Sequence__c = 1,
+        Current_Sequence__c = 5
+    );
+    insert cm;
+
+    Lead l = new Lead(
+        LastName = 'Test Lead',
+        Company = 'Test Company'
+        // ❌ DO NOT SET Enq_No__c
+    );
+
+    Test.startTest();
+    insert l;
+    Test.stopTest();
+
+    Lead updatedLead = [SELECT Enq_No__c FROM Lead WHERE Id = :l.Id];
+
+    System.assertNotEquals(null, updatedLead.Enq_No__c);
+    System.assert(updatedLead.Enq_No__c.startsWith('SF'));
+}
 }

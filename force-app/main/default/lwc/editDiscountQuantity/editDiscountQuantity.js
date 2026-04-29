@@ -122,7 +122,16 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             Quantity: item.Quantity ? parseFloat(item.Quantity) : 0,
             Discount_to_be_offered__c: item.Discount_to_be_offered__c ? parseFloat(item.Discount_to_be_offered__c) : 0,
             Customer_Part_No__c: item.Customer_Part_No__c,
-            P_F_Charges__c: item.P_F_Charges__c ? parseFloat(item.P_F_Charges__c) : 0
+            P_F_Charges__c: item.P_F_Charges__c ? parseFloat(item.P_F_Charges__c) : 0,
+            Discount_as_per_SAP__c: parseFloat(item.Discount_as_per_SAP__c),
+
+            Final_Discount_Approver__c: item.Final_Discount_Approver__c,
+            Sales_Rep__c: item.Sales_Rep__c,
+            Sales_Manager__c: item.Sales_Manager__c,
+            Country_Continent_Sales_Head_LOB_Head__c: item.Country_Continent_Sales_Head_LOB_Head__c,
+            Global_Sales_Head__c: item.Global_Sales_Head__c,
+            Rotex_Board_Member__c: item.Rotex_Board_Member__c,
+            Managing_Director_Country_Manage__c: item.Managing_Director_Country_Manage__c
         }));
 
         updateQuoteLineItem({

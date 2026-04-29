@@ -1,14 +1,44 @@
 public class editDiscountQuantityController {
     @AuraEnabled(cacheable=true)
     public static List<QuoteLineItem> getQuoteLineItem(String qId) {
-        return [SELECT Id, Discount_as_per_SAP__c, Discount_to_be_offered__c, Quantity,
-            UnitPrice, ListPrice, Customer_Part_No__c, Product2.Name, Product2Id, P_F_Charges__c
+        return [SELECT Id, Discount_as_per_SAP__c, Discount_to_be_offered__c, Quantity, 
+            UnitPrice, ListPrice, Customer_Part_No__c, Product2.Name, Product2Id, P_F_Charges__c, Final_Discount_Approver__c, Sales_Rep__c, Sales_Manager__c, 
+            Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c, Rotex_Board_Member__c, Managing_Director_Country_Manage__c
             FROM QuoteLineItem WHERE QuoteId = :qId
         ];
     }
 
     @AuraEnabled
     public static void updateQuoteLineItem(List<QuoteLineItem> quoteLineItems) {
+
+        List<SOA_Matrix__c> matrixList = [
+            SELECT SOA_Profile__c, Min_Discount__c, Max_Discount__c
+            FROM SOA_Matrix__c
+        ];
+
+        for (QuoteLineItem qli : quoteLineItems) {
+            if (qli.Discount_to_be_offered__c != null && qli.Discount_as_per_SAP__c != null && qli.Discount_to_be_offered__c > qli.Discount_as_per_SAP__c) {
+                for (SOA_Matrix__c matrix : matrixList) {
+                    if (qli.Discount_to_be_offered__c >= matrix.Min_Discount__c && qli.Discount_to_be_offered__c <= matrix.Max_Discount__c) {
+                        if (matrix.SOA_Profile__c == 'Sales Rep') {
+                            qli.Final_Discount_Approver__c = qli.Sales_Rep__c;
+                        } else if (matrix.SOA_Profile__c == 'Sales Manager') {
+                            qli.Final_Discount_Approver__c = qli.Sales_Manager__c;
+                        } else if (matrix.SOA_Profile__c == 'Country / Continent Sales Head / LOB Head') {
+                            qli.Final_Discount_Approver__c = qli.Country_Continent_Sales_Head_LOB_Head__c;
+                        } else if (matrix.SOA_Profile__c == 'Global Sales Head') {
+                            qli.Final_Discount_Approver__c = qli.Global_Sales_Head__c;
+                        } else if (matrix.SOA_Profile__c == 'Rotex Board Member') {
+                            qli.Final_Discount_Approver__c = qli.Rotex_Board_Member__c;
+                        } else if (matrix.SOA_Profile__c == 'Managing Director / Country Manager') {
+                            qli.Final_Discount_Approver__c = qli.Managing_Director_Country_Manage__c;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
         update quoteLineItems;
     }
 

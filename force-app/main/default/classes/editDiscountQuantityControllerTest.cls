@@ -78,8 +78,43 @@ public class editDiscountQuantityControllerTest {
     @IsTest
     static void testUpdateQuoteLineItem() {
 
-        List<QuoteLineItem> qliList = [SELECT Id, Quantity, Discount_to_be_offered__c 
-                                       FROM QuoteLineItem LIMIT 1];
+        List<SOA_Matrix__c> soaMatrixList = new List<SOA_Matrix__c>();
+        soaMatrixList.add(new SOA_Matrix__c(
+            SOA_Profile__c = 'Sales Rep',
+            Min_Discount__c = 0,
+            Max_Discount__c = 5
+        ));
+        soaMatrixList.add(new SOA_Matrix__c(
+            SOA_Profile__c = 'Sales Manager',
+            Min_Discount__c = 5.01,
+            Max_Discount__c = 10
+        ));
+        soaMatrixList.add(new SOA_Matrix__c(
+            SOA_Profile__c = 'Country / Continent Sales Head / LOB Head',
+            Min_Discount__c = 10.01,
+            Max_Discount__c = 15
+        ));
+        soaMatrixList.add(new SOA_Matrix__c(
+            SOA_Profile__c = 'Global Sales Head',
+            Min_Discount__c = 15.01,
+            Max_Discount__c = 20
+        ));
+        soaMatrixList.add(new SOA_Matrix__c(
+            SOA_Profile__c = 'Rotex Board Member',
+            Min_Discount__c = 20.01,
+            Max_Discount__c = 25
+        ));
+        soaMatrixList.add(new SOA_Matrix__c(
+            SOA_Profile__c = 'Managing Director / Country Manager',
+            Min_Discount__c = 25.01,
+            Max_Discount__c = 30
+        ));
+        insert soaMatrixList;
+
+        List<QuoteLineItem> qliList = [SELECT Id, Discount_as_per_SAP__c, Discount_to_be_offered__c, Quantity, 
+            UnitPrice, ListPrice, Customer_Part_No__c, Product2.Name, Product2Id, P_F_Charges__c, Final_Discount_Approver__c, Sales_Rep__c, Sales_Manager__c, 
+            Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c, Rotex_Board_Member__c, Managing_Director_Country_Manage__c
+            FROM QuoteLineItem LIMIT 1];
 
         // Modify values
         qliList[0].Quantity = 5;

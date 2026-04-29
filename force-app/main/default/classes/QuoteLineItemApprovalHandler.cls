@@ -251,6 +251,17 @@ public class QuoteLineItemApprovalHandler {
                     System.debug('    ✗ WARNING - Approver User not found in approverMap: ' + approverId);
                     continue;
                 }
+
+                if (qli.Discount_to_be_offered__c == null || qli.Discount_as_per_SAP__c == null) {
+                    System.debug('    ✗ Skipping email - One or both discount fields are NULL');
+                    continue;
+                }
+
+                if (qli.Discount_to_be_offered__c <= qli.Discount_as_per_SAP__c) {
+                    System.debug('    ✗ Skipping email - Offered discount (' + qli.Discount_to_be_offered__c + 
+                               ') is NOT greater than SAP discount (' + qli.Discount_as_per_SAP__c + ')');
+                    continue;
+                }
                 
                 System.debug('    ✓ Approver found: ' + approverUser.Name + ' (' + approverUser.Email + ')');
                 

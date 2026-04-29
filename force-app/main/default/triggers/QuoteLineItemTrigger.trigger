@@ -88,7 +88,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
     if (Trigger.isAfter && Trigger.isUpdate) {
         System.debug('=== APPROVAL PROCESS: AFTER UPDATE TRIGGER START ===');
         System.debug('Calling Sequential Approval Handler');
-        QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(Trigger.new);
+        QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(Trigger.new, Trigger.oldMap);
         System.debug('=== APPROVAL PROCESS: AFTER UPDATE TRIGGER END ===');
     }
     

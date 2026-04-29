@@ -102,8 +102,8 @@ public class QuoteLineItemApprovalHandlerTest {
     @isTest
     static void testProcessApprovals_SalesRepOwner() {
         // Get test data
-        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' LIMIT 1];
-        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Country / Continent Sales Head / LOB Head' LIMIT 1];
+        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' AND IsActive = true LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Country / Continent Sales Head / LOB Head' AND IsActive = true LIMIT 1];
         Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
         PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
         Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
@@ -138,8 +138,8 @@ public class QuoteLineItemApprovalHandlerTest {
     @isTest
     static void testProcessApprovals_SalesManagerOwner() {
         // Get test data
-        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' LIMIT 1];
-        User countryHead = [SELECT Id FROM User WHERE SOA_Profile__c = 'Country / Continent Sales Head / LOB Head' LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' AND IsActive = true LIMIT 1];
+        User countryHead = [SELECT Id FROM User WHERE SOA_Profile__c = 'Country / Continent Sales Head / LOB Head' AND IsActive = true LIMIT 1];
         Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
         PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
         Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
@@ -174,8 +174,8 @@ public class QuoteLineItemApprovalHandlerTest {
     @isTest
     static void testProcessApprovals_NoApprovalNeeded() {
         // Get test data
-        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' LIMIT 1];
-        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' LIMIT 1];
+        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' AND IsActive = true LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' AND IsActive = true LIMIT 1];
         Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
         PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
         Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
@@ -209,8 +209,8 @@ public class QuoteLineItemApprovalHandlerTest {
     @isTest
     static void testProcessApprovals_NullDiscountFields() {
         // Get test data
-        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' LIMIT 1];
-        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' LIMIT 1];
+        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' AND IsActive = true LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' AND IsActive = true LIMIT 1];
         Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
         PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
         Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
@@ -244,9 +244,9 @@ public class QuoteLineItemApprovalHandlerTest {
     @isTest
     static void testProcessApprovals_MultipleQLIs() {
         // Get test data
-        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' LIMIT 1];
-        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' LIMIT 1];
-        User countryHead = [SELECT Id FROM User WHERE SOA_Profile__c = 'Country / Continent Sales Head / LOB Head' LIMIT 1];
+        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' AND IsActive = true LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' AND IsActive = true LIMIT 1];
+        User countryHead = [SELECT Id FROM User WHERE SOA_Profile__c = 'Country / Continent Sales Head / LOB Head' AND IsActive = true LIMIT 1];
         Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
         PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
         Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
@@ -299,8 +299,8 @@ public class QuoteLineItemApprovalHandlerTest {
 
     @isTest
     static void testGetCustomNotificationTypeId_NotFound() {
-        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' LIMIT 1];
-        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' LIMIT 1];
+        User salesRep = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Rep' AND IsActive = true LIMIT 1];
+        User salesManager = [SELECT Id FROM User WHERE SOA_Profile__c = 'Sales Manager' AND IsActive = true LIMIT 1];
         Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
         PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :prod.Id LIMIT 1];
         Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];

@@ -25,11 +25,12 @@ public with sharing class SubmitQuoteController {
         
         quoteRecord.Quote_Submitted__c = System.now();
         
-        update quoteRecord;
         
         sendEmailToAccountOwner(quoteRecord, newOwnerId);
         
         sendCustomNotification(quoteRecord, newOwnerId);
+        
+        update quoteRecord;
         
     }
     

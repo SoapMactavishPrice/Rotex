@@ -74,7 +74,12 @@
 }
 
 .input-field {
-    width: 80%;
+    width: 90%;
+}
+
+.slds-text-color_weak {
+    text-align: center;
+    display: block;
 }
 
 .footer-actions {

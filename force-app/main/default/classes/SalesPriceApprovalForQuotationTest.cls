@@ -215,8 +215,11 @@ private class SalesPriceApprovalForQuotationTest {
         
         System.runAs(salesRep) {
             Test.startTest();
-            List<SalesPriceApprovalForQuotation.QuotationWrapper> quotations = 
+            try {
                 SalesPriceApprovalForQuotation.getAllQuotations();
+            } catch (AuraHandledException e) {
+                // Sales Rep is not one of the five dashboard approver roles.
+            }
             Test.stopTest();
         }
     }
@@ -570,5 +573,50 @@ private class SalesPriceApprovalForQuotationTest {
             SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper =
                 new SalesPriceApprovalForQuotation.QuotationLineItemWrapper(qli);
         }
+    }
+
+    @isTest
+    static void testSkipSoaDoesNotAutoApproveFinalApproverRow() {
+        User boardUser = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
+        User globalUser = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+
+        QuoteLineItem qli = [
+            SELECT Id, QuoteId
+            FROM QuoteLineItem
+            LIMIT 1
+        ];
+        qli.Final_Discount_Approver__c = globalUser.Id;
+        qli.Sales_Manager_Comments__c = null;
+        qli.Sales_Manager_Status__c = 'Submitted';
+        qli.Global_Sales_Head_Comments__c = null;
+        qli.Global_Sales_Head_Status__c = 'Submitted';
+        update qli;
+
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            buildWrapper(qli, 'Global_Sales_Head_Status__c', 'Submitted');
+        SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper = wrapper.quoteLineItems[0];
+        lineWrapper.isFinalDiscountApprover = false;
+        lineWrapper.skipSoaRestrictions = true;
+        lineWrapper.Sales_Manager_Comments = 'Submitted by higher approver';
+        lineWrapper.Global_Sales_Head_Comments = 'Final approver comment only';
+
+        System.runAs(boardUser) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.updateQuoteLineItem(serializeWrapper(wrapper));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+
+        QuoteLineItem updatedQli = [
+            SELECT Sales_Manager_Status__c, Global_Sales_Head_Status__c,
+                Sales_Manager_Comments__c, Global_Sales_Head_Comments__c
+            FROM QuoteLineItem
+            WHERE Id = :qli.Id
+        ];
+
+        System.assertEquals('Approved', updatedQli.Sales_Manager_Status__c);
+        System.assertEquals('Submitted', updatedQli.Global_Sales_Head_Status__c);
+        System.assertEquals('Submitted by higher approver', updatedQli.Sales_Manager_Comments__c);
+        System.assertEquals('Final approver comment only', updatedQli.Global_Sales_Head_Comments__c);
     }
 }

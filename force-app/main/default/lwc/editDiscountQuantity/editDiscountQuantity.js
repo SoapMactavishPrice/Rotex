@@ -64,10 +64,21 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             // Initialize newDiscountValue for items that need it
             this.quoteLineItemList = result.map(item => ({
                 ...item,
-                newDiscountValue: null
+                newDiscountValue: null,
+                isDiscountOfferedDisabled: item.Is_Discount_Approved__c || this.hasSubmittedApproverStatus(item)
             }));
             console.log('quoteLineItemList ', this.quoteLineItemList);
         })
+    }
+
+    hasSubmittedApproverStatus(item) {
+        return [
+            item.Sales_Manager_Status__c,
+            item.Country_Continent_Sales_H_LOB_Status__c,
+            item.Global_Sales_Head_Status__c,
+            item.Rotex_Board_Member_Status__c,
+            item.Managing_Director_Status__c
+        ].some(status => status === 'Submitted');
     }
 
     handleCustomerPartNoChange(event) {

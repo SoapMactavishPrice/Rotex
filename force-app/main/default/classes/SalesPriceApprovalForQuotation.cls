@@ -19,14 +19,14 @@ public without sharing class SalesPriceApprovalForQuotation {
             SELECT QuoteId
             FROM QuoteLineItem
             WHERE (
-                    (Sales_Rep_Status__c = 'Submitted' AND Sales_Rep__c = :currentUserId) OR
-                    (Sales_Manager_Status__c = 'Submitted' AND Sales_Manager__c = :currentUserId) OR
-                    (Country_Continent_Sales_H_LOB_Status__c = 'Submitted' AND Country_Continent_Sales_Head_LOB_Head__c = :currentUserId) OR
-                    (Global_Sales_Head_Status__c = 'Submitted' AND Global_Sales_Head__c = :currentUserId) OR
-                    (Managing_Director_Status__c = 'Submitted' AND Managing_Director_Country_Manage__c = :currentUserId) OR
-                    (Rotex_Board_Member_Status__c = 'Submitted' AND Rotex_Board_Member__c = :currentUserId)
+                    Sales_Manager__c = :currentUserId OR
+                    Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR
+                    Global_Sales_Head__c = :currentUserId OR
+                    Managing_Director_Country_Manage__c = :currentUserId OR
+                    Rotex_Board_Member__c = :currentUserId
                 )
                 AND Discount_offered_SAP__c = true
+                AND Is_Discount_Approved__c = false
         ];
 
         if (submittedQlis.isEmpty()) {
@@ -56,7 +56,10 @@ public without sharing class SalesPriceApprovalForQuotation {
                 Global_Sales_Head__r.Name,
                 Sales_Manager_Date_Time__c, Country_Head_Date_Time__c,
                 Global_Sales_Head_Date_Time__c, Rotex_Board_Member_Date_Time__c,
-                Managing_Director_Date_Time__c
+                Managing_Director_Date_Time__c, Previous_Discount__c, Is_Discount_Approved__c,
+                Prev_Sales_Manager_Comments__c, Prev_Country_Continent_Sales_Comments__c,
+                Prev_Global_Sales_Head_Comments__c, Prev_Rotex_Board_Member_Comments__c,
+                Prev_Managing_Director_Comments__c
             FROM QuoteLineItem
             WHERE QuoteId IN :quoteIdsWithSubmitted
                 AND Discount_offered_SAP__c = true
@@ -127,12 +130,18 @@ public without sharing class SalesPriceApprovalForQuotation {
             existingQuoteLineItems = new Map<Id, QuoteLineItem>([
                 SELECT Id, Final_Discount_Approver__c, Sales_Rep_Status__c, Sales_Manager_Status__c,
                     Country_Continent_Sales_H_LOB_Status__c, Global_Sales_Head_Status__c,
-                    Rotex_Board_Member_Status__c, Managing_Director_Status__c
+                    Rotex_Board_Member_Status__c, Managing_Director_Status__c,
+                    Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
+                    Global_Sales_Head__c, Rotex_Board_Member__c,
+                    Managing_Director_Country_Manage__c,
+                    Sales_Manager_Comments__c, Country_Continent_Sales_LOB_Comments__c,
+                    Global_Sales_Head_Comments__c, Rotex_Board_Member_Comments__c,
+                    Managing_Director_Comments__c
                 FROM QuoteLineItem
                 WHERE Id IN :updatedQuoteLineItemIds
             ]);
         }
-        List<Quote> quotesToUpdate = new List<Quote>();
+        Set<Quote> quotesToUpdate = new Set<Quote>();
         for (QuotationWrapper eachQuotation : quotations) {
             if (eachQuotation.updated && eachQuotation.quoteLineItems != null && !eachQuotation.quoteLineItems.isEmpty()) {
                 for (QuotationLineItemWrapper eachQuoteLineItem : eachQuotation.quoteLineItems) {
@@ -140,74 +149,73 @@ public without sharing class SalesPriceApprovalForQuotation {
                         QuoteLineItem existingQuoteLineItem = existingQuoteLineItems.get((Id)eachQuoteLineItem.quoteLineItemId);
                         String existingStageStatus = getStageStatus(existingQuoteLineItem, eachQuoteLineItem.currentStageField);
                         Boolean statusChanged = eachQuoteLineItem.approvalStatus != existingStageStatus;
-                        if (statusChanged && (existingQuoteLineItem == null || existingQuoteLineItem.Final_Discount_Approver__c != UserInfo.getUserId())) {
+                        Boolean currentStageCommentChanged = didCurrentStageCommentChange(existingQuoteLineItem, eachQuoteLineItem);
+                        Boolean shouldUpdateCurrentStage = statusChanged || currentStageCommentChanged;
+                        Boolean canSubmitAsFinalApprover = eachQuoteLineItem.isFinalDiscountApprover == true ||
+                            canSkipToPreviousFinalApprover(existingQuoteLineItem, eachQuoteLineItem);
+                        if (statusChanged && (existingQuoteLineItem == null || !canSubmitAsFinalApprover)) {
                             throw new AuraHandledException('Only the Final Discount Approver can change the approval status of a Quote Line Item.');
                         }
 
                         QuoteLineItem quoteLineItem = new QuoteLineItem();
                         quoteLineItem.Id = eachQuoteLineItem.quoteLineItemId;
+                        applySkippedComments(quoteLineItem, existingQuoteLineItem, eachQuoteLineItem);
 
-                        if(eachQuoteLineItem.currentStageField == 'Sales_Rep_Status__c'){
-                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                        if(shouldUpdateCurrentStage && eachQuoteLineItem.currentStageField == 'Sales_Rep_Status__c'){
+                            if (canSubmitAsFinalApprover) {
                                 quoteLineItem.Sales_Rep_Status__c = eachQuoteLineItem.approvalStatus;
                             } else {
                                 quoteLineItem.Sales_Rep_Status__c = 'Approved';
                             }
                             quoteLineItem.Approval_Comments__c = eachQuoteLineItem.approvalComments;
                         }
-                        if(eachQuoteLineItem.currentStageField == 'Sales_Manager_Status__c'){
-                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                        if(shouldUpdateCurrentStage && eachQuoteLineItem.currentStageField == 'Sales_Manager_Status__c'){
+                            if (canSubmitAsFinalApprover && statusChanged) {
                                 quoteLineItem.Sales_Manager_Status__c = eachQuoteLineItem.approvalStatus;
-                            } else {
+                            } else if (!canSubmitAsFinalApprover) {
                                 quoteLineItem.Sales_Manager_Status__c = 'Approved';
                             }
                             quoteLineItem.Sales_Manager_Comments__c = eachQuoteLineItem.Sales_Manager_Comments;
                             quoteLineItem.Sales_Manager_Date_Time__c = DateTime.now(); // ✅
                         } 
-                        if(eachQuoteLineItem.currentStageField == 'Country_Continent_Sales_H_LOB_Status__c'){
-                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                        if(shouldUpdateCurrentStage && eachQuoteLineItem.currentStageField == 'Country_Continent_Sales_H_LOB_Status__c'){
+                            if (canSubmitAsFinalApprover && statusChanged) {
                                 quoteLineItem.Country_Continent_Sales_H_LOB_Status__c = eachQuoteLineItem.approvalStatus;
-                            } else {
+                            } else if (!canSubmitAsFinalApprover) {
                                 quoteLineItem.Country_Continent_Sales_H_LOB_Status__c = 'Approved';
                             }
                             quoteLineItem.Country_Continent_Sales_LOB_Comments__c = eachQuoteLineItem.Country_Continent_Sales_LOB_Comments;
                             quoteLineItem.Country_Head_Date_Time__c = DateTime.now(); // ✅
                         } 
-                        if(eachQuoteLineItem.currentStageField == 'Global_Sales_Head_Status__c'){
-                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                        if(shouldUpdateCurrentStage && eachQuoteLineItem.currentStageField == 'Global_Sales_Head_Status__c'){
+                            if (canSubmitAsFinalApprover && statusChanged) {
                                 quoteLineItem.Global_Sales_Head_Status__c = eachQuoteLineItem.approvalStatus;
-                            } else {
+                            } else if (!canSubmitAsFinalApprover) {
                                 quoteLineItem.Global_Sales_Head_Status__c = 'Approved';
                             }
                             quoteLineItem.Global_Sales_Head_Comments__c = eachQuoteLineItem.Global_Sales_Head_Comments;
                             quoteLineItem.Global_Sales_Head_Date_Time__c = DateTime.now(); // ✅
                         }
-                        if(eachQuoteLineItem.currentStageField =='Rotex_Board_Member_Status__c'){
-                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                        if(shouldUpdateCurrentStage && eachQuoteLineItem.currentStageField =='Rotex_Board_Member_Status__c'){
+                            if (canSubmitAsFinalApprover && statusChanged) {
                                 quoteLineItem.Rotex_Board_Member_Status__c = eachQuoteLineItem.approvalStatus;
-                            } else {
+                            } else if (!canSubmitAsFinalApprover) {
                                 quoteLineItem.Rotex_Board_Member_Status__c = 'Approved';
                             }
                             quoteLineItem.Rotex_Board_Member_Comments__c= eachQuoteLineItem.Rotex_Board_Member_Comments;
                             quoteLineItem.Rotex_Board_Member_Date_Time__c = DateTime.now(); // ✅
                         } 
-                        if(eachQuoteLineItem.currentStageField == 'Managing_Director_Status__c'){
-                            if (eachQuoteLineItem.isFinalDiscountApprover) {
+                        if(shouldUpdateCurrentStage && eachQuoteLineItem.currentStageField == 'Managing_Director_Status__c'){
+                            if (canSubmitAsFinalApprover && statusChanged) {
                                 quoteLineItem.Managing_Director_Status__c = eachQuoteLineItem.approvalStatus;
-                            } else {
+                            } else if (!canSubmitAsFinalApprover) {
                                 quoteLineItem.Managing_Director_Status__c = 'Approved';
                             }
                             quoteLineItem.Managing_Director_Comments__c = eachQuoteLineItem.Managing_Director_Comments;
                             quoteLineItem.Managing_Director_Date_Time__c = DateTime.now(); // ✅
                         } 
 
-                        if (eachQuoteLineItem.isFinalDiscountApprover && eachQuoteLineItem.approvalStatus == 'Rejected') {
-                            Quote quote = new Quote();
-                            quote.Id = eachQuotation.quoteId;
-                            quote.OwnerId = eachQuotation.accountOwner;
-                            quote.Status = eachQuoteLineItem.approvalStatus;
-                            quotesToUpdate.add(quote);
-                        } else if (eachQuoteLineItem.isFinalDiscountApprover) {
+                        if (canSubmitAsFinalApprover) {
                             Quote quote = new Quote();
                             quote.Id = eachQuotation.quoteId;
                             quote.OwnerId = eachQuotation.accountOwner;
@@ -223,7 +231,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
 
         UPDATE quotationLineItemsToBeUpdated;
-        UPDATE quotesToUpdate;
+        UPDATE new List<Quote>(quotesToUpdate);
 
         for (QuotationWrapper eachQuotation : quotations) {
             SalesPriceApprovalForQuotation controller = new SalesPriceApprovalForQuotation(eachQuotation);
@@ -347,12 +355,181 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
     }
 
+    private static Decimal getDecimalFieldSafely(SObject record, String fieldApiName) {
+        try {
+            Object value = record.get(fieldApiName);
+            return value == null ? null : (Decimal)value;
+        } catch (SObjectException e) {
+            return null;
+        }
+    }
+
     private static String getStageStatus(QuoteLineItem quoteLineItem, String currentStageField) {
         if (quoteLineItem == null || String.isBlank(currentStageField)) {
             return null;
         }
 
         return getStringFieldSafely(quoteLineItem, currentStageField);
+    }
+
+    private static Boolean didCurrentStageCommentChange(
+        QuoteLineItem quoteLineItem,
+        QuotationLineItemWrapper lineItem
+    ) {
+        if (quoteLineItem == null || lineItem == null || String.isBlank(lineItem.currentStageField)) {
+            return false;
+        }
+
+        String existingComment;
+        String submittedComment;
+
+        if (lineItem.currentStageField == 'Sales_Rep_Status__c') {
+            existingComment = getStringFieldSafely(quoteLineItem, 'Approval_Comments__c');
+            submittedComment = lineItem.approvalComments;
+        } else if (lineItem.currentStageField == 'Sales_Manager_Status__c') {
+            existingComment = getStringFieldSafely(quoteLineItem, 'Sales_Manager_Comments__c');
+            submittedComment = lineItem.Sales_Manager_Comments;
+        } else if (lineItem.currentStageField == 'Country_Continent_Sales_H_LOB_Status__c') {
+            existingComment = getStringFieldSafely(quoteLineItem, 'Country_Continent_Sales_LOB_Comments__c');
+            submittedComment = lineItem.Country_Continent_Sales_LOB_Comments;
+        } else if (lineItem.currentStageField == 'Global_Sales_Head_Status__c') {
+            existingComment = getStringFieldSafely(quoteLineItem, 'Global_Sales_Head_Comments__c');
+            submittedComment = lineItem.Global_Sales_Head_Comments;
+        } else if (lineItem.currentStageField == 'Rotex_Board_Member_Status__c') {
+            existingComment = getStringFieldSafely(quoteLineItem, 'Rotex_Board_Member_Comments__c');
+            submittedComment = lineItem.Rotex_Board_Member_Comments;
+        } else if (lineItem.currentStageField == 'Managing_Director_Status__c') {
+            existingComment = getStringFieldSafely(quoteLineItem, 'Managing_Director_Comments__c');
+            submittedComment = lineItem.Managing_Director_Comments;
+        }
+
+        return normalizeComment(existingComment) != normalizeComment(submittedComment);
+    }
+
+    private static String normalizeComment(String value) {
+        return value == null ? '' : value.trim();
+    }
+
+    private static Boolean canSkipToPreviousFinalApprover(
+        QuoteLineItem quoteLineItem,
+        QuotationLineItemWrapper lineItem
+    ) {
+        if (quoteLineItem == null || lineItem == null || lineItem.skipSoaRestrictions != true) {
+            return false;
+        }
+
+        Integer currentUserIndex = getApproverIndex(quoteLineItem, UserInfo.getUserId());
+        Integer finalApproverIndex = getApproverIndex(quoteLineItem, quoteLineItem.Final_Discount_Approver__c);
+        Id stageApproverId = getApproverIdForStage(quoteLineItem, lineItem.currentStageField);
+
+        return currentUserIndex != null &&
+            finalApproverIndex != null &&
+            finalApproverIndex < currentUserIndex &&
+            stageApproverId == quoteLineItem.Final_Discount_Approver__c;
+    }
+
+    private static Integer getApproverIndex(QuoteLineItem quoteLineItem, Id approverId) {
+        if (quoteLineItem == null || approverId == null) {
+            return null;
+        }
+
+        if (quoteLineItem.Sales_Manager__c == approverId) {
+            return 1;
+        }
+        if (quoteLineItem.Country_Continent_Sales_Head_LOB_Head__c == approverId) {
+            return 2;
+        }
+        if (quoteLineItem.Global_Sales_Head__c == approverId) {
+            return 3;
+        }
+        if (quoteLineItem.Rotex_Board_Member__c == approverId) {
+            return 4;
+        }
+        if (quoteLineItem.Managing_Director_Country_Manage__c == approverId) {
+            return 5;
+        }
+
+        return null;
+    }
+
+    private static Id getApproverIdForStage(QuoteLineItem quoteLineItem, String stageField) {
+        if (quoteLineItem == null || String.isBlank(stageField)) {
+            return null;
+        }
+
+        if (stageField == 'Sales_Manager_Status__c') {
+            return quoteLineItem.Sales_Manager__c;
+        }
+        if (stageField == 'Country_Continent_Sales_H_LOB_Status__c') {
+            return quoteLineItem.Country_Continent_Sales_Head_LOB_Head__c;
+        }
+        if (stageField == 'Global_Sales_Head_Status__c') {
+            return quoteLineItem.Global_Sales_Head__c;
+        }
+        if (stageField == 'Rotex_Board_Member_Status__c') {
+            return quoteLineItem.Rotex_Board_Member__c;
+        }
+        if (stageField == 'Managing_Director_Status__c') {
+            return quoteLineItem.Managing_Director_Country_Manage__c;
+        }
+
+        return null;
+    }
+
+    private static void applySkippedComments(
+        QuoteLineItem quoteLineItem,
+        QuoteLineItem existingQuoteLineItem,
+        QuotationLineItemWrapper lineItem
+    ) {
+        if (quoteLineItem == null || existingQuoteLineItem == null || lineItem == null || lineItem.skipSoaRestrictions != true) {
+            return;
+        }
+
+        Integer currentUserIndex = getApproverIndex(existingQuoteLineItem, UserInfo.getUserId());
+        if (currentUserIndex == null) {
+            return;
+        }
+
+        if (1 < currentUserIndex &&
+            existingQuoteLineItem.Sales_Manager__c != existingQuoteLineItem.Final_Discount_Approver__c &&
+            String.isBlank(existingQuoteLineItem.Sales_Manager_Comments__c) &&
+            String.isNotBlank(lineItem.Sales_Manager_Comments)) {
+            quoteLineItem.Sales_Manager_Comments__c = lineItem.Sales_Manager_Comments;
+            quoteLineItem.Sales_Manager_Status__c = 'Approved';
+            quoteLineItem.Sales_Manager_Date_Time__c = DateTime.now();
+        }
+        if (2 < currentUserIndex &&
+            existingQuoteLineItem.Country_Continent_Sales_Head_LOB_Head__c != existingQuoteLineItem.Final_Discount_Approver__c &&
+            String.isBlank(existingQuoteLineItem.Country_Continent_Sales_LOB_Comments__c) &&
+            String.isNotBlank(lineItem.Country_Continent_Sales_LOB_Comments)) {
+            quoteLineItem.Country_Continent_Sales_LOB_Comments__c = lineItem.Country_Continent_Sales_LOB_Comments;
+            quoteLineItem.Country_Continent_Sales_H_LOB_Status__c = 'Approved';
+            quoteLineItem.Country_Head_Date_Time__c = DateTime.now();
+        }
+        if (3 < currentUserIndex &&
+            existingQuoteLineItem.Global_Sales_Head__c != existingQuoteLineItem.Final_Discount_Approver__c &&
+            String.isBlank(existingQuoteLineItem.Global_Sales_Head_Comments__c) &&
+            String.isNotBlank(lineItem.Global_Sales_Head_Comments)) {
+            quoteLineItem.Global_Sales_Head_Comments__c = lineItem.Global_Sales_Head_Comments;
+            quoteLineItem.Global_Sales_Head_Status__c = 'Approved';
+            quoteLineItem.Global_Sales_Head_Date_Time__c = DateTime.now();
+        }
+        if (4 < currentUserIndex &&
+            existingQuoteLineItem.Rotex_Board_Member__c != existingQuoteLineItem.Final_Discount_Approver__c &&
+            String.isBlank(existingQuoteLineItem.Rotex_Board_Member_Comments__c) &&
+            String.isNotBlank(lineItem.Rotex_Board_Member_Comments)) {
+            quoteLineItem.Rotex_Board_Member_Comments__c = lineItem.Rotex_Board_Member_Comments;
+            quoteLineItem.Rotex_Board_Member_Status__c = 'Approved';
+            quoteLineItem.Rotex_Board_Member_Date_Time__c = DateTime.now();
+        }
+        if (5 < currentUserIndex &&
+            existingQuoteLineItem.Managing_Director_Country_Manage__c != existingQuoteLineItem.Final_Discount_Approver__c &&
+            String.isBlank(existingQuoteLineItem.Managing_Director_Comments__c) &&
+            String.isNotBlank(lineItem.Managing_Director_Comments)) {
+            quoteLineItem.Managing_Director_Comments__c = lineItem.Managing_Director_Comments;
+            quoteLineItem.Managing_Director_Status__c = 'Approved';
+            quoteLineItem.Managing_Director_Date_Time__c = DateTime.now();
+        }
     }
 
     public class QuotationWrapper {
@@ -422,12 +599,23 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String Managing_Director_Comments;
         @AuraEnabled public String Rotex_Board_Member_Comments;
         @AuraEnabled public String Sales_Manager_Comments;
+
+        @AuraEnabled public String prevSalesManagerComments;
+        @AuraEnabled public String prevCountryContinentSalesComments;
+        @AuraEnabled public String prevGlobalSalesHeadComments;
+        @AuraEnabled public String prevRotexBoardMemberComments;
+        @AuraEnabled public String prevManagingDirectorComments;
         
         @AuraEnabled public String salesManagerName;
         @AuraEnabled public String countryContinentSalesName;
         @AuraEnabled public String rotexBoardMemberName;
         @AuraEnabled public String managingDirectorName;
         @AuraEnabled public String globalSalesHeadName;
+        @AuraEnabled public String salesManagerId;
+        @AuraEnabled public String countryContinentSalesId;
+        @AuraEnabled public String rotexBoardMemberId;
+        @AuraEnabled public String managingDirectorId;
+        @AuraEnabled public String globalSalesHeadId;
 
         // Per-SOA status fields (for displaying each approver's current status)
         @AuraEnabled public String salesManagerStatus;
@@ -448,6 +636,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public Decimal salesPrice;
         @AuraEnabled public Decimal d1;
         @AuraEnabled public Decimal d2;
+        @AuraEnabled public Decimal previousDiscount;
         @AuraEnabled public boolean bcheck;
         @AuraEnabled public boolean bcheck1;
         @AuraEnabled public boolean bcheck2;
@@ -462,6 +651,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String currentStageField; 
         @AuraEnabled public String finalDiscountApproverId;
         @AuraEnabled public Boolean isFinalDiscountApprover;
+        @AuraEnabled public Boolean skipSoaRestrictions;
 
         public QuotationLineItemWrapper() {}
 
@@ -486,6 +676,11 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.Managing_Director_Comments = quoteLineItem.Managing_Director_Comments__c;
             this.Rotex_Board_Member_Comments = quoteLineItem.Rotex_Board_Member_Comments__c;
             this.Sales_Manager_Comments = quoteLineItem.Sales_Manager_Comments__c;
+            this.prevSalesManagerComments = SalesPriceApprovalForQuotation.getStringFieldSafely(quoteLineItem, 'Prev_Sales_Manager_Comments__c');
+            this.prevCountryContinentSalesComments = SalesPriceApprovalForQuotation.getStringFieldSafely(quoteLineItem, 'Prev_Country_Continent_Sales_Comments__c');
+            this.prevGlobalSalesHeadComments = SalesPriceApprovalForQuotation.getStringFieldSafely(quoteLineItem, 'Prev_Global_Sales_Head_Comments__c');
+            this.prevRotexBoardMemberComments = SalesPriceApprovalForQuotation.getStringFieldSafely(quoteLineItem, 'Prev_Rotex_Board_Member_Comments__c');
+            this.prevManagingDirectorComments = SalesPriceApprovalForQuotation.getStringFieldSafely(quoteLineItem, 'Prev_Managing_Director_Comments__c');
             
             // Set names
             this.salesManagerName = quoteLineItem.Sales_Manager__r?.Name;
@@ -493,6 +688,11 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.rotexBoardMemberName = quoteLineItem.Rotex_Board_Member__r?.Name;
             this.managingDirectorName = quoteLineItem.Managing_Director_Country_Manage__r?.Name;
             this.globalSalesHeadName = quoteLineItem.Global_Sales_Head__r?.Name;
+            this.salesManagerId = String.valueOf(quoteLineItem.Sales_Manager__c);
+            this.countryContinentSalesId = String.valueOf(quoteLineItem.Country_Continent_Sales_Head_LOB_Head__c);
+            this.rotexBoardMemberId = String.valueOf(quoteLineItem.Rotex_Board_Member__c);
+            this.managingDirectorId = String.valueOf(quoteLineItem.Managing_Director_Country_Manage__c);
+            this.globalSalesHeadId = String.valueOf(quoteLineItem.Global_Sales_Head__c);
             
             Id hodUserId;
             string approvalComments = '';
@@ -545,9 +745,11 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.currentStageField = currentStageField;
             this.d1 = quoteLineItem.Discount_as_per_SAP__c;
             this.d2 = quoteLineItem.Discount_to_be_offered__c;
+            this.previousDiscount = SalesPriceApprovalForQuotation.getDecimalFieldSafely(quoteLineItem, 'Previous_Discount__c');
             this.approvalStatus = currentStage;
             this.approvalComments = approvalComments;
             this.updated = false;
+            this.skipSoaRestrictions = false;
 
             // Map per-SOA statuses
             this.salesManagerStatus          = SalesPriceApprovalForQuotation.getStringFieldSafely(quoteLineItem, 'Sales_Manager_Status__c');

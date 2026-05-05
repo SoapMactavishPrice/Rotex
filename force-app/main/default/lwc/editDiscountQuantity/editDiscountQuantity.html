@@ -35,7 +35,7 @@
                                 <td>
                                     <lightning-input type="number" data-id={item.Id} variant="label-hidden"
                                         value={item.Discount_to_be_offered__c} class="input-field"
-                                        disabled={item.Is_Discount_Approved__c}
+                                        disabled={item.isDiscountOfferedDisabled}
                                         onchange={handleDiscountChange}>
                                     </lightning-input>
                                 </td>

@@ -1,6 +1,11 @@
 <template>
     <lightning-card>
-        <h4 style="text-align: center; font-size: 24px; font-weight: bold; padding-bottom: 20px;">Quote Discount Approval</h4>
+        <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-p-horizontal_medium slds-p-bottom_medium">
+            <span></span>
+            <h4 style="font-size: 24px; font-weight: bold;">Quote Discount Approval</h4>
+            <lightning-button label="Skip SOA Restrictions" onclick={handleSkipSoaRestrictions}
+                variant="neutral"></lightning-button>
+        </div>
 
         <template if:true={isLoading}>
             <lightning-spinner alternative-text="Loading" size="large"></lightning-spinner>
@@ -8,75 +13,75 @@
 
         <template if:true={quotes}>
             <template for:each={quotes} for:item="quote">
-                <div key={quote.quoteId} class="slds-box slds-m-bottom_medium">
-                    <h3 class="slds-text-heading_small" style="padding-bottom: 6px;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="flex: 1;"><b>Account Name:</b> {quote.accountName}</span>
-                            <span style="flex: 1;"><b>Quote Owner:</b> {quote.quoteOwnerName}</span>
-                            <span style="flex: 1;">
+                <div key={quote.quoteId} class="slds-box slds-m-bottom_medium quote-panel">
+                    <h3 class="slds-text-heading_small quote-summary">
+                        <div class="quote-summary-grid">
+                            <span><b>Account Name:</b> {quote.accountName}</span>
+                            <span><b>Quote Owner:</b> {quote.quoteOwnerName}</span>
+                            <span>
                                 <b>Quote Number:&nbsp;</b>
                                 <a href={quote.quoteRecordUrl} target="_blank"
                                     style="color: #0070d2; text-decoration: underline;">
                                     {quote.quoteNumber} (click here to view)
                                 </a>
                             </span>
-                            <span style="flex: 1;"><b>Quote Name:</b> {quote.quoteName}</span>
+                            <span><b>Quote Name:</b> {quote.quoteName}</span>
                         </div>
                     </h3>
 
-                    <div class="table-container" style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse;"
-                            class="slds-table slds-table_cell-buffer slds-table_bordered">
+                    <div class="table-container">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered approval-table">
                             <thead>
                                 <tr>
-                                    <th scope="col" style="width: 170px; min-width: 170px;">Product Name</th>
-                                    <th scope="col" style="width: 100px; min-width: 100px; text-align: center;">List Price</th>
-                                    <th scope="col" style="width: 80px; min-width: 80px; text-align: center;">Quantity</th>
-                                    <th scope="col" style="width: 120px; min-width: 120px; text-align: center;">Discount (SAP)</th>
-                                    <th scope="col" style="width: 100px; min-width: 100px; text-align: center;">Discount</th>
-                                    <th scope="col" style="width: 120px; min-width: 120px;">SOA</th>
-                                    <th scope="col" style="width: 160px; min-width: 160px;">Status</th>
-                                    <th scope="col" style="width: 150px; min-width: 150px;">Date/Time</th>
-                                    <th scope="col" style="width: 300px; min-width: 300px;">Comments</th>
+                                    <th scope="col" class="product-col">Product Name</th>
+                                    <th scope="col" class="list-price-col number-col">List Price</th>
+                                    <th scope="col" class="quantity-col number-col">Qty</th>
+                                    <th scope="col" class="sap-discount-col number-col">Disc. SAP</th>
+                                    <th scope="col" class="previous-discount-col number-col">Prev. Disc.</th>
+                                    <th scope="col" class="discount-col number-col">Discount</th>
+                                    <th scope="col" class="soa-col">SOA</th>
+                                    <th scope="col" class="status-col">Status</th>
+                                    <th scope="col" class="datetime-col">Date/Time</th>
+                                    <th scope="col" class="previous-comments-col">Previous Comments</th>
+                                    <th scope="col" class="comments-col">Comments</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template for:each={quote.displayRows} for:item="row">
-                                    <tr key={row.key} style={row.rowStyle}>
+                                    <tr key={row.key} style={row.rowStyle} >
                                         <template if:true={row.isFirstRow}>
-                                            <td rowspan={row.soaCount}
-                                                style="white-space: normal; word-wrap: break-word; vertical-align: middle;">
+                                            <td rowspan={row.soaCount} class="product-cell">
                                                 {row.productName}
                                             </td>
-                                            <td rowspan={row.soaCount}
-                                                style="text-align: center; vertical-align: middle;">
+                                            <td rowspan={row.soaCount} class="number-cell">
                                                 {row.listPrice}
                                             </td>
-                                            <td rowspan={row.soaCount}
-                                                style="text-align: center; vertical-align: middle;">
+                                            <td rowspan={row.soaCount} class="number-cell">
                                                 {row.quantity}
                                             </td>
-                                            <td rowspan={row.soaCount}
-                                                style="text-align: center; vertical-align: middle;">
+                                            <td rowspan={row.soaCount} class="number-cell">
                                                 {row.d1}
                                             </td>
-                                            <td rowspan={row.soaCount}
-                                                style="text-align: center; vertical-align: middle;">
+                                            <td rowspan={row.soaCount} class="number-cell">
+                                                {row.previousDiscount}
+                                            </td>
+                                            <td rowspan={row.soaCount} class="number-cell">
                                                 {row.d2}
                                             </td>
                                         </template>
 
                                         <!-- SOA Label -->
-                                        <td style="white-space: normal; word-wrap: break-word;">{row.soaDisplay}</td>
+                                        <td class="soa-cell">{row.soaDisplay}</td>
 
                                         <!-- Status: combobox for current user editable row, plain text otherwise -->
-                                        <td>
+                                        <td class="status-cell">
                                             <template if:true={row.showStatusCombobox}>
                                                 <lightning-combobox
                                                     name="ApprovalStatus"
                                                     data-parent={row.parentId}
                                                     data-id={row.quoteLineItemId}
                                                     data-field="approvalStatus"
+                                                    data-stage-field={row.soaStatusField}
                                                     value={row.approvalStatus}
                                                     options={statusOptions}
                                                     onchange={handleLineItemChanges}
@@ -90,10 +95,15 @@
                                         </td>
 
                                         <!-- Date/Time -->
-                                        <td style="white-space: normal; word-wrap: break-word;">{row.soaDateTime}</td>
+                                        <td class="datetime-cell">{row.soaDateTime}</td>
+
+                                        <!-- Previous Comments -->
+                                        <td class="comment-cell previous-comment-cell">
+                                            <span>{row.prevSoaComments}</span>
+                                        </td>
 
                                         <!-- Comments: textarea for current user row, plain text for others -->
-                                        <td style="white-space: normal; word-wrap: break-word;">
+                                        <td class="comment-cell">
                                             <template if:true={row.showCommentInput}>
                                                 <lightning-textarea
                                                     disabled={row.soaCommentsDisabled}
@@ -101,13 +111,14 @@
                                                     data-parent={row.parentId}
                                                     data-field={row.soaCommentsField}
                                                     data-id={row.quoteLineItemId}
+                                                    oninput={handleLineItemChanges}
                                                     onchange={handleLineItemChanges}
                                                     variant="label-hidden"
-                                                    style="width: 100%;">
+                                                    class="comment-input">
                                                 </lightning-textarea>
                                             </template>
                                             <template if:false={row.showCommentInput}>
-                                                <span style="white-space: pre-wrap; word-wrap: break-word; display: block;">{row.soaComments}</span>
+                                                <span>{row.soaComments}</span>
                                             </template>
                                         </td>
                                     </tr>

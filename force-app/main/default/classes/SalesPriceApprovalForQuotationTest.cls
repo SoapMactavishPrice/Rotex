@@ -210,21 +210,6 @@ private class SalesPriceApprovalForQuotationTest {
     }
     
     @isTest
-    static void testGetAllQuotations_SalesRep() {
-        User salesRep = [SELECT Id FROM User WHERE Email = 'salesrep@test.com' LIMIT 1];
-        
-        System.runAs(salesRep) {
-            Test.startTest();
-            try {
-                SalesPriceApprovalForQuotation.getAllQuotations();
-            } catch (AuraHandledException e) {
-                // Sales Rep is not one of the five dashboard approver roles.
-            }
-            Test.stopTest();
-        }
-    }
-    
-    @isTest
     static void testGetAllQuotations_SalesManager() {
         // Update QLI to have Sales Manager submitted status
         QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];

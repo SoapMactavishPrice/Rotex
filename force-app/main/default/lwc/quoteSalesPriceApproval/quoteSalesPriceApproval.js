@@ -57,9 +57,31 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return {
             ...q,
             quoteRecordUrl,
+            isExpanded: false,
             quoteLineItems: processedLineItems,
             displayRows: this.buildDisplayRows(processedLineItems)
         };
+    }
+
+    handleToggleExpand(event) {
+        const quoteId = event.currentTarget.dataset.quoteId;
+        this.quotes = this.quotes.map(quote => {
+            if (quote.quoteId === quoteId) {
+                return { ...quote, isExpanded: !quote.isExpanded };
+            }
+            return quote;
+        });
+    }
+
+    /** Returns a CSS class string for the status badge. */
+    getStatusBadgeClass(status) {
+        const base = 'status-badge';
+        if (!status) return `${base} status-badge--default`;
+        const normalized = status.toLowerCase();
+        if (normalized === 'approved') return `${base} status-badge--approved`;
+        if (normalized === 'rejected') return `${base} status-badge--rejected`;
+        if (normalized === 'submitted') return `${base} status-badge--submitted`;
+        return `${base} status-badge--default`;
     }
 
     buildDisplayRows(lineItems) {
@@ -79,6 +101,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 const showStatusCombobox = (item.isFinalDiscountApprover && soa.isCurrentUserRow && item.isEditable) ||
                     skipFinalStatusEnabled;
                 const showCommentInput = (soa.isCurrentUserRow && item.isEditable) || skipCommentEnabled;
+                const soaStatus = soa.status || '';
 
                 displayRows.push({
                     key: `${item.quoteLineItemId}_${idx}`,
@@ -95,7 +118,8 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     approvalStatus: skipFinalStatusEnabled ? soa.status : item.approvalStatus,
                     soaStatusField: soa.statusField,
                     soaDisplay: soa.name ? `${soa.label} - ${soa.name}` : '',
-                    soaStatus: soa.status || '',
+                    soaStatus,
+                    statusBadgeClass: this.getStatusBadgeClass(soaStatus),
                     soaDateTime: formattedDateTime,
                     prevSoaComments: soa.previousCommentsValue || '',
                     soaComments: soa.commentsValue || '',
@@ -174,41 +198,52 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     getCurrentUserHierarchyIndex(item) {
-        if (item.bcheck1 === false) {
-            return 1;
-        }
-        if (item.bcheck2 === false) {
-            return 2;
-        }
-        if (item.bcheck5 === false) {
-            return 3;
-        }
-        if (item.bcheck3 === false) {
-            return 4;
-        }
-        if (item.bcheck4 === false) {
-            return 5;
-        }
+        if (item.bcheck1 === false) return 1;
+        if (item.bcheck2 === false) return 2;
+        if (item.bcheck5 === false) return 3;
+        if (item.bcheck3 === false) return 4;
+        if (item.bcheck4 === false) return 5;
         return null;
     }
 
-    handleSkipSoaRestrictions() {
-        this.skipSoaRestrictions = true;
-        this.quotes = (this.quotes || []).map(quote => {
-            const quoteLineItems = (quote.quoteLineItems || []).map(item => ({
-                ...item,
-                skipSoaRestrictions: this.skipSoaRestrictions,
-                skipEditableCommentFields: {
-                    ...(item.skipEditableCommentFields || {}),
-                    ...this.getSkipEditableCommentFields(item)
-                }
-            }));
-            return {
-                ...quote,
-                quoteLineItems,
-                displayRows: this.buildDisplayRows(quoteLineItems)
-            };
-        });
+    handleToggleSkipSoaRestrictions(event) {
+        this.skipSoaRestrictions = event.target.checked;
+
+        if (this.skipSoaRestrictions) {
+            this.quotes = (this.quotes || []).map(quote => {
+                const quoteLineItems = (quote.quoteLineItems || []).map(item => ({
+                    ...item,
+                    skipSoaRestrictions: true,
+                    skipEditableCommentFields: {
+                        ...(item.skipEditableCommentFields || {}),
+                        ...this.getSkipEditableCommentFields(item)
+                    }
+                }));
+                return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems) };
+            });
+        } else {
+            this.quotes = (this.quotes || []).map(quote => {
+                const quoteLineItems = (quote.quoteLineItems || []).map(item => {
+                    const clearedItem = { ...item };
+                    const skipFields = item.skipEditableCommentFields || {};
+
+                    Object.keys(skipFields).forEach(fieldName => {
+                        if (skipFields[fieldName] === true) clearedItem[fieldName] = null;
+                    });
+
+                    const soaLevels = this.getSoaLevels(item);
+                    soaLevels.forEach(soa => {
+                        if (this.isFinalPreviousHierarchyRow(item, soa)) {
+                            clearedItem.approvalStatus = null;
+                        }
+                    });
+
+                    return { ...clearedItem, skipSoaRestrictions: false, skipEditableCommentFields: {} };
+                });
+
+                return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems) };
+            });
+        }
     }
 
     getSkipEditableCommentFields(item) {
@@ -221,7 +256,6 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return editableFields;
     }
 
-
     handleLineItemChanges(event) {
         const field = event.target.dataset.field;
         const lineItemId = event.target.dataset.id;
@@ -230,8 +264,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const stageField = event.target.dataset.stageField;
 
         let specificQuote = this.quotes.find(quote => quote.quoteId == parentId);
-
-        let specificQuoteLineItem = specificQuote.quoteLineItems.find(quoteLineItem => quoteLineItem.quoteLineItemId == lineItemId);
+        let specificQuoteLineItem = specificQuote.quoteLineItems.find(
+            quoteLineItem => quoteLineItem.quoteLineItemId == lineItemId
+        );
 
         specificQuoteLineItem[field] = value;
         if (field === 'approvalStatus' && stageField) {
@@ -246,32 +281,21 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     setStageStatusValue(lineItem, stageField, value) {
-        if (stageField === 'Sales_Manager_Status__c') {
-            lineItem.salesManagerStatus = value;
-        } else if (stageField === 'Country_Continent_Sales_H_LOB_Status__c') {
-            lineItem.countryContinentSalesStatus = value;
-        } else if (stageField === 'Global_Sales_Head_Status__c') {
-            lineItem.globalSalesHeadStatus = value;
-        } else if (stageField === 'Rotex_Board_Member_Status__c') {
-            lineItem.rotexBoardMemberStatus = value;
-        } else if (stageField === 'Managing_Director_Status__c') {
-            lineItem.managingDirectorStatus = value;
-        }
+        if (stageField === 'Sales_Manager_Status__c') lineItem.salesManagerStatus = value;
+        else if (stageField === 'Country_Continent_Sales_H_LOB_Status__c') lineItem.countryContinentSalesStatus = value;
+        else if (stageField === 'Global_Sales_Head_Status__c') lineItem.globalSalesHeadStatus = value;
+        else if (stageField === 'Rotex_Board_Member_Status__c') lineItem.rotexBoardMemberStatus = value;
+        else if (stageField === 'Managing_Director_Status__c') lineItem.managingDirectorStatus = value;
     }
 
     validateQuoteData() {
-        if (!this.requiresNonFinalApproverComment()) {
-            return true;
-        }
-
+        if (!this.requiresNonFinalApproverComment()) return true;
         this.showToast('Error', 'Enter at least one comment before submitting.', 'error');
         return false;
     }
 
     requiresNonFinalApproverComment() {
-        if (!this.quotes) {
-            return false;
-        }
+        if (!this.quotes) return false;
 
         let hasCommentOnlyLine = false;
         let hasCurrentUserComment = false;
@@ -279,9 +303,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         for (let quote of this.quotes) {
             for (let item of quote.quoteLineItems || []) {
                 const requiredCommentFields = this.getRequiredCommentFields(item);
-                if (!requiredCommentFields.length) {
-                    continue;
-                }
+                if (!requiredCommentFields.length) continue;
 
                 hasCommentOnlyLine = true;
                 if (requiredCommentFields.some(fieldName => this.hasValue(item[fieldName]))) {
@@ -289,10 +311,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     break;
                 }
             }
-
-            if (hasCurrentUserComment) {
-                break;
-            }
+            if (hasCurrentUserComment) break;
         }
 
         return hasCommentOnlyLine && !hasCurrentUserComment;
@@ -316,26 +335,11 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     getCurrentUserComment(item) {
-        if (item.bcheck1 === false) {
-            return { fieldName: 'Sales_Manager_Comments' };
-        }
-
-        if (item.bcheck2 === false) {
-            return { fieldName: 'Country_Continent_Sales_LOB_Comments' };
-        }
-
-        if (item.bcheck3 === false) {
-            return { fieldName: 'Rotex_Board_Member_Comments' };
-        }
-
-        if (item.bcheck4 === false) {
-            return { fieldName: 'Managing_Director_Comments' };
-        }
-
-        if (item.bcheck5 === false) {
-            return { fieldName: 'Global_Sales_Head_Comments' };
-        }
-
+        if (item.bcheck1 === false) return { fieldName: 'Sales_Manager_Comments' };
+        if (item.bcheck2 === false) return { fieldName: 'Country_Continent_Sales_LOB_Comments' };
+        if (item.bcheck3 === false) return { fieldName: 'Rotex_Board_Member_Comments' };
+        if (item.bcheck4 === false) return { fieldName: 'Managing_Director_Comments' };
+        if (item.bcheck5 === false) return { fieldName: 'Global_Sales_Head_Comments' };
         return null;
     }
 
@@ -343,53 +347,41 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return value !== undefined && value !== null && String(value).trim() !== '';
     }
 
-
     saveChanges() {
         this.isSaveDisabled = true;
-        let temp = false;
-        temp = this.validateQuoteData();
-        
+        const temp = this.validateQuoteData();
+
         console.log('Final Quote List', JSON.stringify(this.quotes));
 
-    setTimeout(() => {
-        if(temp){
-            updateQuoteLineItem({quotationListStringObject: JSON.stringify(this.quotes)}).then((result) => {
-                if (result == 'Success') {
-                    this.showToast('Success', 'Quotation Line Items updated successfully', 'success');
-
-                    setTimeout(()=>{
-                        window.location.reload();
-                    }, 1500)
-                } else {
-                    this.showToast('Error', result, 'error');
-                }
-            }).catch((error)=>{
+        setTimeout(() => {
+            if (temp) {
+                updateQuoteLineItem({ quotationListStringObject: JSON.stringify(this.quotes) })
+                    .then(result => {
+                        if (result === 'Success') {
+                            this.showToast('Success', 'Quotation Line Items updated successfully', 'success');
+                            setTimeout(() => { window.location.reload(); }, 1500);
+                        } else {
+                            this.showToast('Error', result, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        this.isSaveDisabled = false;
+                        this.showToast('Error', error.body.message, 'error');
+                    });
+            } else {
                 this.isSaveDisabled = false;
-                this.showToast('Error', error.body.message, 'error');
-            })
-        } else {
-            this.isSaveDisabled = false; // ← ADD THIS
-        }
-    }, 1000); 
-
+            }
+        }, 1000);
     }
 
     redirectToHome() {
         this[NavigationMixin.Navigate]({
             type: 'standard__namedPage',
-            attributes: {
-                pageName: 'home'
-            }
+            attributes: { pageName: 'home' }
         });
     }
 
     showToast(title, msg, variant) {
-        const evt = new ShowToastEvent({
-            title: title,
-            message: msg,
-            variant: variant
-        });
-        this.dispatchEvent(evt);
+        this.dispatchEvent(new ShowToastEvent({ title, message: msg, variant }));
     }
-
 }

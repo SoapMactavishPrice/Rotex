@@ -146,6 +146,13 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     handleSave() {
         this.showSpinner = true;
 
+        // Check if any New Discount values were entered
+        const hasNewDiscountEntered = this.quoteLineItemList.some(item => 
+            item.Is_Discount_Approved__c && 
+            item.newDiscountValue != null && 
+            item.newDiscountValue !== ''
+        );
+
         const itemsToUpdate = this.quoteLineItemList.map(item => {
             const updateData = {
                 Id: item.Id,
@@ -193,7 +200,9 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
         });
 
         updateQuoteLineItem({
-            quoteLineItems: itemsToUpdate
+            quoteId: this.recordId,
+            quoteLineItems: itemsToUpdate,
+            shouldUpdateQuoteStatus: hasNewDiscountEntered
         }).then(() => {
             this.showToast('Quote Line Items Updated', '', 'success');
             this.closeModal();

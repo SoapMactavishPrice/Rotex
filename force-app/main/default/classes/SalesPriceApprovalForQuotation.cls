@@ -79,7 +79,9 @@ public without sharing class SalesPriceApprovalForQuotation {
                     Country_Continent_Sales_Head_LOB_Head__c, Country_Continent_Sales_H_LOB_Status__c,
                     Global_Sales_Head__c,
                     Managing_Director_Country_Manager__c, Managing_Director_Status__c,
-                    Rotex_Board_Member__c, Rotex_Board_Member_Status__c
+                    Rotex_Board_Member__c, Rotex_Board_Member_Status__c,
+                    Total_Value__c, Rev_No__c, Validity_of_Offer__c, Payment_Terms__c,
+                    Warranty_Terms__c, Delivery_Period__c
             FROM Quote
             WHERE Id IN :quoteIds]
         );
@@ -542,7 +544,13 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String quoteOwnerEmail;
         @AuraEnabled public String quoteOwnerName;
         @AuraEnabled public String quoteLink;
-        @AuraEnabled public String hodUserId; 
+        @AuraEnabled public String hodUserId;
+        @AuraEnabled public Decimal totalValue;
+        @AuraEnabled public String revNo;
+        @AuraEnabled public String validityOfOffer;
+        @AuraEnabled public String paymentTerms;
+        @AuraEnabled public String warrantyTerms;
+        @AuraEnabled public String deliveryPeriod;
         @AuraEnabled public List<QuotationLineItemWrapper> quoteLineItems;
         @AuraEnabled public Boolean updated;
 
@@ -557,6 +565,12 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.quoteOwnerId = quote.OwnerId;
             this.quoteOwnerEmail = quote.Owner.Email;
             this.quoteOwnerName = quote.Owner.Name;
+            this.totalValue = getDecimalFieldSafely(quote, 'Total_Value__c');
+            this.revNo = getStringFieldSafely(quote, 'Rev_No__c');
+            this.validityOfOffer = getStringFieldSafely(quote, 'Validity_of_Offer__c');
+            this.paymentTerms = getStringFieldSafely(quote, 'Payment_Terms__c');
+            this.warrantyTerms = getStringFieldSafely(quote, 'Warranty_Terms__c');
+            this.deliveryPeriod = getStringFieldSafely(quote, 'Delivery_Period__c');
             
             Id hodUserId;
             Id currentUserId = UserInfo.getUserId();

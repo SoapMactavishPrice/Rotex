@@ -33,7 +33,7 @@ public class editDiscountQuantityController {
     }
 
     @AuraEnabled
-    public static void updateQuoteLineItem(List<QuoteLineItem> quoteLineItems) {
+    public static void updateQuoteLineItem(String quoteId, List<QuoteLineItem> quoteLineItems, Boolean shouldUpdateQuoteStatus) {
 
         List<SOA_Matrix__c> matrixList = [
             SELECT SOA_Profile__c, Min_Discount__c, Max_Discount__c
@@ -101,6 +101,15 @@ public class editDiscountQuantityController {
         }
 
         update quoteLineItems;
+
+        // Update Quote Status to 'Need Revision' if new discount was entered
+        if (shouldUpdateQuoteStatus && String.isNotBlank(quoteId)) {
+            Quote quoteToUpdate = new Quote(
+                Id = quoteId,
+                Status = 'Need Revision'
+            );
+            update quoteToUpdate;
+        }
     }
 
     @AuraEnabled

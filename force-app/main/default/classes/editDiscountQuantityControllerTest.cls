@@ -118,7 +118,7 @@ public class editDiscountQuantityControllerTest {
         qliList[0].Discount_to_be_offered__c = 20;
 
         Test.startTest();
-        editDiscountQuantityController.updateQuoteLineItem(qliList);
+        editDiscountQuantityController.updateQuoteLineItem(qliList[0].QuoteId, qliList, true);
         Test.stopTest();
 
         // Verify update

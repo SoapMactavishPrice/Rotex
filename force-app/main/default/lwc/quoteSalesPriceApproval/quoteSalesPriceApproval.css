@@ -293,6 +293,35 @@ lightning-textarea.comment-input {
     margin-bottom: -72px;
 }
 
+/* ── Warranty/Discount Split Layout (50/50) ── */
+.warranty-discount-split-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 12px 12px 16px;
+    margin-bottom: 16px;
+}
+
+.warranty-section {
+    background: #f8f9fa;
+    border-radius: 0.25rem;
+    border: 1px solid #e0dedc;
+    overflow: visible;
+}
+
+.empty-section {
+    background: #fafaf9;
+    border-radius: 0.25rem;
+    border: 1px dashed #c9c7c5;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #706e6b;
+    font-size: 12px;
+    font-style: italic;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1200px) {
     .table-container {
@@ -305,6 +334,10 @@ lightning-textarea.comment-input {
 
     .quote-header-grid {
         grid-template-columns: 1fr 1fr;
+    }
+
+    .warranty-discount-split-container {
+        grid-template-columns: 1fr;
     }
 }
 

@@ -2,6 +2,8 @@ import { LightningElement, track, wire } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getAllQuotations from '@salesforce/apex/SalesPriceApprovalForQuotation.getAllQuotations';
 import updateQuoteLineItem from '@salesforce/apex/SalesPriceApprovalForQuotation.updateQuoteLineItem';
+import updateWarrantyApproval from '@salesforce/apex/SalesPriceApprovalForQuotation.updateWarrantyApproval';
+import submitWarrantyApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle';
 import USER_ID from '@salesforce/user/Id';
 import { NavigationMixin } from 'lightning/navigation';
 
@@ -11,18 +13,23 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     @track isSaveDisabled = false;
     @track skipSoaRestrictions = false;
 
+    /**
+     * ✅ FIX: warrantyApprovalsMap is now populated inside fetchQuotes() from
+     *         the warrantyApproval embedded in every QuotationWrapper returned
+     *         by getAllQuotations().  Previously this map was always empty
+     *         because getWarrantyApprovals() was imported but never called.
+     */
+    @track warrantyApprovalsMap = new Map();
+
     userId = USER_ID;
 
     @track statusOptions = [
         { label: 'Submitted', value: 'Submitted' },
-        { label: 'Approved', value: 'Approved' },
-        { label: 'Rejected', value: 'Rejected' }
+        { label: 'Approved',  value: 'Approved'  },
+        { label: 'Rejected',  value: 'Rejected'  }
     ];
-    error;
 
-    connectedCallback() {
-        this.fetchQuotes();
-    }
+    error;
 
     get isLoading() {
         return this.isSaveDisabled;
@@ -32,9 +39,29 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return this.isSaveDisabled || this.requiresNonFinalApproverComment();
     }
 
+    connectedCallback() {
+        this.fetchQuotes();
+    }
+
+    /**
+     * ✅ FIX: After mapping quotes, iterate the raw server result and seed
+     *         warrantyApprovalsMap with any non-null warrantyApproval payloads.
+     *         This makes warranty data available when the user expands a quote
+     *         row — whether it is a discount-only, warranty-only, or both quote.
+     */
     fetchQuotes() {
         getAllQuotations()
             .then(result => {
+                // Seed the warranty map BEFORE building the display quotes so
+                // that handleToggleExpand can resolve entries immediately.
+                const newMap = new Map();
+                result.forEach(q => {
+                    if (q.warrantyApproval) {
+                        newMap.set(q.quoteId, { ...q.warrantyApproval });
+                    }
+                });
+                this.warrantyApprovalsMap = newMap;
+
                 this.quotes = result.map(q => this.processQuote(q));
             })
             .catch(error => {
@@ -58,6 +85,8 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             ...q,
             quoteRecordUrl,
             isExpanded: false,
+            hasLineItems: (q.quoteLineItems || []).length > 0,   // ← add this line
+            warrantyApproval: null,
             quoteLineItems: processedLineItems,
             displayRows: this.buildDisplayRows(processedLineItems)
         };
@@ -67,20 +96,90 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const quoteId = event.currentTarget.dataset.quoteId;
         this.quotes = this.quotes.map(quote => {
             if (quote.quoteId === quoteId) {
-                return { ...quote, isExpanded: !quote.isExpanded };
+                const expanded = !quote.isExpanded;
+                return {
+                    ...quote,
+                    isExpanded: expanded,
+                    // ✅ warrantyApprovalsMap is now populated, so this lookup
+                    //    correctly returns the warranty data instead of undefined.
+                    warrantyApproval: expanded ? this.warrantyApprovalsMap.get(quoteId) : null
+                };
             }
             return quote;
         });
+    }
+
+    handleWarrantyStatusChange(event) {
+        const { quoteId, field, value } = event.detail;
+        const warranty = this.warrantyApprovalsMap.get(quoteId);
+
+        if (warranty) {
+            warranty[`${field}WarrantyStatus`] = value;
+            warranty.updated = true;
+            this.warrantyApprovalsMap = new Map(this.warrantyApprovalsMap);
+
+            this.quotes = this.quotes.map(q => {
+                if (q.quoteId === quoteId) {
+                    return { ...q, warrantyApproval: { ...warranty } };
+                }
+                return q;
+            });
+        }
+    }
+
+    handleWarrantyCommentChange(event) {
+        const { quoteId, field, value } = event.detail;
+        const warranty = this.warrantyApprovalsMap.get(quoteId);
+
+        if (warranty) {
+            warranty[`${field}WarrantyComments`] = value;
+            warranty.updated = true;
+
+            this.warrantyApprovalsMap = new Map(this.warrantyApprovalsMap);
+
+            this.quotes = this.quotes.map(q => {
+                if (q.quoteId === quoteId) {
+                    return { ...q, warrantyApproval: { ...warranty } };
+                }
+                return q;
+            });
+        }
+    }
+
+    handleWarrantySubmit(event) {
+        const { quoteId, warrantyData } = event.detail;
+        
+        if (!warrantyData || !warrantyData.updated) {
+            this.showToast('Warning', 'No changes to submit for warranty approval', 'warning');
+            return;
+        }
+
+        this.isSaveDisabled = true;
+
+        submitWarrantyApprovalSingle({ warrantyApprovalJson: JSON.stringify(warrantyData) })
+            .then(result => {
+                if (result === 'Success') {
+                    this.showToast('Success', 'Warranty approval submitted successfully', 'success');
+                    setTimeout(() => { window.location.reload(); }, 1500);
+                } else {
+                    this.showToast('Info', result, 'info');
+                    this.isSaveDisabled = false;
+                }
+            })
+            .catch(error => {
+                this.isSaveDisabled = false;
+                this.showToast('Error', error.body?.message || 'An error occurred while submitting warranty approval', 'error');
+            });
     }
 
     /** Returns a CSS class string for the status badge. */
     getStatusBadgeClass(status) {
         const base = 'status-badge';
         if (!status) return `${base} status-badge--default`;
-        const normalized = status.toLowerCase();
-        if (normalized === 'approved') return `${base} status-badge--approved`;
-        if (normalized === 'rejected') return `${base} status-badge--rejected`;
-        if (normalized === 'submitted') return `${base} status-badge--submitted`;
+        const n = status.toLowerCase();
+        if (n === 'approved')  return `${base} status-badge--approved`;
+        if (n === 'rejected')  return `${base} status-badge--rejected`;
+        if (n === 'submitted') return `${base} status-badge--submitted`;
         return `${base} status-badge--default`;
     }
 
@@ -93,46 +192,43 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     ? new Date(soa.dateTime).toLocaleString('en-GB', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
                         hour: '2-digit', minute: '2-digit'
-                    })
+                      })
                     : '';
-                const skipCommentEnabled = this.isSkipCommentEnabled(item, soa);
-                const skipFinalStatusEnabled = this.skipSoaRestrictions &&
-                    this.isFinalPreviousHierarchyRow(item, soa);
-                const showStatusCombobox = (item.isFinalDiscountApprover && soa.isCurrentUserRow && item.isEditable) ||
-                    skipFinalStatusEnabled;
-                const showCommentInput = (soa.isCurrentUserRow && item.isEditable) || skipCommentEnabled;
-                const soaStatus = soa.status || '';
+                const skipCommentEnabled   = this.isSkipCommentEnabled(item, soa);
+                const skipFinalStatusEnabled = this.skipSoaRestrictions && this.isFinalPreviousHierarchyRow(item, soa);
+                const showStatusCombobox   = (item.isFinalDiscountApprover && soa.isCurrentUserRow && item.isEditable) || skipFinalStatusEnabled;
+                const showCommentInput     = (soa.isCurrentUserRow && item.isEditable) || skipCommentEnabled;
+                const soaStatus            = soa.status || '';
 
                 displayRows.push({
-                    key: `${item.quoteLineItemId}_${idx}`,
-                    isFirstRow: idx === 0,
-                    soaCount: soaLevels.length,
-                    productName: item.productName,
-                    listPrice: item.listPrice,
-                    quantity: item.quantity,
-                    d1: item.d1,
+                    key:              `${item.quoteLineItemId}_${idx}`,
+                    isFirstRow:       idx === 0,
+                    soaCount:         soaLevels.length,
+                    productName:      item.productName,
+                    listPrice:        item.listPrice,
+                    quantity:         item.quantity,
+                    d1:               item.d1,
                     previousDiscount: item.previousDiscount,
-                    d2: item.d2,
-                    quoteLineItemId: item.quoteLineItemId,
-                    parentId: item.parentId,
-                    approvalStatus: skipFinalStatusEnabled ? soa.status : item.approvalStatus,
-                    soaStatusField: soa.statusField,
-                    soaDisplay: soa.name ? `${soa.label} - ${soa.name}` : '',
+                    d2:               item.d2,
+                    quoteLineItemId:  item.quoteLineItemId,
+                    parentId:         item.parentId,
+                    approvalStatus:   skipFinalStatusEnabled ? soa.status : item.approvalStatus,
+                    soaStatusField:   soa.statusField,
+                    soaDisplay:       soa.name ? `${soa.label} - ${soa.name}` : '',
                     soaStatus,
                     statusBadgeClass: this.getStatusBadgeClass(soaStatus),
-                    soaDateTime: formattedDateTime,
-                    prevSoaComments: soa.previousCommentsValue || '',
-                    soaComments: soa.commentsValue || '',
+                    soaDateTime:      formattedDateTime,
+                    prevSoaComments:  soa.previousCommentsValue || '',
+                    soaComments:      soa.commentsValue || '',
                     soaCommentsField: soa.commentsField,
                     showStatusCombobox,
-                    showStatusText: !showStatusCombobox,
+                    showStatusText:   !showStatusCombobox,
                     showCommentInput,
                     soaCommentsDisabled: !(soa.isCurrentUserRow && item.isEditable) && !skipCommentEnabled,
                     rowStyle: ''
                 });
             });
         });
-
         return displayRows;
     }
 
@@ -188,13 +284,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     isFinalPreviousHierarchyRow(item, soa) {
         return this.isPreviousHierarchyRow(item, soa.hierarchyIndex) &&
-            soa.approverId === item.finalDiscountApproverId;
+               soa.approverId === item.finalDiscountApproverId;
     }
 
     isSkipCommentEnabled(item, soa) {
         return this.skipSoaRestrictions &&
-            item.skipEditableCommentFields &&
-            item.skipEditableCommentFields[soa.commentsField] === true;
+               item.skipEditableCommentFields &&
+               item.skipEditableCommentFields[soa.commentsField] === true;
     }
 
     getCurrentUserHierarchyIndex(item) {
@@ -224,49 +320,38 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         } else {
             this.quotes = (this.quotes || []).map(quote => {
                 const quoteLineItems = (quote.quoteLineItems || []).map(item => {
-                    const clearedItem = { ...item };
-                    const skipFields = item.skipEditableCommentFields || {};
-
-                    Object.keys(skipFields).forEach(fieldName => {
-                        if (skipFields[fieldName] === true) clearedItem[fieldName] = null;
+                    const clearedItem  = { ...item };
+                    const skipFields   = item.skipEditableCommentFields || {};
+                    Object.keys(skipFields).forEach(f => { if (skipFields[f] === true) clearedItem[f] = null; });
+                    this.getSoaLevels(item).forEach(soa => {
+                        if (this.isFinalPreviousHierarchyRow(item, soa)) clearedItem.approvalStatus = null;
                     });
-
-                    const soaLevels = this.getSoaLevels(item);
-                    soaLevels.forEach(soa => {
-                        if (this.isFinalPreviousHierarchyRow(item, soa)) {
-                            clearedItem.approvalStatus = null;
-                        }
-                    });
-
                     return { ...clearedItem, skipSoaRestrictions: false, skipEditableCommentFields: {} };
                 });
-
                 return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems) };
             });
         }
     }
 
     getSkipEditableCommentFields(item) {
-        const editableFields = {};
+        const editable = {};
         this.getSoaLevels(item).forEach(soa => {
             if (this.isPreviousHierarchyRow(item, soa.hierarchyIndex) && !this.hasValue(soa.commentsValue)) {
-                editableFields[soa.commentsField] = true;
+                editable[soa.commentsField] = true;
             }
         });
-        return editableFields;
+        return editable;
     }
 
     handleLineItemChanges(event) {
-        const field = event.target.dataset.field;
+        const field      = event.target.dataset.field;
         const lineItemId = event.target.dataset.id;
-        const parentId = event.target.dataset.parent;
-        const value = event.target.value;
+        const parentId   = event.target.dataset.parent;
+        const value      = event.target.value;
         const stageField = event.target.dataset.stageField;
 
-        let specificQuote = this.quotes.find(quote => quote.quoteId == parentId);
-        let specificQuoteLineItem = specificQuote.quoteLineItems.find(
-            quoteLineItem => quoteLineItem.quoteLineItemId == lineItemId
-        );
+        const specificQuote        = this.quotes.find(q => q.quoteId == parentId);
+        const specificQuoteLineItem = specificQuote.quoteLineItems.find(qli => qli.quoteLineItemId == lineItemId);
 
         specificQuoteLineItem[field] = value;
         if (field === 'approvalStatus' && stageField) {
@@ -275,17 +360,17 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         }
         specificQuoteLineItem.skipSoaRestrictions = this.skipSoaRestrictions;
         specificQuoteLineItem['updated'] = true;
-        specificQuote['updated'] = true;
-        specificQuote.displayRows = this.buildDisplayRows(specificQuote.quoteLineItems);
+        specificQuote['updated']         = true;
+        specificQuote.displayRows        = this.buildDisplayRows(specificQuote.quoteLineItems);
         this.quotes = [...this.quotes];
     }
 
     setStageStatusValue(lineItem, stageField, value) {
-        if (stageField === 'Sales_Manager_Status__c') lineItem.salesManagerStatus = value;
+        if (stageField === 'Sales_Manager_Status__c')                   lineItem.salesManagerStatus = value;
         else if (stageField === 'Country_Continent_Sales_H_LOB_Status__c') lineItem.countryContinentSalesStatus = value;
-        else if (stageField === 'Global_Sales_Head_Status__c') lineItem.globalSalesHeadStatus = value;
-        else if (stageField === 'Rotex_Board_Member_Status__c') lineItem.rotexBoardMemberStatus = value;
-        else if (stageField === 'Managing_Director_Status__c') lineItem.managingDirectorStatus = value;
+        else if (stageField === 'Global_Sales_Head_Status__c')           lineItem.globalSalesHeadStatus = value;
+        else if (stageField === 'Rotex_Board_Member_Status__c')          lineItem.rotexBoardMemberStatus = value;
+        else if (stageField === 'Managing_Director_Status__c')           lineItem.managingDirectorStatus = value;
     }
 
     validateQuoteData() {
@@ -296,17 +381,15 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     requiresNonFinalApproverComment() {
         if (!this.quotes) return false;
-
-        let hasCommentOnlyLine = false;
+        let hasCommentOnlyLine    = false;
         let hasCurrentUserComment = false;
 
-        for (let quote of this.quotes) {
-            for (let item of quote.quoteLineItems || []) {
-                const requiredCommentFields = this.getRequiredCommentFields(item);
-                if (!requiredCommentFields.length) continue;
-
+        for (const quote of this.quotes) {
+            for (const item of quote.quoteLineItems || []) {
+                const required = this.getRequiredCommentFields(item);
+                if (!required.length) continue;
                 hasCommentOnlyLine = true;
-                if (requiredCommentFields.some(fieldName => this.hasValue(item[fieldName]))) {
+                if (required.some(f => this.hasValue(item[f]))) {
                     hasCurrentUserComment = true;
                     break;
                 }
@@ -318,20 +401,15 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     getRequiredCommentFields(item) {
-        const requiredFields = [];
+        const required          = [];
         const currentUserComment = this.getCurrentUserComment(item);
-
         if (currentUserComment && !item.isFinalDiscountApprover && item.isEditable) {
-            requiredFields.push(currentUserComment.fieldName);
+            required.push(currentUserComment.fieldName);
         }
-
-        Object.keys(item.skipEditableCommentFields || {}).forEach(fieldName => {
-            if (item.skipEditableCommentFields[fieldName] === true) {
-                requiredFields.push(fieldName);
-            }
+        Object.keys(item.skipEditableCommentFields || {}).forEach(f => {
+            if (item.skipEditableCommentFields[f] === true) required.push(f);
         });
-
-        return requiredFields;
+        return required;
     }
 
     getCurrentUserComment(item) {
@@ -349,24 +427,31 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     saveChanges() {
         this.isSaveDisabled = true;
-        const temp = this.validateQuoteData();
+        const valid = this.validateQuoteData();
 
         console.log('Final Quote List', JSON.stringify(this.quotes));
 
         setTimeout(() => {
-            if (temp) {
-                updateQuoteLineItem({ quotationListStringObject: JSON.stringify(this.quotes) })
+            if (valid) {
+                // Only submit discount approvals through main Submit button
+                // Warranty approvals now have their own separate Submit button
+                const discountPromise = updateQuoteLineItem({
+                    quotationListStringObject: JSON.stringify(this.quotes)
+                });
+
+                discountPromise
                     .then(result => {
                         if (result === 'Success') {
-                            this.showToast('Success', 'Quotation Line Items updated successfully', 'success');
+                            this.showToast('Success', 'Discount approvals updated successfully', 'success');
                             setTimeout(() => { window.location.reload(); }, 1500);
                         } else {
-                            this.showToast('Error', result, 'error');
+                            this.showToast('Error', 'Update failed', 'error');
+                            this.isSaveDisabled = false;
                         }
                     })
                     .catch(error => {
                         this.isSaveDisabled = false;
-                        this.showToast('Error', error.body.message, 'error');
+                        this.showToast('Error', error.body?.message || 'An error occurred', 'error');
                     });
             } else {
                 this.isSaveDisabled = false;

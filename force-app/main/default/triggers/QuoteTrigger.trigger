@@ -1,25 +1,16 @@
-trigger QuoteTrigger on Quote (after insert, before update) {
-    
-    // AFTER INSERT
-    if (Trigger.isAfter && Trigger.isInsert) {
-        
+trigger QuoteTrigger on Quote (before insert, before update) {
+    System.debug('In QuoteTrigger');
+
+    // BEFORE INSERT
+    if (Trigger.isBefore && Trigger.isInsert) {
+        System.debug('In BEFORE INSERT of QuoteTrigger');
         List<Quote> quotesToUpdate = new List<Quote>();
         
         for (Quote q : Trigger.new) {
-            
-            if (q.Quote_Validity_Extension__c == 'Yes') {
-                
-                Quote qUpdate = new Quote();
-                qUpdate.Id = q.Id;
-                qUpdate.OwnerId = q.CreatedById;
-                
-                quotesToUpdate.add(qUpdate);
-            }
+            q.Warranty_Terms__c = '12 Months from date of supply';
+            q.Warranty_Terms_Draft__c = '12 Months from date of supply';
         }
         
-        if (!quotesToUpdate.isEmpty()) {
-            update quotesToUpdate;
-        }
     }
     
     // BEFORE UPDATE
@@ -41,5 +32,8 @@ trigger QuoteTrigger on Quote (after insert, before update) {
                     q.addError('Remarks are required when Quote Validity Extension is No.');
                 }
         }
+        
+        // Handle warranty approval process for quote updates
+        QuoteWarrantyApprovalHandler.handleBeforeUpdate(Trigger.new, Trigger.oldMap);
     }
 }

@@ -1,4 +1,4 @@
-trigger QuoteTrigger on Quote (before insert, before update) {
+trigger QuoteTrigger on Quote (before insert, before update, after insert) {
     System.debug('In QuoteTrigger');
 
     // BEFORE INSERT
@@ -8,9 +8,10 @@ trigger QuoteTrigger on Quote (before insert, before update) {
             q.Warranty_Terms__c = '12 Months from date of supply';
             q.Warranty_Terms_Draft__c = '12 Months from date of supply';
         }
-
-        // Handle total value approval process on quote insert
-        QuoteTotalValueApprovalHandler.handleBeforeInsert(Trigger.new);
+    }
+    
+    if (Trigger.isAfter && Trigger.isInsert) {
+        QuoteTotalValueApprovalHandler.handleAfterInsert(Trigger.new);
     }
     
     // BEFORE UPDATE

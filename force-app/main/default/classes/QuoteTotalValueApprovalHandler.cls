@@ -13,7 +13,8 @@ public with sharing class QuoteTotalValueApprovalHandler {
 
     private static final String NOTIFICATION_TYPE_API_NAME = 'Quote_Total_Value_Approval_Required';
 
-    public static void handleBeforeInsert(List<Quote> newQuotes) {
+    public static void handleAfterInsert(List<Quote> newQuotes) {
+
         Set<Decimal> totalValues = new Set<Decimal>();
         for (Quote q : newQuotes) {
             if (q.Status == 'Draft' && q.Total_Value__c != null) {
@@ -24,15 +25,30 @@ public with sharing class QuoteTotalValueApprovalHandler {
 
         Map<Decimal, String> profileByValue = getFinalApproverProfileByValue(totalValues);
 
+        List<Quote> quotesToUpdate = new List<Quote>();
+
         for (Quote q : newQuotes) {
-            if (q.Status != 'Draft' || q.Total_Value__c == null) continue;
-            resetApprovalFields(q);
+
+            if (q.Status != 'Draft' || q.Total_Value__c == null) {
+                continue;
+            }
+
+            Quote quoteToUpdate = q.clone(false, false, false, false);
+            quoteToUpdate.Id = q.Id;
+
+            resetApprovalFields(quoteToUpdate);
 
             String finalApproverProfile = profileByValue.get(q.Total_Value__c);
             if (String.isBlank(finalApproverProfile)) {
                 finalApproverProfile = PROFILE_SALES_MANAGER;
             }
-            applyInitialApprovalState(q, finalApproverProfile);
+            
+            applyInitialApprovalState(quoteToUpdate, finalApproverProfile);
+
+            quotesToUpdate.add(quoteToUpdate);
+        }
+        if (!quotesToUpdate.isEmpty()) {
+            update quotesToUpdate;
         }
     }
 

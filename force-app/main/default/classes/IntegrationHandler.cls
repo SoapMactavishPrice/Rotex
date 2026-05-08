@@ -1584,7 +1584,7 @@ public class IntegrationHandler {
                 ShippingCity, ShippingState, ShippingCountry, ShippingPostalCode, Status, TotalPrice, Subtotal, Discount,
                 Quote_Type__c, SalesOrganization__c, DistributionChannel__c, OrganizationDivision__c, CurrencyISOCode,
                 SoldToParty__c, PurchaseOrderByCustomer__c, CustomerPurchaseOrderDate__c, Account.Discount__c,
-                RequestedDeliveryDate__c, Quote_Date__c, Quote_Valid_Till__c, Account.SAP_Customer_Code__c, Customer_Reference_Date__c
+                RequestedDeliveryDate__c, Quote_Date__c, Quote_Valid_Till__c, Account.SAP_Customer_Code__c, Customer_Reference_Date__c,Delivery_Period__c,Warranty_Terms__c,Liquidate_Terms__c,SAP_Quotation_Number__c,OwnerId,Owner.Name
                 FROM Quote
                 WHERE Id =: quoteId
             ];
@@ -1632,6 +1632,11 @@ public class IntegrationHandler {
             for (Quote q: quoteList) {
                 QuoteWrapper quoteWrapper = new QuoteWrapper();
                 // quoteWrapper.SalesQuotationType = q.Quote_Type__c;
+                quoteWrapper.SalesQuotationNum = q.SAP_Quotation_Number__c;
+                quoteWrapper.Assigned_To = q.Owner.Name;
+                quoteWrapper.Delivery_Period = String.valueOf(q.Delivery_Period__c);
+                quoteWrapper.Warranty_Terms = q.Warranty_Terms__c;
+                quoteWrapper.Liquidity_Terms = q.Liquidate_Terms__c;
                 quoteWrapper.SalesQuotationType = 'ZQT';
                 // quoteWrapper.SalesOrganization = q.SalesOrganization__c;
                 quoteWrapper.SalesOrganization = saItem.Sales_Org__c;
@@ -1640,14 +1645,20 @@ public class IntegrationHandler {
                 // quoteWrapper.OrganizationDivision = q.OrganizationDivision__c;
                 quoteWrapper.OrganizationDivision = saItem.Division__c;
                 quoteWrapper.SoldToParty = q.Account.SAP_Customer_Code__c;
-                // quoteWrapper.PurchaseOrderByCustomer = q.PurchaseOrderByCustomer__c;
-                quoteWrapper.PurchaseOrderByCustomer = q.QuoteNumber;
-                quoteWrapper.CustomerPurchaseOrderDate = q.Customer_Reference_Date__c != null ? convertDateToMicrosoftJsonFormat(q.Customer_Reference_Date__c) : null;
-                quoteWrapper.RequestedDeliveryDate = q.RequestedDeliveryDate__c != null ? convertDateToMicrosoftJsonFormat(q.RequestedDeliveryDate__c) : null;
+                quoteWrapper.PurchaseOrderByCustomer = q.PurchaseOrderByCustomer__c;
+                //quoteWrapper.PurchaseOrderByCustomer = q.Customer_Reference_No__c;
                 Date todayDate = Date.today();
                 Date endDate = todayDate.addDays(30);
-                quoteWrapper.BindingPeriodValidityStartDate = convertDateToMicrosoftJsonFormat(todayDate);
-                quoteWrapper.BindingPeriodValidityEndDate = convertDateToMicrosoftJsonFormat(endDate);
+                quoteWrapper.CustomerPurchaseOrderDate = q.Customer_Reference_Date__c != null ?DateTime.newInstance(q.Customer_Reference_Date__c,Time.newInstance(0,0,0,0)).format('dd.MM.yyyy'): null;
+                //quoteWrapper.RequestedDeliveryDate = q.RequestedDeliveryDate__c != null ? convertDateToMicrosoftJsonFormat(q.RequestedDeliveryDate__c) : null;
+                quoteWrapper.RequestedDeliveryDate = q.RequestedDeliveryDate__c != null ?DateTime.newInstance(q.RequestedDeliveryDate__c, Time.newInstance(0,0,0,0)).format('dd.MM.yyyy'): null;
+                //Date todayDate = Date.today();
+                
+                DateTime startDt = DateTime.newInstance(todayDate, Time.newInstance(0,0,0,0));
+                DateTime endDt = DateTime.newInstance(endDate, Time.newInstance(0,0,0,0));
+
+                quoteWrapper.BindingPeriodValidityStartDate = startDt.format('dd.MM.yyyy');
+                quoteWrapper.BindingPeriodValidityEndDate = endDt.format('dd.MM.yyyy');
                 // quoteWrapper.BindingPeriodValidityStartDate = q.Quote_Date__c != null ? convertDateToMicrosoftJsonFormat(q.Quote_Date__c) : null;
                 // quoteWrapper.BindingPeriodValidityEndDate = q.Quote_Valid_Till__c != null ? convertDateToMicrosoftJsonFormat(q.Quote_Valid_Till__c) : null;
 
@@ -1672,8 +1683,10 @@ public class IntegrationHandler {
                         lineItemWrapper.RequestedQuantity = String.valueOf(qli.Quantity);
                         // lineItemWrapper.Plant = qli.Plant__c;
                         lineItemWrapper.Plant = saItem.Sales_Org__c;
+                        lineItemWrapper.Cond_type = 'ZDIS';
+                        lineItemWrapper.Cond_Value = String.valueOf(qli.Discount_to_be_offered__c);
 
-                        if (qli.Discount_to_be_offered__c > 0) {
+                        /*if (qli.Discount_to_be_offered__c > 0) {
                             lineItemWrapper.to_PricingElement = new List < PricingElementWrapper > ();
                             PricingElementWrapper pricingElementWrapper = new PricingElementWrapper();
                             
@@ -1690,8 +1703,8 @@ public class IntegrationHandler {
                             
                             pricingElementWrapper.ConditionRateValue = String.valueOf(qli.Discount_to_be_offered__c);
                             pricingElementWrapper.ConditionCurrency = qli.Quote.CurrencyISOCode;
-                            lineItemWrapper.to_PricingElement.add(pricingElementWrapper);
-                        }
+                            //lineItemWrapper.to_PricingElement.add(pricingElementWrapper);
+                        }*/
 
                         quoteWrapper.to_Item.add(lineItemWrapper);
                         ind = ind + 10;
@@ -1702,7 +1715,7 @@ public class IntegrationHandler {
             }
 
             // Convert the nested structure to JSON
-            jsonPayload = JSON.serialize(quoteWrapperList[0], true);
+            jsonPayload = JSON.serialize(quoteWrapperList[0], True);
             System.debug('JSON Payload: ' + jsonPayload);
         } catch (Exception e) {
             jsonPayload = '';
@@ -1873,6 +1886,11 @@ public class IntegrationHandler {
         public String BindingPeriodValidityEndDate;
         public List < PartnerWrapper > to_Partner;
         public List < QuoteLineItemWrapper > to_Item;
+        public String SalesQuotationNum;
+        public String Assigned_To;
+        public String Delivery_Period;
+        public String Warranty_Terms;
+        public String Liquidity_Terms;
     }
 
     public class PartnerWrapper {
@@ -1885,6 +1903,8 @@ public class IntegrationHandler {
         public String Material;
         public String RequestedQuantity;
         public String Plant;
+        public String Cond_type;
+        public String Cond_Value;
         public List < PricingElementWrapper > to_PricingElement;
     }
 
@@ -1904,6 +1924,7 @@ public class IntegrationHandler {
         public String DistributionChannel;
         public String OrganizationDivision;
         public String SoldToParty;
+        public String SalesQuotationNum;
         public String PurchaseOrderByCustomer;
         // public String CustomerPurchaseOrderDate;
         // public List<PartnerWrapper> to_PartnerFunction;

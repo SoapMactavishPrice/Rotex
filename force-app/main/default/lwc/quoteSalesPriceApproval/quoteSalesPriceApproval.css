@@ -302,7 +302,21 @@ lightning-textarea.comment-input {
     margin-bottom: 16px;
 }
 
+.approval-left-column,
+.approval-right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
 .warranty-section {
+    background: #f8f9fa;
+    border-radius: 0.25rem;
+    border: 1px solid #e0dedc;
+    overflow: visible;
+}
+
+.total-value-section {
     background: #f8f9fa;
     border-radius: 0.25rem;
     border: 1px solid #e0dedc;

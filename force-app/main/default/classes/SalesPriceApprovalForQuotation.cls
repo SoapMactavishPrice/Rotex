@@ -93,10 +93,38 @@ public without sharing class SalesPriceApprovalForQuotation {
             validityOfferQuoteIds.add(q.Id);
         }
 
+        // ── PART D : Quote IDs that have a pending TOTAL VALUE approval ──────
+        List<Quote> totalValueQuotes = [
+            SELECT Id
+            FROM   Quote
+            WHERE  (
+                       Sales_Manager__c                          = :currentUserId OR
+                       Country_Continent_Sales_Head_LOB_Head__c  = :currentUserId OR
+                       Global_Sales_Head__c                      = :currentUserId OR
+                       Rotex_Board_Member__c                     = :currentUserId OR
+                       Managing_Director_Country_Manager__c      = :currentUserId
+                   )
+                   AND Total_Value__c != null
+                   AND Is_Total_Value_Approved__c = false
+                   AND (
+                       SM_Value_Status__c = 'Submitted' OR
+                       CH_Value_Status__c = 'Submitted' OR
+                       GS_Value_Status__c = 'Submitted' OR
+                       BM_Value_Status__c = 'Submitted' OR
+                       MD_Value_Status__c = 'Submitted'
+                   )
+        ];
+
+        Set<Id> totalValueQuoteIds = new Set<Id>();
+        for (Quote q : totalValueQuotes) {
+            totalValueQuoteIds.add(q.Id);
+        }
+
         // ── UNION: all quotes relevant to this user ────────────────────────
         Set<Id> allRelevantQuoteIds = new Set<Id>(discountQuoteIds);
         allRelevantQuoteIds.addAll(warrantyQuoteIds);
         allRelevantQuoteIds.addAll(validityOfferQuoteIds);
+        allRelevantQuoteIds.addAll(totalValueQuoteIds);
 
         if (allRelevantQuoteIds.isEmpty()) {
             throw new AuraHandledException(
@@ -161,7 +189,13 @@ public without sharing class SalesPriceApprovalForQuotation {
                    GS_Validity_Offer_Status__c,  GS_Validity_Offer_Date_Time__c,  GS_Validity_Offer_Comments__c,
                    BM_Validity_Offer_Status__c,  BM_Validity_Offer_Date_Time__c,  BM_Validity_Offer_Comments__c,
                    MD_Validity_Offer_Status__c,  MD_Validity_Offer_Date_Time__c,  MD_Validity_Offer_Comments__c,
-                   Final_Validity_Offer_Approver__c
+                   Final_Validity_Offer_Approver__c,
+                   SM_Value_Status__c,  SM_Value_Date_Time__c,  SM_Value_Comments__c,
+                   CH_Value_Status__c,  CH_Value_Date_Time__c,  CH_Value_Comments__c,
+                   GS_Value_Status__c,  GS_Value_Date_Time__c,  GS_Value_Comments__c,
+                   BM_Value_Status__c,  BM_Value_Date_Time__c,  BM_Value_Comments__c,
+                   MD_Value_Status__c,  MD_Value_Date_Time__c,  MD_Value_Comments__c,
+                   Final_Total_Value_Approver__c, Is_Total_Value_Approved__c
             FROM   Quote
             WHERE  Id IN :allRelevantQuoteIds
         ]);
@@ -486,6 +520,106 @@ public without sharing class SalesPriceApprovalForQuotation {
                 }
                 q.MD_Validity_Offer_Comments__c  = wrapper.mdValidityOfferComments;
                 q.MD_Validity_Offer_Date_Time__c = DateTime.now();
+                hasChanges = true;
+            }
+        }
+
+        if (hasChanges) {
+            update q;
+        }
+        return 'Success';
+    }
+
+    @AuraEnabled
+    public static String submitTotalValueApprovalSingle(String totalValueApprovalJson) {
+        TotalValueApprovalWrapper wrapper = (TotalValueApprovalWrapper) JSON.deserialize(
+            totalValueApprovalJson, TotalValueApprovalWrapper.class
+        );
+
+        if (!wrapper.updated) {
+            return 'No changes to submit';
+        }
+
+        Quote q = new Quote(Id = wrapper.quoteId);
+        Boolean hasChanges = false;
+        Id finalApproverId = wrapper.finalTotalValueApprover;
+
+        if (wrapper.smValueStatus != wrapper.originalSmValueStatus ||
+            wrapper.smValueComments != wrapper.originalSmValueComments) {
+            if (wrapper.isSmCurrentUser) {
+                if (wrapper.smId != finalApproverId &&
+                    wrapper.smValueStatus == wrapper.originalSmValueStatus &&
+                    String.isNotBlank(wrapper.smValueComments)) {
+                    q.SM_Value_Status__c = 'Approved';
+                } else {
+                    q.SM_Value_Status__c = wrapper.smValueStatus;
+                }
+                q.SM_Value_Comments__c  = wrapper.smValueComments;
+                q.SM_Value_Date_Time__c = DateTime.now();
+                hasChanges = true;
+            }
+        }
+
+        if (wrapper.chValueStatus != wrapper.originalChValueStatus ||
+            wrapper.chValueComments != wrapper.originalChValueComments) {
+            if (wrapper.isChCurrentUser) {
+                if (wrapper.chId != finalApproverId &&
+                    wrapper.chValueStatus == wrapper.originalChValueStatus &&
+                    String.isNotBlank(wrapper.chValueComments)) {
+                    q.CH_Value_Status__c = 'Approved';
+                } else {
+                    q.CH_Value_Status__c = wrapper.chValueStatus;
+                }
+                q.CH_Value_Comments__c  = wrapper.chValueComments;
+                q.CH_Value_Date_Time__c = DateTime.now();
+                hasChanges = true;
+            }
+        }
+
+        if (wrapper.gsValueStatus != wrapper.originalGsValueStatus ||
+            wrapper.gsValueComments != wrapper.originalGsValueComments) {
+            if (wrapper.isGsCurrentUser) {
+                if (wrapper.gsId != finalApproverId &&
+                    wrapper.gsValueStatus == wrapper.originalGsValueStatus &&
+                    String.isNotBlank(wrapper.gsValueComments)) {
+                    q.GS_Value_Status__c = 'Approved';
+                } else {
+                    q.GS_Value_Status__c = wrapper.gsValueStatus;
+                }
+                q.GS_Value_Comments__c  = wrapper.gsValueComments;
+                q.GS_Value_Date_Time__c = DateTime.now();
+                hasChanges = true;
+            }
+        }
+
+        if (wrapper.bmValueStatus != wrapper.originalBmValueStatus ||
+            wrapper.bmValueComments != wrapper.originalBmValueComments) {
+            if (wrapper.isBmCurrentUser) {
+                if (wrapper.bmId != finalApproverId &&
+                    wrapper.bmValueStatus == wrapper.originalBmValueStatus &&
+                    String.isNotBlank(wrapper.bmValueComments)) {
+                    q.BM_Value_Status__c = 'Approved';
+                } else {
+                    q.BM_Value_Status__c = wrapper.bmValueStatus;
+                }
+                q.BM_Value_Comments__c  = wrapper.bmValueComments;
+                q.BM_Value_Date_Time__c = DateTime.now();
+                hasChanges = true;
+            }
+        }
+
+        if (wrapper.mdValueStatus != wrapper.originalMdValueStatus ||
+            wrapper.mdValueComments != wrapper.originalMdValueComments) {
+            if (wrapper.isMdCurrentUser) {
+                if (wrapper.mdId != finalApproverId &&
+                    wrapper.mdValueStatus == wrapper.originalMdValueStatus &&
+                    String.isNotBlank(wrapper.mdValueComments)) {
+                    q.MD_Value_Status__c = 'Approved';
+                } else {
+                    q.MD_Value_Status__c = wrapper.mdValueStatus;
+                }
+                q.MD_Value_Comments__c  = wrapper.mdValueComments;
+                q.MD_Value_Date_Time__c = DateTime.now();
                 hasChanges = true;
             }
         }
@@ -895,6 +1029,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public Boolean updated;
         @AuraEnabled public WarrantyApprovalWrapper warrantyApproval;
         @AuraEnabled public ValidityOfferApprovalWrapper validityOfferApproval;
+        @AuraEnabled public TotalValueApprovalWrapper totalValueApproval;
 
         public QuotationWrapper() {}
 
@@ -928,6 +1063,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             // warranty approver for this quote (warranty-only quotes rely on this).
             this.warrantyApproval = createWarrantyApprovalIfNeeded(quote, currentUserId);
             this.validityOfferApproval = createValidityOfferApprovalIfNeeded(quote, currentUserId);
+            this.totalValueApproval = createTotalValueApprovalIfNeeded(quote, currentUserId);
 
             this.quoteLineItems = new List<QuotationLineItemWrapper>();
             for (QuoteLineItem eachLine : lineItems) {
@@ -987,6 +1123,27 @@ public without sharing class SalesPriceApprovalForQuotation {
             }
             return isApprover ? new ValidityOfferApprovalWrapper(q) : null;
         }
+
+        private TotalValueApprovalWrapper createTotalValueApprovalIfNeeded(Quote q, Id currentUserId) {
+            if (q.Total_Value__c == null || q.Is_Total_Value_Approved__c == true) {
+                return null;
+            }
+            Boolean isApprover =
+                (q.Sales_Manager__c                         == currentUserId && q.SM_Value_Status__c == 'Submitted') ||
+                (q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId && q.CH_Value_Status__c == 'Submitted') ||
+                (q.Global_Sales_Head__c                     == currentUserId && q.GS_Value_Status__c == 'Submitted') ||
+                (q.Rotex_Board_Member__c                    == currentUserId && q.BM_Value_Status__c == 'Submitted') ||
+                (q.Managing_Director_Country_Manager__c     == currentUserId && q.MD_Value_Status__c == 'Submitted');
+
+            if (!isApprover) {
+                Integer currentPos = getTotalValueHierarchyPos(q, currentUserId);
+                Integer finalPos   = getTotalValueHierarchyPos(q, q.Final_Total_Value_Approver__c);
+                if (currentPos != null && finalPos != null && currentPos > finalPos) {
+                    isApprover = true;
+                }
+            }
+            return isApprover ? new TotalValueApprovalWrapper(q) : null;
+        }
     }
 
     private static Integer getHierarchyPos(Quote q, Id userId) {
@@ -1008,6 +1165,16 @@ public without sharing class SalesPriceApprovalForQuotation {
     }
 
     private static Integer getValidityOfferHierarchyPos(Quote q, Id userId) {
+        if (userId == null) return null;
+        if (q.Sales_Manager__c                         == userId) return 1;
+        if (q.Country_Continent_Sales_Head_LOB_Head__c == userId) return 2;
+        if (q.Global_Sales_Head__c                     == userId) return 3;
+        if (q.Rotex_Board_Member__c                    == userId) return 4;
+        if (q.Managing_Director_Country_Manager__c     == userId) return 5;
+        return null;
+    }
+
+    private static Integer getTotalValueHierarchyPos(Quote q, Id userId) {
         if (userId == null) return null;
         if (q.Sales_Manager__c                         == userId) return 1;
         if (q.Country_Continent_Sales_Head_LOB_Head__c == userId) return 2;
@@ -1392,6 +1559,109 @@ public without sharing class SalesPriceApprovalForQuotation {
             if (this.isGsCurrentUser && this.gsValidityOfferStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }
             if (this.isBmCurrentUser && this.bmValidityOfferStatus == 'Submitted') { this.canBmEditComments = true; this.canBmEditStatus = (q.Rotex_Board_Member__c == finalId); }
             if (this.isMdCurrentUser && this.mdValidityOfferStatus == 'Submitted') { this.canMdEditComments = true; this.canMdEditStatus = (q.Managing_Director_Country_Manager__c == finalId); }
+        }
+    }
+
+    public class TotalValueApprovalWrapper {
+        @AuraEnabled public String   quoteId;
+        @AuraEnabled public String   quoteName;
+        @AuraEnabled public String   quoteNumber;
+        @AuraEnabled public Decimal  totalValue;
+        @AuraEnabled public String   finalTotalValueApprover;
+        @AuraEnabled public Boolean  updated;
+
+        @AuraEnabled public String   smName; @AuraEnabled public String smId;
+        @AuraEnabled public String   smValueStatus; @AuraEnabled public DateTime smValueDateTime;
+        @AuraEnabled public String   smValueComments; @AuraEnabled public Boolean isSmCurrentUser;
+        @AuraEnabled public Boolean  canSmEditStatus; @AuraEnabled public Boolean canSmEditComments;
+        @AuraEnabled public String   originalSmValueStatus; @AuraEnabled public String originalSmValueComments;
+
+        @AuraEnabled public String   chName; @AuraEnabled public String chId;
+        @AuraEnabled public String   chValueStatus; @AuraEnabled public DateTime chValueDateTime;
+        @AuraEnabled public String   chValueComments; @AuraEnabled public Boolean isChCurrentUser;
+        @AuraEnabled public Boolean  canChEditStatus; @AuraEnabled public Boolean canChEditComments;
+        @AuraEnabled public String   originalChValueStatus; @AuraEnabled public String originalChValueComments;
+
+        @AuraEnabled public String   gsName; @AuraEnabled public String gsId;
+        @AuraEnabled public String   gsValueStatus; @AuraEnabled public DateTime gsValueDateTime;
+        @AuraEnabled public String   gsValueComments; @AuraEnabled public Boolean isGsCurrentUser;
+        @AuraEnabled public Boolean  canGsEditStatus; @AuraEnabled public Boolean canGsEditComments;
+        @AuraEnabled public String   originalGsValueStatus; @AuraEnabled public String originalGsValueComments;
+
+        @AuraEnabled public String   bmName; @AuraEnabled public String bmId;
+        @AuraEnabled public String   bmValueStatus; @AuraEnabled public DateTime bmValueDateTime;
+        @AuraEnabled public String   bmValueComments; @AuraEnabled public Boolean isBmCurrentUser;
+        @AuraEnabled public Boolean  canBmEditStatus; @AuraEnabled public Boolean canBmEditComments;
+        @AuraEnabled public String   originalBmValueStatus; @AuraEnabled public String originalBmValueComments;
+
+        @AuraEnabled public String   mdName; @AuraEnabled public String mdId;
+        @AuraEnabled public String   mdValueStatus; @AuraEnabled public DateTime mdValueDateTime;
+        @AuraEnabled public String   mdValueComments; @AuraEnabled public Boolean isMdCurrentUser;
+        @AuraEnabled public Boolean  canMdEditStatus; @AuraEnabled public Boolean canMdEditComments;
+        @AuraEnabled public String   originalMdValueStatus; @AuraEnabled public String originalMdValueComments;
+
+        @AuraEnabled public Integer  currentUserHierarchyPosition;
+        @AuraEnabled public Integer  finalApproverHierarchyPosition;
+        @AuraEnabled public Boolean  isHigherHierarchy;
+        @AuraEnabled public Boolean  canViewReadOnly;
+
+        public TotalValueApprovalWrapper() {}
+
+        public TotalValueApprovalWrapper(Quote q) {
+            Id currentUserId = UserInfo.getUserId();
+            this.quoteId                  = q.Id;
+            this.quoteName                = q.Name;
+            this.quoteNumber              = q.QuoteNumber;
+            this.totalValue               = q.Total_Value__c;
+            this.finalTotalValueApprover  = getStringFieldSafely(q, 'Final_Total_Value_Approver__c');
+            this.updated                  = false;
+
+            this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r?.Name;
+            this.smValueStatus = q.SM_Value_Status__c; this.smValueDateTime = q.SM_Value_Date_Time__c;
+            this.smValueComments = q.SM_Value_Comments__c; this.isSmCurrentUser = q.Sales_Manager__c == currentUserId;
+            this.originalSmValueStatus = q.SM_Value_Status__c; this.originalSmValueComments = q.SM_Value_Comments__c;
+
+            this.chId = q.Country_Continent_Sales_Head_LOB_Head__c; this.chName = q.Country_Continent_Sales_Head_LOB_Head__r?.Name;
+            this.chValueStatus = q.CH_Value_Status__c; this.chValueDateTime = q.CH_Value_Date_Time__c;
+            this.chValueComments = q.CH_Value_Comments__c; this.isChCurrentUser = q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId;
+            this.originalChValueStatus = q.CH_Value_Status__c; this.originalChValueComments = q.CH_Value_Comments__c;
+
+            this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r?.Name;
+            this.gsValueStatus = q.GS_Value_Status__c; this.gsValueDateTime = q.GS_Value_Date_Time__c;
+            this.gsValueComments = q.GS_Value_Comments__c; this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId;
+            this.originalGsValueStatus = q.GS_Value_Status__c; this.originalGsValueComments = q.GS_Value_Comments__c;
+
+            this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r?.Name;
+            this.bmValueStatus = q.BM_Value_Status__c; this.bmValueDateTime = q.BM_Value_Date_Time__c;
+            this.bmValueComments = q.BM_Value_Comments__c; this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId;
+            this.originalBmValueStatus = q.BM_Value_Status__c; this.originalBmValueComments = q.BM_Value_Comments__c;
+
+            this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r?.Name;
+            this.mdValueStatus = q.MD_Value_Status__c; this.mdValueDateTime = q.MD_Value_Date_Time__c;
+            this.mdValueComments = q.MD_Value_Comments__c; this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId;
+            this.originalMdValueStatus = q.MD_Value_Status__c; this.originalMdValueComments = q.MD_Value_Comments__c;
+
+            setTotalValueHierarchyPositions(q, currentUserId);
+            setTotalValueEditPermissions(q);
+        }
+
+        private void setTotalValueHierarchyPositions(Quote q, Id currentUserId) {
+            this.currentUserHierarchyPosition   = getTotalValueHierarchyPos(q, currentUserId);
+            Id finalId = q.Final_Total_Value_Approver__c;
+            this.finalApproverHierarchyPosition = getTotalValueHierarchyPos(q, finalId);
+            this.isHigherHierarchy = this.currentUserHierarchyPosition != null &&
+                                    this.finalApproverHierarchyPosition != null &&
+                                    this.currentUserHierarchyPosition > this.finalApproverHierarchyPosition;
+            this.canViewReadOnly = this.isHigherHierarchy;
+        }
+
+        private void setTotalValueEditPermissions(Quote q) {
+            Id finalId = q.Final_Total_Value_Approver__c;
+            if (this.isSmCurrentUser && this.smValueStatus == 'Submitted') { this.canSmEditComments = true; this.canSmEditStatus = (q.Sales_Manager__c == finalId); }
+            if (this.isChCurrentUser && this.chValueStatus == 'Submitted') { this.canChEditComments = true; this.canChEditStatus = (q.Country_Continent_Sales_Head_LOB_Head__c == finalId); }
+            if (this.isGsCurrentUser && this.gsValueStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }
+            if (this.isBmCurrentUser && this.bmValueStatus == 'Submitted') { this.canBmEditComments = true; this.canBmEditStatus = (q.Rotex_Board_Member__c == finalId); }
+            if (this.isMdCurrentUser && this.mdValueStatus == 'Submitted') { this.canMdEditComments = true; this.canMdEditStatus = (q.Managing_Director_Country_Manager__c == finalId); }
         }
     }
 }

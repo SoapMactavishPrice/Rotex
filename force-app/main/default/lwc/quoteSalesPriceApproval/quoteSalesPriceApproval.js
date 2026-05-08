@@ -5,6 +5,7 @@ import updateQuoteLineItem from '@salesforce/apex/SalesPriceApprovalForQuotation
 import updateWarrantyApproval from '@salesforce/apex/SalesPriceApprovalForQuotation.updateWarrantyApproval';
 import submitWarrantyApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle';
 import submitValidityOfferApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle';
+import submitTotalValueApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitTotalValueApprovalSingle';
 import USER_ID from '@salesforce/user/Id';
 import { NavigationMixin } from 'lightning/navigation';
 
@@ -22,6 +23,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
      */
     @track warrantyApprovalsMap = new Map();
     @track validityOfferApprovalsMap = new Map();
+    @track totalValueApprovalsMap = new Map();
 
     userId = USER_ID;
 
@@ -58,6 +60,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 // that handleToggleExpand can resolve entries immediately.
                 const newWarrantyMap = new Map();
                 const newValidityMap = new Map();
+                const newTotalValueMap = new Map();
                 result.forEach(q => {
                     if (q.warrantyApproval) {
                         newWarrantyMap.set(q.quoteId, { ...q.warrantyApproval });
@@ -65,9 +68,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     if (q.validityOfferApproval) {
                         newValidityMap.set(q.quoteId, { ...q.validityOfferApproval });
                     }
+                    if (q.totalValueApproval) {
+                        newTotalValueMap.set(q.quoteId, { ...q.totalValueApproval });
+                    }
                 });
                 this.warrantyApprovalsMap = newWarrantyMap;
                 this.validityOfferApprovalsMap = newValidityMap;
+                this.totalValueApprovalsMap = newTotalValueMap;
 
                 this.quotes = result.map(q => this.processQuote(q));
             })
@@ -95,6 +102,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             hasLineItems: (q.quoteLineItems || []).length > 0,
             warrantyApproval: null,
             validityOfferApproval: null,
+            totalValueApproval: null,
             showApprovalDashboard: false,
             quoteLineItems: processedLineItems,
             displayRows: this.buildDisplayRows(processedLineItems)
@@ -108,12 +116,14 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 const expanded = !quote.isExpanded;
                 const warrantyApproval = expanded ? this.warrantyApprovalsMap.get(quoteId) : null;
                 const validityOfferApproval = expanded ? this.validityOfferApprovalsMap.get(quoteId) : null;
+                const totalValueApproval = expanded ? this.totalValueApprovalsMap.get(quoteId) : null;
                 return {
                     ...quote,
                     isExpanded: expanded,
                     warrantyApproval,
                     validityOfferApproval,
-                    showApprovalDashboard: expanded && (warrantyApproval != null || validityOfferApproval != null)
+                    totalValueApproval,
+                    showApprovalDashboard: expanded && (warrantyApproval != null || validityOfferApproval != null || totalValueApproval != null)
                 };
             }
             return quote;
@@ -245,6 +255,68 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             .catch(error => {
                 this.isSaveDisabled = false;
                 this.showToast('Error', error.body?.message || 'An error occurred while submitting validity of offer approval', 'error');
+            });
+    }
+
+    // ── Total Value Approval Handlers ──────────────────────────────────────
+    handleTotalValueStatusChange(event) {
+        const { quoteId, field, value } = event.detail;
+        const totalValue = this.totalValueApprovalsMap.get(quoteId);
+
+        if (totalValue) {
+            totalValue[`${field}ValueStatus`] = value;
+            totalValue.updated = true;
+            this.totalValueApprovalsMap = new Map(this.totalValueApprovalsMap);
+
+            this.quotes = this.quotes.map(q => {
+                if (q.quoteId === quoteId) {
+                    return { ...q, totalValueApproval: { ...totalValue } };
+                }
+                return q;
+            });
+        }
+    }
+
+    handleTotalValueCommentChange(event) {
+        const { quoteId, field, value } = event.detail;
+        const totalValue = this.totalValueApprovalsMap.get(quoteId);
+
+        if (totalValue) {
+            totalValue[`${field}ValueComments`] = value;
+            totalValue.updated = true;
+            this.totalValueApprovalsMap = new Map(this.totalValueApprovalsMap);
+
+            this.quotes = this.quotes.map(q => {
+                if (q.quoteId === quoteId) {
+                    return { ...q, totalValueApproval: { ...totalValue } };
+                }
+                return q;
+            });
+        }
+    }
+
+    handleTotalValueSubmit(event) {
+        const { totalValueData } = event.detail;
+
+        if (!totalValueData || !totalValueData.updated) {
+            this.showToast('Warning', 'No changes to submit for total value approval', 'warning');
+            return;
+        }
+
+        this.isSaveDisabled = true;
+        submitTotalValueApprovalSingle({ totalValueApprovalJson: JSON.stringify(totalValueData) })
+            .then(result => {
+                if (result === 'Success') {
+                    this.showToast('Success', 'Total value approval submitted successfully', 'success');
+                    setTimeout(() => { window.location.reload(); }, 1500);
+                } else {
+                    this.showToast('Info', result, 'info');
+                    this.isSaveDisabled = false;
+                }
+            })
+            .catch(error => {
+                this.isSaveDisabled = false;
+                this.showToast('Error', error.body?.message || 'An error occurred while submitting total value approval', 'error');
             });
     }
 

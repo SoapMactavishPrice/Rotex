@@ -81,18 +81,31 @@
                             <!-- ── Warranty Approval Section (50/50 Layout) ── -->
                             <template if:true={quote.showApprovalDashboard}>
                                 <div class="warranty-discount-split-container">
-                                    <div class="warranty-section">
-                                        <template if:true={quote.warrantyApproval}>
-                                            <c-quote-warranty-approval
-                                                quote-id={quote.quoteId}
-                                                warranty-data={quote.warrantyApproval}
-                                                onwarrantystatuschange={handleWarrantyStatusChange}
-                                                onwarrantycommentchange={handleWarrantyCommentChange}
-                                                onwarrantysubmit={handleWarrantySubmit}>
-                                            </c-quote-warranty-approval>
+                                    <div class="approval-left-column">
+                                        <div class="warranty-section">
+                                            <template if:true={quote.warrantyApproval}>
+                                                <c-quote-warranty-approval
+                                                    quote-id={quote.quoteId}
+                                                    warranty-data={quote.warrantyApproval}
+                                                    onwarrantystatuschange={handleWarrantyStatusChange}
+                                                    onwarrantycommentchange={handleWarrantyCommentChange}
+                                                    onwarrantysubmit={handleWarrantySubmit}>
+                                                </c-quote-warranty-approval>
+                                            </template>
+                                        </div>
+                                        <template if:true={quote.totalValueApproval}>
+                                            <div class="total-value-section">
+                                                <c-quote-total-value-approval
+                                                    quote-id={quote.quoteId}
+                                                    total-value-data={quote.totalValueApproval}
+                                                    ontotalvaluestatuschange={handleTotalValueStatusChange}
+                                                    ontotalvaluecommentchange={handleTotalValueCommentChange}
+                                                    ontotalvaluesubmit={handleTotalValueSubmit}>
+                                                </c-quote-total-value-approval>
+                                            </div>
                                         </template>
                                     </div>
-                                    <div class="validity-section">
+                                    <div class="approval-right-column validity-section">
                                         <template if:true={quote.validityOfferApproval}>
                                             <c-quote-validity-offer-approval
                                                 quote-id={quote.quoteId}

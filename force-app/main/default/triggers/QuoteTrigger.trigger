@@ -35,5 +35,8 @@ trigger QuoteTrigger on Quote (before insert, before update) {
         
         // Handle warranty approval process for quote updates
         QuoteWarrantyApprovalHandler.handleBeforeUpdate(Trigger.new, Trigger.oldMap);
+        
+        // Handle validity of offer approval process for quote updates
+        QuoteValidityOfferApprovalHandler.handleBeforeUpdate(Trigger.new, Trigger.oldMap);
     }
 }

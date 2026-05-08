@@ -1,0 +1,215 @@
+/* =============================================
+   Quote Validity Of Offer Approval Styles
+   ============================================= */
+
+.validity-offer-approval-container {
+    padding: 12px;
+    background: #ffffff;
+    border-radius: 0.25rem;
+}
+
+/* ── Header ── */
+.validity-offer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #e0dedc;
+}
+
+.validity-offer-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #181818;
+    margin: 0;
+    letter-spacing: -0.2px;
+}
+
+.validity-offer-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #706e6b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0070d2;
+}
+
+/* ── Table ── */
+.validity-offer-table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.validity-offer-table thead tr {
+    background-color: #f3f2f2;
+    border-bottom: 2px solid #d8d7d6;
+}
+
+.validity-offer-table th {
+    padding: 8px 7px !important;
+    font-size: 11px;
+    font-weight: 700;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    text-align: left;
+    white-space: nowrap;
+    border-right: 1px solid #e0dedc;
+}
+
+.validity-offer-table th:last-child {
+    border-right: none;
+}
+
+.validity-offer-table tbody tr {
+    border-bottom: 1px solid #e0dedc;
+    transition: background-color 0.1s ease;
+}
+
+.validity-offer-table tbody tr:hover {
+    background-color: #f0f4ff;
+}
+
+.validity-offer-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.validity-offer-table td {
+    padding: 10px 7px !important;
+    vertical-align: middle;
+    overflow-wrap: break-word;
+    border-right: 1px solid #eeece9;
+}
+
+.validity-offer-table td:last-child {
+    border-right: none;
+}
+
+/* ── Column Widths ── */
+.approver-col {
+    width: 25%;
+}
+
+.status-col {
+    width: 20%;
+}
+
+.datetime-col {
+    width: 20%;
+    text-align: center !important;
+}
+
+.comments-col {
+    width: 35%;
+}
+
+/* ── Approver Cell ── */
+.approver-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.approver-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #706e6b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.approver-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #181818;
+}
+
+/* ── Status Cell ── */
+.status-cell lightning-combobox {
+    width: 100%;
+}
+
+/* ── Status Badge ── */
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    line-height: 1.6;
+    text-transform: capitalize;
+}
+
+.status-badge--approved {
+    background-color: #ecfdf3;
+    color: #027a48;
+    border: 1px solid #a6f4c5;
+}
+
+.status-badge--rejected {
+    background-color: #fff1f0;
+    color: #c0392b;
+    border: 1px solid #fca5a5;
+}
+
+.status-badge--submitted {
+    background-color: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+}
+
+.status-badge--default {
+    background-color: #f3f2f2;
+    color: #3e3e3c;
+    border: 1px solid #dddbda;
+}
+
+/* ── Date/Time Cell ── */
+.datetime-cell {
+    text-align: center;
+    white-space: nowrap;
+    font-size: 11px;
+    color: #706e6b;
+}
+
+/* ── Comment Cell ── */
+.comment-cell .comment-input {
+    width: 100%;
+}
+
+.comment-cell lightning-textarea {
+    --slds-c-textarea-sizing-min-height: 48px;
+}
+
+.comment-text {
+    display: block;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: #3e3e3c;
+    line-height: 1.45;
+    font-size: 12px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .validity-offer-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}

@@ -66,9 +66,37 @@ public without sharing class SalesPriceApprovalForQuotation {
             warrantyQuoteIds.add(q.Id);
         }
 
+        // ── PART C : Quote IDs that have a pending VALIDITY OF OFFER approval ──
+        List<Quote> validityOfferQuotes = [
+            SELECT Id
+            FROM   Quote
+            WHERE  (
+                       Sales_Manager__c                          = :currentUserId OR
+                       Country_Continent_Sales_Head_LOB_Head__c  = :currentUserId OR
+                       Global_Sales_Head__c                      = :currentUserId OR
+                       Rotex_Board_Member__c                     = :currentUserId OR
+                       Managing_Director_Country_Manager__c      = :currentUserId
+                   )
+                   AND Requested_Validity_Of_Offer__c != null
+                   AND Requested_Validity_Of_Offer__c != '30 Days'
+                   AND (
+                       SM_Validity_Offer_Status__c = 'Submitted' OR
+                       CH_Validity_Offer_Status__c = 'Submitted' OR
+                       GS_Validity_Offer_Status__c = 'Submitted' OR
+                       BM_Validity_Offer_Status__c = 'Submitted' OR
+                       MD_Validity_Offer_Status__c = 'Submitted'
+                   )
+        ];
+
+        Set<Id> validityOfferQuoteIds = new Set<Id>();
+        for (Quote q : validityOfferQuotes) {
+            validityOfferQuoteIds.add(q.Id);
+        }
+
         // ── UNION: all quotes relevant to this user ────────────────────────
         Set<Id> allRelevantQuoteIds = new Set<Id>(discountQuoteIds);
         allRelevantQuoteIds.addAll(warrantyQuoteIds);
+        allRelevantQuoteIds.addAll(validityOfferQuoteIds);
 
         if (allRelevantQuoteIds.isEmpty()) {
             throw new AuraHandledException(
@@ -126,7 +154,14 @@ public without sharing class SalesPriceApprovalForQuotation {
                    GS_Warranty_Status__c,  GS_Warranty_Date_Time__c,  GS_Warranty_Comments__c,
                    BM_Warranty_Status__c,  BM_Warranty_Date_Time__c,  BM_Warranty_Comments__c,
                    MD_Warranty_Status__c,  MD_Warranty_Date_Time__c,  MD_Warranty_Comments__c,
-                   Final_Warranty_Terms_Approver__c
+                   Final_Warranty_Terms_Approver__c,
+                   Requested_Validity_Of_Offer__c,
+                   SM_Validity_Offer_Status__c,  SM_Validity_Offer_Date_Time__c,  SM_Validity_Offer_Comments__c,
+                   CH_Validity_Offer_Status__c,  CH_Validity_Offer_Date_Time__c,  CH_Validity_Offer_Comments__c,
+                   GS_Validity_Offer_Status__c,  GS_Validity_Offer_Date_Time__c,  GS_Validity_Offer_Comments__c,
+                   BM_Validity_Offer_Status__c,  BM_Validity_Offer_Date_Time__c,  BM_Validity_Offer_Comments__c,
+                   MD_Validity_Offer_Status__c,  MD_Validity_Offer_Date_Time__c,  MD_Validity_Offer_Comments__c,
+                   Final_Validity_Offer_Approver__c
             FROM   Quote
             WHERE  Id IN :allRelevantQuoteIds
         ]);
@@ -346,6 +381,111 @@ public without sharing class SalesPriceApprovalForQuotation {
                 }
                 q.MD_Warranty_Comments__c  = wrapper.mdWarrantyComments;
                 q.MD_Warranty_Date_Time__c = DateTime.now();
+                hasChanges = true;
+            }
+        }
+
+        if (hasChanges) {
+            update q;
+        }
+        return 'Success';
+    }
+
+    /**
+     * @description: Submits validity of offer approval for a single quote.
+     * No Skip SOA logic — validity of offer does not use the SOA toggle.
+     */
+    @AuraEnabled
+    public static String submitValidityOfferApprovalSingle(String validityOfferApprovalJson) {
+        ValidityOfferApprovalWrapper wrapper = (ValidityOfferApprovalWrapper) JSON.deserialize(
+            validityOfferApprovalJson, ValidityOfferApprovalWrapper.class
+        );
+
+        if (!wrapper.updated) {
+            return 'No changes to submit';
+        }
+
+        Quote q = new Quote(Id = wrapper.quoteId);
+        Boolean hasChanges = false;
+        Id finalApproverId = wrapper.finalValidityOfferApprover;
+
+        // SM
+        if (wrapper.smValidityOfferStatus != wrapper.originalSmValidityOfferStatus ||
+            wrapper.smValidityOfferComments != wrapper.originalSmValidityOfferComments) {
+            if (wrapper.isSmCurrentUser) {
+                if (wrapper.smId != finalApproverId &&
+                    wrapper.smValidityOfferStatus == wrapper.originalSmValidityOfferStatus &&
+                    String.isNotBlank(wrapper.smValidityOfferComments)) {
+                    q.SM_Validity_Offer_Status__c = 'Approved';
+                } else {
+                    q.SM_Validity_Offer_Status__c = wrapper.smValidityOfferStatus;
+                }
+                q.SM_Validity_Offer_Comments__c  = wrapper.smValidityOfferComments;
+                q.SM_Validity_Offer_Date_Time__c = DateTime.now();
+                hasChanges = true;
+            }
+        }
+        // CH
+        if (wrapper.chValidityOfferStatus != wrapper.originalChValidityOfferStatus ||
+            wrapper.chValidityOfferComments != wrapper.originalChValidityOfferComments) {
+            if (wrapper.isChCurrentUser) {
+                if (wrapper.chId != finalApproverId &&
+                    wrapper.chValidityOfferStatus == wrapper.originalChValidityOfferStatus &&
+                    String.isNotBlank(wrapper.chValidityOfferComments)) {
+                    q.CH_Validity_Offer_Status__c = 'Approved';
+                } else {
+                    q.CH_Validity_Offer_Status__c = wrapper.chValidityOfferStatus;
+                }
+                q.CH_Validity_Offer_Comments__c  = wrapper.chValidityOfferComments;
+                q.CH_Validity_Offer_Date_Time__c = DateTime.now();
+                hasChanges = true;
+            }
+        }
+        // GS
+        if (wrapper.gsValidityOfferStatus != wrapper.originalGsValidityOfferStatus ||
+            wrapper.gsValidityOfferComments != wrapper.originalGsValidityOfferComments) {
+            if (wrapper.isGsCurrentUser) {
+                if (wrapper.gsId != finalApproverId &&
+                    wrapper.gsValidityOfferStatus == wrapper.originalGsValidityOfferStatus &&
+                    String.isNotBlank(wrapper.gsValidityOfferComments)) {
+                    q.GS_Validity_Offer_Status__c = 'Approved';
+                } else {
+                    q.GS_Validity_Offer_Status__c = wrapper.gsValidityOfferStatus;
+                }
+                q.GS_Validity_Offer_Comments__c  = wrapper.gsValidityOfferComments;
+                q.GS_Validity_Offer_Date_Time__c = DateTime.now();
+                hasChanges = true;
+            }
+        }
+        // BM
+        if (wrapper.bmValidityOfferStatus != wrapper.originalBmValidityOfferStatus ||
+            wrapper.bmValidityOfferComments != wrapper.originalBmValidityOfferComments) {
+            if (wrapper.isBmCurrentUser) {
+                if (wrapper.bmId != finalApproverId &&
+                    wrapper.bmValidityOfferStatus == wrapper.originalBmValidityOfferStatus &&
+                    String.isNotBlank(wrapper.bmValidityOfferComments)) {
+                    q.BM_Validity_Offer_Status__c = 'Approved';
+                } else {
+                    q.BM_Validity_Offer_Status__c = wrapper.bmValidityOfferStatus;
+                }
+                q.BM_Validity_Offer_Comments__c  = wrapper.bmValidityOfferComments;
+                q.BM_Validity_Offer_Date_Time__c = DateTime.now();
+                hasChanges = true;
+            }
+        }
+        // MD
+        if (wrapper.mdValidityOfferStatus != wrapper.originalMdValidityOfferStatus ||
+            wrapper.mdValidityOfferComments != wrapper.originalMdValidityOfferComments) {
+            if (wrapper.isMdCurrentUser) {
+                if (wrapper.mdId != finalApproverId &&
+                    wrapper.mdValidityOfferStatus == wrapper.originalMdValidityOfferStatus &&
+                    String.isNotBlank(wrapper.mdValidityOfferComments)) {
+                    q.MD_Validity_Offer_Status__c = 'Approved';
+                } else {
+                    q.MD_Validity_Offer_Status__c = wrapper.mdValidityOfferStatus;
+                }
+                q.MD_Validity_Offer_Comments__c  = wrapper.mdValidityOfferComments;
+                q.MD_Validity_Offer_Date_Time__c = DateTime.now();
                 hasChanges = true;
             }
         }
@@ -754,6 +894,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public List<QuotationLineItemWrapper> quoteLineItems;
         @AuraEnabled public Boolean updated;
         @AuraEnabled public WarrantyApprovalWrapper warrantyApproval;
+        @AuraEnabled public ValidityOfferApprovalWrapper validityOfferApproval;
 
         public QuotationWrapper() {}
 
@@ -786,6 +927,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             // Warranty approval data — always populate when current user is a
             // warranty approver for this quote (warranty-only quotes rely on this).
             this.warrantyApproval = createWarrantyApprovalIfNeeded(quote, currentUserId);
+            this.validityOfferApproval = createValidityOfferApprovalIfNeeded(quote, currentUserId);
 
             this.quoteLineItems = new List<QuotationLineItemWrapper>();
             for (QuoteLineItem eachLine : lineItems) {
@@ -821,6 +963,30 @@ public without sharing class SalesPriceApprovalForQuotation {
             }
             return isApprover ? new WarrantyApprovalWrapper(q) : null;
         }
+
+        private ValidityOfferApprovalWrapper createValidityOfferApprovalIfNeeded(Quote q, Id currentUserId) {
+            if (String.isBlank(q.Requested_Validity_Of_Offer__c) ||
+                q.Requested_Validity_Of_Offer__c == '30 Days') {
+                return null;
+            }
+            Boolean isApprover =
+                (q.Sales_Manager__c                         == currentUserId && q.SM_Validity_Offer_Status__c == 'Submitted') ||
+                (q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId && q.CH_Validity_Offer_Status__c == 'Submitted') ||
+                (q.Global_Sales_Head__c                     == currentUserId && q.GS_Validity_Offer_Status__c == 'Submitted') ||
+                (q.Rotex_Board_Member__c                    == currentUserId && q.BM_Validity_Offer_Status__c == 'Submitted') ||
+                (q.Managing_Director_Country_Manager__c     == currentUserId && q.MD_Validity_Offer_Status__c == 'Submitted');
+
+            if (!isApprover) {
+                Integer currentPos = getValidityOfferHierarchyPos(q, currentUserId);
+                Integer finalPos   = getValidityOfferHierarchyPos(q, q.Final_Validity_Offer_Approver__c);
+                if (currentPos != null && finalPos != null) {
+                    if (currentPos > finalPos) {
+                        isApprover = true;
+                    }
+                }
+            }
+            return isApprover ? new ValidityOfferApprovalWrapper(q) : null;
+        }
     }
 
     private static Integer getHierarchyPos(Quote q, Id userId) {
@@ -839,6 +1005,16 @@ public without sharing class SalesPriceApprovalForQuotation {
         if (pos > 3 && q.GS_Warranty_Status__c == 'Submitted') return true;
         if (pos > 4 && q.BM_Warranty_Status__c == 'Submitted') return true;
         return false;
+    }
+
+    private static Integer getValidityOfferHierarchyPos(Quote q, Id userId) {
+        if (userId == null) return null;
+        if (q.Sales_Manager__c                         == userId) return 1;
+        if (q.Country_Continent_Sales_Head_LOB_Head__c == userId) return 2;
+        if (q.Global_Sales_Head__c                     == userId) return 3;
+        if (q.Rotex_Board_Member__c                    == userId) return 4;
+        if (q.Managing_Director_Country_Manager__c     == userId) return 5;
+        return null;
     }
 
     public class QuotationLineItemWrapper {
@@ -1101,6 +1277,121 @@ public without sharing class SalesPriceApprovalForQuotation {
             if (this.isGsCurrentUser && this.gsWarrantyStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }
             if (this.isBmCurrentUser && this.bmWarrantyStatus == 'Submitted') { this.canBmEditComments = true; this.canBmEditStatus = (q.Rotex_Board_Member__c == finalId); }
             if (this.isMdCurrentUser && this.mdWarrantyStatus == 'Submitted') { this.canMdEditComments = true; this.canMdEditStatus = (q.Managing_Director_Country_Manager__c == finalId); }
+        }
+    }
+
+    public class ValidityOfferApprovalWrapper {
+        @AuraEnabled public String   quoteId;
+        @AuraEnabled public String   quoteName;
+        @AuraEnabled public String   quoteNumber;
+        @AuraEnabled public String   requestedValidityOfOffer;
+        @AuraEnabled public String   validityOfOffer;
+        @AuraEnabled public String   finalValidityOfferApprover;
+        @AuraEnabled public Boolean  updated;
+
+        @AuraEnabled public String   smName;         @AuraEnabled public String   smId;
+        @AuraEnabled public String   smValidityOfferStatus; @AuraEnabled public DateTime smValidityOfferDateTime;
+        @AuraEnabled public String   smValidityOfferComments; @AuraEnabled public Boolean isSmCurrentUser;
+        @AuraEnabled public Boolean  canSmEditStatus; @AuraEnabled public Boolean  canSmEditComments;
+        @AuraEnabled public String   originalSmValidityOfferStatus; @AuraEnabled public String originalSmValidityOfferComments;
+
+        @AuraEnabled public String   chName;         @AuraEnabled public String   chId;
+        @AuraEnabled public String   chValidityOfferStatus; @AuraEnabled public DateTime chValidityOfferDateTime;
+        @AuraEnabled public String   chValidityOfferComments; @AuraEnabled public Boolean isChCurrentUser;
+        @AuraEnabled public Boolean  canChEditStatus; @AuraEnabled public Boolean  canChEditComments;
+        @AuraEnabled public String   originalChValidityOfferStatus; @AuraEnabled public String originalChValidityOfferComments;
+
+        @AuraEnabled public String   gsName;         @AuraEnabled public String   gsId;
+        @AuraEnabled public String   gsValidityOfferStatus; @AuraEnabled public DateTime gsValidityOfferDateTime;
+        @AuraEnabled public String   gsValidityOfferComments; @AuraEnabled public Boolean isGsCurrentUser;
+        @AuraEnabled public Boolean  canGsEditStatus; @AuraEnabled public Boolean  canGsEditComments;
+        @AuraEnabled public String   originalGsValidityOfferStatus; @AuraEnabled public String originalGsValidityOfferComments;
+
+        @AuraEnabled public String   bmName;         @AuraEnabled public String   bmId;
+        @AuraEnabled public String   bmValidityOfferStatus; @AuraEnabled public DateTime bmValidityOfferDateTime;
+        @AuraEnabled public String   bmValidityOfferComments; @AuraEnabled public Boolean isBmCurrentUser;
+        @AuraEnabled public Boolean  canBmEditStatus; @AuraEnabled public Boolean  canBmEditComments;
+        @AuraEnabled public String   originalBmValidityOfferStatus; @AuraEnabled public String originalBmValidityOfferComments;
+
+        @AuraEnabled public String   mdName;         @AuraEnabled public String   mdId;
+        @AuraEnabled public String   mdValidityOfferStatus; @AuraEnabled public DateTime mdValidityOfferDateTime;
+        @AuraEnabled public String   mdValidityOfferComments; @AuraEnabled public Boolean isMdCurrentUser;
+        @AuraEnabled public Boolean  canMdEditStatus; @AuraEnabled public Boolean  canMdEditComments;
+        @AuraEnabled public String   originalMdValidityOfferStatus; @AuraEnabled public String originalMdValidityOfferComments;
+
+        @AuraEnabled public Integer  currentUserHierarchyPosition;
+        @AuraEnabled public Integer  finalApproverHierarchyPosition;
+        @AuraEnabled public Boolean  isHigherHierarchy;
+        @AuraEnabled public Boolean  canViewReadOnly;
+
+        public ValidityOfferApprovalWrapper() {}
+
+        public ValidityOfferApprovalWrapper(Quote q) {
+            Id currentUserId = UserInfo.getUserId();
+            this.quoteId                    = q.Id;
+            this.quoteName                  = q.Name;
+            this.quoteNumber                = q.QuoteNumber;
+            this.requestedValidityOfOffer   = q.Requested_Validity_Of_Offer__c;
+            this.validityOfOffer            = q.Validity_of_Offer__c;
+            this.finalValidityOfferApprover = getStringFieldSafely(q, 'Final_Validity_Offer_Approver__c');
+            this.updated                    = false;
+
+            this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r?.Name;
+            this.smValidityOfferStatus = q.SM_Validity_Offer_Status__c; this.smValidityOfferDateTime = q.SM_Validity_Offer_Date_Time__c;
+            this.smValidityOfferComments = q.SM_Validity_Offer_Comments__c; this.isSmCurrentUser = q.Sales_Manager__c == currentUserId;
+            this.originalSmValidityOfferStatus = q.SM_Validity_Offer_Status__c; this.originalSmValidityOfferComments = q.SM_Validity_Offer_Comments__c;
+
+            this.chId = q.Country_Continent_Sales_Head_LOB_Head__c; this.chName = q.Country_Continent_Sales_Head_LOB_Head__r?.Name;
+            this.chValidityOfferStatus = q.CH_Validity_Offer_Status__c; this.chValidityOfferDateTime = q.CH_Validity_Offer_Date_Time__c;
+            this.chValidityOfferComments = q.CH_Validity_Offer_Comments__c; this.isChCurrentUser = q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId;
+            this.originalChValidityOfferStatus = q.CH_Validity_Offer_Status__c; this.originalChValidityOfferComments = q.CH_Validity_Offer_Comments__c;
+
+            this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r?.Name;
+            this.gsValidityOfferStatus = q.GS_Validity_Offer_Status__c; this.gsValidityOfferDateTime = q.GS_Validity_Offer_Date_Time__c;
+            this.gsValidityOfferComments = q.GS_Validity_Offer_Comments__c; this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId;
+            this.originalGsValidityOfferStatus = q.GS_Validity_Offer_Status__c; this.originalGsValidityOfferComments = q.GS_Validity_Offer_Comments__c;
+
+            this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r?.Name;
+            this.bmValidityOfferStatus = q.BM_Validity_Offer_Status__c; this.bmValidityOfferDateTime = q.BM_Validity_Offer_Date_Time__c;
+            this.bmValidityOfferComments = q.BM_Validity_Offer_Comments__c; this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId;
+            this.originalBmValidityOfferStatus = q.BM_Validity_Offer_Status__c; this.originalBmValidityOfferComments = q.BM_Validity_Offer_Comments__c;
+
+            this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r?.Name;
+            this.mdValidityOfferStatus = q.MD_Validity_Offer_Status__c; this.mdValidityOfferDateTime = q.MD_Validity_Offer_Date_Time__c;
+            this.mdValidityOfferComments = q.MD_Validity_Offer_Comments__c; this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId;
+            this.originalMdValidityOfferStatus = q.MD_Validity_Offer_Status__c; this.originalMdValidityOfferComments = q.MD_Validity_Offer_Comments__c;
+
+            setValidityOfferHierarchyPositions(q, currentUserId);
+            setValidityOfferEditPermissions(q, currentUserId);
+        }
+
+        private void setValidityOfferHierarchyPositions(Quote q, Id currentUserId) {
+            this.currentUserHierarchyPosition   = getValidityOfferHierarchyIdx(q, currentUserId);
+            Id finalId = q.Final_Validity_Offer_Approver__c;
+            this.finalApproverHierarchyPosition = getValidityOfferHierarchyIdx(q, finalId);
+            this.isHigherHierarchy = this.currentUserHierarchyPosition != null &&
+                                    this.finalApproverHierarchyPosition != null &&
+                                    this.currentUserHierarchyPosition > this.finalApproverHierarchyPosition;
+            this.canViewReadOnly = this.isHigherHierarchy;
+        }
+
+        private Integer getValidityOfferHierarchyIdx(Quote q, Id approverId) {
+            if (approverId == null) return null;
+            if (q.Sales_Manager__c == approverId) return 1;
+            if (q.Country_Continent_Sales_Head_LOB_Head__c == approverId) return 2;
+            if (q.Global_Sales_Head__c == approverId) return 3;
+            if (q.Rotex_Board_Member__c == approverId) return 4;
+            if (q.Managing_Director_Country_Manager__c == approverId) return 5;
+            return null;
+        }
+
+        private void setValidityOfferEditPermissions(Quote q, Id currentUserId) {
+            Id finalId = q.Final_Validity_Offer_Approver__c;
+            if (this.isSmCurrentUser && this.smValidityOfferStatus == 'Submitted') { this.canSmEditComments = true; this.canSmEditStatus = (q.Sales_Manager__c == finalId); }
+            if (this.isChCurrentUser && this.chValidityOfferStatus == 'Submitted') { this.canChEditComments = true; this.canChEditStatus = (q.Country_Continent_Sales_Head_LOB_Head__c == finalId); }
+            if (this.isGsCurrentUser && this.gsValidityOfferStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }
+            if (this.isBmCurrentUser && this.bmValidityOfferStatus == 'Submitted') { this.canBmEditComments = true; this.canBmEditStatus = (q.Rotex_Board_Member__c == finalId); }
+            if (this.isMdCurrentUser && this.mdValidityOfferStatus == 'Submitted') { this.canMdEditComments = true; this.canMdEditStatus = (q.Managing_Director_Country_Manager__c == finalId); }
         }
     }
 }

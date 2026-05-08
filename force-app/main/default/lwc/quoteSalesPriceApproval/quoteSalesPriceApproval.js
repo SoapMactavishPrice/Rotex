@@ -4,6 +4,7 @@ import getAllQuotations from '@salesforce/apex/SalesPriceApprovalForQuotation.ge
 import updateQuoteLineItem from '@salesforce/apex/SalesPriceApprovalForQuotation.updateQuoteLineItem';
 import updateWarrantyApproval from '@salesforce/apex/SalesPriceApprovalForQuotation.updateWarrantyApproval';
 import submitWarrantyApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle';
+import submitValidityOfferApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle';
 import USER_ID from '@salesforce/user/Id';
 import { NavigationMixin } from 'lightning/navigation';
 
@@ -20,6 +21,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
      *         because getWarrantyApprovals() was imported but never called.
      */
     @track warrantyApprovalsMap = new Map();
+    @track validityOfferApprovalsMap = new Map();
 
     userId = USER_ID;
 
@@ -54,13 +56,18 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             .then(result => {
                 // Seed the warranty map BEFORE building the display quotes so
                 // that handleToggleExpand can resolve entries immediately.
-                const newMap = new Map();
+                const newWarrantyMap = new Map();
+                const newValidityMap = new Map();
                 result.forEach(q => {
                     if (q.warrantyApproval) {
-                        newMap.set(q.quoteId, { ...q.warrantyApproval });
+                        newWarrantyMap.set(q.quoteId, { ...q.warrantyApproval });
+                    }
+                    if (q.validityOfferApproval) {
+                        newValidityMap.set(q.quoteId, { ...q.validityOfferApproval });
                     }
                 });
-                this.warrantyApprovalsMap = newMap;
+                this.warrantyApprovalsMap = newWarrantyMap;
+                this.validityOfferApprovalsMap = newValidityMap;
 
                 this.quotes = result.map(q => this.processQuote(q));
             })
@@ -85,8 +92,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             ...q,
             quoteRecordUrl,
             isExpanded: false,
-            hasLineItems: (q.quoteLineItems || []).length > 0,   // ← add this line
+            hasLineItems: (q.quoteLineItems || []).length > 0,
             warrantyApproval: null,
+            validityOfferApproval: null,
+            showApprovalDashboard: false,
             quoteLineItems: processedLineItems,
             displayRows: this.buildDisplayRows(processedLineItems)
         };
@@ -97,12 +106,14 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         this.quotes = this.quotes.map(quote => {
             if (quote.quoteId === quoteId) {
                 const expanded = !quote.isExpanded;
+                const warrantyApproval = expanded ? this.warrantyApprovalsMap.get(quoteId) : null;
+                const validityOfferApproval = expanded ? this.validityOfferApprovalsMap.get(quoteId) : null;
                 return {
                     ...quote,
                     isExpanded: expanded,
-                    // ✅ warrantyApprovalsMap is now populated, so this lookup
-                    //    correctly returns the warranty data instead of undefined.
-                    warrantyApproval: expanded ? this.warrantyApprovalsMap.get(quoteId) : null
+                    warrantyApproval,
+                    validityOfferApproval,
+                    showApprovalDashboard: expanded && (warrantyApproval != null || validityOfferApproval != null)
                 };
             }
             return quote;
@@ -169,6 +180,71 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             .catch(error => {
                 this.isSaveDisabled = false;
                 this.showToast('Error', error.body?.message || 'An error occurred while submitting warranty approval', 'error');
+            });
+    }
+
+    // ── Validity Of Offer Approval Handlers ──────────────────────────────
+
+    handleValidityOfferStatusChange(event) {
+        const { quoteId, field, value } = event.detail;
+        const validity = this.validityOfferApprovalsMap.get(quoteId);
+
+        if (validity) {
+            validity[`${field}ValidityOfferStatus`] = value;
+            validity.updated = true;
+            this.validityOfferApprovalsMap = new Map(this.validityOfferApprovalsMap);
+
+            this.quotes = this.quotes.map(q => {
+                if (q.quoteId === quoteId) {
+                    return { ...q, validityOfferApproval: { ...validity } };
+                }
+                return q;
+            });
+        }
+    }
+
+    handleValidityOfferCommentChange(event) {
+        const { quoteId, field, value } = event.detail;
+        const validity = this.validityOfferApprovalsMap.get(quoteId);
+
+        if (validity) {
+            validity[`${field}ValidityOfferComments`] = value;
+            validity.updated = true;
+
+            this.validityOfferApprovalsMap = new Map(this.validityOfferApprovalsMap);
+
+            this.quotes = this.quotes.map(q => {
+                if (q.quoteId === quoteId) {
+                    return { ...q, validityOfferApproval: { ...validity } };
+                }
+                return q;
+            });
+        }
+    }
+
+    handleValidityOfferSubmit(event) {
+        const { quoteId, validityData } = event.detail;
+        
+        if (!validityData || !validityData.updated) {
+            this.showToast('Warning', 'No changes to submit for validity of offer approval', 'warning');
+            return;
+        }
+
+        this.isSaveDisabled = true;
+
+        submitValidityOfferApprovalSingle({ validityOfferApprovalJson: JSON.stringify(validityData) })
+            .then(result => {
+                if (result === 'Success') {
+                    this.showToast('Success', 'Validity of offer approval submitted successfully', 'success');
+                    setTimeout(() => { window.location.reload(); }, 1500);
+                } else {
+                    this.showToast('Info', result, 'info');
+                    this.isSaveDisabled = false;
+                }
+            })
+            .catch(error => {
+                this.isSaveDisabled = false;
+                this.showToast('Error', error.body?.message || 'An error occurred while submitting validity of offer approval', 'error');
             });
     }
 

@@ -6,6 +6,7 @@ import updateWarrantyApproval from '@salesforce/apex/SalesPriceApprovalForQuotat
 import submitWarrantyApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle';
 import submitValidityOfferApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle';
 import submitTotalValueApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitTotalValueApprovalSingle';
+import submitMinimumOfferApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle';
 import USER_ID from '@salesforce/user/Id';
 import { NavigationMixin } from 'lightning/navigation';
 
@@ -24,6 +25,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     @track warrantyApprovalsMap = new Map();
     @track validityOfferApprovalsMap = new Map();
     @track totalValueApprovalsMap = new Map();
+    @track minimumOfferApprovalsMap = new Map();
 
     userId = USER_ID;
 
@@ -61,6 +63,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 const newWarrantyMap = new Map();
                 const newValidityMap = new Map();
                 const newTotalValueMap = new Map();
+                const newMinimumOfferMap = new Map();
                 result.forEach(q => {
                     if (q.warrantyApproval) {
                         newWarrantyMap.set(q.quoteId, { ...q.warrantyApproval });
@@ -71,10 +74,14 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     if (q.totalValueApproval) {
                         newTotalValueMap.set(q.quoteId, { ...q.totalValueApproval });
                     }
+                    if (q.minimumOfferApproval) {
+                        newMinimumOfferMap.set(q.quoteId, { ...q.minimumOfferApproval });
+                    }
                 });
                 this.warrantyApprovalsMap = newWarrantyMap;
                 this.validityOfferApprovalsMap = newValidityMap;
                 this.totalValueApprovalsMap = newTotalValueMap;
+                this.minimumOfferApprovalsMap = newMinimumOfferMap;
 
                 this.quotes = result.map(q => this.processQuote(q));
             })
@@ -103,6 +110,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             warrantyApproval: null,
             validityOfferApproval: null,
             totalValueApproval: null,
+            minimumOfferApproval: null,
             showApprovalDashboard: false,
             quoteLineItems: processedLineItems,
             displayRows: this.buildDisplayRows(processedLineItems)
@@ -117,13 +125,15 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 const warrantyApproval = expanded ? this.warrantyApprovalsMap.get(quoteId) : null;
                 const validityOfferApproval = expanded ? this.validityOfferApprovalsMap.get(quoteId) : null;
                 const totalValueApproval = expanded ? this.totalValueApprovalsMap.get(quoteId) : null;
+                const minimumOfferApproval = expanded ? this.minimumOfferApprovalsMap.get(quoteId) : null;
                 return {
                     ...quote,
                     isExpanded: expanded,
                     warrantyApproval,
                     validityOfferApproval,
                     totalValueApproval,
-                    showApprovalDashboard: expanded && (warrantyApproval != null || validityOfferApproval != null || totalValueApproval != null)
+                    minimumOfferApproval,
+                    showApprovalDashboard: expanded && (warrantyApproval != null || validityOfferApproval != null || totalValueApproval != null || minimumOfferApproval != null)
                 };
             }
             return quote;
@@ -317,6 +327,68 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             .catch(error => {
                 this.isSaveDisabled = false;
                 this.showToast('Error', error.body?.message || 'An error occurred while submitting total value approval', 'error');
+            });
+    }
+
+    // ── Minimum Offer Approval Handlers ────────────────────────────────────
+    handleMinimumOfferStatusChange(event) {
+        const { quoteId, field, value } = event.detail;
+        const minimumOffer = this.minimumOfferApprovalsMap.get(quoteId);
+
+        if (minimumOffer) {
+            minimumOffer[`${field}MinOfferStatus`] = value;
+            minimumOffer.updated = true;
+            this.minimumOfferApprovalsMap = new Map(this.minimumOfferApprovalsMap);
+
+            this.quotes = this.quotes.map(q => {
+                if (q.quoteId === quoteId) {
+                    return { ...q, minimumOfferApproval: { ...minimumOffer } };
+                }
+                return q;
+            });
+        }
+    }
+
+    handleMinimumOfferCommentChange(event) {
+        const { quoteId, field, value } = event.detail;
+        const minimumOffer = this.minimumOfferApprovalsMap.get(quoteId);
+
+        if (minimumOffer) {
+            minimumOffer[`${field}MinOfferComments`] = value;
+            minimumOffer.updated = true;
+            this.minimumOfferApprovalsMap = new Map(this.minimumOfferApprovalsMap);
+
+            this.quotes = this.quotes.map(q => {
+                if (q.quoteId === quoteId) {
+                    return { ...q, minimumOfferApproval: { ...minimumOffer } };
+                }
+                return q;
+            });
+        }
+    }
+
+    handleMinimumOfferSubmit(event) {
+        const { minimumOfferData } = event.detail;
+
+        if (!minimumOfferData || !minimumOfferData.updated) {
+            this.showToast('Warning', 'No changes to submit for minimum offer approval', 'warning');
+            return;
+        }
+
+        this.isSaveDisabled = true;
+        submitMinimumOfferApprovalSingle({ minimumOfferApprovalJson: JSON.stringify(minimumOfferData) })
+            .then(result => {
+                if (result === 'Success') {
+                    this.showToast('Success', 'Minimum offer approval submitted successfully', 'success');
+                    setTimeout(() => { window.location.reload(); }, 1500);
+                } else {
+                    this.showToast('Info', result, 'info');
+                    this.isSaveDisabled = false;
+                }
+            })
+            .catch(error => {
+                this.isSaveDisabled = false;
+                this.showToast('Error', error.body?.message || 'An error occurred while submitting minimum offer approval', 'error');
             });
     }
 

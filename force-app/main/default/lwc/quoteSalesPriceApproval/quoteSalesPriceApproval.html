@@ -104,6 +104,17 @@
                                                 </c-quote-total-value-approval>
                                             </div>
                                         </template>
+                                        <template if:true={quote.minimumOfferApproval}>
+                                            <div class="minimum-offer-section">
+                                                <c-quote-minimum-offer-approval
+                                                    quote-id={quote.quoteId}
+                                                    minimum-offer-data={quote.minimumOfferApproval}
+                                                    onminimumofferstatuschange={handleMinimumOfferStatusChange}
+                                                    onminimumoffercommentchange={handleMinimumOfferCommentChange}
+                                                    onminimumoffersubmit={handleMinimumOfferSubmit}>
+                                                </c-quote-minimum-offer-approval>
+                                            </div>
+                                        </template>
                                     </div>
                                     <div class="approval-right-column validity-section">
                                         <template if:true={quote.validityOfferApproval}>

@@ -12,6 +12,7 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert) {
     
     if (Trigger.isAfter && Trigger.isInsert) {
         QuoteTotalValueApprovalHandler.handleAfterInsert(Trigger.new);
+        QuoteMinimumOfferValueApprovalHandler.handleAfterInsert(Trigger.new);
     }
     
     // BEFORE UPDATE
@@ -42,5 +43,8 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert) {
 
         // Handle total value approval process for quote updates
         QuoteTotalValueApprovalHandler.handleBeforeUpdate(Trigger.new, Trigger.oldMap);
+
+        // Handle minimum offer value approval process for quote updates
+        QuoteMinimumOfferValueApprovalHandler.handleBeforeUpdate(Trigger.new, Trigger.oldMap);
     }
 }

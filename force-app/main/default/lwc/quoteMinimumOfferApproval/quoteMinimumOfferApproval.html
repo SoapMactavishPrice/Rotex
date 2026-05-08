@@ -1,0 +1,75 @@
+<template>
+    <template if:true={hasMinimumOfferData}>
+        <div class="minimum-offer-approval-container">
+            <div class="minimum-offer-header">
+                <h5 class="minimum-offer-title">Minimum Offer Approval</h5>
+                <div class="minimum-offer-info">
+                    <span class="info-label">Total Value:</span>
+                    <span class="info-value">{minimumOfferData.totalValue}</span>
+                </div>
+            </div>
+
+            <table class="slds-table slds-table_cell-buffer slds-table_bordered minimum-offer-table">
+                <thead>
+                    <tr>
+                        <th scope="col" class="approver-col">Approver</th>
+                        <th scope="col" class="status-col">Status</th>
+                        <th scope="col" class="datetime-col">Date / Time</th>
+                        <th scope="col" class="comments-col">Comments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template for:each={approverRows} for:item="row">
+                        <tr key={row.key} class="approver-row">
+                            <td class="approver-cell">
+                                <span class="approver-label">{row.label}</span>
+                                <span class="approver-name">{row.name}</span>
+                            </td>
+                            <td class="status-cell">
+                                <template if:true={row.showStatusCombobox}>
+                                    <lightning-combobox
+                                        name="minimumOfferStatus"
+                                        data-field={row.field}
+                                        value={row.status}
+                                        options={statusOptions}
+                                        onchange={handleStatusChange}
+                                        variant="label-hidden"
+                                        dropdown-alignment="auto">
+                                    </lightning-combobox>
+                                </template>
+                                <template if:false={row.showStatusCombobox}>
+                                    <span class={row.statusBadgeClass}>{row.status}</span>
+                                </template>
+                            </td>
+                            <td class="datetime-cell">{row.dateTime}</td>
+                            <td class="comment-cell">
+                                <template if:true={row.showCommentInput}>
+                                    <lightning-textarea
+                                        value={row.comments}
+                                        data-field={row.field}
+                                        onchange={handleCommentChange}
+                                        variant="label-hidden"
+                                        class="comment-input">
+                                    </lightning-textarea>
+                                </template>
+                                <template if:false={row.showCommentInput}>
+                                    <span class="comment-text">{row.comments}</span>
+                                </template>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <div class="minimum-offer-footer slds-m-top_medium">
+                <lightning-button
+                    label="Submit Minimum Offer Approval"
+                    variant="brand"
+                    onclick={handleSubmitMinimumOffer}
+                    disabled={isSubmitDisabled}
+                    class="submit-button">
+                </lightning-button>
+            </div>
+        </div>
+    </template>
+</template>

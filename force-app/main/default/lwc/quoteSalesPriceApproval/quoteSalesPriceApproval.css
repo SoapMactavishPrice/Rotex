@@ -323,6 +323,13 @@ lightning-textarea.comment-input {
     overflow: visible;
 }
 
+.minimum-offer-section {
+    background: #f8f9fa;
+    border-radius: 0.25rem;
+    border: 1px solid #e0dedc;
+    overflow: visible;
+}
+
 .empty-section {
     background: #fafaf9;
     border-radius: 0.25rem;

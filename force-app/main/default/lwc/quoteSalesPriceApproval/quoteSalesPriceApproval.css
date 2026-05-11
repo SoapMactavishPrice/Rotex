@@ -367,3 +367,16 @@ lightning-textarea.comment-input {
         grid-template-columns: 1fr;
     }
 }
+
+.approval-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.product-col,
+.product-cell {
+    width: 160px;
+    white-space: normal;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}

@@ -135,8 +135,14 @@
                                     <table class="slds-table slds-table_cell-buffer slds-table_bordered approval-table">
                                         <thead>
                                             <tr>
-                                                <th scope="col" class="product-col">Product Name</th>
-                                                <th scope="col" class="list-price-col number-col">List Price</th>
+                                                <th scope="col" class="product-col"
+                                                    style="min-width: 160px; max-width: 200px; white-space: normal; word-wrap: break-word; word-break: break-word;">
+                                                    Product Name
+                                                </th>
+                                                <th scope="col" class="list-price-col number-col"
+                                                    style="min-width: 90px; white-space: nowrap;">
+                                                    List Price
+                                                </th>
                                                 <th scope="col" class="quantity-col number-col">Qty</th>
                                                 <th scope="col" class="sap-discount-col number-col">Disc. SAP</th>
                                                 <th scope="col" class="previous-discount-col number-col">Prev. Disc.</th>
@@ -154,10 +160,12 @@
     
                                                     <!-- Product-level cells (merged rows) -->
                                                     <template if:true={row.isFirstRow}>
-                                                        <td rowspan={row.soaCount} class="product-cell">
+                                                        <td rowspan={row.soaCount} class="product-cell"
+                                                            style="min-width: 160px; max-width: 200px; white-space: normal; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word;">
                                                             {row.productName}
                                                         </td>
-                                                        <td rowspan={row.soaCount} class="number-cell">
+                                                        <td rowspan={row.soaCount} class="number-cell"
+                                                            style="min-width: 90px; white-space: nowrap;">
                                                             {row.listPrice}
                                                         </td>
                                                         <td rowspan={row.soaCount} class="number-cell">

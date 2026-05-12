@@ -330,6 +330,97 @@ lightning-textarea.comment-input {
     overflow: visible;
 }
 
+/* Combined Quote Approval Table */
+.combined-approval-container {
+    padding: 12px 12px 18px;
+    margin-bottom: 10px;
+    overflow: visible;
+}
+
+.combined-approval-table-wrap {
+    overflow-x: auto;
+    overflow-y: visible;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+.combined-approval-table {
+    width: 100%;
+    min-width: 1040px;
+    table-layout: fixed;
+    border-collapse: collapse;
+    background: #fff;
+    color: #181818;
+    font-size: 13px;
+}
+
+.combined-approval-table th {
+    background: #1F3A5F;
+    border: 1px solid #181818;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 7px 6px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.combined-approval-table td {
+    border: 1px solid #181818;
+    padding: 6px;
+    text-align: center;
+    vertical-align: middle;
+    min-height: 32px;
+}
+
+.approval-type-col {
+    width: 15%;
+}
+
+.approval-value-col {
+    width: 13%;
+}
+
+.approver-col {
+    width: 14%;
+}
+
+.approval-type-cell {
+    font-weight: 600;
+    text-align: left !important;
+}
+
+.approval-value-cell {
+    font-weight: 600;
+}
+
+.approval-status-cell {
+    min-height: 38px;
+}
+
+.approval-comment-cell {
+    min-height: 54px;
+}
+
+.approval-comment-cell span {
+    display: block;
+    min-height: 20px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.approval-datetime-cell {
+    color: #444;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.combined-approval-footer {
+    display: flex;
+    justify-content: center;
+    padding-top: 14px;
+}
+
 .empty-section {
     background: #fafaf9;
     border-radius: 0.25rem;
@@ -357,8 +448,8 @@ lightning-textarea.comment-input {
         grid-template-columns: 1fr 1fr;
     }
 
-    .warranty-discount-split-container {
-        grid-template-columns: 1fr;
+    .combined-approval-table {
+        min-width: 1040px;
     }
 }
 

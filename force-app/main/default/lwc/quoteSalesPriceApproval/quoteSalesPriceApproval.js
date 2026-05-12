@@ -112,6 +112,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             totalValueApproval: null,
             minimumOfferApproval: null,
             showApprovalDashboard: false,
+            approvalColumns: [],
+            approvalDashboardRows: [],
+            isCombinedApprovalSubmitDisabled: true,
             quoteLineItems: processedLineItems,
             displayRows: this.buildDisplayRows(processedLineItems)
         };
@@ -126,6 +129,12 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 const validityOfferApproval = expanded ? this.validityOfferApprovalsMap.get(quoteId) : null;
                 const totalValueApproval = expanded ? this.totalValueApprovalsMap.get(quoteId) : null;
                 const minimumOfferApproval = expanded ? this.minimumOfferApprovalsMap.get(quoteId) : null;
+                const approvalDashboard = this.buildApprovalDashboard({
+                    warrantyApproval,
+                    validityOfferApproval,
+                    totalValueApproval,
+                    minimumOfferApproval
+                });
                 return {
                     ...quote,
                     isExpanded: expanded,
@@ -133,11 +142,317 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     validityOfferApproval,
                     totalValueApproval,
                     minimumOfferApproval,
-                    showApprovalDashboard: expanded && (warrantyApproval != null || validityOfferApproval != null || totalValueApproval != null || minimumOfferApproval != null)
+                    showApprovalDashboard: expanded && approvalDashboard.rows.length > 0,
+                    approvalColumns: approvalDashboard.columns,
+                    approvalDashboardRows: approvalDashboard.rows,
+                    isCombinedApprovalSubmitDisabled: this.isSaveDisabled || !approvalDashboard.hasChanges
                 };
             }
             return quote;
         });
+    }
+
+    buildApprovalDashboard(quote) {
+        const columns = this.buildApprovalColumns(quote);
+        const rows = [
+            this.buildApprovalRow('warranty', 'Warranty Terms', quote.warrantyApproval, {
+                currentValueKey: 'warrantyTerms',
+                requestedValueKey: 'warrantyTermsDraft',
+                statusSuffix: 'WarrantyStatus',
+                commentsSuffix: 'WarrantyComments',
+                dateTimeSuffix: 'WarrantyDateTime'
+            }, columns),
+            this.buildApprovalRow('totalValue', 'Total Value', quote.totalValueApproval, {
+                currentValueKey: 'totalValue',
+                requestedValueKey: 'totalValue',
+                statusSuffix: 'ValueStatus',
+                commentsSuffix: 'ValueComments',
+                dateTimeSuffix: 'ValueDateTime'
+            }, columns),
+            this.buildApprovalRow('minimumOffer', 'Min Offer Value', quote.minimumOfferApproval, {
+                currentValueKey: 'totalValue',
+                requestedValueKey: 'totalValue',
+                statusSuffix: 'MinOfferStatus',
+                commentsSuffix: 'MinOfferComments',
+                dateTimeSuffix: 'MinOfferDateTime'
+            }, columns),
+            this.buildApprovalRow('validityOffer', 'Validity Offer', quote.validityOfferApproval, {
+                currentValueKey: 'validityOfOffer',
+                requestedValueKey: 'requestedValidityOfOffer',
+                statusSuffix: 'ValidityOfferStatus',
+                commentsSuffix: 'ValidityOfferComments',
+                dateTimeSuffix: 'ValidityOfferDateTime'
+            }, columns)
+        ].filter(row => row != null);
+
+        return {
+            columns,
+            rows,
+            hasChanges: [
+                quote.warrantyApproval,
+                quote.validityOfferApproval,
+                quote.totalValueApproval,
+                quote.minimumOfferApproval
+            ].some(approval => approval && approval.updated)
+        };
+    }
+
+    buildApprovalColumns(quote) {
+        const levels = [
+            { key: 'sm', label: 'SM' },
+            { key: 'ch', label: 'CH' },
+            { key: 'gs', label: 'GS' },
+            { key: 'bm', label: 'BM' },
+            { key: 'md', label: 'MD' }
+        ];
+        const approvals = [
+            quote.warrantyApproval,
+            quote.validityOfferApproval,
+            quote.totalValueApproval,
+            quote.minimumOfferApproval
+        ].filter(approval => approval != null);
+
+        return levels.map(level => {
+            const name = approvals.map(approval => approval[`${level.key}Name`]).find(value => this.hasValue(value));
+            return {
+                key: level.key,
+                label: name ? `${level.label} - ${name}` : level.label
+            };
+        });
+    }
+
+    buildApprovalRow(type, label, data, config, columns) {
+        if (!data) return null;
+
+        return {
+            type,
+            label,
+            statusKey: `${type}-status`,
+            commentsKey: `${type}-comments`,
+            dateTimeKey: `${type}-datetime`,
+            currentValue: this.formatApprovalValue(data[config.currentValueKey]),
+            requestedValue: this.formatApprovalValue(data[config.requestedValueKey]),
+            approvers: columns.map(column => this.buildApprovalApprover(type, data, config, column.key))
+        };
+    }
+
+    buildApprovalApprover(type, data, config, level) {
+        const actualStatus = data[`${level}${config.statusSuffix}`] || '';
+
+        const finalApproverMap = {
+            sm: data.finalApprover === 'SM',
+            ch: data.finalApprover === 'CH',
+            gs: data.finalApprover === 'GS',
+            bm: data.finalApprover === 'BM',
+            md: data.finalApprover === 'MD'
+        };
+
+        const displayStatus = this.getDisplayStatus(
+            actualStatus,
+            finalApproverMap[level]
+        );
+        const comments = data[`${level}${config.commentsSuffix}`] || '';
+        return {
+            field: level,
+            status: actualStatus,
+            displayStatus,
+            comments,
+            dateTime: this.formatDateTime(data[`${level}${config.dateTimeSuffix}`]),
+            showStatusCombobox: !!data[`can${this.capitalize(level)}EditStatus`],
+            showCommentInput: !!data[`can${this.capitalize(level)}EditComments`],
+            statusBadgeClass: this.getStatusBadgeClass(displayStatus),
+            statusKey: `${type}-${level}-status`,
+            commentsKey: `${type}-${level}-comments`,
+            dateTimeKey: `${type}-${level}-datetime`
+        };
+    }
+
+    formatApprovalValue(value) {
+        if (value === undefined || value === null) return '';
+        return String(value);
+    }
+
+    formatDateTime(dateTime) {
+        if (!dateTime) return '';
+        try {
+            return new Date(dateTime).toLocaleString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (e) {
+            return '';
+        }
+    }
+
+    capitalize(value) {
+        return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+    }
+
+    handleCombinedApprovalStatusChange(event) {
+        this.updateCombinedApproval(
+            event.target.dataset.quoteId,
+            event.target.dataset.approvalType,
+            event.target.dataset.field,
+            'status',
+            event.detail.value
+        );
+    }
+
+    handleCombinedApprovalCommentChange(event) {
+        this.updateCombinedApproval(
+            event.target.dataset.quoteId,
+            event.target.dataset.approvalType,
+            event.target.dataset.field,
+            'comments',
+            event.target.value
+        );
+    }
+
+    updateCombinedApproval(quoteId, approvalType, field, valueType, value) {
+        const config = this.getCombinedApprovalConfig(approvalType);
+        if (!config) return;
+
+        const approvalMap = this[config.mapName];
+        const approval = approvalMap.get(quoteId);
+        if (!approval) return;
+
+        approval[`${field}${valueType === 'status' ? config.statusSuffix : config.commentsSuffix}`] = value;
+        approval.updated = true;
+        this[config.mapName] = new Map(approvalMap);
+        this.refreshQuoteApprovalDashboard(quoteId);
+    }
+
+    getCombinedApprovalConfig(approvalType) {
+        const configs = {
+            warranty: {
+                mapName: 'warrantyApprovalsMap',
+                dataName: 'warrantyApproval',
+                statusSuffix: 'WarrantyStatus',
+                commentsSuffix: 'WarrantyComments'
+            },
+            validityOffer: {
+                mapName: 'validityOfferApprovalsMap',
+                dataName: 'validityOfferApproval',
+                statusSuffix: 'ValidityOfferStatus',
+                commentsSuffix: 'ValidityOfferComments'
+            },
+            totalValue: {
+                mapName: 'totalValueApprovalsMap',
+                dataName: 'totalValueApproval',
+                statusSuffix: 'ValueStatus',
+                commentsSuffix: 'ValueComments'
+            },
+            minimumOffer: {
+                mapName: 'minimumOfferApprovalsMap',
+                dataName: 'minimumOfferApproval',
+                statusSuffix: 'MinOfferStatus',
+                commentsSuffix: 'MinOfferComments'
+            }
+        };
+        return configs[approvalType];
+    }
+
+    refreshQuoteApprovalDashboard(quoteId) {
+        this.quotes = this.quotes.map(quote => {
+            if (quote.quoteId !== quoteId) return quote;
+
+            const warrantyApproval = this.warrantyApprovalsMap.get(quoteId) || null;
+            const validityOfferApproval = this.validityOfferApprovalsMap.get(quoteId) || null;
+            const totalValueApproval = this.totalValueApprovalsMap.get(quoteId) || null;
+            const minimumOfferApproval = this.minimumOfferApprovalsMap.get(quoteId) || null;
+            const approvalDashboard = this.buildApprovalDashboard({
+                warrantyApproval,
+                validityOfferApproval,
+                totalValueApproval,
+                minimumOfferApproval
+            });
+
+            return {
+                ...quote,
+                warrantyApproval,
+                validityOfferApproval,
+                totalValueApproval,
+                minimumOfferApproval,
+                showApprovalDashboard: quote.isExpanded && approvalDashboard.rows.length > 0,
+                approvalColumns: approvalDashboard.columns,
+                approvalDashboardRows: approvalDashboard.rows,
+                isCombinedApprovalSubmitDisabled: this.isSaveDisabled || !approvalDashboard.hasChanges
+            };
+        });
+    }
+
+    handleCombinedApprovalSubmit(event) {
+        const quoteId = event.target.dataset.quoteId;
+        const submissions = [];
+
+        const warrantyApproval = this.warrantyApprovalsMap.get(quoteId);
+        if (warrantyApproval && warrantyApproval.updated) {
+            submissions.push({
+                label: 'Warranty Terms',
+                promise: submitWarrantyApprovalSingle({ warrantyApprovalJson: JSON.stringify(warrantyApproval) })
+            });
+        }
+
+        const totalValueApproval = this.totalValueApprovalsMap.get(quoteId);
+        if (totalValueApproval && totalValueApproval.updated) {
+            submissions.push({
+                label: 'Total Value',
+                promise: submitTotalValueApprovalSingle({ totalValueApprovalJson: JSON.stringify(totalValueApproval) })
+            });
+        }
+
+        const minimumOfferApproval = this.minimumOfferApprovalsMap.get(quoteId);
+        if (minimumOfferApproval && minimumOfferApproval.updated) {
+            submissions.push({
+                label: 'Min Offer Value',
+                promise: submitMinimumOfferApprovalSingle({ minimumOfferApprovalJson: JSON.stringify(minimumOfferApproval) })
+            });
+        }
+
+        const validityOfferApproval = this.validityOfferApprovalsMap.get(quoteId);
+        if (validityOfferApproval && validityOfferApproval.updated) {
+            submissions.push({
+                label: 'Validity Offer',
+                promise: submitValidityOfferApprovalSingle({ validityOfferApprovalJson: JSON.stringify(validityOfferApproval) })
+            });
+        }
+
+        if (!submissions.length) {
+            this.showToast('Warning', 'No quote approval changes to submit', 'warning');
+            return;
+        }
+
+        this.isSaveDisabled = true;
+        this.refreshQuoteApprovalDashboard(quoteId);
+
+        Promise.all(submissions.map(item => item.promise.then(result => ({ ...item, result }))))
+            .then(results => {
+                const nonSuccess = results.find(item => item.result !== 'Success');
+                if (nonSuccess) {
+                    this.showToast('Info', `${nonSuccess.label}: ${nonSuccess.result}`, 'info');
+                    this.isSaveDisabled = false;
+                    this.refreshQuoteApprovalDashboard(quoteId);
+                    return;
+                }
+
+                this.showToast('Success', 'Quote approvals submitted successfully', 'success');
+                setTimeout(() => { window.location.reload(); }, 1500);
+            })
+            .catch(error => {
+                this.isSaveDisabled = false;
+                this.refreshQuoteApprovalDashboard(quoteId);
+                this.showToast('Error', error.body?.message || 'An error occurred while submitting quote approvals', 'error');
+            });
+    }
+
+    getDisplayStatus(status, isFinalApprover) {
+        if (status === 'Approved' && !isFinalApprover) {
+            return 'Commented';
+        }
+        return status || '';
     }
 
     handleWarrantyStatusChange(event) {
@@ -418,7 +733,12 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 const skipFinalStatusEnabled = this.skipSoaRestrictions && this.isFinalPreviousHierarchyRow(item, soa);
                 const showStatusCombobox   = (item.isFinalDiscountApprover && soa.isCurrentUserRow && item.isEditable) || skipFinalStatusEnabled;
                 const showCommentInput     = (soa.isCurrentUserRow && item.isEditable) || skipCommentEnabled;
-                const soaStatus            = soa.status || '';
+                const actualStatus = soa.status || '';
+
+                const soaStatus = this.getDisplayStatus(
+                    actualStatus,
+                    soa.approverId === item.finalDiscountApproverId
+                );
 
                 displayRows.push({
                     key:              `${item.quoteLineItemId}_${idx}`,

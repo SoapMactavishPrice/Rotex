@@ -80,52 +80,83 @@
                             
                             <!-- ── Warranty Approval Section (50/50 Layout) ── -->
                             <template if:true={quote.showApprovalDashboard}>
-                                <div class="warranty-discount-split-container">
-                                    <div class="approval-left-column">
-                                        <div class="warranty-section">
-                                            <template if:true={quote.warrantyApproval}>
-                                                <c-quote-warranty-approval
-                                                    quote-id={quote.quoteId}
-                                                    warranty-data={quote.warrantyApproval}
-                                                    onwarrantystatuschange={handleWarrantyStatusChange}
-                                                    onwarrantycommentchange={handleWarrantyCommentChange}
-                                                    onwarrantysubmit={handleWarrantySubmit}>
-                                                </c-quote-warranty-approval>
-                                            </template>
-                                        </div>
-                                        <template if:true={quote.totalValueApproval}>
-                                            <div class="total-value-section">
-                                                <c-quote-total-value-approval
-                                                    quote-id={quote.quoteId}
-                                                    total-value-data={quote.totalValueApproval}
-                                                    ontotalvaluestatuschange={handleTotalValueStatusChange}
-                                                    ontotalvaluecommentchange={handleTotalValueCommentChange}
-                                                    ontotalvaluesubmit={handleTotalValueSubmit}>
-                                                </c-quote-total-value-approval>
-                                            </div>
-                                        </template>
-                                        <template if:true={quote.minimumOfferApproval}>
-                                            <div class="minimum-offer-section">
-                                                <c-quote-minimum-offer-approval
-                                                    quote-id={quote.quoteId}
-                                                    minimum-offer-data={quote.minimumOfferApproval}
-                                                    onminimumofferstatuschange={handleMinimumOfferStatusChange}
-                                                    onminimumoffercommentchange={handleMinimumOfferCommentChange}
-                                                    onminimumoffersubmit={handleMinimumOfferSubmit}>
-                                                </c-quote-minimum-offer-approval>
-                                            </div>
-                                        </template>
+                                <div class="combined-approval-container">
+                                    <div class="combined-approval-table-wrap">
+                                        <table class="combined-approval-table">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col" class="approval-type-col">Approval Type</th>
+                                                    <th scope="col" class="approval-value-col">Current Value</th>
+                                                    <th scope="col" class="approval-value-col">Requested Value</th>
+                                                    <template for:each={quote.approvalColumns} for:item="column">
+                                                        <th scope="col" key={column.key} class="approver-col">{column.label}</th>
+                                                    </template>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template for:each={quote.approvalDashboardRows} for:item="approvalRow">
+                                                    <tr key={approvalRow.statusKey}>
+                                                        <td rowspan="3" class="approval-type-cell">{approvalRow.label}</td>
+                                                        <td rowspan="3" class="approval-value-cell">{approvalRow.currentValue}</td>
+                                                        <td rowspan="3" class="approval-value-cell">{approvalRow.requestedValue}</td>
+                                                        <template for:each={approvalRow.approvers} for:item="approver">
+                                                            <td key={approver.statusKey} class="approval-status-cell">
+                                                                <template if:true={approver.showStatusCombobox}>
+                                                                    <lightning-combobox
+                                                                        name="combinedApprovalStatus"
+                                                                        data-quote-id={quote.quoteId}
+                                                                        data-approval-type={approvalRow.type}
+                                                                        data-field={approver.field}
+                                                                        value={approver.status}
+                                                                        options={statusOptions}
+                                                                        onchange={handleCombinedApprovalStatusChange}
+                                                                        variant="label-hidden"
+                                                                        dropdown-alignment="auto">
+                                                                    </lightning-combobox>
+                                                                </template>
+                                                                <template if:false={approver.showStatusCombobox}>
+                                                                    <span class={approver.statusBadgeClass}>{approver.displayStatus}</span>
+                                                                </template>
+                                                            </td>
+                                                        </template>
+                                                    </tr>
+                                                    <tr key={approvalRow.commentsKey}>
+                                                        <template for:each={approvalRow.approvers} for:item="approver">
+                                                            <td key={approver.commentsKey} class="approval-comment-cell">
+                                                                <template if:true={approver.showCommentInput}>
+                                                                    <lightning-textarea
+                                                                        value={approver.comments}
+                                                                        data-quote-id={quote.quoteId}
+                                                                        data-approval-type={approvalRow.type}
+                                                                        data-field={approver.field}
+                                                                        onchange={handleCombinedApprovalCommentChange}
+                                                                        variant="label-hidden"
+                                                                        class="comment-input">
+                                                                    </lightning-textarea>
+                                                                </template>
+                                                                <template if:false={approver.showCommentInput}>
+                                                                    <span>{approver.comments}</span>
+                                                                </template>
+                                                            </td>
+                                                        </template>
+                                                    </tr>
+                                                    <tr key={approvalRow.dateTimeKey}>
+                                                        <template for:each={approvalRow.approvers} for:item="approver">
+                                                            <td key={approver.dateTimeKey} class="approval-datetime-cell">{approver.dateTime}</td>
+                                                        </template>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div class="approval-right-column validity-section">
-                                        <template if:true={quote.validityOfferApproval}>
-                                            <c-quote-validity-offer-approval
-                                                quote-id={quote.quoteId}
-                                                validity-data={quote.validityOfferApproval}
-                                                onvalidityofferstatuschange={handleValidityOfferStatusChange}
-                                                onvalidityoffercommentchange={handleValidityOfferCommentChange}
-                                                onvalidityoffersubmit={handleValidityOfferSubmit}>
-                                            </c-quote-validity-offer-approval>
-                                        </template>
+                                    <div class="combined-approval-footer">
+                                        <lightning-button
+                                            label="Submit"
+                                            variant="brand"
+                                            data-quote-id={quote.quoteId}
+                                            onclick={handleCombinedApprovalSubmit}
+                                            disabled={quote.isCombinedApprovalSubmitDisabled}>
+                                        </lightning-button>
                                     </div>
                                 </div>
                             </template>

@@ -379,21 +379,24 @@ public with sharing class QuoteTotalValueApprovalHandler {
         email.setSaveAsActivity(true);
         email.setWhatId(q.Id);
 
-        String quoteLink = URL.getOrgDomainUrl().toExternalForm() + '/' + q.Id;
+        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/Quote_Discount_Approval';
+        String quoteRecordUrl  = URL.getOrgDomainUrl().toExternalForm() + '/' + q.Id;
 
         if (isRejection) {
             email.setSubject('Quote Total Value Approval Rejected — ' + q.QuoteNumber);
-            email.setPlainTextBody(
+            email.setHtmlBody(
                 'The total value approval for Quote ' + q.QuoteNumber +
-                ' has been rejected.\n\nTotal value: ' + String.valueOf(q.Total_Value__c) +
-                '\n\nPlease review the approver comments and take necessary action.\n\nQuote: ' + quoteLink
+                ' has been rejected.<br/><br/>Total value: ' + String.valueOf(q.Total_Value__c) +
+                '<br/><br/>Please review the approver comments and take necessary action.<br/><br/>' +
+                'Quote Record Page: <a href="' + quoteRecordUrl + '">click here</a>'
             );
         } else {
             email.setSubject('Approval Required: Total Value — ' + q.QuoteNumber);
-            email.setPlainTextBody(
+            email.setHtmlBody(
                 'Your approval is required for total value on Quote ' + q.QuoteNumber +
-                '.\n\nTotal value: ' + String.valueOf(q.Total_Value__c) +
-                '\n\nPlease log in to review and approve or reject.\n\nQuote: ' + quoteLink
+                '.<br/><br/>Total value: ' + String.valueOf(q.Total_Value__c) +
+                '<br/><br/>Please log in to review and approve or reject.<br/><br/>' +
+                'Quote Approval Page: <a href="' + approvalPageUrl + '">click here</a>'
             );
         }
         return email;

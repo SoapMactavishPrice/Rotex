@@ -196,7 +196,7 @@ private class SalesPriceApprovalForQuotationTest {
 
     private static List<QuoteLineItem> fetchFullQLIs(Id quoteId) {
         return [
-            SELECT Id, QuoteId, Product2Id, Product2.Name, Quantity, ListPrice, UnitPrice,
+            SELECT Id, QuoteId, Product2Id, Product2.Name, Product2.ProductCode, Quantity, ListPrice, UnitPrice,
                 Sales_Rep__c, Discount_as_per_SAP__c, Discount_to_be_offered__c,
                 Sales_Rep_Status__c, Approval_Comments__c,
                 Sales_Manager__c, Sales_Manager_Status__c,

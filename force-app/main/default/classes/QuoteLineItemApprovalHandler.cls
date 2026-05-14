@@ -278,22 +278,24 @@ public class QuoteLineItemApprovalHandler {
                 System.debug('    Discount to be Offered: ' + qli.Discount_to_be_offered__c + '%');
                 
                 // Create Email Message
+                String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/Quote_Discount_Approval';
                 Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
                 mail.setToAddresses(new String[] { approverUser.Email });
                 mail.setSubject('Discount Approval Request for Quote: ' + q.Name);
                 mail.setWhatId(q.Id);
                 mail.setSaveAsActivity(true);
-                mail.setPlainTextBody(
-                    'Dear ' + approverUser.Name + ',\n\n' +
-                    'A new discount approval request has been submitted.\n\n' +
-                    'Quote: ' + q.Name + '\n' +
-                    'Account: ' + (q.Account != null ? q.Account.Name : 'N/A') + '\n' +
-                    'Quote Owner: ' + owner.Name + '\n' +
-                    'Product: ' + productName + '\n' +
-                    'Standard Discount (as per SAP): ' + qli.Discount_as_per_SAP__c + '%\n' +
-                    'Discount to be Offered: ' + qli.Discount_to_be_offered__c + '%\n\n' +
-                    'Please review and take appropriate action.\n\n' +
-                    'Regards,\nSalesforce Automated Approval System'
+                mail.setHtmlBody(
+                    'Dear ' + approverUser.Name + ',<br/><br/>' +
+                    'A new discount approval request has been submitted.<br/><br/>' +
+                    'Quote: ' + q.Name + '<br/>' +
+                    'Account: ' + (q.Account != null ? q.Account.Name : 'N/A') + '<br/>' +
+                    'Quote Owner: ' + owner.Name + '<br/>' +
+                    'Product: ' + productName + '<br/>' +
+                    'Standard Discount (as per SAP): ' + qli.Discount_as_per_SAP__c + '%<br/>' +
+                    'Discount to be Offered: ' + qli.Discount_to_be_offered__c + '%<br/><br/>' +
+                    'Quote Approval Page: <a href="' + approvalPageUrl + '">click here</a><br/><br/>' +
+                    'Please review and take appropriate action.<br/><br/>' +
+                    'Regards,<br/>Salesforce Automated Approval System'
                 );
                 emails.add(mail);
                 System.debug('    ✓ Email message created and added to send queue');

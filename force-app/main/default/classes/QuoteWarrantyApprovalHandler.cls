@@ -365,21 +365,24 @@ public with sharing class QuoteWarrantyApprovalHandler {
         email.setSaveAsActivity(true);
         email.setWhatId(q.Id);
 
-        String quoteLink = URL.getOrgDomainUrl().toExternalForm() + '/' + q.Id;
+        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/Quote_Discount_Approval';
+        String quoteRecordUrl  = URL.getOrgDomainUrl().toExternalForm() + '/' + q.Id;
 
         if (isRejection) {
             email.setSubject('Quote Warranty Terms Rejected — ' + q.QuoteNumber);
-            email.setPlainTextBody(
+            email.setHtmlBody(
                 'The warranty terms approval for Quote ' + q.QuoteNumber +
-                ' has been rejected.\n\nProposed terms: ' + q.Warranty_Terms_Draft__c +
-                '\n\nPlease review the approver comments and take necessary action.\n\nQuote: ' + quoteLink
+                ' has been rejected.<br/><br/>Proposed terms: ' + q.Warranty_Terms_Draft__c +
+                '<br/><br/>Please review the approver comments and take necessary action.<br/><br/>' +
+                'Quote Record Page: <a href="' + quoteRecordUrl + '">click here</a>'
             );
         } else {
             email.setSubject('Approval Required: Warranty Terms — ' + q.QuoteNumber);
-            email.setPlainTextBody(
+            email.setHtmlBody(
                 'Your approval is required for the warranty terms on Quote ' + q.QuoteNumber +
-                '.\n\nProposed warranty terms: ' + q.Warranty_Terms_Draft__c +
-                '\n\nPlease log in to review and approve or reject.\n\nQuote: ' + quoteLink
+                '.<br/><br/>Proposed warranty terms: ' + q.Warranty_Terms_Draft__c +
+                '<br/><br/>Please log in to review and approve or reject.<br/><br/>' +
+                'Quote Approval Page: <a href="' + approvalPageUrl + '">click here</a>'
             );
         }
 

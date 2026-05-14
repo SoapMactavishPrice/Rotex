@@ -55,35 +55,63 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
      *         This makes warranty data available when the user expands a quote
      *         row — whether it is a discount-only, warranty-only, or both quote.
      */
-    fetchQuotes() {
+    fetchQuotes(preserveExpandedQuoteIds = []) {
         getAllQuotations()
             .then(result => {
-                // Seed the warranty map BEFORE building the display quotes so
-                // that handleToggleExpand can resolve entries immediately.
-                const newWarrantyMap = new Map();
-                const newValidityMap = new Map();
-                const newTotalValueMap = new Map();
-                const newMinimumOfferMap = new Map();
+                const newWarrantyMap      = new Map();
+                const newValidityMap      = new Map();
+                const newTotalValueMap    = new Map();
+                const newMinimumOfferMap  = new Map();
                 result.forEach(q => {
-                    if (q.warrantyApproval) {
-                        newWarrantyMap.set(q.quoteId, { ...q.warrantyApproval });
-                    }
-                    if (q.validityOfferApproval) {
-                        newValidityMap.set(q.quoteId, { ...q.validityOfferApproval });
-                    }
-                    if (q.totalValueApproval) {
-                        newTotalValueMap.set(q.quoteId, { ...q.totalValueApproval });
-                    }
-                    if (q.minimumOfferApproval) {
-                        newMinimumOfferMap.set(q.quoteId, { ...q.minimumOfferApproval });
-                    }
+                    if (q.warrantyApproval)     newWarrantyMap.set(q.quoteId,     { ...q.warrantyApproval });
+                    if (q.validityOfferApproval) newValidityMap.set(q.quoteId,    { ...q.validityOfferApproval });
+                    if (q.totalValueApproval)   newTotalValueMap.set(q.quoteId,   { ...q.totalValueApproval });
+                    if (q.minimumOfferApproval) newMinimumOfferMap.set(q.quoteId, { ...q.minimumOfferApproval });
                 });
-                this.warrantyApprovalsMap = newWarrantyMap;
+                this.warrantyApprovalsMap      = newWarrantyMap;
                 this.validityOfferApprovalsMap = newValidityMap;
-                this.totalValueApprovalsMap = newTotalValueMap;
-                this.minimumOfferApprovalsMap = newMinimumOfferMap;
+                this.totalValueApprovalsMap    = newTotalValueMap;
+                this.minimumOfferApprovalsMap  = newMinimumOfferMap;
 
-                this.quotes = result.map(q => this.processQuote(q));
+                this.quotes = result.map(q => {
+                    const processed = this.processQuote(q);
+
+                    // ── Restore expanded state for quotes that were open ──
+                    if (preserveExpandedQuoteIds.includes(q.quoteId)) {
+                        const warrantyApproval      = this.warrantyApprovalsMap.get(q.quoteId)      || null;
+                        const validityOfferApproval = this.validityOfferApprovalsMap.get(q.quoteId) || null;
+                        const totalValueApproval    = this.totalValueApprovalsMap.get(q.quoteId)    || null;
+                        const minimumOfferApproval  = this.minimumOfferApprovalsMap.get(q.quoteId)  || null;
+                        const approvalDashboard     = this.buildApprovalDashboard({
+                            warrantyApproval, validityOfferApproval, totalValueApproval, minimumOfferApproval
+                        });
+                        return {
+                            ...processed,
+                            isExpanded:                        true,
+                            warrantyApproval,
+                            validityOfferApproval,
+                            totalValueApproval,
+                            minimumOfferApproval,
+                            showApprovalDashboard:             approvalDashboard.rows.length > 0,
+                            approvalColumns:                   approvalDashboard.columns,
+                            approvalDashboardRows:             approvalDashboard.rows,
+                            isCombinedApprovalSubmitDisabled:  true   // fresh data, nothing changed yet
+                        };
+                    }
+
+                    return processed;
+                }).filter(quote => {
+                    const warrantyApproval      = this.warrantyApprovalsMap.get(quote.quoteId)      || null;
+                    const validityOfferApproval = this.validityOfferApprovalsMap.get(quote.quoteId) || null;
+                    const totalValueApproval    = this.totalValueApprovalsMap.get(quote.quoteId)    || null;
+                    const minimumOfferApproval  = this.minimumOfferApprovalsMap.get(quote.quoteId)  || null;
+
+                    const dashboardRows = this.buildApprovalDashboard({
+                        warrantyApproval, validityOfferApproval, totalValueApproval, minimumOfferApproval
+                    }).rows;
+
+                    return quote.hasLineItems || dashboardRows.length > 0;
+                });
             })
             .catch(error => {
                 this.showToast('Error', error.body.message, 'error');
@@ -115,6 +143,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             approvalColumns: [],
             approvalDashboardRows: [],
             isCombinedApprovalSubmitDisabled: true,
+            isUnifiedSubmitDisabled: true,
             quoteLineItems: processedLineItems,
             displayRows: this.buildDisplayRows(processedLineItems)
         };
@@ -135,6 +164,8 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     totalValueApproval,
                     minimumOfferApproval
                 });
+                const hasDiscountChanges = this.hasDiscountChanges(quote);
+                const hasCombinedChanges = approvalDashboard.hasChanges;
                 return {
                     ...quote,
                     isExpanded: expanded,
@@ -145,7 +176,8 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     showApprovalDashboard: expanded && approvalDashboard.rows.length > 0,
                     approvalColumns: approvalDashboard.columns,
                     approvalDashboardRows: approvalDashboard.rows,
-                    isCombinedApprovalSubmitDisabled: this.isSaveDisabled || !approvalDashboard.hasChanges
+                    isCombinedApprovalSubmitDisabled: this.isSaveDisabled || !approvalDashboard.hasChanges,
+                    isUnifiedSubmitDisabled: this.isSaveDisabled || (!hasDiscountChanges && !hasCombinedChanges)
                 };
             }
             return quote;
@@ -188,12 +220,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return {
             columns,
             rows,
-            hasChanges: [
-                quote.warrantyApproval,
-                quote.validityOfferApproval,
-                quote.totalValueApproval,
-                quote.minimumOfferApproval
-            ].some(approval => approval && approval.updated)
+            hasChanges: true
         };
     }
 
@@ -223,6 +250,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     buildApprovalRow(type, label, data, config, columns) {
         if (!data) return null;
+
+        const levels = ['sm', 'ch', 'gs', 'bm', 'md'];
+        const currentUserLevel = levels.find(level => data[`is${this.capitalize(level)}CurrentUser`]);
+        if (currentUserLevel) {
+            const currentUserStatus = data[`${currentUserLevel}${config.statusSuffix}`];
+            if (currentUserStatus !== 'Submitted') return null;
+        }
 
         return {
             type,
@@ -321,8 +355,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
         approval[`${field}${valueType === 'status' ? config.statusSuffix : config.commentsSuffix}`] = value;
         approval.updated = true;
+
         this[config.mapName] = new Map(approvalMap);
-        this.refreshQuoteApprovalDashboard(quoteId);
+
+        this.refreshQuoteApprovalDashboard(quoteId); // no parameter needed now
     }
 
     getCombinedApprovalConfig(approvalType) {
@@ -359,27 +395,30 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         this.quotes = this.quotes.map(quote => {
             if (quote.quoteId !== quoteId) return quote;
 
-            const warrantyApproval = this.warrantyApprovalsMap.get(quoteId) || null;
+            const warrantyApproval      = this.warrantyApprovalsMap.get(quoteId)      || null;
             const validityOfferApproval = this.validityOfferApprovalsMap.get(quoteId) || null;
-            const totalValueApproval = this.totalValueApprovalsMap.get(quoteId) || null;
-            const minimumOfferApproval = this.minimumOfferApprovalsMap.get(quoteId) || null;
-            const approvalDashboard = this.buildApprovalDashboard({
-                warrantyApproval,
-                validityOfferApproval,
-                totalValueApproval,
-                minimumOfferApproval
-            });
+            const totalValueApproval    = this.totalValueApprovalsMap.get(quoteId)    || null;
+            const minimumOfferApproval  = this.minimumOfferApprovalsMap.get(quoteId)  || null;
 
+            const approvalData = { warrantyApproval, validityOfferApproval, totalValueApproval, minimumOfferApproval };
+            const approvalDashboard = this.buildApprovalDashboard(approvalData);
+
+            // Derive hasChanges directly from the maps — no parameter needed
+            const hasChanges =
+                !!(warrantyApproval?.updated)      ||
+                !!(validityOfferApproval?.updated) ||
+                !!(totalValueApproval?.updated)    ||
+                !!(minimumOfferApproval?.updated);
+
+            const hasDiscountChanges = this.hasDiscountChanges(quote);
             return {
                 ...quote,
-                warrantyApproval,
-                validityOfferApproval,
-                totalValueApproval,
-                minimumOfferApproval,
-                showApprovalDashboard: quote.isExpanded && approvalDashboard.rows.length > 0,
-                approvalColumns: approvalDashboard.columns,
-                approvalDashboardRows: approvalDashboard.rows,
-                isCombinedApprovalSubmitDisabled: this.isSaveDisabled || !approvalDashboard.hasChanges
+                ...approvalData,
+                showApprovalDashboard:            quote.isExpanded && approvalDashboard.rows.length > 0,
+                approvalColumns:                  approvalDashboard.columns,
+                approvalDashboardRows:            approvalDashboard.rows,
+                isCombinedApprovalSubmitDisabled: !hasChanges,
+                isUnifiedSubmitDisabled:          !hasChanges && !hasDiscountChanges
             };
         });
     }
@@ -439,7 +478,8 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 }
 
                 this.showToast('Success', 'Quote approvals submitted successfully', 'success');
-                setTimeout(() => { window.location.reload(); }, 1500);
+                this.isSaveDisabled = false;
+                this.fetchQuotes([quoteId]);
             })
             .catch(error => {
                 this.isSaveDisabled = false;
@@ -712,16 +752,25 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const base = 'status-badge';
         if (!status) return `${base} status-badge--default`;
         const n = status.toLowerCase();
-        if (n === 'approved')  return `${base} status-badge--approved`;
-        if (n === 'rejected')  return `${base} status-badge--rejected`;
-        if (n === 'submitted') return `${base} status-badge--submitted`;
+        if (n === 'approved')   return `${base} status-badge--approved`;
+        if (n === 'rejected')   return `${base} status-badge--rejected`;
+        if (n === 'submitted')  return `${base} status-badge--submitted`;
+        if (n === 'commented')  return `${base} status-badge--commented`;  // ← add this
         return `${base} status-badge--default`;
     }
 
     buildDisplayRows(lineItems) {
         const displayRows = [];
         (lineItems || []).forEach(item => {
-            const soaLevels = this.getSoaLevels(item);
+            const allSoaLevels = this.getSoaLevels(item);
+
+            // Hide rows whose hierarchy is above the final approver
+            const finalLevel = allSoaLevels.find(soa => soa.approverId === item.finalDiscountApproverId);
+            const maxHierarchyIndex = finalLevel ? finalLevel.hierarchyIndex : null;
+            const soaLevels = maxHierarchyIndex
+                ? allSoaLevels.filter(soa => soa.hierarchyIndex <= maxHierarchyIndex)
+                : allSoaLevels;
+
             soaLevels.forEach((soa, idx) => {
                 const formattedDateTime = soa.dateTime
                     ? new Date(soa.dateTime).toLocaleString('en-GB', {
@@ -745,6 +794,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     isFirstRow:       idx === 0,
                     soaCount:         soaLevels.length,
                     productName:      item.productName,
+                    productCode:      item.productCode,
                     listPrice:        item.listPrice,
                     quantity:         item.quantity,
                     d1:               item.d1,
@@ -761,6 +811,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     prevSoaComments:  soa.previousCommentsValue || '',
                     soaComments:      soa.commentsValue || '',
                     soaCommentsField: soa.commentsField,
+                    showDiscountInput: idx === 0 && item.isFinalDiscountApprover && item.isEditable,
                     showStatusCombobox,
                     showStatusText:   !showStatusCombobox,
                     showCommentInput,
@@ -902,6 +953,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         specificQuoteLineItem['updated'] = true;
         specificQuote['updated']         = true;
         specificQuote.displayRows        = this.buildDisplayRows(specificQuote.quoteLineItems);
+        specificQuote.isUnifiedSubmitDisabled = !this.hasDiscountChanges(specificQuote) && !this.hasCombinedApprovalChanges(specificQuote);
         this.quotes = [...this.quotes];
     }
 
@@ -963,6 +1015,164 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     hasValue(value) {
         return value !== undefined && value !== null && String(value).trim() !== '';
+    }
+
+    hasDiscountChanges(quote) {
+        if (!quote || !quote.quoteLineItems) return false;
+        return quote.quoteLineItems.some(item => item.updated === true);
+    }
+
+    hasCombinedApprovalChanges(quote) {
+        if (!quote) return false;
+        const warrantyApproval = this.warrantyApprovalsMap.get(quote.quoteId);
+        const validityOfferApproval = this.validityOfferApprovalsMap.get(quote.quoteId);
+        const totalValueApproval = this.totalValueApprovalsMap.get(quote.quoteId);
+        const minimumOfferApproval = this.minimumOfferApprovalsMap.get(quote.quoteId);
+        
+        return !!(warrantyApproval?.updated) || 
+               !!(validityOfferApproval?.updated) || 
+               !!(totalValueApproval?.updated) || 
+               !!(minimumOfferApproval?.updated);
+    }
+
+    getCurrentUserCommentValue(item) {
+        if (item.bcheck1 === false) return item.Sales_Manager_Comments;
+        if (item.bcheck2 === false) return item.Country_Continent_Sales_LOB_Comments;
+        if (item.bcheck5 === false) return item.Global_Sales_Head_Comments;
+        if (item.bcheck3 === false) return item.Rotex_Board_Member_Comments;
+        if (item.bcheck4 === false) return item.Managing_Director_Comments;
+        return null;
+    }
+
+    validateFinalApproverRequirements(quote) {
+        if (!quote || !quote.quoteLineItems) return true;
+        
+        for (const item of quote.quoteLineItems) {
+            if (!item.updated || !item.isFinalDiscountApprover) continue;
+            
+            const hasStatusChange = item.approvalStatus && item.approvalStatus !== '';
+            const currentComment = this.getCurrentUserCommentValue(item);
+            const hasComments = this.hasValue(currentComment);
+            
+            if (!hasStatusChange) {
+                this.showToast('Error', 'Final approver must select an approval status', 'error');
+                return false;
+            }
+            
+            if (!hasComments) {
+                this.showToast('Error', 'Final approver must enter comments', 'error');
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    handleUnifiedQuoteSubmit(event) {
+        const quoteId = event.currentTarget.dataset.quoteId;
+        const quote = this.quotes.find(q => q.quoteId === quoteId);
+        
+        if (!quote) {
+            this.showToast('Error', 'Quote not found', 'error');
+            return;
+        }
+
+        const hasDiscountChanges = this.hasDiscountChanges(quote);
+        const hasCombinedChanges = this.hasCombinedApprovalChanges(quote);
+
+        if (!hasDiscountChanges && !hasCombinedChanges) {
+            this.showToast('Warning', 'No changes to submit', 'warning');
+            return;
+        }
+
+        // Validate final approver requirements for discount approvals
+        if (hasDiscountChanges && !this.validateFinalApproverRequirements(quote)) {
+            return;
+        }
+
+        this.isSaveDisabled = true;
+        this.quotes = this.quotes.map(q => {
+            if (q.quoteId === quoteId) {
+                return { ...q, isUnifiedSubmitDisabled: true };
+            }
+            return q;
+        });
+
+        const submissions = [];
+
+        // Submit discount approvals if changed
+        if (hasDiscountChanges) {
+            const quotesToSubmit = [quote];
+            submissions.push({
+                type: 'discount',
+                promise: updateQuoteLineItem({ quotationListStringObject: JSON.stringify(quotesToSubmit) })
+            });
+        }
+
+        // Submit combined approvals if changed
+        if (hasCombinedChanges) {
+            const warrantyApproval = this.warrantyApprovalsMap.get(quoteId);
+            if (warrantyApproval?.updated) {
+                submissions.push({
+                    type: 'warranty',
+                    promise: submitWarrantyApprovalSingle({ warrantyApprovalJson: JSON.stringify(warrantyApproval) })
+                });
+            }
+
+            const totalValueApproval = this.totalValueApprovalsMap.get(quoteId);
+            if (totalValueApproval?.updated) {
+                submissions.push({
+                    type: 'totalValue',
+                    promise: submitTotalValueApprovalSingle({ totalValueApprovalJson: JSON.stringify(totalValueApproval) })
+                });
+            }
+
+            const minimumOfferApproval = this.minimumOfferApprovalsMap.get(quoteId);
+            if (minimumOfferApproval?.updated) {
+                submissions.push({
+                    type: 'minimumOffer',
+                    promise: submitMinimumOfferApprovalSingle({ minimumOfferApprovalJson: JSON.stringify(minimumOfferApproval) })
+                });
+            }
+
+            const validityOfferApproval = this.validityOfferApprovalsMap.get(quoteId);
+            if (validityOfferApproval?.updated) {
+                submissions.push({
+                    type: 'validityOffer',
+                    promise: submitValidityOfferApprovalSingle({ validityOfferApprovalJson: JSON.stringify(validityOfferApproval) })
+                });
+            }
+        }
+
+        Promise.all(submissions.map(item => item.promise.then(result => ({ ...item, result }))))
+            .then(results => {
+                const failed = results.find(item => item.result !== 'Success');
+                if (failed) {
+                    this.showToast('Error', `${failed.type} submission failed: ${failed.result}`, 'error');
+                    this.isSaveDisabled = false;
+                    this.quotes = this.quotes.map(q => {
+                        if (q.quoteId === quoteId) {
+                            return { ...q, isUnifiedSubmitDisabled: false };
+                        }
+                        return q;
+                    });
+                    return;
+                }
+
+                this.showToast('Success', 'All approvals submitted successfully', 'success');
+                this.isSaveDisabled = false;
+                this.fetchQuotes([quoteId]);
+            })
+            .catch(error => {
+                this.isSaveDisabled = false;
+                this.quotes = this.quotes.map(q => {
+                    if (q.quoteId === quoteId) {
+                        return { ...q, isUnifiedSubmitDisabled: false };
+                    }
+                    return q;
+                });
+                this.showToast('Error', error.body?.message || 'An error occurred during submission', 'error');
+            });
     }
 
     saveChanges() {

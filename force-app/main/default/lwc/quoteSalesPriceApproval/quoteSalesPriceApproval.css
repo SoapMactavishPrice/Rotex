@@ -39,13 +39,43 @@
     border-radius: 0.25rem 0.25rem 0 0;
 }
 
+/* ── Inner wrapper: grid + toggle side-by-side ── */
+.quote-header-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .quote-header-grid {
+    flex: 1;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 10px 20px;
     align-items: start;
 }
 
+/* ── Expand / Collapse Toggle Button ── */
+.quote-expand-toggle {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.expand-chevron-btn {
+    --slds-c-button-icon-color-border: #dddbda;
+    --slds-c-button-icon-color-background: #fff;
+    --slds-c-button-icon-color-border-hover: #0070d2;
+    --slds-c-button-icon-color-background-hover: #e8f4ff;
+    border-radius: 0.25rem !important;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.2s ease;
+}
+
+.expand-chevron-btn:hover {
+    transform: scale(1.07);
+}
+
+/* ── Header Field Labels & Values ── */
 .header-field {
     display: flex;
     flex-direction: column;
@@ -68,7 +98,7 @@
     line-height: 1.4;
 }
 
-/* ── Action Links (view / open / close) ── */
+/* ── Action Links (view) ── */
 .action-link {
     color: #0070d2;
     text-decoration: none;
@@ -90,7 +120,10 @@
     padding: 12px 12px 16px;
 }
 
-/* ── Approval Table ── */
+/* ══════════════════════════════════════════════
+   Discount Line Items Table
+   – Header now matches combined approval green
+   ══════════════════════════════════════════════ */
 .approval-table {
     table-layout: fixed !important;
     width: 100% !important;
@@ -99,27 +132,31 @@
     color: #3e3e3c;
 }
 
-/* ── Table Header ── */
-.approval-table thead tr {
-    background-color: #f3f2f2;
-    border-bottom: 2px solid #d8d7d6;
+/* ── Table Header – matched to combined approval (#007764) ── */
+/* Extra specificity beats SLDS's own .slds-table thead styles */
+table.approval-table thead tr,
+table.approval-table thead tr:hover {
+    background-color: #007764 !important;
+    border-bottom: 2px solid #005a4a !important;
 }
 
-.approval-table th {
+table.approval-table thead tr th,
+table.approval-table thead tr th:hover {
+    background-color: #007764 !important;
     padding: 8px 7px !important;
-    font-size: 11px;
-    font-weight: 700;
-    color: #444;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    text-align: left;
-    white-space: nowrap;
-    border-right: 1px solid #e0dedc;
-    vertical-align: middle;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.25) !important;
+    vertical-align: middle !important;
 }
 
-.approval-table th:last-child {
-    border-right: none;
+table.approval-table thead tr th:last-child {
+    border-right: none !important;
 }
 
 /* ── Table Body Rows ── */
@@ -197,7 +234,6 @@
 }
 
 /* ── Status Badge ── */
-/* Wrap the soa status span for badge styling */
 .status-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -227,6 +263,12 @@
     border: 1px solid #fcd34d;
 }
 
+.status-badge--commented {
+    background-color: #d4e8fc;
+    color: #0a3a6b;
+    border: 1px solid #7bb9f5;
+}
+
 .status-badge--default {
     background-color: #f3f2f2;
     color: #3e3e3c;
@@ -234,17 +276,25 @@
 }
 
 /* ── Column Widths ── */
-.product-col       { width: 10%; }
-.list-price-col    { width: 6%; }
-.quantity-col      { width: 4.5%; }
+.product-col            { width: 10%; }
+.list-price-col         { width: 6%; }
+.quantity-col           { width: 4.5%; }
 .sap-discount-col,
 .previous-discount-col,
-.discount-col      { width: 5.5%; }
-.soa-col           { width: 10.5%; }
-.status-col        { width: 9%; }
-.datetime-col      { width: 9.5%; }
-.previous-comments-col { width: 16.75%; }
-.comments-col      { width: 16.75%; }
+.discount-col           { width: 5.5%; }
+.soa-col                { width: 10.5%; }
+.status-col             { width: 9%; }
+.datetime-col           { width: 9.5%; }
+.previous-comments-col  { width: 16.75%; }
+.comments-col           { width: 16.75%; }
+
+.product-col,
+.product-cell {
+    width: 160px;
+    white-space: normal;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
 
 /* ── Input Controls ── */
 .status-cell lightning-combobox,
@@ -293,44 +343,9 @@ lightning-textarea.comment-input {
     margin-bottom: -72px;
 }
 
-/* ── Warranty/Discount Split Layout (50/50) ── */
-.warranty-discount-split-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    padding: 12px 12px 16px;
-    margin-bottom: 16px;
-}
-
-.approval-left-column,
-.approval-right-column {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.warranty-section {
-    background: #f8f9fa;
-    border-radius: 0.25rem;
-    border: 1px solid #e0dedc;
-    overflow: visible;
-}
-
-.total-value-section {
-    background: #f8f9fa;
-    border-radius: 0.25rem;
-    border: 1px solid #e0dedc;
-    overflow: visible;
-}
-
-.minimum-offer-section {
-    background: #f8f9fa;
-    border-radius: 0.25rem;
-    border: 1px solid #e0dedc;
-    overflow: visible;
-}
-
-/* Combined Quote Approval Table */
+/* ══════════════════════════════════════════════
+   Combined Approval Table (Warranty / SOA etc.)
+   ══════════════════════════════════════════════ */
 .combined-approval-container {
     padding: 12px 12px 18px;
     margin-bottom: 10px;
@@ -355,7 +370,7 @@ lightning-textarea.comment-input {
 }
 
 .combined-approval-table th {
-    background: #1F3A5F;
+    background: #007764;
     border: 1px solid #181818;
     color: #fff;
     font-size: 13px;
@@ -373,17 +388,9 @@ lightning-textarea.comment-input {
     min-height: 32px;
 }
 
-.approval-type-col {
-    width: 15%;
-}
-
-.approval-value-col {
-    width: 13%;
-}
-
-.approver-col {
-    width: 14%;
-}
+.approval-type-col   { width: 15%; }
+.approval-value-col  { width: 13%; }
+.approver-col        { width: 14%; }
 
 .approval-type-cell {
     font-weight: 600;
@@ -409,16 +416,52 @@ lightning-textarea.comment-input {
     overflow-wrap: anywhere;
 }
 
+.approval-status-datetime-cell {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.approval-status-datetime-cell .status-badge {
+    display: inline-block;
+    margin: 0 auto;
+}
+
+.approval-datetime-inline {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+}
+
 .approval-datetime-cell {
     color: #444;
     font-size: 12px;
     white-space: nowrap;
 }
 
-.combined-approval-footer {
+/* ── Warranty / Split Sections ── */
+.warranty-discount-split-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 12px 12px 16px;
+    margin-bottom: 16px;
+}
+
+.approval-left-column,
+.approval-right-column {
     display: flex;
-    justify-content: center;
-    padding-top: 14px;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.warranty-section,
+.total-value-section,
+.minimum-offer-section {
+    background: #f8f9fa;
+    border-radius: 0.25rem;
+    border: 1px solid #e0dedc;
+    overflow: visible;
 }
 
 .empty-section {
@@ -432,6 +475,25 @@ lightning-textarea.comment-input {
     color: #706e6b;
     font-size: 12px;
     font-style: italic;
+}
+
+/* ── Discount Table: Outer black border ── */
+table.approval-table {
+    border: 1px solid #000 !important;
+}
+
+/* ── Discount Table: Header cell black borders ── */
+table.approval-table thead tr th {
+    border: 1px solid #000 !important;
+}
+
+/* ── Submit Button – teal to match table header ── */
+.submit-btn-wrap lightning-button {
+    --slds-c-button-brand-color-background: #007764;
+    --slds-c-button-brand-color-border: #007764;
+    --slds-c-button-brand-color-background-hover: #005a4a;
+    --slds-c-button-brand-color-border-hover: #005a4a;
+    --slds-c-button-brand-color-background-active: #004a3c;
 }
 
 /* ── Responsive ── */
@@ -459,15 +521,3 @@ lightning-textarea.comment-input {
     }
 }
 
-.approval-table {
-    table-layout: fixed;
-    width: 100%;
-}
-
-.product-col,
-.product-cell {
-    width: 160px;
-    white-space: normal;
-    word-break: break-all;
-    overflow-wrap: break-word;
-}

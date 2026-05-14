@@ -357,21 +357,24 @@ public with sharing class QuoteValidityOfferApprovalHandler {
         email.setSaveAsActivity(true);
         email.setWhatId(q.Id);
 
-        String quoteLink = URL.getOrgDomainUrl().toExternalForm() + '/' + q.Id;
+        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/Quote_Discount_Approval';
+        String quoteRecordUrl  = URL.getOrgDomainUrl().toExternalForm() + '/' + q.Id;
 
         if (isRejection) {
             email.setSubject('Quote Validity of Offer Rejected — ' + q.QuoteNumber);
-            email.setPlainTextBody(
+            email.setHtmlBody(
                 'The validity of offer approval for Quote ' + q.QuoteNumber +
-                ' has been rejected.\n\nProposed validity: ' + q.Requested_Validity_Of_Offer__c +
-                '\n\nPlease review the approver comments and take necessary action.\n\nQuote: ' + quoteLink
+                ' has been rejected.<br/><br/>Proposed validity: ' + q.Requested_Validity_Of_Offer__c +
+                '<br/><br/>Please review the approver comments and take necessary action.<br/><br/>' +
+                'Quote Record Page: <a href="' + quoteRecordUrl + '">click here</a>'
             );
         } else {
             email.setSubject('Approval Required: Validity of Offer — ' + q.QuoteNumber);
-            email.setPlainTextBody(
+            email.setHtmlBody(
                 'Your approval is required for the validity of offer on Quote ' + q.QuoteNumber +
-                '.\n\nProposed validity of offer: ' + q.Requested_Validity_Of_Offer__c +
-                '\n\nPlease log in to review and approve or reject.\n\nQuote: ' + quoteLink
+                '.<br/><br/>Proposed validity of offer: ' + q.Requested_Validity_Of_Offer__c +
+                '<br/><br/>Please log in to review and approve or reject.<br/><br/>' +
+                'Quote Approval Page: <a href="' + approvalPageUrl + '">click here</a>'
             );
         }
 

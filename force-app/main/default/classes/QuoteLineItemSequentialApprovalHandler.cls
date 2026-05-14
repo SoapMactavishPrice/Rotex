@@ -338,21 +338,23 @@ public class QuoteLineItemSequentialApprovalHandler {
         User approver = approvers[0];
         String ownerName = getQuoteOwnerName(q);
 
+        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/Quote_Discount_Approval';
         String body =
-            'Dear ' + approver.Name + ',\n\n' +
-            'A new discount approval request has been submitted.\n\n' +
-            'Quote: ' + q.Name + '\n' +
-            'Account: ' + (q.Account != null ? q.Account.Name : 'N/A') + '\n' +
-            'Quote Owner: ' + ownerName + '\n' +
-            'Product: ' + (qli.Product2 != null ? qli.Product2.Name : 'N/A') + '\n' +
-            'Discount to be Offered: ' + qli.Discount_to_be_offered__c + '%\n\n' +
-            'Please review and take appropriate action.\n\n' +
-            'Regards,\nSalesforce System';
+            'Dear ' + approver.Name + ',<br/><br/>' +
+            'A new discount approval request has been submitted.<br/><br/>' +
+            'Quote: ' + q.Name + '<br/>' +
+            'Account: ' + (q.Account != null ? q.Account.Name : 'N/A') + '<br/>' +
+            'Quote Owner: ' + ownerName + '<br/>' +
+            'Product: ' + (qli.Product2 != null ? qli.Product2.Name : 'N/A') + '<br/>' +
+            'Discount to be Offered: ' + qli.Discount_to_be_offered__c + '%<br/><br/>' +
+            'Quote Approval Page: <a href="' + approvalPageUrl + '">click here</a><br/><br/>' +
+            'Please review and take appropriate action.<br/><br/>' +
+            'Regards,<br/>Salesforce System';
 
         Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
         mail.setToAddresses(new String[] { approver.Email });
         mail.setSubject('Discount Approval Request - Quote ' + q.Name);
-        mail.setPlainTextBody(body);
+        mail.setHtmlBody(body);
         mail.setWhatId(q.Id);
         mail.setSaveAsActivity(true);
         Messaging.sendEmail(new Messaging.SingleEmailMessage[] { mail });

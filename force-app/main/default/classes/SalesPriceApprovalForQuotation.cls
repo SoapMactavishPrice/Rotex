@@ -165,7 +165,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             quoteLineItems = [
                 SELECT Approval_Comments__c, Approval_Status__c, Approver__c, CreatedById, ServiceDate,
                        Discount, LastModifiedById, Description, LineNumber, ListPrice,
-                       Product2Id, Product2.Name, Quantity, QuoteId, Discount_as_per_SAP__c,
+                       Product2Id, Product2.Name, Quantity, QuoteId, Discount_as_per_SAP__c, Product2.ProductCode,
                        Global_Sales_Head__c, Global_Sales_Head_Status__c, Reject_Reason__c,
                        UnitPrice, SortOrder, Subtotal, TotalPrice, Discount_to_be_offered__c,
                        Sales_Rep__c, Sales_Rep_Status__c, Sales_Manager__c, Sales_Manager_Status__c,
@@ -256,6 +256,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             quotations.add(new QuotationWrapper(q, lineItems, currentUserId));
         }
 
+        quotations.sort();
         return quotations;
     }
 
@@ -806,6 +807,29 @@ public without sharing class SalesPriceApprovalForQuotation {
         List<QuoteLineItem> quotationLineItemsToBeUpdated = new List<QuoteLineItem>();
         Set<Id> updatedQuoteLineItemIds = new Set<Id>();
 
+        // ── SOA Matrix max-discount pre-load ──────────────────────────────
+        Map<String, Decimal> profileMaxDiscountMap = new Map<String, Decimal>();
+
+        for (SOA_Matrix__c m : [
+            SELECT SOA_Profile__c, Max_Discount__c
+            FROM SOA_Matrix__c
+            WHERE Max_Discount__c != null
+        ]) {
+            String profile = m.SOA_Profile__c != null ? m.SOA_Profile__c.trim() : null;
+
+            if (profile == null) continue;
+
+            Decimal existingMax = profileMaxDiscountMap.get(profile);
+
+            if (existingMax == null || m.Max_Discount__c > existingMax) {
+                profileMaxDiscountMap.put(profile, m.Max_Discount__c);
+            }
+        }
+
+        // kept only so remaining code compiles if referenced elsewhere
+        Map<Id, User> finalApproverUserMap = new Map<Id, User>();
+        // ─────────────────────────────────────────────────────────────────
+
         for (QuotationWrapper eachQuotation : quotations) {
             if (eachQuotation.updated &&
                 eachQuotation.quoteLineItems != null &&
@@ -829,7 +853,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Managing_Director_Country_Manage__c,
                        Sales_Manager_Comments__c, Country_Continent_Sales_LOB_Comments__c,
                        Global_Sales_Head_Comments__c, Rotex_Board_Member_Comments__c,
-                       Managing_Director_Comments__c
+                       Managing_Director_Comments__c, Discount_to_be_offered__c
                 FROM   QuoteLineItem
                 WHERE  Id IN :updatedQuoteLineItemIds
             ]);
@@ -849,9 +873,48 @@ public without sharing class SalesPriceApprovalForQuotation {
                     String existingStageStatus    = getStageStatus(existing, eachQli.currentStageField);
                     Boolean statusChanged          = eachQli.approvalStatus != existingStageStatus;
                     Boolean commentChanged         = didCurrentStageCommentChange(existing, eachQli);
-                    Boolean shouldUpdate           = statusChanged || commentChanged;
                     Boolean canSubmitAsFinal       = eachQli.isFinalDiscountApprover == true ||
                                                      canSkipToPreviousFinalApprover(existing, eachQli);
+                    Boolean discountChanged        = canSubmitAsFinal &&
+                                                     eachQli.d2 != null &&
+                                                     (existing == null || eachQli.d2 != existing.Discount_to_be_offered__c);
+                    Boolean shouldUpdate           = statusChanged || commentChanged || discountChanged;
+
+                    // ── Validate discount does not exceed SOA Matrix max ──
+                    if (canSubmitAsFinal && eachQli.d2 != null) {
+
+                        Integer finalApproverPos =
+                            getApproverIndex(existing, (Id) eachQli.finalDiscountApproverId);
+
+                        String soaProfile = getSoaProfileByPosition(finalApproverPos);
+
+                        Decimal maxDiscount = null;
+
+                        if (String.isNotBlank(soaProfile)) {
+
+                            maxDiscount = profileMaxDiscountMap.get(soaProfile);
+
+                            if (maxDiscount == null) {
+                                for (String key : profileMaxDiscountMap.keySet()) {
+                                    if (key.equalsIgnoreCase(soaProfile)) {
+                                        maxDiscount = profileMaxDiscountMap.get(key);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (maxDiscount != null && eachQli.d2 > maxDiscount) {
+                            throw new AuraHandledException(
+                                'Discount of ' + eachQli.d2 +
+                                '% exceeds the maximum allowed discount of ' +
+                                maxDiscount +
+                                '% for this approver level.'
+                            );
+                        }
+                    }
+                    // ─────────────────────────────────────────────────────
+                    // ─────────────────────────────────────────────────────
 
                     if (statusChanged && (existing == null || !canSubmitAsFinal)) {
                         throw new AuraHandledException(
@@ -862,6 +925,10 @@ public without sharing class SalesPriceApprovalForQuotation {
                     QuoteLineItem qli = new QuoteLineItem();
                     qli.Id = eachQli.quoteLineItemId;
                     applySkippedComments(qli, existing, eachQli);
+
+                    if (discountChanged) {
+                        qli.Discount_to_be_offered__c = eachQli.d2;
+                    }
 
                     if (shouldUpdate && eachQli.currentStageField == 'Sales_Rep_Status__c') {
                         qli.Sales_Rep_Status__c  = canSubmitAsFinal ? eachQli.approvalStatus : 'Approved';
@@ -941,10 +1008,11 @@ public without sharing class SalesPriceApprovalForQuotation {
         email.setWhatId(quotation.quoteId);
         email.setSaveAsActivity(true);
 
+        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm()+ '/lightning/n/Quote_Discount_Approval';
         String body = 'Dear ' + quotation.quoteOwnerName + ',<br/><br/>';
         body += 'The Sales Price has been ' + status.toLowerCase() + ' for the following Quote:<br/><br/>';
-        body += 'Quote Name: '  + quotation.quoteName  + '<br/>';
-        body += 'Quote Link: '  + quotation.quoteLink  + '</a><br/><br/>';
+        body += 'Quote Name: ' + quotation.quoteName + '<br/>';
+        body += 'Quote Approval Page: <a href="' + approvalPageUrl + '">click here</a><br/><br/>';
         body += 'Below are the product details:<br/><br/>';
         body += '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse:collapse;width:100%;">';
         body += '<thead><tr style="background-color:#f2f2f2;"><th>Product Name</th><th>List Price</th><th>Sales Price</th><th>Approval Status</th></tr></thead><tbody>';
@@ -1001,6 +1069,18 @@ public without sharing class SalesPriceApprovalForQuotation {
             Object value = record.get(fieldApiName);
             return value == null ? null : String.valueOf(value);
         } catch (SObjectException e) { return null; }
+    }
+
+    public static String getPicklistLabel(String objectApiName, String fieldApiName, String apiValue) {
+        if (String.isBlank(apiValue)) return apiValue;
+        Schema.SObjectType objType = Schema.getGlobalDescribe().get(objectApiName);
+        if (objType == null) return apiValue;
+        Schema.SObjectField sField = objType.getDescribe().fields.getMap().get(fieldApiName);
+        if (sField == null) return apiValue;
+        for (Schema.PicklistEntry entry : sField.getDescribe().getPicklistValues()) {
+            if (entry.getValue() == apiValue) return entry.getLabel();
+        }
+        return apiValue;
     }
 
     public static Datetime getDateTimeFieldSafely(SObject record, String fieldApiName) {
@@ -1108,7 +1188,7 @@ public without sharing class SalesPriceApprovalForQuotation {
 
     // ── Inner Wrappers ────────────────────────────────────────────────────
 
-    public class QuotationWrapper {
+    public class QuotationWrapper implements Comparable{
         @AuraEnabled public String quoteId;
         @AuraEnabled public String quoteName;
         @AuraEnabled public String quoteNumber;
@@ -1146,7 +1226,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.totalValue      = getDecimalFieldSafely(quote, 'Total_Value__c');
             this.revNo           = getStringFieldSafely(quote, 'Rev_No__c');
             this.validityOfOffer = getStringFieldSafely(quote, 'Validity_of_Offer__c');
-            this.paymentTerms    = getStringFieldSafely(quote, 'Payment_Terms__c');
+            this.paymentTerms    = getPicklistLabel('Quote', 'Payment_Terms__c', getStringFieldSafely(quote, 'Payment_Terms__c'));
             this.warrantyTerms   = getStringFieldSafely(quote, 'Warranty_Terms__c');
             this.deliveryPeriod  = getStringFieldSafely(quote, 'Delivery_Period__c');
             this.updated         = false;
@@ -1171,6 +1251,14 @@ public without sharing class SalesPriceApprovalForQuotation {
             for (QuoteLineItem eachLine : lineItems) {
                 this.quoteLineItems.add(new QuotationLineItemWrapper(eachLine));
             }
+        }
+
+        public Integer compareTo(Object compareTo) {
+            QuotationWrapper other = (QuotationWrapper) compareTo;
+            if (this.quoteNumber == null && other.quoteNumber == null) return 0;
+            if (this.quoteNumber == null) return 1;
+            if (other.quoteNumber == null) return -1;
+            return other.quoteNumber.compareTo(this.quoteNumber); // descending
         }
 
         private WarrantyApprovalWrapper createWarrantyApprovalIfNeeded(Quote q, Id currentUserId) {
@@ -1316,11 +1404,31 @@ public without sharing class SalesPriceApprovalForQuotation {
         return null;
     }
 
+    private static String getSoaProfileByPosition(Integer position) {
+
+        if (position == null) return null;
+
+        if (position == 1) return 'Sales Manager';
+
+        if (position == 2)
+            return 'Country / Continent Sales Head / LOB Head';
+
+        if (position == 3) return 'Global Sales Head';
+
+        if (position == 4) return 'Rotex Board Member';
+
+        if (position == 5)
+            return 'Managing Director / Country Manager';
+
+        return null;
+    }
+
     public class QuotationLineItemWrapper {
         @AuraEnabled public String  parentId;
         @AuraEnabled public String  quoteLineItemId;
         @AuraEnabled public String  productId;
         @AuraEnabled public String  productName;
+        @AuraEnabled public String  productCode;
         @AuraEnabled public String  Country_Continent_Sales_LOB_Comments;
         @AuraEnabled public String  Global_Sales_Head_Comments;
         @AuraEnabled public String  Managing_Director_Comments;
@@ -1380,6 +1488,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.quoteLineItemId  = qli.Id;
             this.productId        = qli.Product2Id;
             this.productName      = qli.Product2.Name;
+            this.productCode      = qli.Product2.ProductCode;
             this.quantity         = qli.Quantity;
             this.listPrice        = qli.ListPrice;
             this.salesPrice       = qli.UnitPrice;
@@ -1398,11 +1507,11 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.prevRotexBoardMemberComments         = getStringFieldSafely(qli, 'Prev_Rotex_Board_Member_Comments__c');
             this.prevManagingDirectorComments         = getStringFieldSafely(qli, 'Prev_Managing_Director_Comments__c');
 
-            this.salesManagerName        = qli.Sales_Manager__r?.Name;
-            this.countryContinentSalesName = qli.Country_Continent_Sales_Head_LOB_Head__r?.Name;
-            this.rotexBoardMemberName    = qli.Rotex_Board_Member__r?.Name;
-            this.managingDirectorName    = qli.Managing_Director_Country_Manage__r?.Name;
-            this.globalSalesHeadName     = qli.Global_Sales_Head__r?.Name;
+            this.salesManagerName        = qli.Sales_Manager__r != null ? qli.Sales_Manager__r.Name : null;
+            this.countryContinentSalesName = qli.Country_Continent_Sales_Head_LOB_Head__r != null ? qli.Country_Continent_Sales_Head_LOB_Head__r.Name : null;
+            this.rotexBoardMemberName    = qli.Rotex_Board_Member__r != null ? qli.Rotex_Board_Member__r.Name : null;
+            this.managingDirectorName    = qli.Managing_Director_Country_Manage__r != null ? qli.Managing_Director_Country_Manage__r.Name : null;
+            this.globalSalesHeadName     = qli.Global_Sales_Head__r != null ? qli.Global_Sales_Head__r.Name : null;
             this.salesManagerId          = String.valueOf(qli.Sales_Manager__c);
             this.countryContinentSalesId = String.valueOf(qli.Country_Continent_Sales_Head_LOB_Head__c);
             this.rotexBoardMemberId      = String.valueOf(qli.Rotex_Board_Member__c);
@@ -1504,27 +1613,27 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.finalWarrantyApprover = getStringFieldSafely(q, 'Final_Warranty_Terms_Approver__c');
             this.updated             = false;
 
-            this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r?.Name;
+            this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r != null ? q.Sales_Manager__r.Name : null;
             this.smWarrantyStatus = q.SM_Warranty_Status__c; this.smWarrantyDateTime = q.SM_Warranty_Date_Time__c;
             this.smWarrantyComments = q.SM_Warranty_Comments__c; this.isSmCurrentUser = q.Sales_Manager__c == currentUserId;
             this.originalSmWarrantyStatus = q.SM_Warranty_Status__c; this.originalSmWarrantyComments = q.SM_Warranty_Comments__c;
 
-            this.chId = q.Country_Continent_Sales_Head_LOB_Head__c; this.chName = q.Country_Continent_Sales_Head_LOB_Head__r?.Name;
+            this.chId = q.Country_Continent_Sales_Head_LOB_Head__c; this.chName = q.Country_Continent_Sales_Head_LOB_Head__r != null ? q.Country_Continent_Sales_Head_LOB_Head__r.Name : null;
             this.chWarrantyStatus = q.CH_Warranty_Status__c; this.chWarrantyDateTime = q.CH_Warranty_Date_Time__c;
             this.chWarrantyComments = q.CH_Warranty_Comments__c; this.isChCurrentUser = q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId;
             this.originalChWarrantyStatus = q.CH_Warranty_Status__c; this.originalChWarrantyComments = q.CH_Warranty_Comments__c;
 
-            this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r?.Name;
+            this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r != null ? q.Global_Sales_Head__r.Name : null;
             this.gsWarrantyStatus = q.GS_Warranty_Status__c; this.gsWarrantyDateTime = q.GS_Warranty_Date_Time__c;
             this.gsWarrantyComments = q.GS_Warranty_Comments__c; this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId;
             this.originalGsWarrantyStatus = q.GS_Warranty_Status__c; this.originalGsWarrantyComments = q.GS_Warranty_Comments__c;
 
-            this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r?.Name;
+            this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r != null ? q.Rotex_Board_Member__r.Name : null;
             this.bmWarrantyStatus = q.BM_Warranty_Status__c; this.bmWarrantyDateTime = q.BM_Warranty_Date_Time__c;
             this.bmWarrantyComments = q.BM_Warranty_Comments__c; this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId;
             this.originalBmWarrantyStatus = q.BM_Warranty_Status__c; this.originalBmWarrantyComments = q.BM_Warranty_Comments__c;
 
-            this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r?.Name;
+            this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r != null ? q.Managing_Director_Country_Manager__r.Name : null;
             this.mdWarrantyStatus = q.MD_Warranty_Status__c; this.mdWarrantyDateTime = q.MD_Warranty_Date_Time__c;
             this.mdWarrantyComments = q.MD_Warranty_Comments__c; this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId;
             this.originalMdWarrantyStatus = q.MD_Warranty_Status__c; this.originalMdWarrantyComments = q.MD_Warranty_Comments__c;
@@ -1635,27 +1744,27 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.finalValidityOfferApprover = getStringFieldSafely(q, 'Final_Validity_Offer_Approver__c');
             this.updated                    = false;
 
-            this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r?.Name;
+            this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r != null ? q.Sales_Manager__r.Name : null;
             this.smValidityOfferStatus = q.SM_Validity_Offer_Status__c; this.smValidityOfferDateTime = q.SM_Validity_Offer_Date_Time__c;
             this.smValidityOfferComments = q.SM_Validity_Offer_Comments__c; this.isSmCurrentUser = q.Sales_Manager__c == currentUserId;
             this.originalSmValidityOfferStatus = q.SM_Validity_Offer_Status__c; this.originalSmValidityOfferComments = q.SM_Validity_Offer_Comments__c;
 
-            this.chId = q.Country_Continent_Sales_Head_LOB_Head__c; this.chName = q.Country_Continent_Sales_Head_LOB_Head__r?.Name;
+            this.chId = q.Country_Continent_Sales_Head_LOB_Head__c; this.chName = q.Country_Continent_Sales_Head_LOB_Head__r != null ? q.Country_Continent_Sales_Head_LOB_Head__r.Name : null;
             this.chValidityOfferStatus = q.CH_Validity_Offer_Status__c; this.chValidityOfferDateTime = q.CH_Validity_Offer_Date_Time__c;
             this.chValidityOfferComments = q.CH_Validity_Offer_Comments__c; this.isChCurrentUser = q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId;
             this.originalChValidityOfferStatus = q.CH_Validity_Offer_Status__c; this.originalChValidityOfferComments = q.CH_Validity_Offer_Comments__c;
 
-            this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r?.Name;
+            this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r != null ? q.Global_Sales_Head__r.Name : null;
             this.gsValidityOfferStatus = q.GS_Validity_Offer_Status__c; this.gsValidityOfferDateTime = q.GS_Validity_Offer_Date_Time__c;
             this.gsValidityOfferComments = q.GS_Validity_Offer_Comments__c; this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId;
             this.originalGsValidityOfferStatus = q.GS_Validity_Offer_Status__c; this.originalGsValidityOfferComments = q.GS_Validity_Offer_Comments__c;
 
-            this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r?.Name;
+            this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r != null ? q.Rotex_Board_Member__r.Name : null;
             this.bmValidityOfferStatus = q.BM_Validity_Offer_Status__c; this.bmValidityOfferDateTime = q.BM_Validity_Offer_Date_Time__c;
             this.bmValidityOfferComments = q.BM_Validity_Offer_Comments__c; this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId;
             this.originalBmValidityOfferStatus = q.BM_Validity_Offer_Status__c; this.originalBmValidityOfferComments = q.BM_Validity_Offer_Comments__c;
 
-            this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r?.Name;
+            this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r != null ? q.Managing_Director_Country_Manager__r.Name : null;
             this.mdValidityOfferStatus = q.MD_Validity_Offer_Status__c; this.mdValidityOfferDateTime = q.MD_Validity_Offer_Date_Time__c;
             this.mdValidityOfferComments = q.MD_Validity_Offer_Comments__c; this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId;
             this.originalMdValidityOfferStatus = q.MD_Validity_Offer_Status__c; this.originalMdValidityOfferComments = q.MD_Validity_Offer_Comments__c;
@@ -1748,27 +1857,27 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.finalTotalValueApprover  = getStringFieldSafely(q, 'Final_Total_Value_Approver__c');
             this.updated                  = false;
 
-            this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r?.Name;
+            this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r != null ? q.Sales_Manager__r.Name : null;
             this.smValueStatus = q.SM_Value_Status__c; this.smValueDateTime = q.SM_Value_Date_Time__c;
             this.smValueComments = q.SM_Value_Comments__c; this.isSmCurrentUser = q.Sales_Manager__c == currentUserId;
             this.originalSmValueStatus = q.SM_Value_Status__c; this.originalSmValueComments = q.SM_Value_Comments__c;
 
-            this.chId = q.Country_Continent_Sales_Head_LOB_Head__c; this.chName = q.Country_Continent_Sales_Head_LOB_Head__r?.Name;
+            this.chId = q.Country_Continent_Sales_Head_LOB_Head__c; this.chName = q.Country_Continent_Sales_Head_LOB_Head__r != null ? q.Country_Continent_Sales_Head_LOB_Head__r.Name : null;
             this.chValueStatus = q.CH_Value_Status__c; this.chValueDateTime = q.CH_Value_Date_Time__c;
             this.chValueComments = q.CH_Value_Comments__c; this.isChCurrentUser = q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId;
             this.originalChValueStatus = q.CH_Value_Status__c; this.originalChValueComments = q.CH_Value_Comments__c;
 
-            this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r?.Name;
+            this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r != null ? q.Global_Sales_Head__r.Name : null;
             this.gsValueStatus = q.GS_Value_Status__c; this.gsValueDateTime = q.GS_Value_Date_Time__c;
             this.gsValueComments = q.GS_Value_Comments__c; this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId;
             this.originalGsValueStatus = q.GS_Value_Status__c; this.originalGsValueComments = q.GS_Value_Comments__c;
 
-            this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r?.Name;
+            this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r != null ? q.Rotex_Board_Member__r.Name : null;
             this.bmValueStatus = q.BM_Value_Status__c; this.bmValueDateTime = q.BM_Value_Date_Time__c;
             this.bmValueComments = q.BM_Value_Comments__c; this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId;
             this.originalBmValueStatus = q.BM_Value_Status__c; this.originalBmValueComments = q.BM_Value_Comments__c;
 
-            this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r?.Name;
+            this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r != null ? q.Managing_Director_Country_Manager__r.Name : null;
             this.mdValueStatus = q.MD_Value_Status__c; this.mdValueDateTime = q.MD_Value_Date_Time__c;
             this.mdValueComments = q.MD_Value_Comments__c; this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId;
             this.originalMdValueStatus = q.MD_Value_Status__c; this.originalMdValueComments = q.MD_Value_Comments__c;
@@ -1839,17 +1948,17 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.finalMinimumOfferValueApprover = getStringFieldSafely(q, 'Final_Minimum_Offer_Value_Approver__c');
             this.updated                        = false;
 
-            this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r?.Name;
+            this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r != null ? q.Global_Sales_Head__r.Name : null;
             this.gsMinOfferStatus = q.GS_Min_Offer_Status__c; this.gsMinOfferDateTime = q.GS_Min_Offer_Date_Time__c;
             this.gsMinOfferComments = q.GS_Min_Offer_Comments__c; this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId;
             this.originalGsMinOfferStatus = q.GS_Min_Offer_Status__c; this.originalGsMinOfferComments = q.GS_Min_Offer_Comments__c;
 
-            this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r?.Name;
+            this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r != null ? q.Rotex_Board_Member__r.Name : null;
             this.bmMinOfferStatus = q.BM_Min_Offer_Status__c; this.bmMinOfferDateTime = q.BM_Min_Offer_Date_Time__c;
             this.bmMinOfferComments = q.BM_Min_Offer_Comments__c; this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId;
             this.originalBmMinOfferStatus = q.BM_Min_Offer_Status__c; this.originalBmMinOfferComments = q.BM_Min_Offer_Comments__c;
 
-            this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r?.Name;
+            this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r != null ? q.Managing_Director_Country_Manager__r.Name : null;
             this.mdMinOfferStatus = q.MD_Min_Offer_Status__c; this.mdMinOfferDateTime = q.MD_Min_Offer_Date_Time__c;
             this.mdMinOfferComments = q.MD_Min_Offer_Comments__c; this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId;
             this.originalMdMinOfferStatus = q.MD_Min_Offer_Status__c; this.originalMdMinOfferComments = q.MD_Min_Offer_Comments__c;

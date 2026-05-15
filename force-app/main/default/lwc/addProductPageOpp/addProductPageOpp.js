@@ -183,14 +183,18 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         return this.prodfamilylst;
     }
 
-    get itemsOptions() {
+   get itemsOptions() {
         let items = [
             { label: '--None--', value: '' },
             { label: 'Spares / Special', value: 'Spares / Special' },
             { label: 'Coil', value: 'Coil' },
-            { label: 'SOV', value: 'SOV' },
+            { label: 'SOV (0-15000)', value: 'SOV (0-15000)' },
+            { label: 'SOV (15001-30000)', value: 'SOV (15001-30000)' },
+            { label: 'SOV (30001-45000)', value: 'SOV (30001-45000)' },
+            { label: 'SOV (45001-60000)', value: 'SOV (45001-60000)' },
             { label: 'Valve', value: 'Valve' },
             { label: 'Others', value: 'Others' }
+
         ];
 
         return items;

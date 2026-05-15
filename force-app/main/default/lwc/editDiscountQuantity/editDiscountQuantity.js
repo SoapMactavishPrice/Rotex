@@ -13,7 +13,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     @api objectApiName;
     @track showSpinner = false;
     @track quoteLineItemList = [];
-
+    @track currencyCode = '';
     showToast(toastTitle, toastMsg, toastType) {
         const event = new ShowToastEvent({
             title: toastTitle,
@@ -67,6 +67,9 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
                 newDiscountValue: null,
                 isDiscountOfferedDisabled: item.Is_Discount_Approved__c || this.hasSubmittedApproverStatus(item)
             }));
+            if (result && result.length > 0) {
+            this.currencyCode = result[0].CurrencyIsoCode;
+            }
             console.log('quoteLineItemList ', this.quoteLineItemList);
         })
     }

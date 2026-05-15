@@ -122,18 +122,17 @@
 
 /* ══════════════════════════════════════════════
    Discount Line Items Table
-   – Header now matches combined approval green
    ══════════════════════════════════════════════ */
 .approval-table {
     table-layout: fixed !important;
     width: 100% !important;
-    border-collapse: collapse;
+    border-collapse: collapse !important;
     font-size: 12px;
     color: #3e3e3c;
+    border: 1px solid #000 !important;
 }
 
-/* ── Table Header – matched to combined approval (#007764) ── */
-/* Extra specificity beats SLDS's own .slds-table thead styles */
+/* ── Table Header ── */
 table.approval-table thead tr,
 table.approval-table thead tr:hover {
     background-color: #007764 !important;
@@ -151,17 +150,12 @@ table.approval-table thead tr th:hover {
     letter-spacing: 0.4px !important;
     text-align: left !important;
     white-space: nowrap !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid #000 !important;
     vertical-align: middle !important;
-}
-
-table.approval-table thead tr th:last-child {
-    border-right: none !important;
 }
 
 /* ── Table Body Rows ── */
 .approval-table tbody tr {
-    border-bottom: 1px solid #e0dedc;
     transition: background-color 0.1s ease;
 }
 
@@ -169,27 +163,15 @@ table.approval-table thead tr th:last-child {
     background-color: #f0f4ff;
 }
 
-.approval-table tbody tr:last-child {
-    border-bottom: none;
-}
-
-.approval-table td {
+/* ── ALL body cells: single clean black border ── */
+.approval-table tbody td {
     padding: 7px !important;
     vertical-align: top;
     overflow-wrap: break-word;
     word-break: normal;
     overflow: visible !important;
     line-height: 1.4;
-    border-right: 1px solid #eeece9;
-}
-
-.approval-table td:last-child {
-    border-right: none;
-}
-
-/* Alternate SOA rows within a product group */
-.approval-table .soa-row-alt {
-    background-color: #fafaf9;
+    border: 1px solid #000 !important;
 }
 
 /* ── Cell-specific tweaks ── */
@@ -203,14 +185,13 @@ table.approval-table thead tr th:last-child {
     text-align: center !important;
 }
 
+/* ── SOA span: text styling only, NO box properties ── */
 .soa-cell {
-    border-left: none !important;
     color: #444;
     font-weight: 600;
     font-size: 11.5px;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    display: block;
 }
 
 .datetime-col,
@@ -277,16 +258,16 @@ table.approval-table thead tr th:last-child {
 
 /* ── Column Widths ── */
 .product-col            { width: 10%; }
-.list-price-col         { width: 6%; }
-.quantity-col           { width: 4.5%; }
+.list-price-col         { width: 4%; }
+.quantity-col           { width: 3%; }
 .sap-discount-col,
 .previous-discount-col,
-.discount-col           { width: 5.5%; }
+.discount-col           { width: 4%; }
 .soa-col                { width: 10.5%; }
 .status-col             { width: 9%; }
 .datetime-col           { width: 9.5%; }
-.previous-comments-col  { width: 16.75%; }
-.comments-col           { width: 16.75%; }
+.previous-comments-col  { width: 20%; }
+.comments-col           { width: 20%; }
 
 .product-col,
 .product-cell {
@@ -316,7 +297,6 @@ lightning-combobox {
     z-index: 9999 !important;
 }
 
-/* Textarea sizing */
 .comment-input lightning-textarea,
 lightning-textarea.comment-input {
     --slds-c-textarea-sizing-min-height: 48px;
@@ -330,21 +310,19 @@ lightning-textarea.comment-input {
     gap: 12px;
 }
 
-/* ── Header toggle area ── */
 .header-controls {
     display: flex;
     align-items: center;
     gap: 16px;
 }
 
-/* ── Divider between quote header and table ── */
 .quote-panel .table-container {
     padding: 12px 12px 72px;
     margin-bottom: -72px;
 }
 
 /* ══════════════════════════════════════════════
-   Combined Approval Table (Warranty / SOA etc.)
+   Combined Approval Table
    ══════════════════════════════════════════════ */
 .combined-approval-container {
     padding: 12px 12px 18px;
@@ -394,7 +372,7 @@ lightning-textarea.comment-input {
 
 .approval-type-cell {
     font-weight: 600;
-    text-align: left !important;
+    text-align: center;
 }
 
 .approval-value-cell {
@@ -439,55 +417,7 @@ lightning-textarea.comment-input {
     white-space: nowrap;
 }
 
-/* ── Warranty / Split Sections ── */
-.warranty-discount-split-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    padding: 12px 12px 16px;
-    margin-bottom: 16px;
-}
-
-.approval-left-column,
-.approval-right-column {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.warranty-section,
-.total-value-section,
-.minimum-offer-section {
-    background: #f8f9fa;
-    border-radius: 0.25rem;
-    border: 1px solid #e0dedc;
-    overflow: visible;
-}
-
-.empty-section {
-    background: #fafaf9;
-    border-radius: 0.25rem;
-    border: 1px dashed #c9c7c5;
-    min-height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #706e6b;
-    font-size: 12px;
-    font-style: italic;
-}
-
-/* ── Discount Table: Outer black border ── */
-table.approval-table {
-    border: 1px solid #000 !important;
-}
-
-/* ── Discount Table: Header cell black borders ── */
-table.approval-table thead tr th {
-    border: 1px solid #000 !important;
-}
-
-/* ── Submit Button – teal to match table header ── */
+/* ── Submit Button ── */
 .submit-btn-wrap lightning-button {
     --slds-c-button-brand-color-background: #007764;
     --slds-c-button-brand-color-border: #007764;
@@ -520,4 +450,3 @@ table.approval-table thead tr th {
         grid-template-columns: 1fr;
     }
 }
-

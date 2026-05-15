@@ -10,7 +10,7 @@ trigger QuoteRevisionTrigger on Quote (before update) {
     /* ---------------- TRACK CHANGES ---------------- */
     Set<Id> quoteFieldChangedIds = new Set<Id>();
     Set<Id> qliFieldChangedIds   = new Set<Id>();
-
+    Map<Id, String> quoteChangedFieldMap = new Map<Id, String>();
     /* --------- QUOTE FIELDS TO TRACK --------- */
     List<String> quoteFieldsToTrack = new List<String>{
         'Quote_Valid_Till__c',
@@ -42,6 +42,7 @@ trigger QuoteRevisionTrigger on Quote (before update) {
             // ✅ ONLY real change (NOT null → value)
             if (oldVal != null && newVal != null && oldVal != newVal) {
                 quoteFieldChangedIds.add(newQ.Id);
+                quoteChangedFieldMap.put(newQ.Id, f); // 🔥 store field name
                 break;
             }
         }
@@ -79,11 +80,18 @@ trigger QuoteRevisionTrigger on Quote (before update) {
             // ✅ ONLY real change (NOT null → value)
             if (oldVal != null && newVal != null && oldVal != newVal) {
                 qliFieldChangedIds.add(newLine.QuoteId);
+                
+                // 🔥 store QLI field name also
+                if (!quoteChangedFieldMap.containsKey(newLine.QuoteId)) {
+                    quoteChangedFieldMap.put(
+                        newLine.QuoteId,
+                        'QuoteLineItem ' + f
+                    );
+                }
                 break;
             }
         }
     }
-
     /* ---------------- FINAL REVISION UPDATE ---------------- */
     for (Quote q : Trigger.new) {
         Quote oldQ = Trigger.oldMap.get(q.Id);
@@ -96,10 +104,46 @@ trigger QuoteRevisionTrigger on Quote (before update) {
 
         // ✅ Increase ONLY once per real change
         if ((quoteChanged || lineChanged) && newRevision == oldRevision) {
-            q.Rev_No__c  = oldRevision + 1;
-            q.Rev_Date__c = System.today();
+            
+            Integer updatedRev = oldRevision + 1;
+            Datetime nowDT = System.now();
+            Date todayDate = nowDT.date();
+            
+            q.Rev_No__c  = updatedRev;
+            q.Rev_Date__c = todayDate;
+            
+            // 🔥 GET FIELD NAME
+            String changedField;
+            
+            if (quoteChangedFieldMap.containsKey(q.Id)) {
+                changedField = 'Quote: ' + quoteChangedFieldMap.get(q.Id);
+            }
+            else if (QuoteChangeTracker.qliFieldByQuoteId.containsKey(q.Id)) {
+                
+                String qliField = QuoteChangeTracker.qliFieldByQuoteId.get(q.Id);
+                
+                // remove "QuoteLineItem " prefix
+                String fieldOnly = qliField.replace('QuoteLineItem ', '');
+                
+                changedField = 'QuoteLineItem : ' + fieldOnly;
+            }
+            else {
+                changedField = 'Unknown';
+            }
+            
+            // 🔥 FORMAT DATE
+            String formattedDateTime = nowDT.format('dd-MM-yyyy HH:mm:ss');
+            
+            // 🔥 CREATE ENTRY
+            String newEntry = 'Rev No: ' + updatedRev + ' Date Time: ' + formattedDateTime + ' ' + changedField;
+            
+            // 🔥 APPEND HISTORY
+            if (oldQ.Rev_History_Tracking__c != null) {
+                q.Rev_History_Tracking__c = oldQ.Rev_History_Tracking__c + '\n' + newEntry;
+            } else {
+                q.Rev_History_Tracking__c = newEntry;
+            }
         }
-
         // ✅ reset flag
         q.Qli_Updated_Flag__c = false;
     }

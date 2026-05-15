@@ -34,6 +34,21 @@
                                         <span class="field-label">Quote No.</span>
                                         <span class="field-value">
                                             {quote.quoteNumber}
+                                            <!-- CHANGE 1: (open)/(close) link replaces chevron toggle -->
+                                            <template if:false={quote.isExpanded}>
+                                                <a
+                                                    data-quote-id={quote.quoteId}
+                                                    onclick={handleToggleExpand}
+                                                    class="action-link"
+                                                    style="cursor: pointer;">(open)</a>
+                                            </template>
+                                            <template if:true={quote.isExpanded}>
+                                                <a
+                                                    data-quote-id={quote.quoteId}
+                                                    onclick={handleToggleExpand}
+                                                    class="action-link"
+                                                    style="cursor: pointer;">(close)</a>
+                                            </template>
                                             <a href={quote.quoteRecordUrl} target="_blank" class="action-link">(view)</a>
                                         </span>
                                     </div>
@@ -66,34 +81,7 @@
                                         <span class="field-value">{quote.deliveryPeriod}</span>
                                     </div>
                                 </div>
-
-                                <!-- ── Expand/Collapse Toggle ── -->
-                                <div class="quote-expand-toggle">
-                                    <template if:false={quote.isExpanded}>
-                                        <lightning-button-icon
-                                            icon-name="utility:chevrondown"
-                                            alternative-text="Expand"
-                                            title="Expand quote details"
-                                            data-quote-id={quote.quoteId}
-                                            onclick={handleToggleExpand}
-                                            variant="border-filled"
-                                            size="small"
-                                            class="expand-chevron-btn">
-                                        </lightning-button-icon>
-                                    </template>
-                                    <template if:true={quote.isExpanded}>
-                                        <lightning-button-icon
-                                            icon-name="utility:chevronup"
-                                            alternative-text="Collapse"
-                                            title="Collapse quote details"
-                                            data-quote-id={quote.quoteId}
-                                            onclick={handleToggleExpand}
-                                            variant="border-filled"
-                                            size="small"
-                                            class="expand-chevron-btn">
-                                        </lightning-button-icon>
-                                    </template>
-                                </div>
+                                <!-- CHANGE 1: chevron toggle div removed entirely -->
                             </div>
                         </div>
 
@@ -120,7 +108,8 @@
 
                                                     <!-- Row 1: Status + DateTime stacked -->
                                                     <tr key={approvalRow.statusKey}>
-                                                        <td rowspan="2" class="approval-type-cell">{approvalRow.label}</td>
+                                                        <!-- CHANGE 3: approval-type-cell center aligned -->
+                                                        <td rowspan="2" class="approval-type-cell" style="text-align: center;">{approvalRow.label}</td>
                                                         <td rowspan="2" class="approval-value-cell">{approvalRow.currentValue}</td>
                                                         <td rowspan="2" class="approval-value-cell">{approvalRow.requestedValue}</td>
                                                         <template for:each={approvalRow.approvers} for:item="approver">
@@ -180,60 +169,36 @@
                             <!-- ── Discount Line Items Table ── -->
                             <template if:true={quote.hasLineItems}>
                                 <div class="table-container">
-                                    <table class="slds-table slds-table_cell-buffer slds-table_bordered approval-table">
+                                    <table style="width:100%; table-layout:auto; border-collapse:collapse; border:1px solid #000; font-size:12px; color:#3e3e3c;">
                                         <thead>
-                                            <tr>
-                                                <th scope="col" class="product-col"
-                                                    style="min-width: 160px; max-width: 200px; white-space: normal; word-wrap: break-word; word-break: break-word;">
-                                                    Product Name
-                                                </th>
-                                                <th scope="col" class="product-col"
-                                                    style="min-width: 110px; max-width: 140px; white-space: normal; word-wrap: break-word; word-break: break-word; text-align: center;">
-                                                    Product Code
-                                                </th>
-                                                <th scope="col" class="list-price-col number-col"
-                                                    style="min-width: 90px; white-space: nowrap;">
-                                                    List Price
-                                                </th>
-                                                <th scope="col" class="quantity-col number-col">Qty</th>
-                                                <th scope="col" class="sap-discount-col number-col">Disc.SAP%</th>
-                                                <th scope="col" class="previous-discount-col number-col">P.Disc.%</th>
-                                                <th scope="col" class="discount-col number-col">Disc.%</th>
-                                                <th scope="col" class="soa-col">SOA</th>
-                                                <th scope="col" class="status-col">Status</th>
-                                                <th scope="col" class="status-col">Status / Date</th>
-                                                <th scope="col" class="previous-comments-col">Previous Comments</th>
-                                                <th scope="col" class="comments-col">Comments</th>
+                                            <tr style="background-color:#007764;">
+                                                <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left; white-space:normal; word-break:break-word;">Product Name</th>
+                                                <th scope="col" style="width:8%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center; white-space:normal; word-break:break-word;">Product Code</th>
+                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">List Price</th>
+                                                <th scope="col" style="width:3%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Qty</th>
+                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc.SAP%</th>
+                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">P.Disc.%</th>
+                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc.%</th>
+                                                <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">SOA</th>
+                                                <th scope="col" style="width:8%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Status</th>
+                                                <th scope="col" style="width:8%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Date / Time</th>
+                                                <th scope="col" style="width:18%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Previous Comments</th>
+                                                <th scope="col" style="width:19%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Comments</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <template for:each={quote.displayRows} for:item="row">
-                                                <tr key={row.key} style={row.rowStyle}>
+                                                <tr key={row.key}>
 
                                                     <!-- Product-level cells (merged rows) -->
                                                     <template if:true={row.isFirstRow}>
-                                                        <td rowspan={row.soaCount} class="product-cell"
-                                                            style="min-width: 160px; max-width: 200px; white-space: normal; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word;">
-                                                            {row.productName}
-                                                        </td>
-                                                        <td rowspan={row.soaCount} class="product-cell"
-                                                            style="min-width: 110px; max-width: 140px; white-space: normal; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; text-align: center; color: #706e6b; font-size: 13px;">
-                                                            {row.productCode}
-                                                        </td>
-                                                        <td rowspan={row.soaCount} class="number-cell"
-                                                            style="min-width: 90px; white-space: nowrap;">
-                                                            {row.listPrice}
-                                                        </td>
-                                                        <td rowspan={row.soaCount} class="number-cell">
-                                                            {row.quantity}
-                                                        </td>
-                                                        <td rowspan={row.soaCount} class="number-cell">
-                                                            {row.d1}
-                                                        </td>
-                                                        <td rowspan={row.soaCount} class="number-cell">
-                                                            {row.previousDiscount}
-                                                        </td>
-                                                        <td rowspan={row.soaCount} class="number-cell">
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; white-space:normal; word-break:break-word; overflow-wrap:break-word;">{row.productName}</td>
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center; color:#706e6b; font-size:13px; white-space:normal; word-break:break-word;">{row.productCode}</td>
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.listPrice}</td>
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.quantity}</td>
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.d1}</td>
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.previousDiscount}</td>
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">
                                                             <template if:true={row.showDiscountInput}>
                                                                 <lightning-input
                                                                     type="number"
@@ -253,13 +218,13 @@
                                                         </td>
                                                     </template>
 
-                                                    <!-- SOA Label -->
-                                                    <td class="soa-cell">
-                                                        <span class="soa-cell">{row.soaDisplay}</span>
+                                                    <!-- SOA Label — no CSS class on span, all inline -->
+                                                    <td style="border:1px solid #000; padding:8px; vertical-align:top;">
+                                                        <span style="color:#444; font-weight:600; font-size:11.5px; white-space:pre-wrap; overflow-wrap:anywhere;">{row.soaDisplay}</span>
                                                     </td>
 
                                                     <!-- Status -->
-                                                    <td class="status-cell">
+                                                    <td style="border:1px solid #000; padding:8px; vertical-align:top;">
                                                         <template if:true={row.showStatusCombobox}>
                                                             <lightning-combobox
                                                                 name="ApprovalStatus"
@@ -280,15 +245,15 @@
                                                     </td>
 
                                                     <!-- Date/Time -->
-                                                    <td class="datetime-cell">{row.soaDateTime}</td>
+                                                    <td style="border:1px solid #000; padding:8px; vertical-align:top; font-size:11px; color:#706e6b; white-space:nowrap;">{row.soaDateTime}</td>
 
                                                     <!-- Previous Comments -->
-                                                    <td class="comment-cell previous-comment-cell">
-                                                        <span>{row.prevSoaComments}</span>
+                                                    <td style="border:1px solid #000; padding:8px; vertical-align:top;">
+                                                        <span style="white-space:pre-wrap; overflow-wrap:anywhere; display:block; color:#3e3e3c; line-height:1.45;">{row.prevSoaComments}</span>
                                                     </td>
 
                                                     <!-- Comments -->
-                                                    <td class="comment-cell">
+                                                    <td style="border:1px solid #000; padding:8px; vertical-align:top;">
                                                         <template if:true={row.showCommentInput}>
                                                             <lightning-textarea
                                                                 disabled={row.soaCommentsDisabled}
@@ -303,7 +268,7 @@
                                                             </lightning-textarea>
                                                         </template>
                                                         <template if:false={row.showCommentInput}>
-                                                            <span>{row.soaComments}</span>
+                                                            <span style="white-space:pre-wrap; overflow-wrap:anywhere; display:block; color:#3e3e3c; line-height:1.45;">{row.soaComments}</span>
                                                         </template>
                                                     </td>
                                                 </tr>

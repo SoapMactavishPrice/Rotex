@@ -1436,7 +1436,26 @@ public class IntegrationHandler {
 
                 // Log response
                 if (response.getStatusCode() == 200 || response.getStatusCode() == 201) {
-                    System.debug('API call successful: ' + response.getBody());
+                    List<Object> respList = (List<Object>) JSON.deserializeUntyped(response.getBody());
+
+                    if (respList != null && !respList.isEmpty()) {
+
+                        Map<String, Object> firstResp =
+                            (Map<String, Object>) respList[0];
+
+                        String quotationNumber =
+                            String.valueOf(firstResp.get('SalesQuotationNum'));
+
+                        if (quotationNumber != null) {
+
+                            Quote q = new Quote(
+                                Id = parentId,
+                                SAP_Quotation_Number__c = quotationNumber
+                            );
+
+                            update q;
+                        }
+                    }
                 } else {
                     System.debug('API call failed: ' + response.getStatusCode() + ' ' + response.getBody());
                 }
@@ -1450,7 +1469,7 @@ public class IntegrationHandler {
             // UtilityCls.logApiCall('QuotationCreation', '', jsonPayload, response.getBody(), '', 0);
             UtilityCls.logApiCall('QuotationCreation', '', jsonPayload, response.getBody(), '', response.getStatusCode());
         }
-        return JSON.serialize(response.getBody());
+        return response.getBody();
     }
 
     public static String getSalesOrderPayload(String parentId) {
@@ -1584,7 +1603,7 @@ public class IntegrationHandler {
                 ShippingCity, ShippingState, ShippingCountry, ShippingPostalCode, Status, TotalPrice, Subtotal, Discount,
                 Quote_Type__c, SalesOrganization__c, DistributionChannel__c, OrganizationDivision__c, CurrencyISOCode,
                 SoldToParty__c, PurchaseOrderByCustomer__c, CustomerPurchaseOrderDate__c, Account.Discount__c,
-                RequestedDeliveryDate__c, Quote_Date__c, Quote_Valid_Till__c, Account.SAP_Customer_Code__c, Customer_Reference_Date__c,Delivery_Period__c,Warranty_Terms__c,Liquidate_Terms__c,SAP_Quotation_Number__c,OwnerId,Owner.Name
+                RequestedDeliveryDate__c, Quote_Date__c, Quote_Valid_Till__c, Account.SAP_Customer_Code__c, Customer_Reference_Date__c,Delivery_Period__c,Warranty_Terms__c,Liquidate_Terms__c,SAP_Quotation_Number__c,OwnerId,Owner.Name,Rev_No__c,Rev_Date__c
                 FROM Quote
                 WHERE Id =: quoteId
             ];
@@ -1634,6 +1653,11 @@ public class IntegrationHandler {
                 // quoteWrapper.SalesQuotationType = q.Quote_Type__c;
                 quoteWrapper.SalesQuotationNum = q.SAP_Quotation_Number__c;
                 quoteWrapper.Assigned_To = q.Owner.Name;
+                quoteWrapper.revision_no = String.valueOf(q.Rev_No__c);
+                quoteWrapper.revision_date = q.Rev_Date__c != null ? Datetime.newInstance(q.Rev_Date__c , Time.newInstance(0,0,0,0)).format('dd.MM.yyyy'): null;
+
+
+                //quoteWrapper.revision_date = q.Rev_Date__c;
                 quoteWrapper.Delivery_Period = String.valueOf(q.Delivery_Period__c);
                 quoteWrapper.Warranty_Terms = q.Warranty_Terms__c;
                 quoteWrapper.Liquidity_Terms = q.Liquidate_Terms__c;
@@ -1715,7 +1739,7 @@ public class IntegrationHandler {
             }
 
             // Convert the nested structure to JSON
-            jsonPayload = JSON.serialize(quoteWrapperList[0], True);
+            jsonPayload = JSON.serialize(quoteWrapperList[0], FALSE);
             System.debug('JSON Payload: ' + jsonPayload);
         } catch (Exception e) {
             jsonPayload = '';
@@ -1891,6 +1915,10 @@ public class IntegrationHandler {
         public String Delivery_Period;
         public String Warranty_Terms;
         public String Liquidity_Terms;
+        public String revision_no;
+        public String revision_date;
+
+
     }
 
     public class PartnerWrapper {

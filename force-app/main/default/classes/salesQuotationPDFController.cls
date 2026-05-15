@@ -63,7 +63,11 @@ return;
                       Is_Small_Order_Handling__c,Minimum_Offer_Approval_Status__c,
                       Bill_To_Street__c,Bill_To_City__c,Bill_To_Postal_Code__c,Bill_To_State__c,Bill_To_Country__c,
                       Ship_To_Street__c,Ship_To_City__c,Ship_To_Postal_Code__c,Ship_To_State__c,Ship_To_Country__c,
-                      Grand_Total__c,Customer_Reference_No__c,Project_Details__c
+                      Grand_Total__c,Customer_Reference_No__c,Project_Details__c,
+                      Final_Warranty_Terms_Approver__c,MD_Warranty_Status__c,BM_Warranty_Status__c,GS_Warranty_Status__c,CH_Warranty_Status__c,SM_Warranty_Status__c,
+                      Final_Validity_Offer_Approver__c,MD_Validity_Offer_Status__c,BM_Validity_Offer_Status__c,GS_Validity_Offer_Status__c,CH_Validity_Offer_Status__c,SM_Validity_Offer_Status__c,
+                      Final_Minimum_Offer_Value_Approver__c,MD_Min_Offer_Status__c,BM_Min_Offer_Status__c,GS_Min_Offer_Status__c,CH_Min_Offer_Status__c,SM_Min_Offer_Status__c,
+                      Final_Total_Value_Approver__c,MD_Value_Status__c,BM_Value_Status__c,GS_Value_Status__c,CH_Value_Status__c,SM_Value_Status__c
                       FROM Quote WHERE Id = :qId];
         } catch (Exception e) {
             System.debug('Error querying Quote data: ' + e.getMessage());
@@ -128,39 +132,72 @@ return;
             ));
             isValid = false;
         }
-        // Small Order Handling condition
-        if (quData.Is_Small_Order_Handling__c == true) {
-            if (quData.Minimum_Offer_Approval_Status__c == 'Submitted') {
-                ApexPages.addMessage(new ApexPages.Message(
-                    ApexPages.Severity.ERROR,
-                    'Minimum Offer approval is still in Submitted status (Pending Approval)'
-                ));
-                isValid = false;
-            }
+       
+        if (quData.Final_Warranty_Terms_Approver__c != null && (
+                quData.MD_Warranty_Status__c == 'Submitted' ||
+                quData.BM_Warranty_Status__c == 'Submitted' ||
+                quData.GS_Warranty_Status__c == 'Submitted' ||
+                quData.CH_Warranty_Status__c == 'Submitted' ||
+                quData.SM_Warranty_Status__c == 'Submitted'
+            )
+        ) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Warranty Terms Approval Is Still In Submitted Status (Pending Approval)'
+            ));
+            isValid = false;
         }
-        if (quData.Payment_Terms_Approval_Status__c == 'Submitted') {
+        if (quData.Final_Validity_Offer_Approver__c != null && (
+                quData.MD_Validity_Offer_Status__c == 'Submitted' ||
+                quData.BM_Validity_Offer_Status__c == 'Submitted' ||
+                quData.GS_Validity_Offer_Status__c == 'Submitted' ||
+                quData.CH_Validity_Offer_Status__c == 'Submitted' ||
+                quData.SM_Validity_Offer_Status__c == 'Submitted'
+            )
+        ) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Validity Of Offer Approval Is Still In Submitted Status (Pending Approval)'
+            ));
+            isValid = false;
+        }
+        
+       /*if (quData.Payment_Terms_Approval_Status__c == 'Submitted') {
             ApexPages.addMessage(new ApexPages.Message(
                 ApexPages.Severity.ERROR,
                 'Payment Terms approval is still in Submitted status (Pending Approval)'
             ));
             isValid = false;
-        }
-        if (quData.Warranty_Terms_Approval_Status__c == 'Submitted') {
-            ApexPages.addMessage(new ApexPages.Message(
-                ApexPages.Severity.ERROR,
-                'Warranty Terms approval is still in Submitted status (Pending Approval)'
-            ));
-            isValid = false;
-        }
-        if (quData.Approval_Status__c == 'Submitted') {
-            ApexPages.addMessage(new ApexPages.Message(
-                ApexPages.Severity.ERROR,
-                'Validity of Offer approval is still in Submitted status (Pending Approval)'
-            ));
-            isValid = false;
-        }
-
+        }*/
         
+        if (quData.Final_Minimum_Offer_Value_Approver__c != null && (
+                quData.MD_Min_Offer_Status__c == 'Submitted' ||
+                quData.BM_Min_Offer_Status__c == 'Submitted' ||
+                quData.GS_Min_Offer_Status__c == 'Submitted' ||
+                quData.CH_Min_Offer_Status__c == 'Submitted' ||
+                quData.SM_Min_Offer_Status__c == 'Submitted'
+            )
+        ) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Minimum Offer Approval Is Still In Submitted Status (Pending Approval)'
+            ));
+            isValid = false;
+        }
+        if (quData.Final_Total_Value_Approver__c != null && (
+                quData.MD_Value_Status__c == 'Submitted' ||
+                quData.BM_Value_Status__c == 'Submitted' ||
+                quData.GS_Value_Status__c == 'Submitted' ||
+                quData.CH_Value_Status__c == 'Submitted' ||
+                quData.SM_Value_Status__c == 'Submitted'
+            )
+        ) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Total Quote Value Approval Is Still In Submitted Status (Pending Approval)'
+            ));
+            isValid = false;
+        }
         //quoteRecord.QuotationNo = quData.QuoteNumber;
         
         
@@ -172,10 +209,11 @@ return;
                      Unit_of_Measure_Code__c, Units_per_Parcel__c, Insurance_Charges__c, EBDTA_Gain_Deficit__c, Estimated_Freight_Per_Kgs__c, 
                      Estimated_Commission_Per_Kgs__c, Estimated_Ocean_Freight_Per_Kgs__c, Estimated_Inspection_Fee_Per_Kgs__c, LC_Confirmation_Charges_Per_Kgs__c, 
                      Other_Incidental_Expenses_Per_Kgs__c, Unit_Price_Excl_VAT_Rate_per_Kgs__c, Line_Amount_Excl_VAT_Qty_Rate__c, 
-                     Product2.ProductCode,Product2.Base_UOM__c,Customer_Part_No__c,Sales_Rep_Status__c,Sales_Manager_Status__c,
-                     Country_Continent_Sales_H_LOB_Status__c,Global_Sales_Head_Status__c,Rotex_Board_Member_Status__c,Managing_Director_Status__c,
-                     Unit_Price__c,Total_Value__c,HSN_Code__c
-                     FROM QuoteLineItem WHERE QuoteId = :quData.Id];
+                     Product2.ProductCode,Product2.Base_UOM__c,Customer_Part_No__c,Sales_Rep_Status__c,
+                     Unit_Price__c,Total_Value__c,HSN_Code__c,
+                     Final_Discount_Approver__c,Managing_Director_Status__c,Rotex_Board_Member_Status__c,Global_Sales_Head_Status__c,Country_Continent_Sales_H_LOB_Status__c,
+                     Sales_Manager_Status__c
+                     FROM QuoteLineItem WHERE QuoteId = :quData.Id order by SortOrder asc];
         } catch (Exception e) {
             System.debug('Error querying QuoteLineItems: ' + e.getMessage());
             ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Error retrieving Quote Line Items.'));
@@ -188,31 +226,26 @@ return;
         totalQuantity = 0;
         totalValueINR = 0;
         // ❗ Check if any QLI has approval still in Submitted status
-        Boolean hasPendingSalesApproval = false;
-        
         for (QuoteLineItem qli : qItem) {
             if (
-                qli.Sales_Manager_Status__c == 'Submitted' ||
-                qli.Sales_Rep_Status__c == 'Submitted' ||
-                qli.Country_Continent_Sales_H_LOB_Status__c == 'Submitted' ||
-                qli.Global_Sales_Head_Status__c == 'Submitted' ||
-                qli.Rotex_Board_Member_Status__c == 'Submitted' ||
-                qli.Managing_Director_Status__c == 'Submitted'
+                qli.Final_Discount_Approver__c != null &&
+                (
+                    qli.Managing_Director_Status__c == 'Submitted' ||
+                    qli.Rotex_Board_Member_Status__c == 'Submitted' ||
+                    qli.Global_Sales_Head_Status__c == 'Submitted' ||
+                    qli.Country_Continent_Sales_H_LOB_Status__c == 'Submitted' ||
+                    qli.Sales_Manager_Status__c == 'Submitted'
+                )
             ) {
-                hasPendingSalesApproval = true;
+                ApexPages.addMessage(new ApexPages.Message(
+                    ApexPages.Severity.ERROR,
+                    'Discount approval is still in Submitted status (Pending Approval)'
+                ));
+                isValid = false;
                 break;
             }
         }
-        
-        if (hasPendingSalesApproval) {
-            ApexPages.addMessage(
-                new ApexPages.Message(
-                    ApexPages.Severity.ERROR,
-                    'Discount approval is still in Submitted status. Please wait until all approvals are completed.'
-                )
-            );
-            isValid = false;
-        }
+
         if (qItem.size() > 0) {
             for (QuoteLineItem qli : qItem) {
                 QuoteLineItemWrapper ql = new QuoteLineItemWrapper();
@@ -268,7 +301,7 @@ return;
         } else {
             ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Before making a Quote PDF, please add at least one product.'));
             isValid = false;
-        }	
+        }  
     }
     public static String forceWrap(String s, Integer interval) {
     if (String.isBlank(s)) return s;

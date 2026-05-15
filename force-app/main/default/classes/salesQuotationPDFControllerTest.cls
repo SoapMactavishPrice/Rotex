@@ -17,8 +17,7 @@ static void setupTestData() {
         IsActive = true
     );
     insert standardPricebookEntry;
-
-    
+    User approverUser = [SELECT Id FROM User WHERE IsActive = true LIMIT 1];
     Opportunity opp = new Opportunity(Name = 'Test Opportunity', StageName = 'Prospecting', CloseDate = Date.today());
     insert opp;
 
@@ -33,7 +32,15 @@ static void setupTestData() {
         Payment_Terms_Approval_Status__c = 'Submitted',
         Warranty_Terms_Approval_Status__c = 'Submitted',
         Approval_Status__c = 'Submitted',
-        Payment_Terms__c = 'Open Credit upto 180 days'
+        Payment_Terms__c = 'Open Credit upto 180 days',
+        Final_Warranty_Terms_Approver__c = approverUser.Id,
+        MD_Warranty_Status__c = 'Submitted',
+        Final_Validity_Offer_Approver__c = approverUser.Id,
+        MD_Validity_Offer_Status__c = 'Submitted',
+        Final_Minimum_Offer_Value_Approver__c = approverUser.Id,
+        MD_Min_Offer_Status__c = 'Submitted',
+        Final_Total_Value_Approver__c = approverUser.Id,
+        MD_Value_Status__c = 'Submitted'
     );
     insert testQuote;
     testQuote.Is_Small_Order_Handling__c = true;

@@ -90,7 +90,48 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         System.debug('Calling Sequential Approval Handler');
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(Trigger.new, Trigger.oldMap);
         System.debug('=== APPROVAL PROCESS: AFTER UPDATE TRIGGER END ===');
+
+        // Apply discount directly to UnitPrice when no approval is needed.
+        // Runs AFTER save so formula field Discount_as_per_SAP__c is freshly calculated.
+        if (!QuoteLineItemApprovalHandler.directDiscountUpdateInProgress) {
+            QuoteLineItemApprovalHandler.applyDirectDiscountIfNoApprovalNeeded(Trigger.new, Trigger.oldMap);
+        }
     }
+
+    // ── AFTER INSERT: Apply Discount_as_per_SAP__c to UnitPrice on creation ──────
+    if (Trigger.isAfter && Trigger.isInsert) {
+        Set<Id> insertedIds = new Set<Id>();
+        for (QuoteLineItem qli : Trigger.new) {
+            if (qli.Id != null) insertedIds.add(qli.Id);
+        }
+
+        if (!insertedIds.isEmpty()) {
+            // Re-query so formula field Discount_as_per_SAP__c is freshly calculated
+            List<QuoteLineItem> freshInserted = [
+                SELECT Id, ListPrice, Discount_as_per_SAP__c
+                FROM QuoteLineItem
+                WHERE Id IN :insertedIds
+            ];
+
+            List<QuoteLineItem> toUpdate = new List<QuoteLineItem>();
+            for (QuoteLineItem fresh : freshInserted) {
+                if (fresh.ListPrice == null || fresh.ListPrice == 0) continue;
+                // Use 0% if Discount_as_per_SAP__c is blank → UnitPrice = ListPrice
+                Decimal disc = (fresh.Discount_as_per_SAP__c != null) ? fresh.Discount_as_per_SAP__c : 0;
+                Decimal newUnitPrice = (fresh.ListPrice * (1 - disc / 100)).setScale(2);
+                System.debug('INSERT DISCOUNT: QLI ' + fresh.Id +
+                    ' → disc=' + disc + '%, UnitPrice=' + newUnitPrice);
+                toUpdate.add(new QuoteLineItem(Id = fresh.Id, UnitPrice = newUnitPrice));
+            }
+
+            if (!toUpdate.isEmpty()) {
+                update toUpdate;
+                System.debug('INSERT DISCOUNT: Applied Discount_as_per_SAP__c to UnitPrice for ' +
+                    toUpdate.size() + ' QLI(s)');
+            }
+        }
+    }
+    // ─────────────────────────────────────────────────────────────────────────────
     
     Set<Id> quoteIds = new Set<Id>();
     

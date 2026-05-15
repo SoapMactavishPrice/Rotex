@@ -1,5 +1,8 @@
 public class QuoteLineItemApprovalHandler {
-    
+
+    // Prevents recursive after-update firing when this method does its own DML
+    public static Boolean directDiscountUpdateInProgress = false;
+
     public static void processApprovals(List<QuoteLineItem> newList) {
         System.debug('=== INITIAL APPROVAL HANDLER START ===');
         System.debug('Input QLI List Size: ' + newList.size());
@@ -88,6 +91,23 @@ public class QuoteLineItemApprovalHandler {
             System.debug('    Email: ' + u.Email);
             System.debug('    SOA_Profile__c: ' + u.SOA_Profile__c);
         }
+
+        // ── SOA Matrix: max discount allowed per profile ──────────────────────────
+        Map<String, Decimal> soaMaxByProfile = new Map<String, Decimal>();
+        for (SOA_Matrix__c matrix : [
+            SELECT SOA_Profile__c, Max_Discount__c
+            FROM SOA_Matrix__c
+            WHERE Max_Discount__c != null
+        ]) {
+            String prof = matrix.SOA_Profile__c != null ? matrix.SOA_Profile__c.trim() : null;
+            if (prof == null) continue;
+            Decimal existing = soaMaxByProfile.get(prof);
+            if (existing == null || matrix.Max_Discount__c > existing) {
+                soaMaxByProfile.put(prof, matrix.Max_Discount__c);
+            }
+        }
+        System.debug('APPROVAL: SOA max discounts by profile: ' + soaMaxByProfile);
+        // ─────────────────────────────────────────────────────────────────────────
         
         // Query Products
         Map<Id, Product2> productMap = new Map<Id, Product2>();
@@ -105,7 +125,9 @@ public class QuoteLineItemApprovalHandler {
         }
         
         // Collect all approver Ids for sending emails later
-        Set<Id> approverIds = new Set<Id>();
+        Set<Id> approverIds    = new Set<Id>();
+        // Track QLIs that were self-approved (discount within owner's SOA) so we skip emails
+        Set<Id> selfApprovedIds = new Set<Id>();
         
         System.debug('');
         System.debug('=== APPROVAL: Processing QLIs for First Approver Assignment ===');
@@ -162,6 +184,28 @@ public class QuoteLineItemApprovalHandler {
             }
             System.debug('APPROVAL: ✓ Owner found - Name: ' + owner.Name + ', Email: ' + owner.Email);
             System.debug('APPROVAL: Owner SOA_Profile__c: ' + owner.SOA_Profile__c);
+
+            // ── Self-approval check ──────────────────────────────────────────────
+            // If the offered discount is within the Quote owner's own SOA Matrix
+            // allowed maximum, apply the discount directly to UnitPrice without
+            // sending it through the approval chain.
+            String ownerProfile     = owner.SOA_Profile__c != null ? owner.SOA_Profile__c.trim() : null;
+            Decimal ownerMaxDiscount = ownerProfile != null ? soaMaxByProfile.get(ownerProfile) : null;
+
+            if (ownerMaxDiscount != null && qli.Discount_to_be_offered__c <= ownerMaxDiscount) {
+                System.debug('APPROVAL: ✓ Discount (' + qli.Discount_to_be_offered__c +
+                             '%) ≤ owner SOA limit (' + ownerMaxDiscount +
+                             '%) → applying directly to UnitPrice, no approval chain required');
+                if (qli.ListPrice != null) {
+                    qli.UnitPrice = qli.ListPrice * (1 - qli.Discount_to_be_offered__c / 100);
+                    System.debug('APPROVAL: ✓ UnitPrice updated to: ' + qli.UnitPrice);
+                } else {
+                    System.debug('APPROVAL: ✗ ListPrice is NULL — UnitPrice not updated');
+                }
+                selfApprovedIds.add(qli.Id);
+                continue; // Skip the approval chain for this QLI
+            }
+            // ────────────────────────────────────────────────────────────────────
             
             Id approverUserId;
             String statusField;
@@ -242,6 +286,12 @@ public class QuoteLineItemApprovalHandler {
                 Quote q = quoteMap.get(qli.QuoteId);
                 if (q == null) {
                     System.debug('    ✗ Quote not found, skipping email for this QLI');
+                    continue;
+                }
+
+                // Skip email for self-approved QLIs
+                if (selfApprovedIds.contains(qli.Id)) {
+                    System.debug('    → QLI was self-approved (within owner SOA limit) — skipping email/notification');
                     continue;
                 }
                 
@@ -375,6 +425,99 @@ public class QuoteLineItemApprovalHandler {
             System.debug('ERROR: Could not find Custom Notification Type with API Name: ' + apiName);
             System.debug('Exception: ' + e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Called from the AFTER UPDATE trigger.
+     * Re-queries the saved QLIs so we read the freshly-recalculated formula field
+     * Discount_as_per_SAP__c. If the offered discount does NOT need approval
+     * (within SAP range OR within SM's SOA max), UnitPrice is set directly and
+     * any erroneously-initiated approval status is cleared.
+     */
+    public static void applyDirectDiscountIfNoApprovalNeeded(
+            List<QuoteLineItem> newList, Map<Id, QuoteLineItem> oldMap) {
+
+        if (directDiscountUpdateInProgress) return;
+
+        // Collect IDs where Discount_to_be_offered__c actually changed
+        Set<Id> changedIds = new Set<Id>();
+        for (QuoteLineItem qli : newList) {
+            QuoteLineItem old = oldMap.get(qli.Id);
+            if (qli.Discount_to_be_offered__c != old.Discount_to_be_offered__c) {
+                changedIds.add(qli.Id);
+            }
+        }
+        if (changedIds.isEmpty()) return;
+
+        // Re-query to get FRESH formula field values (Discount_as_per_SAP__c is a formula)
+        Map<Id, QuoteLineItem> freshMap = new Map<Id, QuoteLineItem>([
+            SELECT Id, QuoteId, Discount_to_be_offered__c, Discount_as_per_SAP__c,
+                   ListPrice,
+                   Sales_Manager_Status__c,
+                   Country_Continent_Sales_H_LOB_Status__c,
+                   Global_Sales_Head_Status__c,
+                   Rotex_Board_Member_Status__c,
+                   Managing_Director_Status__c
+            FROM QuoteLineItem
+            WHERE Id IN :changedIds
+        ]);
+
+        // SOA Matrix: max discount allowed per profile
+        Map<String, Decimal> soaMaxByProfile = new Map<String, Decimal>();
+        for (SOA_Matrix__c m : [
+            SELECT SOA_Profile__c, Max_Discount__c
+            FROM SOA_Matrix__c
+            WHERE Max_Discount__c != null
+        ]) {
+            String prof = m.SOA_Profile__c != null ? m.SOA_Profile__c.trim() : null;
+            if (prof == null) continue;
+            Decimal ex = soaMaxByProfile.get(prof);
+            if (ex == null || m.Max_Discount__c > ex) soaMaxByProfile.put(prof, m.Max_Discount__c);
+        }
+        Decimal smSoaMax = soaMaxByProfile.get('Sales Manager');
+
+        List<QuoteLineItem> toUpdate = new List<QuoteLineItem>();
+
+        for (QuoteLineItem fresh : freshMap.values()) {
+            if (fresh.Discount_to_be_offered__c == null || fresh.ListPrice == null) continue;
+
+            // No approval chain should be in-progress for self-approved items.
+            // (If SM_Status is already 'Approved' from a real approval, skip.)
+            Boolean approvalInProgress =
+                String.isNotBlank(fresh.Sales_Manager_Status__c) ||
+                String.isNotBlank(fresh.Country_Continent_Sales_H_LOB_Status__c) ||
+                String.isNotBlank(fresh.Global_Sales_Head_Status__c) ||
+                String.isNotBlank(fresh.Rotex_Board_Member_Status__c) ||
+                String.isNotBlank(fresh.Managing_Director_Status__c);
+            if (approvalInProgress) continue;
+
+            // Condition 1 – discount is within the SAP range (formula now recalculated)
+            Boolean withinSAP = fresh.Discount_as_per_SAP__c != null
+                && fresh.Discount_to_be_offered__c <= fresh.Discount_as_per_SAP__c;
+
+            // Condition 2 – discount is within Sales Manager's SOA level
+            Boolean withinSMLevel = smSoaMax != null
+                && fresh.Discount_to_be_offered__c <= smSoaMax;
+
+            if (withinSAP || withinSMLevel) {
+                Decimal newUnitPrice =
+                    (fresh.ListPrice * (1 - fresh.Discount_to_be_offered__c / 100)).setScale(2);
+                System.debug('DIRECT DISCOUNT: QLI ' + fresh.Id +
+                    ' → UnitPrice = ' + newUnitPrice +
+                    ' (withinSAP=' + withinSAP + ', withinSMLevel=' + withinSMLevel + ')');
+                toUpdate.add(new QuoteLineItem(Id = fresh.Id, UnitPrice = newUnitPrice));
+            }
+        }
+
+        if (!toUpdate.isEmpty()) {
+            directDiscountUpdateInProgress = true;
+            try {
+                update toUpdate;
+                System.debug('DIRECT DISCOUNT: Updated UnitPrice for ' + toUpdate.size() + ' QLI(s)');
+            } finally {
+                directDiscountUpdateInProgress = false;
+            }
         }
     }
 }

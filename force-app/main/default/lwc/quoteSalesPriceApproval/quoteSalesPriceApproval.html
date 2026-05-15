@@ -140,7 +140,7 @@
                                                     <!-- Row 2: Comments -->
                                                     <tr key={approvalRow.commentsKey}>
                                                         <template for:each={approvalRow.approvers} for:item="approver">
-                                                            <td key={approver.commentsKey} class="approval-comment-cell">
+                                                            <td key={approver.commentsKey} class="approval-comment-cell" style="border-top: none;">
                                                                 <template if:true={approver.showCommentInput}>
                                                                     <lightning-textarea
                                                                         value={approver.comments}
@@ -178,7 +178,7 @@
                                                 <th scope="col" style="width:3%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Qty</th>
                                                 <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc.SAP%</th>
                                                 <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">P.Disc.%</th>
-                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc.%</th>
+                                                <th scope="col" style="width:7%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc.%</th>
                                                 <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">SOA</th>
                                                 <th scope="col" style="width:8%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Status</th>
                                                 <th scope="col" style="width:8%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Date / Time</th>

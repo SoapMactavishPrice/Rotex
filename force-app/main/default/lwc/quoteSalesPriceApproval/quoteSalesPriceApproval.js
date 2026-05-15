@@ -251,12 +251,11 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     buildApprovalRow(type, label, data, config, columns) {
         if (!data) return null;
 
+        // Show the row if the current user is any approver in this chain (regardless of status).
+        // If not in chain at all → don't show.
         const levels = ['sm', 'ch', 'gs', 'bm', 'md'];
-        const currentUserLevel = levels.find(level => data[`is${this.capitalize(level)}CurrentUser`]);
-        if (currentUserLevel) {
-            const currentUserStatus = data[`${currentUserLevel}${config.statusSuffix}`];
-            if (currentUserStatus !== 'Submitted') return null;
-        }
+        const currentUserIsInChain = levels.some(level => data[`is${this.capitalize(level)}CurrentUser`]);
+        if (!currentUserIsInChain) return null;
 
         return {
             type,
@@ -273,32 +272,52 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     buildApprovalApprover(type, data, config, level) {
         const actualStatus = data[`${level}${config.statusSuffix}`] || '';
 
-        const finalApproverMap = {
-            sm: data.finalApprover === 'SM',
-            ch: data.finalApprover === 'CH',
-            gs: data.finalApprover === 'GS',
-            bm: data.finalApprover === 'BM',
-            md: data.finalApprover === 'MD'
-        };
+        const isFinalApproverForThisLevel = this.isFinalApproverLevel(data, level);
 
         const displayStatus = this.getDisplayStatus(
             actualStatus,
-            finalApproverMap[level]
+            isFinalApproverForThisLevel
         );
         const comments = data[`${level}${config.commentsSuffix}`] || '';
+        const isCurrentUser = !!data[`is${this.capitalize(level)}CurrentUser`];
+
+        // Server grants edit permission only when the original DB status was 'Submitted'.
+        const serverCanEditStatus   = !!data[`can${this.capitalize(level)}EditStatus`];
+        const serverCanEditComments = !!data[`can${this.capitalize(level)}EditComments`];
+
+        // Status combobox: keep visible until the user clicks Submit.
+        // We do NOT gate on isSubmitted so the final approver can freely switch
+        // between Approved / Rejected before submitting.
+        const showStatusCombobox = isCurrentUser && serverCanEditStatus;
+
+        // Comment textarea: stays visible as long as server originally granted permission.
+        const showCommentInput = isCurrentUser && serverCanEditComments;
+
         return {
             field: level,
             status: actualStatus,
             displayStatus,
             comments,
             dateTime: this.formatDateTime(data[`${level}${config.dateTimeSuffix}`]),
-            showStatusCombobox: !!data[`can${this.capitalize(level)}EditStatus`],
-            showCommentInput: !!data[`can${this.capitalize(level)}EditComments`],
+            showStatusCombobox,
+            showCommentInput,
             statusBadgeClass: this.getStatusBadgeClass(displayStatus),
             statusKey: `${type}-${level}-status`,
             commentsKey: `${type}-${level}-comments`,
             dateTimeKey: `${type}-${level}-datetime`
         };
+    }
+
+    isFinalApproverLevel(data, level) {
+        // finalApprover is a string like 'SM','CH','GS','BM','MD'
+        if (data.finalApprover) {
+            return data.finalApprover.toUpperCase() === level.toUpperCase();
+        }
+        // fallback: check if the level's id matches the finalWarrantyApprover / finalValidityOfferApprover / etc.
+        const levelId = data[`${level}Id`];
+        const finalId = data.finalWarrantyApprover || data.finalValidityOfferApprover ||
+                        data.finalTotalValueApprover || data.finalMinimumOfferValueApprover;
+        return !!levelId && !!finalId && levelId === finalId;
     }
 
     formatApprovalValue(value) {
@@ -427,6 +446,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const quoteId = event.target.dataset.quoteId;
         const submissions = [];
 
+        // ── Validate: final approver must enter comments for combined approval ──
+        const combinedValidationError = this.validateCombinedFinalApproverComments(quoteId);
+        if (combinedValidationError) {
+            this.showToast('Error', combinedValidationError, 'error');
+            return;
+        }
+
         const warrantyApproval = this.warrantyApprovalsMap.get(quoteId);
         if (warrantyApproval && warrantyApproval.updated) {
             submissions.push({
@@ -486,6 +512,62 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 this.refreshQuoteApprovalDashboard(quoteId);
                 this.showToast('Error', error.body?.message || 'An error occurred while submitting quote approvals', 'error');
             });
+    }
+
+    /**
+     * Validates that the final approver (in any updated combined approval)
+     * has entered comments when they change status to Approved/Rejected.
+     * Returns an error message string if invalid, null if valid.
+     */
+    validateCombinedFinalApproverComments(quoteId) {
+        const approvalConfigs = [
+            {
+                approval: this.warrantyApprovalsMap.get(quoteId),
+                statusSuffix: 'WarrantyStatus',
+                commentsSuffix: 'WarrantyComments',
+                label: 'Warranty Terms'
+            },
+            {
+                approval: this.totalValueApprovalsMap.get(quoteId),
+                statusSuffix: 'ValueStatus',
+                commentsSuffix: 'ValueComments',
+                label: 'Total Value'
+            },
+            {
+                approval: this.minimumOfferApprovalsMap.get(quoteId),
+                statusSuffix: 'MinOfferStatus',
+                commentsSuffix: 'MinOfferComments',
+                label: 'Min Offer Value'
+            },
+            {
+                approval: this.validityOfferApprovalsMap.get(quoteId),
+                statusSuffix: 'ValidityOfferStatus',
+                commentsSuffix: 'ValidityOfferComments',
+                label: 'Validity Offer'
+            }
+        ];
+
+        const levels = ['sm', 'ch', 'gs', 'bm', 'md'];
+        for (const cfg of approvalConfigs) {
+            const data = cfg.approval;
+            if (!data || !data.updated) continue;
+
+            for (const level of levels) {
+                const isCurrentUser = !!data[`is${this.capitalize(level)}CurrentUser`];
+                if (!isCurrentUser) continue;
+
+                const isFinal = this.isFinalApproverLevel(data, level);
+                if (!isFinal) continue;
+
+                const status = data[`${level}${cfg.statusSuffix}`];
+                const comments = data[`${level}${cfg.commentsSuffix}`];
+
+                if ((status === 'Approved' || status === 'Rejected') && !this.hasValue(comments)) {
+                    return `${cfg.label}: Final approver must enter comments before ${status === 'Rejected' ? 'rejecting' : 'approving'}.`;
+                }
+            }
+        }
+        return null;
     }
 
     getDisplayStatus(status, isFinalApprover) {
@@ -1088,6 +1170,15 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         // Validate final approver requirements for discount approvals
         if (hasDiscountChanges && !this.validateFinalApproverRequirements(quote)) {
             return;
+        }
+
+        // Validate final approver comments for combined (top table) approvals
+        if (hasCombinedChanges) {
+            const combinedValidationError = this.validateCombinedFinalApproverComments(quoteId);
+            if (combinedValidationError) {
+                this.showToast('Error', combinedValidationError, 'error');
+                return;
+            }
         }
 
         this.isSaveDisabled = true;

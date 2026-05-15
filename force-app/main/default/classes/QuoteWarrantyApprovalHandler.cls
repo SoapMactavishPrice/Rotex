@@ -390,24 +390,36 @@ public with sharing class QuoteWarrantyApprovalHandler {
     }
 
     private static void sendCustomNotification(
-            Id notificationTypeId, Quote q, Id recipientId, Boolean isRejection) {
-
+        Id notificationTypeId, Quote q, Id recipientId, Boolean isRejection) {
         if (recipientId == null) return;
-
         try {
             Messaging.CustomNotification notification = new Messaging.CustomNotification();
             notification.setNotificationTypeId(notificationTypeId);
-            notification.setTargetId(q.Id);
-            
+            notification.setTargetPageRef(JSON.serialize(new Map<String, Object>{
+                'type' => 'standard__navItemPage',
+                'attributes' => new Map<String, Object>{
+                    'apiName' => 'Quote_Discount_Approval'
+                }
+            }));
             if (isRejection) {
                 notification.setTitle('Quote Warranty Terms Rejected');
-                notification.setBody('Quote ' + q.QuoteNumber + ' warranty terms have been rejected. Proposed terms: ' + q.Warranty_Terms_Draft__c);
+
+                notification.setBody(
+                    'Quote ' + q.QuoteNumber +
+                    ' warranty terms have been rejected. Proposed terms: ' +
+                    q.Warranty_Terms_Draft__c
+                );
             } else {
                 notification.setTitle('Warranty Approval Required');
-                notification.setBody('Your approval is required for warranty terms on Quote ' + q.QuoteNumber + '. Proposed terms: ' + q.Warranty_Terms_Draft__c);
-            }
 
-            notification.send(new Set<String>{recipientId});
+                notification.setBody(
+                    'Your approval is required for warranty terms on Quote ' +
+                    q.QuoteNumber +
+                    '. Proposed terms: ' +
+                    q.Warranty_Terms_Draft__c
+                );
+            }
+            notification.send(new Set<String>{ recipientId });
         } catch (Exception e) {
             System.debug('Error sending custom notification: ' + e.getMessage());
         }

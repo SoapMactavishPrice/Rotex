@@ -398,9 +398,18 @@ public class QuoteLineItemSequentialApprovalHandler {
             ];
 
             Messaging.CustomNotification notification = new Messaging.CustomNotification();
+
             notification.setNotificationTypeId(notificationType.Id);
-            notification.setTargetId(q.Id);
+
+            notification.setTargetPageRef(JSON.serialize(new Map<String, Object>{
+                'type' => 'standard__navItemPage',
+                'attributes' => new Map<String, Object>{
+                    'apiName' => 'Quote_Discount_Approval'
+                }
+            }));
+
             notification.setTitle('Discount Approval Required');
+
             notification.setBody(
                 'Quote: ' + q.Name + ' | ' +
                 'Product: ' + (qli.Product2 != null ? qli.Product2.Name : 'N/A') + ' | ' +
@@ -408,7 +417,6 @@ public class QuoteLineItemSequentialApprovalHandler {
             );
             notification.setSenderId(UserInfo.getUserId());
             notification.send(new Set<String>{ String.valueOf(approverId) });
-
             System.debug('  -> Custom notification sent successfully to approver: ' + approverId);
         } catch (Exception e) {
             System.debug('  -> Custom notification skipped/failed: ' + e.getMessage());

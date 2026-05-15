@@ -907,9 +907,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                         if (maxDiscount != null && eachQli.d2 > maxDiscount) {
                             throw new AuraHandledException(
                                 'Discount of ' + eachQli.d2 +
-                                '% exceeds the maximum allowed discount of ' +
-                                maxDiscount +
-                                '% for this approver level.'
+                                '% exceeds the maximum discount allowed as per the SOA Matrix'
                             );
                         }
                     }
@@ -1266,28 +1264,18 @@ public without sharing class SalesPriceApprovalForQuotation {
                 q.Warranty_Terms_Draft__c == '12 Months from date of supply') {
                 return null;
             }
-            Boolean isApprover =
-                (q.Sales_Manager__c                         == currentUserId && q.SM_Warranty_Status__c == 'Submitted') ||
-                (q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId && q.CH_Warranty_Status__c == 'Submitted') ||
-                (q.Global_Sales_Head__c                     == currentUserId && q.GS_Warranty_Status__c == 'Submitted') ||
-                (q.Rotex_Board_Member__c                    == currentUserId && q.BM_Warranty_Status__c == 'Submitted') ||
-                (q.Managing_Director_Country_Manager__c     == currentUserId && q.MD_Warranty_Status__c == 'Submitted');
-
-            if (!isApprover) {
-                Integer currentPos = getHierarchyPos(q, currentUserId);
-                Integer finalPos   = getHierarchyPos(q, q.Final_Warranty_Terms_Approver__c);
-                if (currentPos != null && finalPos != null) {
-                    if (currentPos > finalPos) {
-                        // Higher hierarchy than final approver → read-only view
-                        isApprover = true;
-                    } else if (currentPos == finalPos) {
-                        // IS the final approver, but a lower level is still Submitted
-                        // → show dashboard so they can use Skip SOA
-                        isApprover = warrantyAnyLowerSubmitted(q, finalPos);
-                    }
-                }
-            }
-            return isApprover ? new WarrantyApprovalWrapper(q) : null;
+            // Show to ANY approver in the chain until the final approver has approved/rejected.
+            // This keeps the row visible for earlier approvers (e.g. SM) even after they comment.
+            Boolean isInChain =
+                q.Sales_Manager__c                         == currentUserId ||
+                q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId ||
+                q.Global_Sales_Head__c                     == currentUserId ||
+                q.Rotex_Board_Member__c                    == currentUserId ||
+                q.Managing_Director_Country_Manager__c     == currentUserId;
+            if (!isInChain) return null;
+            // Once the final approver has approved or rejected, hide from everyone.
+            if (isWarrantyFinallyDecided(q)) return null;
+            return new WarrantyApprovalWrapper(q);
         }
 
         private ValidityOfferApprovalWrapper createValidityOfferApprovalIfNeeded(Quote q, Id currentUserId) {
@@ -1295,44 +1283,30 @@ public without sharing class SalesPriceApprovalForQuotation {
                 q.Requested_Validity_Of_Offer__c == '30 Days') {
                 return null;
             }
-            Boolean isApprover =
-                (q.Sales_Manager__c                         == currentUserId && q.SM_Validity_Offer_Status__c == 'Submitted') ||
-                (q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId && q.CH_Validity_Offer_Status__c == 'Submitted') ||
-                (q.Global_Sales_Head__c                     == currentUserId && q.GS_Validity_Offer_Status__c == 'Submitted') ||
-                (q.Rotex_Board_Member__c                    == currentUserId && q.BM_Validity_Offer_Status__c == 'Submitted') ||
-                (q.Managing_Director_Country_Manager__c     == currentUserId && q.MD_Validity_Offer_Status__c == 'Submitted');
-
-            if (!isApprover) {
-                Integer currentPos = getValidityOfferHierarchyPos(q, currentUserId);
-                Integer finalPos   = getValidityOfferHierarchyPos(q, q.Final_Validity_Offer_Approver__c);
-                if (currentPos != null && finalPos != null) {
-                    if (currentPos > finalPos) {
-                        isApprover = true;
-                    }
-                }
-            }
-            return isApprover ? new ValidityOfferApprovalWrapper(q) : null;
+            Boolean isInChain =
+                q.Sales_Manager__c                         == currentUserId ||
+                q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId ||
+                q.Global_Sales_Head__c                     == currentUserId ||
+                q.Rotex_Board_Member__c                    == currentUserId ||
+                q.Managing_Director_Country_Manager__c     == currentUserId;
+            if (!isInChain) return null;
+            if (isValidityOfferFinallyDecided(q)) return null;
+            return new ValidityOfferApprovalWrapper(q);
         }
 
         private TotalValueApprovalWrapper createTotalValueApprovalIfNeeded(Quote q, Id currentUserId) {
             if (q.Total_Value__c == null || q.Is_Total_Value_Approved__c == true) {
                 return null;
             }
-            Boolean isApprover =
-                (q.Sales_Manager__c                         == currentUserId && q.SM_Value_Status__c == 'Submitted') ||
-                (q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId && q.CH_Value_Status__c == 'Submitted') ||
-                (q.Global_Sales_Head__c                     == currentUserId && q.GS_Value_Status__c == 'Submitted') ||
-                (q.Rotex_Board_Member__c                    == currentUserId && q.BM_Value_Status__c == 'Submitted') ||
-                (q.Managing_Director_Country_Manager__c     == currentUserId && q.MD_Value_Status__c == 'Submitted');
-
-            if (!isApprover) {
-                Integer currentPos = getTotalValueHierarchyPos(q, currentUserId);
-                Integer finalPos   = getTotalValueHierarchyPos(q, q.Final_Total_Value_Approver__c);
-                if (currentPos != null && finalPos != null && currentPos > finalPos) {
-                    isApprover = true;
-                }
-            }
-            return isApprover ? new TotalValueApprovalWrapper(q) : null;
+            Boolean isInChain =
+                q.Sales_Manager__c                         == currentUserId ||
+                q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId ||
+                q.Global_Sales_Head__c                     == currentUserId ||
+                q.Rotex_Board_Member__c                    == currentUserId ||
+                q.Managing_Director_Country_Manager__c     == currentUserId;
+            if (!isInChain) return null;
+            if (isTotalValueFinallyDecided(q)) return null;
+            return new TotalValueApprovalWrapper(q);
         }
 
         private MinimumOfferApprovalWrapper createMinimumOfferApprovalIfNeeded(Quote q, Id currentUserId) {
@@ -1342,20 +1316,58 @@ public without sharing class SalesPriceApprovalForQuotation {
                 q.Is_Minimum_Offer_Value_Approved__c == true) {
                 return null;
             }
-            Boolean isApprover =
-                (q.Global_Sales_Head__c                  == currentUserId && q.GS_Min_Offer_Status__c == 'Submitted') ||
-                (q.Rotex_Board_Member__c                 == currentUserId && q.BM_Min_Offer_Status__c == 'Submitted') ||
-                (q.Managing_Director_Country_Manager__c  == currentUserId && q.MD_Min_Offer_Status__c == 'Submitted');
-
-            if (!isApprover) {
-                Integer currentPos = getMinimumOfferHierarchyPos(q, currentUserId);
-                Integer finalPos   = getMinimumOfferHierarchyPos(q, q.Final_Minimum_Offer_Value_Approver__c);
-                if (currentPos != null && finalPos != null && currentPos > finalPos) {
-                    isApprover = true;
-                }
-            }
-            return isApprover ? new MinimumOfferApprovalWrapper(q) : null;
+            Boolean isInChain =
+                q.Global_Sales_Head__c                 == currentUserId ||
+                q.Rotex_Board_Member__c                == currentUserId ||
+                q.Managing_Director_Country_Manager__c == currentUserId;
+            if (!isInChain) return null;
+            if (isMinimumOfferFinallyDecided(q)) return null;
+            return new MinimumOfferApprovalWrapper(q);
         }
+    }
+
+    // ── "Finally decided" helpers: true once the final approver has approved or rejected ──
+
+    private static Boolean isWarrantyFinallyDecided(Quote q) {
+        Id finalId = q.Final_Warranty_Terms_Approver__c;
+        if (finalId == null) return false;
+        if (q.Sales_Manager__c                         == finalId) return q.SM_Warranty_Status__c == 'Approved' || q.SM_Warranty_Status__c == 'Rejected';
+        if (q.Country_Continent_Sales_Head_LOB_Head__c == finalId) return q.CH_Warranty_Status__c == 'Approved' || q.CH_Warranty_Status__c == 'Rejected';
+        if (q.Global_Sales_Head__c                     == finalId) return q.GS_Warranty_Status__c == 'Approved' || q.GS_Warranty_Status__c == 'Rejected';
+        if (q.Rotex_Board_Member__c                    == finalId) return q.BM_Warranty_Status__c == 'Approved' || q.BM_Warranty_Status__c == 'Rejected';
+        if (q.Managing_Director_Country_Manager__c     == finalId) return q.MD_Warranty_Status__c == 'Approved' || q.MD_Warranty_Status__c == 'Rejected';
+        return false;
+    }
+
+    private static Boolean isValidityOfferFinallyDecided(Quote q) {
+        Id finalId = q.Final_Validity_Offer_Approver__c;
+        if (finalId == null) return false;
+        if (q.Sales_Manager__c                         == finalId) return q.SM_Validity_Offer_Status__c == 'Approved' || q.SM_Validity_Offer_Status__c == 'Rejected';
+        if (q.Country_Continent_Sales_Head_LOB_Head__c == finalId) return q.CH_Validity_Offer_Status__c == 'Approved' || q.CH_Validity_Offer_Status__c == 'Rejected';
+        if (q.Global_Sales_Head__c                     == finalId) return q.GS_Validity_Offer_Status__c == 'Approved' || q.GS_Validity_Offer_Status__c == 'Rejected';
+        if (q.Rotex_Board_Member__c                    == finalId) return q.BM_Validity_Offer_Status__c == 'Approved' || q.BM_Validity_Offer_Status__c == 'Rejected';
+        if (q.Managing_Director_Country_Manager__c     == finalId) return q.MD_Validity_Offer_Status__c == 'Approved' || q.MD_Validity_Offer_Status__c == 'Rejected';
+        return false;
+    }
+
+    private static Boolean isTotalValueFinallyDecided(Quote q) {
+        Id finalId = q.Final_Total_Value_Approver__c;
+        if (finalId == null) return false;
+        if (q.Sales_Manager__c                         == finalId) return q.SM_Value_Status__c == 'Approved' || q.SM_Value_Status__c == 'Rejected';
+        if (q.Country_Continent_Sales_Head_LOB_Head__c == finalId) return q.CH_Value_Status__c == 'Approved' || q.CH_Value_Status__c == 'Rejected';
+        if (q.Global_Sales_Head__c                     == finalId) return q.GS_Value_Status__c == 'Approved' || q.GS_Value_Status__c == 'Rejected';
+        if (q.Rotex_Board_Member__c                    == finalId) return q.BM_Value_Status__c == 'Approved' || q.BM_Value_Status__c == 'Rejected';
+        if (q.Managing_Director_Country_Manager__c     == finalId) return q.MD_Value_Status__c == 'Approved' || q.MD_Value_Status__c == 'Rejected';
+        return false;
+    }
+
+    private static Boolean isMinimumOfferFinallyDecided(Quote q) {
+        Id finalId = q.Final_Minimum_Offer_Value_Approver__c;
+        if (finalId == null) return false;
+        if (q.Global_Sales_Head__c                     == finalId) return q.GS_Min_Offer_Status__c == 'Approved' || q.GS_Min_Offer_Status__c == 'Rejected';
+        if (q.Rotex_Board_Member__c                    == finalId) return q.BM_Min_Offer_Status__c == 'Approved' || q.BM_Min_Offer_Status__c == 'Rejected';
+        if (q.Managing_Director_Country_Manager__c     == finalId) return q.MD_Min_Offer_Status__c == 'Approved' || q.MD_Min_Offer_Status__c == 'Rejected';
+        return false;
     }
 
     private static Integer getHierarchyPos(Quote q, Id userId) {

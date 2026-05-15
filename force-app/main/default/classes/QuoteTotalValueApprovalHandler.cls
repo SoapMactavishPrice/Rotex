@@ -402,20 +402,47 @@ public with sharing class QuoteTotalValueApprovalHandler {
         return email;
     }
 
-    private static void sendCustomNotification(Id notificationTypeId, Quote q, Id recipientId, Boolean isRejection) {
+    private static void sendCustomNotification(
+        Id notificationTypeId, Quote q, Id recipientId, Boolean isRejection) {
+
         if (recipientId == null) return;
+
         try {
             Messaging.CustomNotification notification = new Messaging.CustomNotification();
+
             notification.setNotificationTypeId(notificationTypeId);
-            notification.setTargetId(q.Id);
+
+            notification.setTargetPageRef(JSON.serialize(new Map<String, Object>{
+                'type' => 'standard__navItemPage',
+                'attributes' => new Map<String, Object>{
+                    'apiName' => 'Quote_Discount_Approval'
+                }
+            }));
+
             if (isRejection) {
+
                 notification.setTitle('Quote Total Value Approval Rejected');
-                notification.setBody('Quote ' + q.QuoteNumber + ' total value approval has been rejected. Total value: ' + String.valueOf(q.Total_Value__c));
+
+                notification.setBody(
+                    'Quote ' + q.QuoteNumber +
+                    ' total value approval has been rejected. Total value: ' +
+                    String.valueOf(q.Total_Value__c)
+                );
+
             } else {
+
                 notification.setTitle('Total Value Approval Required');
-                notification.setBody('Your approval is required for total value on Quote ' + q.QuoteNumber + '. Total value: ' + String.valueOf(q.Total_Value__c));
+
+                notification.setBody(
+                    'Your approval is required for total value on Quote ' +
+                    q.QuoteNumber +
+                    '. Total value: ' +
+                    String.valueOf(q.Total_Value__c)
+                );
             }
+
             notification.send(new Set<String>{ recipientId });
+
         } catch (Exception e) {
             System.debug('Error sending custom notification: ' + e.getMessage());
         }

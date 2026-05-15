@@ -118,16 +118,30 @@ public class QuoteLineItemApprovalHandler {
             System.debug('Product2Id: ' + qli.Product2Id);
             System.debug('Discount_to_be_offered__c: ' + qli.Discount_to_be_offered__c);
             System.debug('Discount_as_per_SAP__c: ' + qli.Discount_as_per_SAP__c);
-            
+
             if (qli.Discount_to_be_offered__c == null || qli.Discount_as_per_SAP__c == null) {
                 System.debug('APPROVAL: ✗ Skipping - One or both discount fields are NULL');
                 continue;
             }
-            
+
             if (qli.Discount_to_be_offered__c <= qli.Discount_as_per_SAP__c) {
-                System.debug('APPROVAL: ✗ Skipping - Offered discount (' + qli.Discount_to_be_offered__c + 
+                System.debug('APPROVAL: ✗ Skipping - Offered discount (' + qli.Discount_to_be_offered__c +
                            ') is NOT greater than SAP discount (' + qli.Discount_as_per_SAP__c + ')');
                 System.debug('APPROVAL: No approval needed (within standard discount)');
+                continue;
+            }
+
+            // ✅ FIX (Issue 5): If any approval status is already set, the approval is already
+            // in-progress (e.g. the final approver just changed the discount).
+            // Do NOT reset the first approver's status back to Submitted.
+            Boolean approvalAlreadyInProgress =
+                String.isNotBlank(qli.Sales_Manager_Status__c) ||
+                String.isNotBlank(qli.Country_Continent_Sales_H_LOB_Status__c) ||
+                String.isNotBlank(qli.Global_Sales_Head_Status__c) ||
+                String.isNotBlank(qli.Rotex_Board_Member_Status__c) ||
+                String.isNotBlank(qli.Managing_Director_Status__c);
+            if (approvalAlreadyInProgress) {
+                System.debug('APPROVAL: ✗ Skipping - Approval already in-progress for QLI: ' + qli.Id);
                 continue;
             }
             
@@ -304,18 +318,20 @@ public class QuoteLineItemApprovalHandler {
                 if (notificationTypeId != null) {
                     Messaging.CustomNotification notification = new Messaging.CustomNotification();
                     notification.setNotificationTypeId(notificationTypeId);
-                    notification.setTargetId(q.Id); // Links to the Quote record
                     notification.setTitle('Discount Approval Required');
                     notification.setBody(
                         'Quote: ' + q.Name + ' | ' +
                         'Product: ' + productName + ' | ' +
                         'Discount: ' + qli.Discount_to_be_offered__c + '% (SAP: ' + qli.Discount_as_per_SAP__c + '%)'
                     );
-                    
-                    // Send to specific approver
                     notification.setSenderId(UserInfo.getUserId());
+                    notification.setTargetPageRef(JSON.serialize(new Map<String, Object>{
+                        'type' => 'standard__navItemPage',
+                        'attributes' => new Map<String, Object>{
+                            'apiName' => 'Quote_Discount_Approval'
+                        }
+                    }));
                     notification.send(new Set<String> { approverId });
-                    
                     System.debug('    ✓ Custom notification sent to approver');
                 } else {
                     System.debug('    ✗ Notification skipped (notification type not found)');

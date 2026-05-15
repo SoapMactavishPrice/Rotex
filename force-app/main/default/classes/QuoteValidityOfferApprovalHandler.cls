@@ -382,24 +382,44 @@ public with sharing class QuoteValidityOfferApprovalHandler {
     }
 
     private static void sendCustomNotification(
-            Id notificationTypeId, Quote q, Id recipientId, Boolean isRejection) {
+        Id notificationTypeId, Quote q, Id recipientId, Boolean isRejection) {
 
         if (recipientId == null) return;
 
         try {
             Messaging.CustomNotification notification = new Messaging.CustomNotification();
+
             notification.setNotificationTypeId(notificationTypeId);
-            notification.setTargetId(q.Id);
-            
+
+            notification.setTargetPageRef(JSON.serialize(new Map<String, Object>{
+                'type' => 'standard__navItemPage',
+                'attributes' => new Map<String, Object>{
+                    'apiName' => 'Quote_Discount_Approval'
+                }
+            }));
+
             if (isRejection) {
                 notification.setTitle('Quote Validity of Offer Rejected');
-                notification.setBody('Quote ' + q.QuoteNumber + ' validity of offer has been rejected. Proposed validity: ' + q.Requested_Validity_Of_Offer__c);
+
+                notification.setBody(
+                    'Quote ' + q.QuoteNumber +
+                    ' validity of offer has been rejected. Proposed validity: ' +
+                    q.Requested_Validity_Of_Offer__c
+                );
+
             } else {
                 notification.setTitle('Validity of Offer Approval Required');
-                notification.setBody('Your approval is required for validity of offer on Quote ' + q.QuoteNumber + '. Proposed validity: ' + q.Requested_Validity_Of_Offer__c);
+
+                notification.setBody(
+                    'Your approval is required for validity of offer on Quote ' +
+                    q.QuoteNumber +
+                    '. Proposed validity: ' +
+                    q.Requested_Validity_Of_Offer__c
+                );
             }
 
-            notification.send(new Set<String>{recipientId});
+            notification.send(new Set<String>{ recipientId });
+
         } catch (Exception e) {
             System.debug('Error sending custom notification: ' + e.getMessage());
         }

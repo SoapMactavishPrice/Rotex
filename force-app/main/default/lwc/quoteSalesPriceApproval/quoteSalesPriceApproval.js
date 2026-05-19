@@ -461,20 +461,40 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const originalStatus = data[originalStatusKey] || '';
         const isAlreadyDecidedByBackend = originalStatus === 'Approved' || originalStatus === 'Rejected';
 
-        // Skip SOA: show comment input for levels below the current user that are not already decided
-        const skipSoaShowCommentInput = (isHigherHierarchyWithSkip || isFinalApproverPendingWithSkip) &&
-            !isCurrentUser && isAtOrBelowFinal && !isAlreadyDecidedByBackend;
+        // Lower hierarchy: current user is BELOW the final approver (e.g. CH with GS as final)
+        const isLowerHierarchyWithSkip = this.skipSoaRestrictions &&
+            currentUserPos != null && finalPos != null && currentUserPos < finalPos;
+
+        // Skip SOA: show comment input for levels below the current user that are not already decided.
+        // Covers three cases:
+        //   1. Higher hierarchy (current user above final approver) — all levels at/below final
+        //   2. Final approver with pending lower levels — levels below the final approver
+        //   3. Lower hierarchy (current user below final approver) — levels strictly below current user
+        const skipSoaShowCommentInput =
+            ((isHigherHierarchyWithSkip || isFinalApproverPendingWithSkip) &&
+                !isCurrentUser && isAtOrBelowFinal && !isAlreadyDecidedByBackend) ||
+            (isLowerHierarchyWithSkip &&
+                !isCurrentUser && levelIndex != null && levelIndex < currentUserPos && !isAlreadyDecidedByBackend);
 
         // Skip SOA: show status combobox ONLY for the final approver's level (not already decided)
         const skipSoaShowStatusCombobox = (isHigherHierarchyWithSkip || isFinalApproverPendingWithSkip) &&
             !isCurrentUser && isFinalApproverForThisLevel && isAtOrBelowFinal && !isAlreadyDecidedByBackend;
         // ─────────────────────────────────────────────────────────────────
 
-        // Status combobox: own row (server-granted) OR Skip SOA (higher hierarchy managing final approver's row)
-        const showStatusCombobox = (isCurrentUser && serverCanEditStatus) || skipSoaShowStatusCombobox;
+        // Skip SOA: final approver's own level is always editable for status + comments
+        // (even if their original status is not 'Submitted')
+        const isOwnFinalLevelSkipSoa = this.skipSoaRestrictions && isCurrentUser && isFinalApproverForThisLevel;
 
-        // Comment textarea: own row (server-granted) OR Skip SOA (higher/final-with-pending editing lower rows)
-        const showCommentInput = (isCurrentUser && serverCanEditComments) || skipSoaShowCommentInput;
+        // Skip SOA: any user's own level always has comment input enabled
+        // (covers Issue 3 — CH below GS as final, and Issue 2 — GS as final with non-Submitted status)
+        const isOwnLevelWithSkipSoa = this.skipSoaRestrictions && isCurrentUser;
+
+        // Status combobox: server-granted OR Skip SOA higher/pending managing final approver's row
+        //                  OR final approver's own level with Skip SOA
+        const showStatusCombobox = (isCurrentUser && serverCanEditStatus) || skipSoaShowStatusCombobox || isOwnFinalLevelSkipSoa;
+
+        // Comment textarea: server-granted OR Skip SOA lower levels OR own level with Skip SOA
+        const showCommentInput = (isCurrentUser && serverCanEditComments) || skipSoaShowCommentInput || isOwnLevelWithSkipSoa;
 
         return {
             field: level,
@@ -879,8 +899,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             const currentUserPos = data.currentUserHierarchyPosition;
             const isHigherHierarchyWithSkip      = !!data.isHigherHierarchy;
             const isFinalApproverPendingWithSkip  = currentUserPos != null && finalPos != null && currentUserPos === finalPos;
+            // Lower hierarchy: current user is below the final approver (e.g. CH with GS as final)
+            const isLowerHierarchyWithSkip        = currentUserPos != null && finalPos != null && currentUserPos < finalPos;
 
-            if (!isHigherHierarchyWithSkip && !isFinalApproverPendingWithSkip) continue;
+            if (!isHigherHierarchyWithSkip && !isFinalApproverPendingWithSkip && !isLowerHierarchyWithSkip) continue;
 
             // Build the chain of editable levels (Skip SOA + own level), ordered ascending
             const chain = [];
@@ -889,7 +911,6 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 if (!levelIndex) continue;
 
                 const isAtOrBelowFinal = finalPos != null && levelIndex <= finalPos;
-                if (!isAtOrBelowFinal) continue;
 
                 const originalStatusKey  = `original${this.capitalize(level)}${cfg.statusSuffix}`;
                 const originalStatus     = data[originalStatusKey] || '';
@@ -897,10 +918,18 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 const isCurrentUserLevel = !!data[`is${this.capitalize(level)}CurrentUser`];
                 const isFinalLevel       = this.isFinalApproverLevel(data, level);
 
-                // Is this level editable via Skip SOA or as own row?
-                const isSkipEditable = (isHigherHierarchyWithSkip || isFinalApproverPendingWithSkip) &&
-                    !isCurrentUserLevel && isAtOrBelowFinal && !isAlreadyDecided;
-                const isOwnEditable  = isCurrentUserLevel && !!data[`can${this.capitalize(level)}EditStatus`];
+                // Is this level editable via Skip SOA?
+                //   Higher/pending case: all levels at or below the final approver
+                //   Lower hierarchy case: only levels strictly below the current user
+                const isSkipEditable =
+                    ((isHigherHierarchyWithSkip || isFinalApproverPendingWithSkip) &&
+                        !isCurrentUserLevel && isAtOrBelowFinal && !isAlreadyDecided) ||
+                    (isLowerHierarchyWithSkip &&
+                        !isCurrentUserLevel && levelIndex < currentUserPos && !isAlreadyDecided);
+
+                // Own level is always editable when Skip SOA is ON
+                const isOwnEditable = isCurrentUserLevel &&
+                    (!!data[`can${this.capitalize(level)}EditStatus`] || this.skipSoaRestrictions);
 
                 if (!isSkipEditable && !isOwnEditable) continue;
 
@@ -1322,13 +1351,18 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     item.isFinalDiscountApprover &&
                     soa.isCurrentUserRow;
 
+                // Skip SOA: always allow the current user to see their own comment input
+                // (even when their status is already Approved — e.g. GS below BM as final approver)
+                const isOwnRowWithSkipSoa = this.skipSoaRestrictions && soa.isCurrentUserRow;
+
                 const showStatusCombobox = (item.isFinalDiscountApprover && soa.isCurrentUserRow && item.isEditable)
                                         || skipFinalStatusEnabled
                                         || isFinalApproverOwnRowWithSkip;
 
                 const showCommentInput   = (soa.isCurrentUserRow && item.isEditable)
                                         || skipCommentEnabled
-                                        || isFinalApproverOwnRowWithSkip;
+                                        || isFinalApproverOwnRowWithSkip
+                                        || isOwnRowWithSkipSoa;
                 const actualStatus = soa.status || '';
 
                 const soaStatus = this.getDisplayStatus(
@@ -1362,7 +1396,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     showStatusCombobox,
                     showStatusText:   !showStatusCombobox,
                     showCommentInput,
-                    soaCommentsDisabled: !(soa.isCurrentUserRow && item.isEditable) && !skipCommentEnabled && !isFinalApproverOwnRowWithSkip,
+                    soaCommentsDisabled: !(soa.isCurrentUserRow && item.isEditable) && !skipCommentEnabled && !isFinalApproverOwnRowWithSkip && !isOwnRowWithSkipSoa,
                     rowStyle: ''
                 });
             });

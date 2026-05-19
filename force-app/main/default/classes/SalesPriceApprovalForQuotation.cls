@@ -397,6 +397,100 @@ public without sharing class SalesPriceApprovalForQuotation {
         else if (finalPos == 5) { q.MD_Min_Offer_Status__c = wrapper.mdMinOfferStatus; q.MD_Min_Offer_Comments__c = wrapper.mdMinOfferComments; q.MD_Min_Offer_Date_Time__c = DateTime.now(); }
     }
 
+    /**
+     * Lower-hierarchy Skip SOA save for Warranty.
+     * Auto-approves all levels BELOW the current user that have comments provided,
+     * then saves the current user's own level as 'Approved'.
+     * Used when the current user is below the final approver (e.g. CH with GS as final).
+     */
+    private static void applyLowerHierarchySkippedWarrantyComments(Quote q, WarrantyApprovalWrapper wrapper) {
+        Integer currentPos = wrapper.currentUserHierarchyPosition;
+        if (currentPos == null) return;
+
+        if (currentPos > 1 && String.isNotBlank(wrapper.smWarrantyComments) && wrapper.smId != wrapper.finalWarrantyApprover) {
+            q.SM_Warranty_Status__c    = 'Approved'; q.SM_Warranty_Comments__c  = wrapper.smWarrantyComments; q.SM_Warranty_Date_Time__c = DateTime.now();
+        }
+        if (currentPos > 2 && String.isNotBlank(wrapper.chWarrantyComments) && wrapper.chId != wrapper.finalWarrantyApprover) {
+            q.CH_Warranty_Status__c    = 'Approved'; q.CH_Warranty_Comments__c  = wrapper.chWarrantyComments; q.CH_Warranty_Date_Time__c = DateTime.now();
+        }
+        if (currentPos > 3 && String.isNotBlank(wrapper.gsWarrantyComments) && wrapper.gsId != wrapper.finalWarrantyApprover) {
+            q.GS_Warranty_Status__c    = 'Approved'; q.GS_Warranty_Comments__c  = wrapper.gsWarrantyComments; q.GS_Warranty_Date_Time__c = DateTime.now();
+        }
+        if (currentPos > 4 && String.isNotBlank(wrapper.bmWarrantyComments) && wrapper.bmId != wrapper.finalWarrantyApprover) {
+            q.BM_Warranty_Status__c    = 'Approved'; q.BM_Warranty_Comments__c  = wrapper.bmWarrantyComments; q.BM_Warranty_Date_Time__c = DateTime.now();
+        }
+        if      (currentPos == 1 && String.isNotBlank(wrapper.smWarrantyComments)) { q.SM_Warranty_Status__c = 'Approved'; q.SM_Warranty_Comments__c = wrapper.smWarrantyComments; q.SM_Warranty_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 2 && String.isNotBlank(wrapper.chWarrantyComments)) { q.CH_Warranty_Status__c = 'Approved'; q.CH_Warranty_Comments__c = wrapper.chWarrantyComments; q.CH_Warranty_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 3 && String.isNotBlank(wrapper.gsWarrantyComments)) { q.GS_Warranty_Status__c = 'Approved'; q.GS_Warranty_Comments__c = wrapper.gsWarrantyComments; q.GS_Warranty_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 4 && String.isNotBlank(wrapper.bmWarrantyComments)) { q.BM_Warranty_Status__c = 'Approved'; q.BM_Warranty_Comments__c = wrapper.bmWarrantyComments; q.BM_Warranty_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 5 && String.isNotBlank(wrapper.mdWarrantyComments)) { q.MD_Warranty_Status__c = 'Approved'; q.MD_Warranty_Comments__c = wrapper.mdWarrantyComments; q.MD_Warranty_Date_Time__c = DateTime.now(); }
+    }
+
+    /** Lower-hierarchy Skip SOA save for Total Value. */
+    private static void applyLowerHierarchySkippedTotalValueComments(Quote q, TotalValueApprovalWrapper wrapper) {
+        Integer currentPos = wrapper.currentUserHierarchyPosition;
+        if (currentPos == null) return;
+
+        if (currentPos > 1 && String.isNotBlank(wrapper.smValueComments) && wrapper.smId != wrapper.finalTotalValueApprover) {
+            q.SM_Value_Status__c    = 'Approved'; q.SM_Value_Comments__c  = wrapper.smValueComments; q.SM_Value_Date_Time__c = DateTime.now();
+        }
+        if (currentPos > 2 && String.isNotBlank(wrapper.chValueComments) && wrapper.chId != wrapper.finalTotalValueApprover) {
+            q.CH_Value_Status__c    = 'Approved'; q.CH_Value_Comments__c  = wrapper.chValueComments; q.CH_Value_Date_Time__c = DateTime.now();
+        }
+        if (currentPos > 3 && String.isNotBlank(wrapper.gsValueComments) && wrapper.gsId != wrapper.finalTotalValueApprover) {
+            q.GS_Value_Status__c    = 'Approved'; q.GS_Value_Comments__c  = wrapper.gsValueComments; q.GS_Value_Date_Time__c = DateTime.now();
+        }
+        if (currentPos > 4 && String.isNotBlank(wrapper.bmValueComments) && wrapper.bmId != wrapper.finalTotalValueApprover) {
+            q.BM_Value_Status__c    = 'Approved'; q.BM_Value_Comments__c  = wrapper.bmValueComments; q.BM_Value_Date_Time__c = DateTime.now();
+        }
+        if      (currentPos == 1 && String.isNotBlank(wrapper.smValueComments)) { q.SM_Value_Status__c = 'Approved'; q.SM_Value_Comments__c = wrapper.smValueComments; q.SM_Value_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 2 && String.isNotBlank(wrapper.chValueComments)) { q.CH_Value_Status__c = 'Approved'; q.CH_Value_Comments__c = wrapper.chValueComments; q.CH_Value_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 3 && String.isNotBlank(wrapper.gsValueComments)) { q.GS_Value_Status__c = 'Approved'; q.GS_Value_Comments__c = wrapper.gsValueComments; q.GS_Value_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 4 && String.isNotBlank(wrapper.bmValueComments)) { q.BM_Value_Status__c = 'Approved'; q.BM_Value_Comments__c = wrapper.bmValueComments; q.BM_Value_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 5 && String.isNotBlank(wrapper.mdValueComments)) { q.MD_Value_Status__c = 'Approved'; q.MD_Value_Comments__c = wrapper.mdValueComments; q.MD_Value_Date_Time__c = DateTime.now(); }
+    }
+
+    /** Lower-hierarchy Skip SOA save for Validity of Offer. */
+    private static void applyLowerHierarchySkippedValidityOfferComments(Quote q, ValidityOfferApprovalWrapper wrapper) {
+        Integer currentPos = wrapper.currentUserHierarchyPosition;
+        if (currentPos == null) return;
+
+        if (currentPos > 1 && String.isNotBlank(wrapper.smValidityOfferComments) && wrapper.smId != wrapper.finalValidityOfferApprover) {
+            q.SM_Validity_Offer_Status__c    = 'Approved'; q.SM_Validity_Offer_Comments__c  = wrapper.smValidityOfferComments; q.SM_Validity_Offer_Date_Time__c = DateTime.now();
+        }
+        if (currentPos > 2 && String.isNotBlank(wrapper.chValidityOfferComments) && wrapper.chId != wrapper.finalValidityOfferApprover) {
+            q.CH_Validity_Offer_Status__c    = 'Approved'; q.CH_Validity_Offer_Comments__c  = wrapper.chValidityOfferComments; q.CH_Validity_Offer_Date_Time__c = DateTime.now();
+        }
+        if (currentPos > 3 && String.isNotBlank(wrapper.gsValidityOfferComments) && wrapper.gsId != wrapper.finalValidityOfferApprover) {
+            q.GS_Validity_Offer_Status__c    = 'Approved'; q.GS_Validity_Offer_Comments__c  = wrapper.gsValidityOfferComments; q.GS_Validity_Offer_Date_Time__c = DateTime.now();
+        }
+        if (currentPos > 4 && String.isNotBlank(wrapper.bmValidityOfferComments) && wrapper.bmId != wrapper.finalValidityOfferApprover) {
+            q.BM_Validity_Offer_Status__c    = 'Approved'; q.BM_Validity_Offer_Comments__c  = wrapper.bmValidityOfferComments; q.BM_Validity_Offer_Date_Time__c = DateTime.now();
+        }
+        if      (currentPos == 1 && String.isNotBlank(wrapper.smValidityOfferComments)) { q.SM_Validity_Offer_Status__c = 'Approved'; q.SM_Validity_Offer_Comments__c = wrapper.smValidityOfferComments; q.SM_Validity_Offer_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 2 && String.isNotBlank(wrapper.chValidityOfferComments)) { q.CH_Validity_Offer_Status__c = 'Approved'; q.CH_Validity_Offer_Comments__c = wrapper.chValidityOfferComments; q.CH_Validity_Offer_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 3 && String.isNotBlank(wrapper.gsValidityOfferComments)) { q.GS_Validity_Offer_Status__c = 'Approved'; q.GS_Validity_Offer_Comments__c = wrapper.gsValidityOfferComments; q.GS_Validity_Offer_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 4 && String.isNotBlank(wrapper.bmValidityOfferComments)) { q.BM_Validity_Offer_Status__c = 'Approved'; q.BM_Validity_Offer_Comments__c = wrapper.bmValidityOfferComments; q.BM_Validity_Offer_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 5 && String.isNotBlank(wrapper.mdValidityOfferComments)) { q.MD_Validity_Offer_Status__c = 'Approved'; q.MD_Validity_Offer_Comments__c = wrapper.mdValidityOfferComments; q.MD_Validity_Offer_Date_Time__c = DateTime.now(); }
+    }
+
+    /** Lower-hierarchy Skip SOA save for Minimum Offer Value. */
+    private static void applyLowerHierarchySkippedMinimumOfferComments(Quote q, MinimumOfferApprovalWrapper wrapper) {
+        Integer currentPos = wrapper.currentUserHierarchyPosition;
+        if (currentPos == null) return;
+
+        // Min offer levels start at GS (3); nothing below GS in this chain
+        if (currentPos > 3 && String.isNotBlank(wrapper.gsMinOfferComments) && wrapper.gsId != wrapper.finalMinimumOfferValueApprover) {
+            q.GS_Min_Offer_Status__c    = 'Approved'; q.GS_Min_Offer_Comments__c  = wrapper.gsMinOfferComments; q.GS_Min_Offer_Date_Time__c = DateTime.now();
+        }
+        if (currentPos > 4 && String.isNotBlank(wrapper.bmMinOfferComments) && wrapper.bmId != wrapper.finalMinimumOfferValueApprover) {
+            q.BM_Min_Offer_Status__c    = 'Approved'; q.BM_Min_Offer_Comments__c  = wrapper.bmMinOfferComments; q.BM_Min_Offer_Date_Time__c = DateTime.now();
+        }
+        if      (currentPos == 3 && String.isNotBlank(wrapper.gsMinOfferComments)) { q.GS_Min_Offer_Status__c = 'Approved'; q.GS_Min_Offer_Comments__c = wrapper.gsMinOfferComments; q.GS_Min_Offer_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 4 && String.isNotBlank(wrapper.bmMinOfferComments)) { q.BM_Min_Offer_Status__c = 'Approved'; q.BM_Min_Offer_Comments__c = wrapper.bmMinOfferComments; q.BM_Min_Offer_Date_Time__c = DateTime.now(); }
+        else if (currentPos == 5 && String.isNotBlank(wrapper.mdMinOfferComments)) { q.MD_Min_Offer_Status__c = 'Approved'; q.MD_Min_Offer_Comments__c = wrapper.mdMinOfferComments; q.MD_Min_Offer_Date_Time__c = DateTime.now(); }
+    }
+
     // ── getWarrantyApprovals kept for backward-compatibility but the LWC ──
     // ── no longer needs to call it — getAllQuotations covers it now.      ──
     @AuraEnabled
@@ -456,6 +550,15 @@ public without sharing class SalesPriceApprovalForQuotation {
             (wrapper.isHigherHierarchy == true || wrapper.isFinalApproverWithPendingLower == true)) {
             applySkippedWarrantyComments(q, wrapper);
             update q;
+            return 'Success';
+        }
+        // Lower-hierarchy Skip SOA: current user is below the final approver
+        if (wrapper.skipSoaRestrictions == true &&
+            wrapper.currentUserHierarchyPosition != null &&
+            wrapper.finalApproverHierarchyPosition != null &&
+            wrapper.currentUserHierarchyPosition < wrapper.finalApproverHierarchyPosition) {
+            applyLowerHierarchySkippedWarrantyComments(q, wrapper);
+            updateWarrantyApprovalQuote(q);
             return 'Success';
         }
 
@@ -583,6 +686,16 @@ public without sharing class SalesPriceApprovalForQuotation {
             updateValidityApprovalQuote(q);
             return 'Success';
         }
+        // Lower-hierarchy Skip SOA: current user is below the final approver
+        if (wrapper.skipSoaRestrictions == true &&
+            wrapper.currentUserHierarchyPosition != null &&
+            wrapper.finalApproverHierarchyPosition != null &&
+            wrapper.currentUserHierarchyPosition < wrapper.finalApproverHierarchyPosition) {
+            Quote q = new Quote(Id = wrapper.quoteId);
+            applyLowerHierarchySkippedValidityOfferComments(q, wrapper);
+            updateValidityApprovalQuote(q);
+            return 'Success';
+        }
 
         Quote existingQuote = getQuoteForApprovalValidation((Id) wrapper.quoteId);
         Quote q = new Quote(Id = wrapper.quoteId);
@@ -704,6 +817,16 @@ public without sharing class SalesPriceApprovalForQuotation {
             update q;
             return 'Success';
         }
+        // Lower-hierarchy Skip SOA: current user is below the final approver
+        if (wrapper.skipSoaRestrictions == true &&
+            wrapper.currentUserHierarchyPosition != null &&
+            wrapper.finalApproverHierarchyPosition != null &&
+            wrapper.currentUserHierarchyPosition < wrapper.finalApproverHierarchyPosition) {
+            Quote q = new Quote(Id = wrapper.quoteId);
+            applyLowerHierarchySkippedTotalValueComments(q, wrapper);
+            update q;
+            return 'Success';
+        }
 
         Quote q = new Quote(Id = wrapper.quoteId);
         Boolean hasChanges = false;
@@ -810,6 +933,16 @@ public without sharing class SalesPriceApprovalForQuotation {
             (wrapper.isHigherHierarchy == true || wrapper.isFinalApproverWithPendingLower == true)) {
             Quote q = new Quote(Id = wrapper.quoteId);
             applySkippedMinimumOfferComments(q, wrapper);
+            update q;
+            return 'Success';
+        }
+        // Lower-hierarchy Skip SOA: current user is below the final approver
+        if (wrapper.skipSoaRestrictions == true &&
+            wrapper.currentUserHierarchyPosition != null &&
+            wrapper.finalApproverHierarchyPosition != null &&
+            wrapper.currentUserHierarchyPosition < wrapper.finalApproverHierarchyPosition) {
+            Quote q = new Quote(Id = wrapper.quoteId);
+            applyLowerHierarchySkippedMinimumOfferComments(q, wrapper);
             update q;
             return 'Success';
         }

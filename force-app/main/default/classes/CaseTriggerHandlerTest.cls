@@ -187,4 +187,55 @@ public class CaseTriggerHandlerTest {
 
         System.assert(true);
     }
+    @isTest
+static void testStateCodeCoverage() {
+
+    insert new Keyword__c(Name = 'RFQ');
+
+    String validStateLabel = null;
+
+    for (Schema.PicklistEntry pe : Lead.StateCode.getDescribe().getPicklistValues()) {
+        if (pe.isActive()) {
+            validStateLabel = pe.getLabel();
+            break;
+        }
+    }
+
+    if (validStateLabel == null) {
+        System.assert(true);
+        return;
+    }
+    Country__c c = new Country__c();
+    c.name = 'India';
+    insert c;
+    insert new State__c(
+        Name = validStateLabel,
+        Country__c= c.Id
+    );
+
+    Case cs = new Case(
+        Subject = 'Need RFQ',
+        Description =
+            'Customer from ' + validStateLabel + '\n' +
+            'Best regards\n' +
+            'Mark John\n' +
+            'Test Company',
+        Status = 'New',
+        Origin = 'Email',
+        SuppliedName = 'Mark John',
+        SuppliedEmail = 'state@test.com'
+    );
+
+    Test.startTest();
+    insert cs;
+    Test.stopTest();
+
+    List<Lead> leads = [
+        SELECT Id
+        FROM Lead
+        WHERE Case__c = :cs.Id
+    ];
+
+    System.assertEquals(1, leads.size());
+}
 }

@@ -1,5 +1,7 @@
 public with sharing class QuoteValidityOfferApprovalHandler {
 
+    public static Boolean bypassRequestedValidityApprovalReset = false;
+
     private static final String STATUS_SUBMITTED = 'Submitted';
     private static final String STATUS_APPROVED  = 'Approved';
     private static final String STATUS_REJECTED  = 'Rejected';
@@ -20,7 +22,8 @@ public with sharing class QuoteValidityOfferApprovalHandler {
         for (Quote q : newQuotes) {
             Quote oldQ = oldQuoteMap.get(q.Id);
 
-            if (q.Requested_Validity_Of_Offer__c != oldQ.Requested_Validity_Of_Offer__c) {
+            if (!bypassRequestedValidityApprovalReset &&
+                q.Requested_Validity_Of_Offer__c != oldQ.Requested_Validity_Of_Offer__c) {
                 resetApprovalFields(q);
 
                 if (q.Requested_Validity_Of_Offer__c == DEFAULT_VALIDITY_OFFER) {

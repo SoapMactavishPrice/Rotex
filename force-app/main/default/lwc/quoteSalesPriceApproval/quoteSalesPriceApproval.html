@@ -61,6 +61,14 @@
                                         <span class="field-value">{quote.totalValue}</span>
                                     </div>
                                     <div class="header-field">
+                                        <span class="field-label">Avg. Discount Requested</span>
+                                        <span class="field-value">{quote.avgDiscountRequested}</span>
+                                    </div>
+                                    <div class="header-field">
+                                        <span class="field-label">Avg. Discount Approved</span>
+                                        <span class="field-value">{quote.avgDiscountApproved}</span>
+                                    </div>
+                                    <div class="header-field">
                                         <span class="field-label">Rev No.</span>
                                         <span class="field-value">{quote.revNo}</span>
                                     </div>
@@ -108,12 +116,40 @@
 
                                                     <!-- Row 1: Status + DateTime stacked -->
                                                     <tr key={approvalRow.statusKey}>
-                                                        <!-- CHANGE 3: approval-type-cell center aligned -->
-                                                        <td rowspan="2" class="approval-type-cell" style="text-align: center;">{approvalRow.label}</td>
-                                                        <td rowspan="2" class="approval-value-cell">{approvalRow.currentValue}</td>
-                                                        <td rowspan="2" class="approval-value-cell">{approvalRow.requestedValue}</td>
+
+                                                        <td class="approval-type-cell" style="text-align: center;">
+                                                            {approvalRow.label}
+                                                        </td>
+
+                                                        <td class="approval-value-cell">
+                                                            {approvalRow.currentValue}
+                                                        </td>
+
+                                                        <td class="approval-value-cell">
+
+                                                            <template if:true={approvalRow.showRequestedValueCombobox}>
+                                                                <lightning-combobox
+                                                                    name="requestedApprovalValue"
+                                                                    data-quote-id={quote.quoteId}
+                                                                    data-approval-type={approvalRow.type}
+                                                                    value={approvalRow.requestedValue}
+                                                                    options={approvalRow.requestedValueOptions}
+                                                                    onchange={handleRequestedApprovalValueChange}
+                                                                    variant="label-hidden"
+                                                                    dropdown-alignment="auto">
+                                                                </lightning-combobox>
+                                                            </template>
+
+                                                            <template if:false={approvalRow.showRequestedValueCombobox}>
+                                                                {approvalRow.requestedValue}
+                                                            </template>
+
+                                                        </td>
+
                                                         <template for:each={approvalRow.approvers} for:item="approver">
-                                                            <td key={approver.statusKey} class="approval-status-cell approval-status-datetime-cell">
+
+                                                            <td key={approver.statusKey} class={approver.statusCellClass}>
+
                                                                 <template if:true={approver.showStatusCombobox}>
                                                                     <lightning-combobox
                                                                         name="combinedApprovalStatus"
@@ -127,36 +163,47 @@
                                                                         dropdown-alignment="auto">
                                                                     </lightning-combobox>
                                                                 </template>
-                                                                <template if:false={approver.showStatusCombobox}>
-                                                                    <span class={approver.statusBadgeClass}>{approver.displayStatus}</span>
-                                                                </template>
-                                                                <template if:true={approver.dateTime}>
-                                                                    <div class="approval-datetime-inline">{approver.dateTime}</div>
-                                                                </template>
-                                                            </td>
-                                                        </template>
-                                                    </tr>
 
-                                                    <!-- Row 2: Comments -->
-                                                    <tr key={approvalRow.commentsKey}>
-                                                        <template for:each={approvalRow.approvers} for:item="approver">
-                                                            <td key={approver.commentsKey} class="approval-comment-cell" style="border-top: none;">
+                                                                <template if:false={approver.showStatusCombobox}>
+                                                                    <template if:false={approver.isBeyondFinalApprover}>
+                                                                        <span class={approver.statusBadgeClass}>
+                                                                            {approver.displayStatus}
+                                                                        </span>
+                                                                    </template>
+                                                                </template>
+
+                                                                <template if:true={approver.dateTime}>
+                                                                    <div class="approval-datetime-inline">
+                                                                        {approver.dateTime}
+                                                                    </div>
+                                                                </template>
+
                                                                 <template if:true={approver.showCommentInput}>
-                                                                    <lightning-textarea
-                                                                        value={approver.comments}
-                                                                        data-quote-id={quote.quoteId}
-                                                                        data-approval-type={approvalRow.type}
-                                                                        data-field={approver.field}
-                                                                        onchange={handleCombinedApprovalCommentChange}
-                                                                        variant="label-hidden"
-                                                                        class="comment-input">
-                                                                    </lightning-textarea>
+                                                                    <div class="approval-comment-inline">
+                                                                        <lightning-textarea
+                                                                            value={approver.comments}
+                                                                            data-quote-id={quote.quoteId}
+                                                                            data-approval-type={approvalRow.type}
+                                                                            data-field={approver.field}
+                                                                            onchange={handleCombinedApprovalCommentChange}
+                                                                            variant="label-hidden"
+                                                                            class="comment-input">
+                                                                        </lightning-textarea>
+                                                                    </div>
                                                                 </template>
+
                                                                 <template if:false={approver.showCommentInput}>
-                                                                    <span>{approver.comments}</span>
+                                                                    <template if:true={approver.comments}>
+                                                                        <div class="approval-comment-inline">
+                                                                            {approver.comments}
+                                                                        </div>
+                                                                    </template>
                                                                 </template>
+
                                                             </td>
+
                                                         </template>
+
                                                     </tr>
 
                                                 </template>

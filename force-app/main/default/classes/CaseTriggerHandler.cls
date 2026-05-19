@@ -88,7 +88,35 @@ public class CaseTriggerHandler {
         }
 
         if (!leadsToInsert.isEmpty()) {
-            insert leadsToInsert;
+            
+            Database.SaveResult[] results = Database.insert(leadsToInsert, false);
+            
+            List<Lead> retryLeads = new List<Lead>();
+            
+            for (Integer i = 0; i < results.size(); i++) {
+                
+                if (!results[i].isSuccess()) {
+                    
+                    Boolean stateError = false;
+                    
+                    for (Database.Error err : results[i].getErrors()) {
+                        if (err.getFields().contains('StateCode')) {
+                            stateError = true;
+                            break;
+                        }
+                    }
+                    
+                    if (stateError) {
+                        Lead retryLead = leadsToInsert[i];
+                        retryLead.StateCode = null;
+                        retryLeads.add(retryLead);
+                    }
+                }
+            }
+            
+            if (!retryLeads.isEmpty()) {
+                insert retryLeads;
+            }
         }
 
         if (!casesToUpdate.isEmpty()) {

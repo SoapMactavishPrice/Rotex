@@ -49,7 +49,7 @@
 .quote-header-grid {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 10px 20px;
     align-items: start;
 }
@@ -379,6 +379,10 @@ lightning-textarea.comment-input {
     font-weight: 600;
 }
 
+.approval-value-cell lightning-combobox {
+    font-weight: 400;
+}
+
 .approval-status-cell {
     min-height: 38px;
 }
@@ -397,8 +401,6 @@ lightning-textarea.comment-input {
 .approval-status-datetime-cell {
     text-align: center;
     vertical-align: middle;
-    /* No bottom border so there's no line between the status row and comments row */
-    border-bottom: none !important;
 }
 
 .approval-status-datetime-cell .status-badge {
@@ -417,6 +419,37 @@ lightning-textarea.comment-input {
     color: #444;
     font-size: 12px;
     white-space: nowrap;
+}
+
+.approval-cell--not-applicable {
+    background-color: #f5f5f5 !important;
+    color: #999 !important;
+    position: relative;
+}
+
+.approval-cell--not-applicable::after {
+    content: "—";
+    font-size: 28px;
+    font-weight: 300;
+    color: #c23934;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    line-height: 1;
+}
+
+.approval-datetime-inline {
+    margin-top: 4px;
+    margin-bottom: 10px;
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+}
+
+.approval-comment-inline {
+    padding-top: 4px;
+    padding-bottom: 5px;
 }
 
 /* ── Submit Button ── */

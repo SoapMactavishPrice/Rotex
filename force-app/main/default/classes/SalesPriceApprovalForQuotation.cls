@@ -18,7 +18,6 @@ public without sharing class SalesPriceApprovalForQuotation {
     public static List<QuotationWrapper> getAllQuotations() {
         Id currentUserId = UserInfo.getUserId();
 
-        // ── PART A : Quote IDs that have pending DISCOUNT QLIs ────────────
         List<QuoteLineItem> submittedQlis = [
             SELECT QuoteId
             FROM   QuoteLineItem
@@ -31,6 +30,13 @@ public without sharing class SalesPriceApprovalForQuotation {
                    )
                    AND Discount_offered_SAP__c = true
                    AND Is_Discount_Approved__c = false
+                   AND (
+                       Sales_Manager_Status__c = 'Submitted' OR
+                       Country_Continent_Sales_H_LOB_Status__c = 'Submitted' OR
+                       Global_Sales_Head_Status__c = 'Submitted' OR
+                       Rotex_Board_Member_Status__c = 'Submitted' OR
+                       Managing_Director_Status__c = 'Submitted'
+                   )
         ];
 
         Set<Id> discountQuoteIds = new Set<Id>();
@@ -38,8 +44,6 @@ public without sharing class SalesPriceApprovalForQuotation {
             discountQuoteIds.add(qli.QuoteId);
         }
 
-        // ── PART B : Quote IDs that have a pending WARRANTY approval ───────
-        // Mirror the exact filter used by the old getWarrantyApprovals() method.
         List<Quote> warrantyQuotes = [
             SELECT Id
             FROM   Quote
@@ -66,7 +70,6 @@ public without sharing class SalesPriceApprovalForQuotation {
             warrantyQuoteIds.add(q.Id);
         }
 
-        // ── PART C : Quote IDs that have a pending VALIDITY OF OFFER approval ──
         List<Quote> validityOfferQuotes = [
             SELECT Id
             FROM   Quote
@@ -93,7 +96,6 @@ public without sharing class SalesPriceApprovalForQuotation {
             validityOfferQuoteIds.add(q.Id);
         }
 
-        // ── PART D : Quote IDs that have a pending TOTAL VALUE approval ──────
         List<Quote> totalValueQuotes = [
             SELECT Id
             FROM   Quote
@@ -120,7 +122,6 @@ public without sharing class SalesPriceApprovalForQuotation {
             totalValueQuoteIds.add(q.Id);
         }
 
-        // ── PART E : Quote IDs that have a pending MINIMUM OFFER VALUE approval ──
         List<Quote> minimumOfferQuotes = [
             SELECT Id
             FROM   Quote
@@ -145,7 +146,6 @@ public without sharing class SalesPriceApprovalForQuotation {
             minimumOfferQuoteIds.add(q.Id);
         }
 
-        // ── UNION: all quotes relevant to this user ────────────────────────
         Set<Id> allRelevantQuoteIds = new Set<Id>(discountQuoteIds);
         allRelevantQuoteIds.addAll(warrantyQuoteIds);
         allRelevantQuoteIds.addAll(validityOfferQuoteIds);
@@ -158,10 +158,8 @@ public without sharing class SalesPriceApprovalForQuotation {
             );
         }
 
-        // ── Fetch ALL QLIs for discount quotes only ────────────────────────
-        // (Warranty-only quotes will simply have an empty lineItems list.)
         List<QuoteLineItem> quoteLineItems = new List<QuoteLineItem>();
-        if (!discountQuoteIds.isEmpty()) {
+        if (!allRelevantQuoteIds.isEmpty()) {
             quoteLineItems = [
                 SELECT Approval_Comments__c, Approval_Status__c, Approver__c, CreatedById, ServiceDate,
                        Discount, LastModifiedById, Description, LineNumber, ListPrice,
@@ -185,12 +183,18 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Prev_Global_Sales_Head_Comments__c, Prev_Rotex_Board_Member_Comments__c,
                        Prev_Managing_Director_Comments__c
                 FROM   QuoteLineItem
-                WHERE  QuoteId IN :discountQuoteIds
+                WHERE  QuoteId IN :allRelevantQuoteIds
                        AND Discount_offered_SAP__c = true
+                       AND (
+                           Sales_Manager_Status__c != null OR
+                           Country_Continent_Sales_H_LOB_Status__c != null OR
+                           Global_Sales_Head_Status__c != null OR
+                           Rotex_Board_Member_Status__c != null OR
+                           Managing_Director_Status__c != null
+                       )
             ];
         }
 
-        // ── Fetch all relevant Quote records (includes warranty fields) ────
         Map<Id, Quote> quoteMap = new Map<Id, Quote>([
             SELECT Id, Name, Owner.Email, Owner.Name, OwnerId, Account.Name, QuoteNumber,
                    Account.OwnerId, Sales_Rep__c, Sales_Manager__c, Sales_Manager_Status__c,
@@ -198,7 +202,8 @@ public without sharing class SalesPriceApprovalForQuotation {
                    Country_Continent_Sales_H_LOB_Status__c, Global_Sales_Head__c,
                    Managing_Director_Country_Manager__c, Managing_Director_Status__c,
                    Rotex_Board_Member__c, Rotex_Board_Member_Status__c,
-                   Total_Value__c, Rev_No__c, Validity_of_Offer__c, Payment_Terms__c,
+                   Total_Value__c, Avg_Discount_Requested__c, Avg_Discount_Approved__c,
+                   Rev_No__c, Validity_of_Offer__c, Payment_Terms__c,
                    Warranty_Terms__c, Delivery_Period__c, Warranty_Terms_Draft__c,
                    Sales_Manager__r.Name, Country_Continent_Sales_Head_LOB_Head__r.Name,
                    Global_Sales_Head__r.Name, Rotex_Board_Member__r.Name,
@@ -232,7 +237,6 @@ public without sharing class SalesPriceApprovalForQuotation {
             WHERE  Id IN :allRelevantQuoteIds
         ]);
 
-        // ── Group QLIs by Quote ────────────────────────────────────────────
         Map<Id, List<QuoteLineItem>> quoteToQliMap = new Map<Id, List<QuoteLineItem>>();
         for (QuoteLineItem eachLine : quoteLineItems) {
             if (!quoteToQliMap.containsKey(eachLine.QuoteId)) {
@@ -241,9 +245,6 @@ public without sharing class SalesPriceApprovalForQuotation {
             quoteToQliMap.get(eachLine.QuoteId).add(eachLine);
         }
 
-        // ── Build wrapper list for ALL relevant quotes ─────────────────────
-        // Warranty-only quotes get an empty List<QuoteLineItem> so they still
-        // appear in the UI (showing only the warranty approval section).
         List<QuotationWrapper> quotations = new List<QuotationWrapper>();
         for (Id eachQuoteId : allRelevantQuoteIds) {
             Quote q = quoteMap.get(eachQuoteId);
@@ -269,7 +270,6 @@ public without sharing class SalesPriceApprovalForQuotation {
         Integer finalPos = wrapper.finalApproverHierarchyPosition;
         if (finalPos == null) return;
 
-        // Rows below final approver — auto-approve if comment provided
         if (finalPos > 1 && String.isNotBlank(wrapper.smWarrantyComments) &&
             wrapper.smId != wrapper.finalWarrantyApprover) {
             q.SM_Warranty_Status__c    = 'Approved';
@@ -295,7 +295,6 @@ public without sharing class SalesPriceApprovalForQuotation {
             q.BM_Warranty_Date_Time__c = DateTime.now();
         }
 
-        // Final approver's row — apply chosen status + comment
         if      (finalPos == 1) { q.SM_Warranty_Status__c = wrapper.smWarrantyStatus; q.SM_Warranty_Comments__c = wrapper.smWarrantyComments; q.SM_Warranty_Date_Time__c = DateTime.now(); }
         else if (finalPos == 2) { q.CH_Warranty_Status__c = wrapper.chWarrantyStatus; q.CH_Warranty_Comments__c = wrapper.chWarrantyComments; q.CH_Warranty_Date_Time__c = DateTime.now(); }
         else if (finalPos == 3) { q.GS_Warranty_Status__c = wrapper.gsWarrantyStatus; q.GS_Warranty_Comments__c = wrapper.gsWarrantyComments; q.GS_Warranty_Date_Time__c = DateTime.now(); }
@@ -309,7 +308,6 @@ public without sharing class SalesPriceApprovalForQuotation {
     public static List<WarrantyApprovalWrapper> getWarrantyApprovals() {
         Id currentUserId = UserInfo.getUserId();
 
-        // Updated query: show ALL quotes where user is ANY approver, not just Submitted status
         List<Quote> quotes = [
             SELECT Id, Name, QuoteNumber, Warranty_Terms_Draft__c, Warranty_Terms__c,
                    Sales_Manager__c, Sales_Manager__r.Name,
@@ -356,9 +354,9 @@ public without sharing class SalesPriceApprovalForQuotation {
             return 'No changes to submit';
         }
 
+        Quote existingQuote = getQuoteForApprovalValidation((Id) wrapper.quoteId);
         Quote q = new Quote(Id = wrapper.quoteId);
 
-        // ── Skip-SOA higher-hierarchy path (mirrors applySkippedComments for QLIs) ──
         if (wrapper.skipSoaRestrictions == true &&
             (wrapper.isHigherHierarchy == true || wrapper.isFinalApproverWithPendingLower == true)) {
             applySkippedWarrantyComments(q, wrapper);
@@ -366,10 +364,20 @@ public without sharing class SalesPriceApprovalForQuotation {
             return 'Success';
         }
 
-        // ── Normal per-role path (unchanged below) ────────────────────────────────
         Boolean hasChanges = false;
         Id currentUserId   = UserInfo.getUserId();
-        Id finalApproverId = wrapper.finalWarrantyApprover;
+        Id finalApproverId = existingQuote.Final_Warranty_Terms_Approver__c;
+        System.debug('submitWarrantyApprovalSingle finalApproverId ==> '+ finalApproverId);
+        Integer finalApproverPosition = getHierarchyPos(existingQuote, finalApproverId);
+        System.debug('submitWarrantyApprovalSingle finalApproverPosition ==> '+ finalApproverPosition);
+        validateWarrantyTermsForApprover(wrapper.warrantyTermsDraft, finalApproverPosition);
+        if (wrapper.warrantyTermsDraft != wrapper.originalWarrantyTermsDraft) {
+            if (currentUserId != finalApproverId) {
+                throw new AuraHandledException('Only the final warranty approver can change Requested Warranty Terms.');
+            }
+            q.Warranty_Terms_Draft__c = wrapper.warrantyTermsDraft;
+            hasChanges = true;
+        }
 
         // SM
         if (wrapper.smWarrantyStatus != wrapper.originalSmWarrantyStatus ||
@@ -453,7 +461,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
 
         if (hasChanges) {
-            update q;
+            updateWarrantyApprovalQuote(q);
         }
         return 'Success';
     }
@@ -472,9 +480,20 @@ public without sharing class SalesPriceApprovalForQuotation {
             return 'No changes to submit';
         }
 
+        Quote existingQuote = getQuoteForApprovalValidation((Id) wrapper.quoteId);
         Quote q = new Quote(Id = wrapper.quoteId);
         Boolean hasChanges = false;
-        Id finalApproverId = wrapper.finalValidityOfferApprover;
+        Id currentUserId = UserInfo.getUserId();
+        Id finalApproverId = existingQuote.Final_Validity_Offer_Approver__c;
+        Integer finalApproverPosition = getValidityOfferHierarchyPos(existingQuote, finalApproverId);
+        validateValidityOfferForApprover(wrapper.requestedValidityOfOffer, finalApproverPosition);
+        if (wrapper.requestedValidityOfOffer != wrapper.originalRequestedValidityOfOffer) {
+            if (currentUserId != finalApproverId) {
+                throw new AuraHandledException('Only the final validity approver can change Requested Validity of Offer.');
+            }
+            q.Requested_Validity_Of_Offer__c = wrapper.requestedValidityOfOffer;
+            hasChanges = true;
+        }
 
         // SM
         if (wrapper.smValidityOfferStatus != wrapper.originalSmValidityOfferStatus ||
@@ -558,7 +577,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
 
         if (hasChanges) {
-            update q;
+            updateValidityApprovalQuote(q);
         }
         return 'Success';
     }
@@ -800,6 +819,93 @@ public without sharing class SalesPriceApprovalForQuotation {
      * @description: Updates approval status and comments of QLIs.
      */
     @AuraEnabled
+    public static String submitUnifiedQuoteApprovals(
+        String quotationListStringObject,
+        String warrantyApprovalJson,
+        String validityOfferApprovalJson,
+        String totalValueApprovalJson,
+        String minimumOfferApprovalJson
+    ) {
+        Savepoint sp = Database.setSavepoint();
+        try {
+            if (String.isNotBlank(quotationListStringObject)) {
+                assertSuccessfulSubmission(
+                    'Discount',
+                    updateQuoteLineItem(quotationListStringObject)
+                );
+            }
+            if (String.isNotBlank(warrantyApprovalJson)) {
+                assertSuccessfulSubmission(
+                    'Warranty Terms',
+                    submitWarrantyApprovalSingle(warrantyApprovalJson)
+                );
+            }
+            if (String.isNotBlank(totalValueApprovalJson)) {
+                assertSuccessfulSubmission(
+                    'Total Value',
+                    submitTotalValueApprovalSingle(totalValueApprovalJson)
+                );
+            }
+            if (String.isNotBlank(minimumOfferApprovalJson)) {
+                assertSuccessfulSubmission(
+                    'Min Offer Value',
+                    submitMinimumOfferApprovalSingle(minimumOfferApprovalJson)
+                );
+            }
+            if (String.isNotBlank(validityOfferApprovalJson)) {
+                assertSuccessfulSubmission(
+                    'Validity Offer',
+                    submitValidityOfferApprovalSingle(validityOfferApprovalJson)
+                );
+            }
+            return 'Success';
+        } catch (Exception e) {
+            Database.rollback(sp);
+            throw new AuraHandledException(e.getMessage());
+        }
+    }
+
+    private static void assertSuccessfulSubmission(String label, String result) {
+        if (result != 'Success') {
+            throw new AuraHandledException(label + ' submission failed: ' + result);
+        }
+    }
+
+    private static Quote getQuoteForApprovalValidation(Id quoteId) {
+        return [
+            SELECT Id,
+                   Sales_Manager__c,
+                   Country_Continent_Sales_Head_LOB_Head__c,
+                   Global_Sales_Head__c,
+                   Rotex_Board_Member__c,
+                   Managing_Director_Country_Manager__c,
+                   Final_Warranty_Terms_Approver__c,
+                   Final_Validity_Offer_Approver__c
+            FROM Quote
+            WHERE Id = :quoteId
+            LIMIT 1
+        ];
+    }
+
+    private static void updateWarrantyApprovalQuote(Quote q) {
+        QuoteWarrantyApprovalHandler.bypassDraftApprovalReset = true;
+        try {
+            update q;
+        } finally {
+            QuoteWarrantyApprovalHandler.bypassDraftApprovalReset = false;
+        }
+    }
+
+    private static void updateValidityApprovalQuote(Quote q) {
+        QuoteValidityOfferApprovalHandler.bypassRequestedValidityApprovalReset = true;
+        try {
+            update q;
+        } finally {
+            QuoteValidityOfferApprovalHandler.bypassRequestedValidityApprovalReset = false;
+        }
+    }
+
+    @AuraEnabled
     public static String updateQuoteLineItem(String quotationListStringObject) {
 
         List<QuotationWrapper> quotations = parseHeaderAndLine(quotationListStringObject);
@@ -853,7 +959,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Managing_Director_Country_Manage__c,
                        Sales_Manager_Comments__c, Country_Continent_Sales_LOB_Comments__c,
                        Global_Sales_Head_Comments__c, Rotex_Board_Member_Comments__c,
-                       Managing_Director_Comments__c, Discount_to_be_offered__c
+                       Managing_Director_Comments__c, Discount_to_be_offered__c, Discount_as_per_SAP__c
                 FROM   QuoteLineItem
                 WHERE  Id IN :updatedQuoteLineItemIds
             ]);
@@ -882,6 +988,13 @@ public without sharing class SalesPriceApprovalForQuotation {
 
                     // ── Validate discount does not exceed SOA Matrix max ──
                     if (canSubmitAsFinal && eachQli.d2 != null) {
+                        Decimal sapDiscount = existing != null ? existing.Discount_as_per_SAP__c : eachQli.d1;
+                        if (sapDiscount != null && eachQli.d2 < sapDiscount) {
+                            throw new AuraHandledException(
+                                'Discount of ' + eachQli.d2 +
+                                '% cannot be less than the Discount as per SAP of ' + sapDiscount + '%'
+                            );
+                        }
 
                         Integer finalApproverPos =
                             getApproverIndex(existing, (Id) eachQli.finalDiscountApproverId);
@@ -1203,6 +1316,8 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String paymentTerms;
         @AuraEnabled public String warrantyTerms;
         @AuraEnabled public String deliveryPeriod;
+        @AuraEnabled public Decimal avgDiscountRequested;
+        @AuraEnabled public Decimal avgDiscountApproved;
         @AuraEnabled public List<QuotationLineItemWrapper> quoteLineItems;
         @AuraEnabled public Boolean updated;
         @AuraEnabled public WarrantyApprovalWrapper warrantyApproval;
@@ -1222,6 +1337,8 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.quoteOwnerEmail = quote.Owner.Email;
             this.quoteOwnerName  = quote.Owner.Name;
             this.totalValue      = getDecimalFieldSafely(quote, 'Total_Value__c');
+            this.avgDiscountRequested = getDecimalFieldSafely(quote, 'Avg_Discount_Requested__c');
+            this.avgDiscountApproved  = getDecimalFieldSafely(quote, 'Avg_Discount_Approved__c');
             this.revNo           = getStringFieldSafely(quote, 'Rev_No__c');
             this.validityOfOffer = getStringFieldSafely(quote, 'Validity_of_Offer__c');
             this.paymentTerms    = getPicklistLabel('Quote', 'Payment_Terms__c', getStringFieldSafely(quote, 'Payment_Terms__c'));
@@ -1260,8 +1377,9 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
 
         private WarrantyApprovalWrapper createWarrantyApprovalIfNeeded(Quote q, Id currentUserId) {
-            if (String.isBlank(q.Warranty_Terms_Draft__c) ||
-                q.Warranty_Terms_Draft__c == '12 Months from date of supply') {
+            if (!hasAnyWarrantyStatus(q) &&
+                (String.isBlank(q.Warranty_Terms_Draft__c) ||
+                 q.Warranty_Terms_Draft__c == '12 Months from date of supply')) {
                 return null;
             }
             // Show to ANY approver in the chain until the final approver has approved/rejected.
@@ -1273,14 +1391,13 @@ public without sharing class SalesPriceApprovalForQuotation {
                 q.Rotex_Board_Member__c                    == currentUserId ||
                 q.Managing_Director_Country_Manager__c     == currentUserId;
             if (!isInChain) return null;
-            // Once the final approver has approved or rejected, hide from everyone.
-            if (isWarrantyFinallyDecided(q)) return null;
             return new WarrantyApprovalWrapper(q);
         }
 
         private ValidityOfferApprovalWrapper createValidityOfferApprovalIfNeeded(Quote q, Id currentUserId) {
-            if (String.isBlank(q.Requested_Validity_Of_Offer__c) ||
-                q.Requested_Validity_Of_Offer__c == '30 Days') {
+            if (!hasAnyValidityOfferStatus(q) &&
+                (String.isBlank(q.Requested_Validity_Of_Offer__c) ||
+                 q.Requested_Validity_Of_Offer__c == '30 Days')) {
                 return null;
             }
             Boolean isInChain =
@@ -1290,12 +1407,12 @@ public without sharing class SalesPriceApprovalForQuotation {
                 q.Rotex_Board_Member__c                    == currentUserId ||
                 q.Managing_Director_Country_Manager__c     == currentUserId;
             if (!isInChain) return null;
-            if (isValidityOfferFinallyDecided(q)) return null;
             return new ValidityOfferApprovalWrapper(q);
         }
 
         private TotalValueApprovalWrapper createTotalValueApprovalIfNeeded(Quote q, Id currentUserId) {
-            if (q.Total_Value__c == null || q.Is_Total_Value_Approved__c == true) {
+            if (!hasAnyTotalValueStatus(q) &&
+                (q.Total_Value__c == null || q.Is_Total_Value_Approved__c == true)) {
                 return null;
             }
             Boolean isInChain =
@@ -1305,15 +1422,15 @@ public without sharing class SalesPriceApprovalForQuotation {
                 q.Rotex_Board_Member__c                    == currentUserId ||
                 q.Managing_Director_Country_Manager__c     == currentUserId;
             if (!isInChain) return null;
-            if (isTotalValueFinallyDecided(q)) return null;
             return new TotalValueApprovalWrapper(q);
         }
 
         private MinimumOfferApprovalWrapper createMinimumOfferApprovalIfNeeded(Quote q, Id currentUserId) {
-            if (q.Total_Value__c == null ||
-                q.Total_Value__c >= 25000 ||
-                q.Is_Small_Order_Handling__c != true ||
-                q.Is_Minimum_Offer_Value_Approved__c == true) {
+            if (!hasAnyMinimumOfferStatus(q) &&
+                (q.Total_Value__c == null ||
+                 q.Total_Value__c >= 25000 ||
+                 q.Is_Small_Order_Handling__c != true ||
+                 q.Is_Minimum_Offer_Value_Approved__c == true)) {
                 return null;
             }
             Boolean isInChain =
@@ -1321,12 +1438,41 @@ public without sharing class SalesPriceApprovalForQuotation {
                 q.Rotex_Board_Member__c                == currentUserId ||
                 q.Managing_Director_Country_Manager__c == currentUserId;
             if (!isInChain) return null;
-            if (isMinimumOfferFinallyDecided(q)) return null;
             return new MinimumOfferApprovalWrapper(q);
         }
     }
 
     // ── "Finally decided" helpers: true once the final approver has approved or rejected ──
+
+    private static Boolean hasAnyWarrantyStatus(Quote q) {
+        return String.isNotBlank(q.SM_Warranty_Status__c) ||
+               String.isNotBlank(q.CH_Warranty_Status__c) ||
+               String.isNotBlank(q.GS_Warranty_Status__c) ||
+               String.isNotBlank(q.BM_Warranty_Status__c) ||
+               String.isNotBlank(q.MD_Warranty_Status__c);
+    }
+
+    private static Boolean hasAnyValidityOfferStatus(Quote q) {
+        return String.isNotBlank(q.SM_Validity_Offer_Status__c) ||
+               String.isNotBlank(q.CH_Validity_Offer_Status__c) ||
+               String.isNotBlank(q.GS_Validity_Offer_Status__c) ||
+               String.isNotBlank(q.BM_Validity_Offer_Status__c) ||
+               String.isNotBlank(q.MD_Validity_Offer_Status__c);
+    }
+
+    private static Boolean hasAnyTotalValueStatus(Quote q) {
+        return String.isNotBlank(q.SM_Value_Status__c) ||
+               String.isNotBlank(q.CH_Value_Status__c) ||
+               String.isNotBlank(q.GS_Value_Status__c) ||
+               String.isNotBlank(q.BM_Value_Status__c) ||
+               String.isNotBlank(q.MD_Value_Status__c);
+    }
+
+    private static Boolean hasAnyMinimumOfferStatus(Quote q) {
+        return String.isNotBlank(q.GS_Min_Offer_Status__c) ||
+               String.isNotBlank(q.BM_Min_Offer_Status__c) ||
+               String.isNotBlank(q.MD_Min_Offer_Status__c);
+    }
 
     private static Boolean isWarrantyFinallyDecided(Quote q) {
         Id finalId = q.Final_Warranty_Terms_Approver__c;
@@ -1433,6 +1579,150 @@ public without sharing class SalesPriceApprovalForQuotation {
             return 'Managing Director / Country Manager';
 
         return null;
+    }
+
+    private static List<ApprovalValueOption> getAllowedWarrantyTermOptions(Integer maxPosition) {
+        List<ApprovalValueOption> options = new List<ApprovalValueOption>();
+        Set<String> added = new Set<String>();
+        if (maxPosition == null) return options;
+        System.debug('getAllowedWarrantyTermOptions maxPosition ==> ' + maxPosition);
+        for (SOA_Matrix__c matrix : getSoaMatrixRows()) {
+            Integer position = getSoaPositionByProfile(matrix.SOA_Profile__c);
+            System.debug('getAllowedWarrantyTermOptions position ==> ' + position);
+            String value = matrix.Warranty_Terms__c;
+            System.debug('getAllowedWarrantyTermOptions value ==> ' + value);
+            if (position != null && position <= maxPosition && String.isNotBlank(value) && !added.contains(value)) {
+                options.add(new ApprovalValueOption(value, value));
+                added.add(value);
+            }
+        }
+        System.debug('getAllowedWarrantyTermOptions options ==>' + options);
+        return options;
+    }
+
+    private static List<ApprovalValueOption> getAllowedValidityOfferOptions(Integer maxPosition) {
+        List<ApprovalValueOption> options = new List<ApprovalValueOption>();
+        Set<String> added = new Set<String>();
+        if (maxPosition == null) return options;
+
+        for (SOA_Matrix__c matrix : getSoaMatrixRows()) {
+            Integer position = getSoaPositionByProfile(matrix.SOA_Profile__c);
+            String value = matrix.Validity_of_Offer__c;
+            if (position != null && position <= maxPosition && String.isNotBlank(value) && !added.contains(value)) {
+                options.add(new ApprovalValueOption(value, value));
+                added.add(value);
+            }
+        }
+        return options;
+    }
+
+    private static void validateWarrantyTermsForApprover(String value, Integer maxPosition) {
+        System.debug('validateWarrantyTermsForApprover Value ==> '+value+ ' maxPosition ==> ' + maxPosition);
+        if (String.isBlank(value)) return;
+        String normalizedValue = normalizeWarrantyTermValue(value);
+        System.debug('validateWarrantyTermsForApprover normalizedValue ==> '+normalizedValue);
+        for (ApprovalValueOption option : getAllowedWarrantyTermOptions(maxPosition)) {
+            System.debug('ApprovalValueOption option label ==> '+option.label);
+            System.debug('ApprovalValueOption option value ==> '+option.value);
+            if (normalizeWarrantyTermValue(option.value) == normalizedValue) {
+                System.debug('validateWarrantyTermsForApprover It is approved');
+                return;
+            }
+        }
+        System.debug('validateWarrantyTermsForApprover It is rejected');
+        throw new AuraHandledException('Requested Warranty Terms are above the final approver SOA level.');
+    }
+
+    private static void validateValidityOfferForApprover(String value, Integer maxPosition) {
+        if (String.isBlank(value)) return;
+        String normalizedValue = normalizeValidityOfferValue(value);
+        for (ApprovalValueOption option : getAllowedValidityOfferOptions(maxPosition)) {
+            if (normalizeValidityOfferValue(option.value) == normalizedValue) return;
+        }
+        throw new AuraHandledException('Requested Validity of Offer is above the final approver SOA level.');
+    }
+
+    private static String normalizeApprovalValue(String value) {
+        return String.isBlank(value) ? '' : value.trim().toLowerCase();
+    }
+
+    private static String normalizeWarrantyTermValue(String value) {
+        String normalized = normalizeApprovalValue(value);
+        if (normalized.contains('more than 48')) return 'more-than-48-months';
+        Matcher m = Pattern.compile('(\\d+)\\s*months?').matcher(normalized);
+        return m.find() ? m.group(1) + '-months' : normalized;
+    }
+
+    private static String normalizeValidityOfferValue(String value) {
+        String normalized = normalizeApprovalValue(value);
+        if (normalized.contains('more than 365')) return 'more-than-365-days';
+        Matcher m = Pattern.compile('(\\d+)\\s*days?').matcher(normalized);
+        return m.find() ? m.group(1) + '-days' : normalized;
+    }
+
+    private static List<SOA_Matrix__c> cachedSoaMatrixRows;
+    private static List<SOA_Matrix__c> getSoaMatrixRows() {
+        if (cachedSoaMatrixRows == null) {
+            cachedSoaMatrixRows = [
+                SELECT SOA_Profile__c, Warranty_Terms__c, Validity_of_Offer__c
+                FROM SOA_Matrix__c
+                ORDER BY Name ASC
+            ];
+        }
+        return cachedSoaMatrixRows;
+    }
+
+    private static Integer getSoaPositionByProfile(String profile) {
+        System.debug('getSoaPositionByProfile profile ==> ' + profile);
+
+        if (String.isBlank(profile)) {
+            return null;
+        }
+
+        String normalized = profile.toLowerCase().trim();
+
+        if (Pattern.matches('.*\\bsales rep\\b.*', normalized)) {
+            return 0;
+        }
+
+        if (Pattern.matches('.*\\bsales manager\\b.*', normalized)) {
+            return 1;
+        }
+
+        if (
+            Pattern.matches('.*\\bmanaging director\\b.*', normalized) ||
+            Pattern.matches('.*\\bcountry manager\\b.*', normalized)
+        ) {
+            return 5;
+        }
+        
+        if (Pattern.matches('.*\\bglobal sales\\b.*', normalized)) {
+            return 3;
+        }
+
+        if (
+            Pattern.matches('.*\\bcountry\\b.*', normalized) ||
+            Pattern.matches('.*\\bcontinent\\b.*', normalized) ||
+            Pattern.matches('.*\\blob\\b.*', normalized)
+        ) {
+            return 2;
+        }
+
+        if (Pattern.matches('.*\\bboard\\b.*', normalized)) {
+            return 4;
+        }
+
+        return null;
+    }
+
+    public class ApprovalValueOption {
+        @AuraEnabled public String label;
+        @AuraEnabled public String value;
+
+        public ApprovalValueOption(String label, String value) {
+            this.label = label;
+            this.value = value;
+        }
     }
 
     public class QuotationLineItemWrapper {
@@ -1572,8 +1862,10 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String   quoteName;
         @AuraEnabled public String   quoteNumber;
         @AuraEnabled public String   warrantyTermsDraft;
+        @AuraEnabled public String   originalWarrantyTermsDraft;
         @AuraEnabled public String   warrantyTerms;
         @AuraEnabled public String   finalWarrantyApprover;
+        @AuraEnabled public List<ApprovalValueOption> allowedWarrantyTerms;
         @AuraEnabled public Boolean  updated;
 
         @AuraEnabled public String   smName;         @AuraEnabled public String   smId;
@@ -1621,6 +1913,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.quoteName           = q.Name;
             this.quoteNumber         = q.QuoteNumber;
             this.warrantyTermsDraft  = q.Warranty_Terms_Draft__c;
+            this.originalWarrantyTermsDraft = q.Warranty_Terms_Draft__c;
             this.warrantyTerms       = q.Warranty_Terms__c;
             this.finalWarrantyApprover = getStringFieldSafely(q, 'Final_Warranty_Terms_Approver__c');
             this.updated             = false;
@@ -1651,13 +1944,17 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.originalMdWarrantyStatus = q.MD_Warranty_Status__c; this.originalMdWarrantyComments = q.MD_Warranty_Comments__c;
 
             setHierarchyPositions(q, currentUserId);
+            this.allowedWarrantyTerms = getAllowedWarrantyTermOptions(this.finalApproverHierarchyPosition);
             setEditPermissions(q, currentUserId);
         }
 
         private void setHierarchyPositions(Quote q, Id currentUserId) {
             this.currentUserHierarchyPosition   = getWarrantyHierarchyIndex(q, currentUserId);
+            System.debug('setHierarchyPositions currentUserHierarchyPosition ==> ' + this.currentUserHierarchyPosition);
             Id finalId = q.Final_Warranty_Terms_Approver__c;
+            System.debug('setHierarchyPositions finalId ==> '+finalId);
             this.finalApproverHierarchyPosition = getWarrantyHierarchyIndex(q, finalId);
+            System.debug('setHierarchyPositions finalApproverHierarchyPosition ==> ' + this.finalApproverHierarchyPosition);
             this.isHigherHierarchy = this.currentUserHierarchyPosition != null &&
                                     this.finalApproverHierarchyPosition != null &&
                                     this.currentUserHierarchyPosition > this.finalApproverHierarchyPosition;
@@ -1681,6 +1978,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
 
         private Integer getWarrantyHierarchyIndex(Quote q, Id approverId) {
+            System.debug('getWarrantyHierarchyIndex approverId ==> '+ approverId);
             if (approverId == null) return null;
             if (q.Sales_Manager__c == approverId) return 1;
             if (q.Country_Continent_Sales_Head_LOB_Head__c == approverId) return 2;
@@ -1705,8 +2003,10 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String   quoteName;
         @AuraEnabled public String   quoteNumber;
         @AuraEnabled public String   requestedValidityOfOffer;
+        @AuraEnabled public String   originalRequestedValidityOfOffer;
         @AuraEnabled public String   validityOfOffer;
         @AuraEnabled public String   finalValidityOfferApprover;
+        @AuraEnabled public List<ApprovalValueOption> allowedValidityOfferValues;
         @AuraEnabled public Boolean  updated;
 
         @AuraEnabled public String   smName;         @AuraEnabled public String   smId;
@@ -1752,6 +2052,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.quoteName                  = q.Name;
             this.quoteNumber                = q.QuoteNumber;
             this.requestedValidityOfOffer   = q.Requested_Validity_Of_Offer__c;
+            this.originalRequestedValidityOfOffer = q.Requested_Validity_Of_Offer__c;
             this.validityOfOffer            = q.Validity_of_Offer__c;
             this.finalValidityOfferApprover = getStringFieldSafely(q, 'Final_Validity_Offer_Approver__c');
             this.updated                    = false;
@@ -1782,6 +2083,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.originalMdValidityOfferStatus = q.MD_Validity_Offer_Status__c; this.originalMdValidityOfferComments = q.MD_Validity_Offer_Comments__c;
 
             setValidityOfferHierarchyPositions(q, currentUserId);
+            this.allowedValidityOfferValues = getAllowedValidityOfferOptions(this.finalApproverHierarchyPosition);
             setValidityOfferEditPermissions(q, currentUserId);
         }
 

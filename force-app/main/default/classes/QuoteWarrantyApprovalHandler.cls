@@ -1,5 +1,7 @@
 public with sharing class QuoteWarrantyApprovalHandler {
 
+    public static Boolean bypassDraftApprovalReset = false;
+
     private static final String STATUS_SUBMITTED = 'Submitted';
     private static final String STATUS_APPROVED  = 'Approved';
     private static final String STATUS_REJECTED  = 'Rejected';
@@ -20,7 +22,8 @@ public with sharing class QuoteWarrantyApprovalHandler {
         for (Quote q : newQuotes) {
             Quote oldQ = oldQuoteMap.get(q.Id);
 
-            if (q.Warranty_Terms_Draft__c != oldQ.Warranty_Terms_Draft__c) {
+            if (!bypassDraftApprovalReset &&
+                q.Warranty_Terms_Draft__c != oldQ.Warranty_Terms_Draft__c) {
                 resetApprovalFields(q);
 
                 if (q.Warranty_Terms_Draft__c == DEFAULT_WARRANTY_TERMS) {

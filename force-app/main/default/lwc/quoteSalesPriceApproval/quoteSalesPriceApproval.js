@@ -167,7 +167,8 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             isFinalDiscountApprover: item.finalDiscountApproverId === this.userId,
             isEditable: item.approvalStatus === 'Submitted',
             skipSoaRestrictions: this.skipSoaRestrictions,
-            skipEditableCommentFields: item.skipEditableCommentFields || {}
+            skipEditableCommentFields: item.skipEditableCommentFields || {},
+            skipEditableStatusFields: item.skipEditableStatusFields || {}
         }));
 
         return {
@@ -441,13 +442,39 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const serverCanEditStatus   = !!data[`can${this.capitalize(level)}EditStatus`];
         const serverCanEditComments = !!data[`can${this.capitalize(level)}EditComments`];
 
-        // Status combobox: keep visible until the user clicks Submit.
-        // We do NOT gate on isSubmitted so the final approver can freely switch
-        // between Approved / Rejected before submitting.
-        const showStatusCombobox = isCurrentUser && serverCanEditStatus;
+        // ── Skip SOA: higher hierarchy can edit lower levels ──────────────
+        const levelIndex = this.getApprovalLevelIndex(level);
+        const finalPos   = data.finalApproverHierarchyPosition;
+        const currentUserPos = data.currentUserHierarchyPosition;
 
-        // Comment textarea: stays visible as long as server originally granted permission.
-        const showCommentInput = isCurrentUser && serverCanEditComments;
+        // Higher hierarchy: current user is above the final approver
+        const isHigherHierarchyWithSkip = this.skipSoaRestrictions && !!data.isHigherHierarchy;
+        // Final approver with pending lower: current user IS the final approver
+        const isFinalApproverPendingWithSkip = this.skipSoaRestrictions &&
+            currentUserPos != null && finalPos != null && currentUserPos === finalPos;
+
+        // Is this level at or below the final approver?
+        const isAtOrBelowFinal = levelIndex != null && finalPos != null && levelIndex <= finalPos;
+
+        // Was this level's status already decided in the backend (not editable via Skip SOA)?
+        const originalStatusKey = `original${this.capitalize(level)}${config.statusSuffix}`;
+        const originalStatus = data[originalStatusKey] || '';
+        const isAlreadyDecidedByBackend = originalStatus === 'Approved' || originalStatus === 'Rejected';
+
+        // Skip SOA: show comment input for levels below the current user that are not already decided
+        const skipSoaShowCommentInput = (isHigherHierarchyWithSkip || isFinalApproverPendingWithSkip) &&
+            !isCurrentUser && isAtOrBelowFinal && !isAlreadyDecidedByBackend;
+
+        // Skip SOA: show status combobox ONLY for the final approver's level (not already decided)
+        const skipSoaShowStatusCombobox = (isHigherHierarchyWithSkip || isFinalApproverPendingWithSkip) &&
+            !isCurrentUser && isFinalApproverForThisLevel && isAtOrBelowFinal && !isAlreadyDecidedByBackend;
+        // ─────────────────────────────────────────────────────────────────
+
+        // Status combobox: own row (server-granted) OR Skip SOA (higher hierarchy managing final approver's row)
+        const showStatusCombobox = (isCurrentUser && serverCanEditStatus) || skipSoaShowStatusCombobox;
+
+        // Comment textarea: own row (server-granted) OR Skip SOA (higher/final-with-pending editing lower rows)
+        const showCommentInput = (isCurrentUser && serverCanEditComments) || skipSoaShowCommentInput;
 
         return {
             field: level,
@@ -638,6 +665,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const quoteId = event.target.dataset.quoteId;
         const submissions = [];
 
+        // ── Validate all visible fields (covers Skip SOA sequential + non-Skip-SOA "all visible") ──
+        const inputError = this.validateCombinedApprovalInputs(quoteId);
+        if (inputError) {
+            this.showToast('Error', inputError, 'error');
+            return;
+        }
+
         // ── Validate: final approver must enter comments for combined approval ──
         const combinedValidationError = this.validateCombinedFinalApproverComments(quoteId);
         if (combinedValidationError) {
@@ -645,11 +679,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             return;
         }
 
+        const skipSoa = this.skipSoaRestrictions;
+
         const warrantyApproval = this.warrantyApprovalsMap.get(quoteId);
         if (warrantyApproval && warrantyApproval.updated) {
             submissions.push({
                 label: 'Warranty Terms',
-                promise: submitWarrantyApprovalSingle({ warrantyApprovalJson: JSON.stringify(warrantyApproval) })
+                promise: submitWarrantyApprovalSingle({ warrantyApprovalJson: JSON.stringify({ ...warrantyApproval, skipSoaRestrictions: skipSoa }) })
             });
         }
 
@@ -657,7 +693,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         if (totalValueApproval && totalValueApproval.updated) {
             submissions.push({
                 label: 'Total Value',
-                promise: submitTotalValueApprovalSingle({ totalValueApprovalJson: JSON.stringify(totalValueApproval) })
+                promise: submitTotalValueApprovalSingle({ totalValueApprovalJson: JSON.stringify({ ...totalValueApproval, skipSoaRestrictions: skipSoa }) })
             });
         }
 
@@ -665,7 +701,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         if (minimumOfferApproval && minimumOfferApproval.updated) {
             submissions.push({
                 label: 'Min Offer Value',
-                promise: submitMinimumOfferApprovalSingle({ minimumOfferApprovalJson: JSON.stringify(minimumOfferApproval) })
+                promise: submitMinimumOfferApprovalSingle({ minimumOfferApprovalJson: JSON.stringify({ ...minimumOfferApproval, skipSoaRestrictions: skipSoa }) })
             });
         }
 
@@ -673,7 +709,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         if (validityOfferApproval && validityOfferApproval.updated) {
             submissions.push({
                 label: 'Validity Offer',
-                promise: submitValidityOfferApprovalSingle({ validityOfferApprovalJson: JSON.stringify(validityOfferApproval) })
+                promise: submitValidityOfferApprovalSingle({ validityOfferApprovalJson: JSON.stringify({ ...validityOfferApproval, skipSoaRestrictions: skipSoa }) })
             });
         }
 
@@ -763,6 +799,11 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     validateCombinedApprovalInputs(quoteId) {
+        // When Skip SOA is ON, use sequential validation
+        if (this.skipSoaRestrictions) {
+            return this.validateCombinedApprovalSequential(quoteId);
+        }
+
         const approvalConfigs = [
             {
                 approval: this.warrantyApprovalsMap.get(quoteId),
@@ -815,6 +856,168 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return null;
     }
 
+    /**
+     * Sequential validation for the 1st table (combined approvals) when Skip SOA is ON.
+     * Rule: comments must be filled bottom-up (no gaps). If level N has content,
+     * all Skip-SOA-editable levels M < N must also have comments.
+     * If a level has status set to Approved/Rejected, its comments must also be provided.
+     */
+    validateCombinedApprovalSequential(quoteId) {
+        const approvalConfigs = [
+            { approval: this.warrantyApprovalsMap.get(quoteId),      statusSuffix: 'WarrantyStatus',      commentsSuffix: 'WarrantyComments',      label: 'Warranty Terms'   },
+            { approval: this.totalValueApprovalsMap.get(quoteId),    statusSuffix: 'ValueStatus',          commentsSuffix: 'ValueComments',          label: 'Total Value'      },
+            { approval: this.minimumOfferApprovalsMap.get(quoteId),  statusSuffix: 'MinOfferStatus',       commentsSuffix: 'MinOfferComments',       label: 'Min Offer Value'  },
+            { approval: this.validityOfferApprovalsMap.get(quoteId), statusSuffix: 'ValidityOfferStatus',  commentsSuffix: 'ValidityOfferComments',  label: 'Validity Offer'   }
+        ];
+        const levels = ['sm', 'ch', 'gs', 'bm', 'md'];
+
+        for (const cfg of approvalConfigs) {
+            const data = cfg.approval;
+            if (!data || !data.updated) continue;
+
+            const finalPos       = data.finalApproverHierarchyPosition;
+            const currentUserPos = data.currentUserHierarchyPosition;
+            const isHigherHierarchyWithSkip      = !!data.isHigherHierarchy;
+            const isFinalApproverPendingWithSkip  = currentUserPos != null && finalPos != null && currentUserPos === finalPos;
+
+            if (!isHigherHierarchyWithSkip && !isFinalApproverPendingWithSkip) continue;
+
+            // Build the chain of editable levels (Skip SOA + own level), ordered ascending
+            const chain = [];
+            for (const level of levels) {
+                const levelIndex = this.getApprovalLevelIndex(level);
+                if (!levelIndex) continue;
+
+                const isAtOrBelowFinal = finalPos != null && levelIndex <= finalPos;
+                if (!isAtOrBelowFinal) continue;
+
+                const originalStatusKey  = `original${this.capitalize(level)}${cfg.statusSuffix}`;
+                const originalStatus     = data[originalStatusKey] || '';
+                const isAlreadyDecided   = originalStatus === 'Approved' || originalStatus === 'Rejected';
+                const isCurrentUserLevel = !!data[`is${this.capitalize(level)}CurrentUser`];
+                const isFinalLevel       = this.isFinalApproverLevel(data, level);
+
+                // Is this level editable via Skip SOA or as own row?
+                const isSkipEditable = (isHigherHierarchyWithSkip || isFinalApproverPendingWithSkip) &&
+                    !isCurrentUserLevel && isAtOrBelowFinal && !isAlreadyDecided;
+                const isOwnEditable  = isCurrentUserLevel && !!data[`can${this.capitalize(level)}EditStatus`];
+
+                if (!isSkipEditable && !isOwnEditable) continue;
+
+                const comments = data[`${level}${cfg.commentsSuffix}`] || '';
+                const status   = data[`${level}${cfg.statusSuffix}`]   || '';
+
+                chain.push({
+                    levelIndex,
+                    label:       level.toUpperCase(),
+                    hasComments: this.hasValue(comments),
+                    hasStatus:   status === 'Approved' || status === 'Rejected',
+                    comments,
+                    status
+                });
+            }
+
+            if (chain.length === 0) continue;
+
+            // Rule 1: if status is set for any level, comments at that level must be provided
+            for (const entry of chain) {
+                if (entry.hasStatus && !entry.hasComments) {
+                    return `${cfg.label}: Enter ${entry.label} comments before approving or rejecting that row.`;
+                }
+            }
+
+            // Rule 2: sequential — find highest level with any content
+            let maxContentIndex = 0;
+            for (const entry of chain) {
+                const hasContent = entry.hasComments || entry.hasStatus;
+                if (hasContent && entry.levelIndex > maxContentIndex) {
+                    maxContentIndex = entry.levelIndex;
+                }
+            }
+
+            if (maxContentIndex === 0) continue; // nothing changed for this approval type
+
+            // All levels below maxContentIndex must have comments
+            for (const entry of chain) {
+                if (entry.levelIndex >= maxContentIndex) continue;
+                if (!entry.hasComments) {
+                    return `${cfg.label}: Enter ${entry.label} comments before adding comments or status for higher hierarchy levels.`;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Sequential validation for the 2nd table (discount line items) when Skip SOA is ON.
+     * Rule: comments must be filled bottom-up (no gaps). If level N has content,
+     * all Skip-SOA-editable levels M < N must also have comments.
+     */
+    validateDiscountApprovalSequential(quote) {
+        if (!quote) return true;
+
+        for (const item of quote.quoteLineItems || []) {
+            if (!item.skipSoaRestrictions) continue;
+
+            const soaLevels = this.getSoaLevels(item);
+            const chain = [];
+
+            for (const soa of soaLevels) {
+                const isSkipComment  = !!(item.skipEditableCommentFields && item.skipEditableCommentFields[soa.commentsField] === true);
+                const isSkipStatus   = !!(item.skipEditableStatusFields  && item.skipEditableStatusFields[soa.statusField]   === true);
+                const isOwnFinalRow  = item.isFinalDiscountApprover && !!soa.isCurrentUserRow;
+
+                if (!isSkipComment && !isSkipStatus && !isOwnFinalRow) continue;
+
+                const comments = soa.commentsValue || '';
+                const status   = soa.status        || '';
+
+                chain.push({
+                    hierarchyIndex: soa.hierarchyIndex,
+                    label:          soa.label,
+                    hasComments:    this.hasValue(comments),
+                    hasStatus:      status === 'Approved' || status === 'Rejected',
+                    comments,
+                    status
+                });
+            }
+
+            if (chain.length === 0) continue;
+
+            // Rule 1: if status set for any level, comments at that level are required
+            for (const entry of chain) {
+                if (entry.hasStatus && !entry.hasComments) {
+                    this.showToast('Error',
+                        `Enter ${entry.label} comments before approving or rejecting that discount row.`, 'error');
+                    return false;
+                }
+            }
+
+            // Rule 2: find highest level with any content
+            let maxContentIndex = 0;
+            for (const entry of chain) {
+                const hasContent = entry.hasComments || entry.hasStatus;
+                if (hasContent && entry.hierarchyIndex > maxContentIndex) {
+                    maxContentIndex = entry.hierarchyIndex;
+                }
+            }
+
+            if (maxContentIndex === 0) continue;
+
+            // All levels below maxContentIndex must have comments
+            for (const entry of chain) {
+                if (entry.hierarchyIndex >= maxContentIndex) continue;
+                if (!entry.hasComments) {
+                    this.showToast('Error',
+                        `Enter ${entry.label} comments before adding comments or status for higher hierarchy levels.`, 'error');
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     getDisplayStatus(status, isFinalApprover) {
         if (status === 'Submitted') {
             return 'Pending';
@@ -864,7 +1067,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     handleWarrantySubmit(event) {
         const { quoteId, warrantyData } = event.detail;
-        
+
         if (!warrantyData || !warrantyData.updated) {
             this.showToast('Warning', 'No changes to submit for warranty approval', 'warning');
             return;
@@ -929,7 +1132,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     handleValidityOfferSubmit(event) {
         const { quoteId, validityData } = event.detail;
-        
+
         if (!validityData || !validityData.updated) {
             this.showToast('Warning', 'No changes to submit for validity of offer approval', 'warning');
             return;
@@ -1110,7 +1313,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                       })
                     : '';
                 const skipCommentEnabled        = this.isSkipCommentEnabled(item, soa);
-                const skipFinalStatusEnabled    = this.skipSoaRestrictions && this.isFinalPreviousHierarchyRow(item, soa);
+                const skipFinalStatusEnabled    = this.skipSoaRestrictions &&
+                    this.isFinalPreviousHierarchyRow(item, soa) &&
+                    !!(item.skipEditableStatusFields && item.skipEditableStatusFields[soa.statusField] === true);
 
                 const isFinalApproverOwnRowWithSkip =
                     this.skipSoaRestrictions &&
@@ -1246,6 +1451,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     skipEditableCommentFields: {
                         ...(item.skipEditableCommentFields || {}),
                         ...this.getSkipEditableCommentFields(item)
+                    },
+                    skipEditableStatusFields: {
+                        ...(item.skipEditableStatusFields || {}),
+                        ...this.getSkipEditableStatusFields(item)
                     }
                 }));
                 return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems) };
@@ -1256,21 +1465,38 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     const clearedItem  = { ...item };
                     const skipFields   = item.skipEditableCommentFields || {};
                     Object.keys(skipFields).forEach(f => { if (skipFields[f] === true) clearedItem[f] = null; });
+                    const skipStatusFields = item.skipEditableStatusFields || {};
+                    Object.keys(skipStatusFields).forEach(f => { if (skipStatusFields[f] === true) delete clearedItem[f]; });
                     this.getSoaLevels(item).forEach(soa => {
                         if (this.isFinalPreviousHierarchyRow(item, soa)) clearedItem.approvalStatus = null;
                     });
-                    return { ...clearedItem, skipSoaRestrictions: false, skipEditableCommentFields: {} };
+                    return { ...clearedItem, skipSoaRestrictions: false, skipEditableCommentFields: {}, skipEditableStatusFields: {} };
                 });
                 return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems) };
             });
         }
+        // Refresh 1st-table approval dashboards to show/hide Skip SOA fields
+        this.refreshExpandedApprovalDashboards();
     }
 
     getSkipEditableCommentFields(item) {
         const editable = {};
         this.getSoaLevels(item).forEach(soa => {
-            if (this.isPreviousHierarchyRow(item, soa.hierarchyIndex) && !this.hasValue(soa.commentsValue)) {
+            if (this.isPreviousHierarchyRow(item, soa.hierarchyIndex) &&
+                !this.hasValue(soa.commentsValue) &&
+                soa.status !== 'Approved' && soa.status !== 'Rejected') {
                 editable[soa.commentsField] = true;
+            }
+        });
+        return editable;
+    }
+
+    getSkipEditableStatusFields(item) {
+        const editable = {};
+        this.getSoaLevels(item).forEach(soa => {
+            if (this.isFinalPreviousHierarchyRow(item, soa) &&
+                soa.status !== 'Approved' && soa.status !== 'Rejected') {
+                editable[soa.statusField] = true;
             }
         });
         return editable;
@@ -1370,10 +1596,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const validityOfferApproval = this.validityOfferApprovalsMap.get(quote.quoteId);
         const totalValueApproval = this.totalValueApprovalsMap.get(quote.quoteId);
         const minimumOfferApproval = this.minimumOfferApprovalsMap.get(quote.quoteId);
-        
-        return !!(warrantyApproval?.updated) || 
-               !!(validityOfferApproval?.updated) || 
-               !!(totalValueApproval?.updated) || 
+
+        return !!(warrantyApproval?.updated) ||
+               !!(validityOfferApproval?.updated) ||
+               !!(totalValueApproval?.updated) ||
                !!(minimumOfferApproval?.updated);
     }
 
@@ -1390,13 +1616,16 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         if (!quote) return true;
 
         for (const row of quote.displayRows || []) {
-            if (row.showStatusCombobox && row.approvalStatus !== 'Approved' && row.approvalStatus !== 'Rejected') {
-                this.showToast('Error', 'Select Approved or Rejected for every visible discount status', 'error');
-                return false;
-            }
-            if (row.showCommentInput && !row.soaCommentsDisabled && !this.hasValue(row.soaComments)) {
-                this.showToast('Error', 'Enter comments for every visible discount comments field', 'error');
-                return false;
+            // When Skip SOA is ON, status + comment validations are handled by the sequential check
+            if (!this.skipSoaRestrictions) {
+                if (row.showStatusCombobox && row.approvalStatus !== 'Approved' && row.approvalStatus !== 'Rejected') {
+                    this.showToast('Error', 'Select Approved or Rejected for every visible discount status', 'error');
+                    return false;
+                }
+                if (row.showCommentInput && !row.soaCommentsDisabled && !this.hasValue(row.soaComments)) {
+                    this.showToast('Error', 'Enter comments for every visible discount comments field', 'error');
+                    return false;
+                }
             }
             if (row.showDiscountInput) {
                 const offeredDiscount = Number(row.d2);
@@ -1413,21 +1642,23 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     validateFinalApproverRequirements(quote) {
         if (!quote || !quote.quoteLineItems) return true;
-        
+        // When Skip SOA is ON, sequential validation covers everything
+        if (this.skipSoaRestrictions) return true;
+
         for (const item of quote.quoteLineItems) {
             if (!item.updated || !item.isFinalDiscountApprover) continue;
-            
+
             const hasFinalStatus = item.approvalStatus === 'Approved' || item.approvalStatus === 'Rejected';
             const currentComment = this.getCurrentUserCommentValue(item);
             const hasComments = this.hasValue(currentComment);
             const offeredDiscount = Number(item.d2);
             const sapDiscount = Number(item.d1);
-            
+
             if (!hasFinalStatus) {
                 this.showToast('Error', 'Final approver must select Approved or Rejected for every discount status', 'error');
                 return false;
             }
-            
+
             if (!hasComments) {
                 this.showToast('Error', 'Final approver must enter comments for every discount row', 'error');
                 return false;
@@ -1438,14 +1669,14 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 return false;
             }
         }
-        
+
         return true;
     }
 
     handleUnifiedQuoteSubmit(event) {
         const quoteId = event.currentTarget.dataset.quoteId;
         const quote = this.quotes.find(q => q.quoteId === quoteId);
-        
+
         if (!quote) {
             this.showToast('Error', 'Quote not found', 'error');
             return;
@@ -1469,8 +1700,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             return;
         }
 
-        // Validate final approver requirements for discount approvals
+        // Validate final approver requirements for discount approvals (non-Skip-SOA path)
         if (hasDiscountChanges && !this.validateFinalApproverRequirements(quote)) {
+            return;
+        }
+
+        // Skip SOA sequential validation for discount approvals
+        if (hasDiscountChanges && this.skipSoaRestrictions && !this.validateDiscountApprovalSequential(quote)) {
             return;
         }
 
@@ -1496,12 +1732,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const minimumOfferApproval = this.minimumOfferApprovalsMap.get(quoteId);
         const validityOfferApproval = this.validityOfferApprovalsMap.get(quoteId);
 
+        const skipSoa = this.skipSoaRestrictions;
         submitUnifiedQuoteApprovals({
             quotationListStringObject: hasDiscountChanges ? JSON.stringify([quote]) : null,
-            warrantyApprovalJson: warrantyApproval?.updated ? JSON.stringify(warrantyApproval) : null,
-            validityOfferApprovalJson: validityOfferApproval?.updated ? JSON.stringify(validityOfferApproval) : null,
-            totalValueApprovalJson: totalValueApproval?.updated ? JSON.stringify(totalValueApproval) : null,
-            minimumOfferApprovalJson: minimumOfferApproval?.updated ? JSON.stringify(minimumOfferApproval) : null
+            warrantyApprovalJson:      warrantyApproval?.updated      ? JSON.stringify({ ...warrantyApproval,      skipSoaRestrictions: skipSoa }) : null,
+            validityOfferApprovalJson: validityOfferApproval?.updated ? JSON.stringify({ ...validityOfferApproval, skipSoaRestrictions: skipSoa }) : null,
+            totalValueApprovalJson:    totalValueApproval?.updated    ? JSON.stringify({ ...totalValueApproval,    skipSoaRestrictions: skipSoa }) : null,
+            minimumOfferApprovalJson:  minimumOfferApproval?.updated  ? JSON.stringify({ ...minimumOfferApproval,  skipSoaRestrictions: skipSoa }) : null
         })
             .then(result => {
                 if (result !== 'Success') {

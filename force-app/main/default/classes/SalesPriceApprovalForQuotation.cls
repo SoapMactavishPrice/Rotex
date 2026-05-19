@@ -302,6 +302,101 @@ public without sharing class SalesPriceApprovalForQuotation {
         else if (finalPos == 5) { q.MD_Warranty_Status__c = wrapper.mdWarrantyStatus; q.MD_Warranty_Comments__c = wrapper.mdWarrantyComments; q.MD_Warranty_Date_Time__c = DateTime.now(); }
     }
 
+    private static void applySkippedTotalValueComments(Quote q, TotalValueApprovalWrapper wrapper) {
+        Integer finalPos = wrapper.finalApproverHierarchyPosition;
+        if (finalPos == null) return;
+
+        if (finalPos > 1 && String.isNotBlank(wrapper.smValueComments) &&
+            wrapper.smId != wrapper.finalTotalValueApprover) {
+            q.SM_Value_Status__c    = 'Approved';
+            q.SM_Value_Comments__c  = wrapper.smValueComments;
+            q.SM_Value_Date_Time__c = DateTime.now();
+        }
+        if (finalPos > 2 && String.isNotBlank(wrapper.chValueComments) &&
+            wrapper.chId != wrapper.finalTotalValueApprover) {
+            q.CH_Value_Status__c    = 'Approved';
+            q.CH_Value_Comments__c  = wrapper.chValueComments;
+            q.CH_Value_Date_Time__c = DateTime.now();
+        }
+        if (finalPos > 3 && String.isNotBlank(wrapper.gsValueComments) &&
+            wrapper.gsId != wrapper.finalTotalValueApprover) {
+            q.GS_Value_Status__c    = 'Approved';
+            q.GS_Value_Comments__c  = wrapper.gsValueComments;
+            q.GS_Value_Date_Time__c = DateTime.now();
+        }
+        if (finalPos > 4 && String.isNotBlank(wrapper.bmValueComments) &&
+            wrapper.bmId != wrapper.finalTotalValueApprover) {
+            q.BM_Value_Status__c    = 'Approved';
+            q.BM_Value_Comments__c  = wrapper.bmValueComments;
+            q.BM_Value_Date_Time__c = DateTime.now();
+        }
+
+        if      (finalPos == 1) { q.SM_Value_Status__c = wrapper.smValueStatus; q.SM_Value_Comments__c = wrapper.smValueComments; q.SM_Value_Date_Time__c = DateTime.now(); }
+        else if (finalPos == 2) { q.CH_Value_Status__c = wrapper.chValueStatus; q.CH_Value_Comments__c = wrapper.chValueComments; q.CH_Value_Date_Time__c = DateTime.now(); }
+        else if (finalPos == 3) { q.GS_Value_Status__c = wrapper.gsValueStatus; q.GS_Value_Comments__c = wrapper.gsValueComments; q.GS_Value_Date_Time__c = DateTime.now(); }
+        else if (finalPos == 4) { q.BM_Value_Status__c = wrapper.bmValueStatus; q.BM_Value_Comments__c = wrapper.bmValueComments; q.BM_Value_Date_Time__c = DateTime.now(); }
+        else if (finalPos == 5) { q.MD_Value_Status__c = wrapper.mdValueStatus; q.MD_Value_Comments__c = wrapper.mdValueComments; q.MD_Value_Date_Time__c = DateTime.now(); }
+    }
+
+    private static void applySkippedValidityOfferComments(Quote q, ValidityOfferApprovalWrapper wrapper) {
+        Integer finalPos = wrapper.finalApproverHierarchyPosition;
+        if (finalPos == null) return;
+
+        if (finalPos > 1 && String.isNotBlank(wrapper.smValidityOfferComments) &&
+            wrapper.smId != wrapper.finalValidityOfferApprover) {
+            q.SM_Validity_Offer_Status__c    = 'Approved';
+            q.SM_Validity_Offer_Comments__c  = wrapper.smValidityOfferComments;
+            q.SM_Validity_Offer_Date_Time__c = DateTime.now();
+        }
+        if (finalPos > 2 && String.isNotBlank(wrapper.chValidityOfferComments) &&
+            wrapper.chId != wrapper.finalValidityOfferApprover) {
+            q.CH_Validity_Offer_Status__c    = 'Approved';
+            q.CH_Validity_Offer_Comments__c  = wrapper.chValidityOfferComments;
+            q.CH_Validity_Offer_Date_Time__c = DateTime.now();
+        }
+        if (finalPos > 3 && String.isNotBlank(wrapper.gsValidityOfferComments) &&
+            wrapper.gsId != wrapper.finalValidityOfferApprover) {
+            q.GS_Validity_Offer_Status__c    = 'Approved';
+            q.GS_Validity_Offer_Comments__c  = wrapper.gsValidityOfferComments;
+            q.GS_Validity_Offer_Date_Time__c = DateTime.now();
+        }
+        if (finalPos > 4 && String.isNotBlank(wrapper.bmValidityOfferComments) &&
+            wrapper.bmId != wrapper.finalValidityOfferApprover) {
+            q.BM_Validity_Offer_Status__c    = 'Approved';
+            q.BM_Validity_Offer_Comments__c  = wrapper.bmValidityOfferComments;
+            q.BM_Validity_Offer_Date_Time__c = DateTime.now();
+        }
+
+        if      (finalPos == 1) { q.SM_Validity_Offer_Status__c = wrapper.smValidityOfferStatus; q.SM_Validity_Offer_Comments__c = wrapper.smValidityOfferComments; q.SM_Validity_Offer_Date_Time__c = DateTime.now(); }
+        else if (finalPos == 2) { q.CH_Validity_Offer_Status__c = wrapper.chValidityOfferStatus; q.CH_Validity_Offer_Comments__c = wrapper.chValidityOfferComments; q.CH_Validity_Offer_Date_Time__c = DateTime.now(); }
+        else if (finalPos == 3) { q.GS_Validity_Offer_Status__c = wrapper.gsValidityOfferStatus; q.GS_Validity_Offer_Comments__c = wrapper.gsValidityOfferComments; q.GS_Validity_Offer_Date_Time__c = DateTime.now(); }
+        else if (finalPos == 4) { q.BM_Validity_Offer_Status__c = wrapper.bmValidityOfferStatus; q.BM_Validity_Offer_Comments__c = wrapper.bmValidityOfferComments; q.BM_Validity_Offer_Date_Time__c = DateTime.now(); }
+        else if (finalPos == 5) { q.MD_Validity_Offer_Status__c = wrapper.mdValidityOfferStatus; q.MD_Validity_Offer_Comments__c = wrapper.mdValidityOfferComments; q.MD_Validity_Offer_Date_Time__c = DateTime.now(); }
+    }
+
+    private static void applySkippedMinimumOfferComments(Quote q, MinimumOfferApprovalWrapper wrapper) {
+        Integer finalPos = wrapper.finalApproverHierarchyPosition;
+        if (finalPos == null) return;
+
+        // Min offer only has GS (3), BM (4), MD (5) levels
+        if (finalPos > 3 && String.isNotBlank(wrapper.gsMinOfferComments) &&
+            wrapper.gsId != wrapper.finalMinimumOfferValueApprover) {
+            q.GS_Min_Offer_Status__c    = 'Approved';
+            q.GS_Min_Offer_Comments__c  = wrapper.gsMinOfferComments;
+            q.GS_Min_Offer_Date_Time__c = DateTime.now();
+        }
+        if (finalPos > 4 && String.isNotBlank(wrapper.bmMinOfferComments) &&
+            wrapper.bmId != wrapper.finalMinimumOfferValueApprover) {
+            q.BM_Min_Offer_Status__c    = 'Approved';
+            q.BM_Min_Offer_Comments__c  = wrapper.bmMinOfferComments;
+            q.BM_Min_Offer_Date_Time__c = DateTime.now();
+        }
+
+        if      (finalPos == 3) { q.GS_Min_Offer_Status__c = wrapper.gsMinOfferStatus; q.GS_Min_Offer_Comments__c = wrapper.gsMinOfferComments; q.GS_Min_Offer_Date_Time__c = DateTime.now(); }
+        else if (finalPos == 4) { q.BM_Min_Offer_Status__c = wrapper.bmMinOfferStatus; q.BM_Min_Offer_Comments__c = wrapper.bmMinOfferComments; q.BM_Min_Offer_Date_Time__c = DateTime.now(); }
+        else if (finalPos == 5) { q.MD_Min_Offer_Status__c = wrapper.mdMinOfferStatus; q.MD_Min_Offer_Comments__c = wrapper.mdMinOfferComments; q.MD_Min_Offer_Date_Time__c = DateTime.now(); }
+    }
+
     // ── getWarrantyApprovals kept for backward-compatibility but the LWC ──
     // ── no longer needs to call it — getAllQuotations covers it now.      ──
     @AuraEnabled
@@ -480,6 +575,15 @@ public without sharing class SalesPriceApprovalForQuotation {
             return 'No changes to submit';
         }
 
+        // ── Skip SOA: higher hierarchy or final-approver-with-pending-lower path ──
+        if (wrapper.skipSoaRestrictions == true &&
+            (wrapper.isHigherHierarchy == true || wrapper.isFinalApproverWithPendingLower == true)) {
+            Quote q = new Quote(Id = wrapper.quoteId);
+            applySkippedValidityOfferComments(q, wrapper);
+            updateValidityApprovalQuote(q);
+            return 'Success';
+        }
+
         Quote existingQuote = getQuoteForApprovalValidation((Id) wrapper.quoteId);
         Quote q = new Quote(Id = wrapper.quoteId);
         Boolean hasChanges = false;
@@ -592,6 +696,15 @@ public without sharing class SalesPriceApprovalForQuotation {
             return 'No changes to submit';
         }
 
+        // ── Skip SOA: higher hierarchy or final-approver-with-pending-lower path ──
+        if (wrapper.skipSoaRestrictions == true &&
+            (wrapper.isHigherHierarchy == true || wrapper.isFinalApproverWithPendingLower == true)) {
+            Quote q = new Quote(Id = wrapper.quoteId);
+            applySkippedTotalValueComments(q, wrapper);
+            update q;
+            return 'Success';
+        }
+
         Quote q = new Quote(Id = wrapper.quoteId);
         Boolean hasChanges = false;
         Id finalApproverId = wrapper.finalTotalValueApprover;
@@ -690,6 +803,15 @@ public without sharing class SalesPriceApprovalForQuotation {
 
         if (!wrapper.updated) {
             return 'No changes to submit';
+        }
+
+        // ── Skip SOA: higher hierarchy or final-approver-with-pending-lower path ──
+        if (wrapper.skipSoaRestrictions == true &&
+            (wrapper.isHigherHierarchy == true || wrapper.isFinalApproverWithPendingLower == true)) {
+            Quote q = new Quote(Id = wrapper.quoteId);
+            applySkippedMinimumOfferComments(q, wrapper);
+            update q;
+            return 'Success';
         }
 
         Quote q = new Quote(Id = wrapper.quoteId);
@@ -1695,7 +1817,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         ) {
             return 5;
         }
-        
+
         if (Pattern.matches('.*\\bglobal sales\\b.*', normalized)) {
             return 3;
         }
@@ -2043,6 +2165,8 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public Integer  finalApproverHierarchyPosition;
         @AuraEnabled public Boolean  isHigherHierarchy;
         @AuraEnabled public Boolean  canViewReadOnly;
+        @AuraEnabled public Boolean  skipSoaRestrictions;
+        @AuraEnabled public Boolean  isFinalApproverWithPendingLower;
 
         public ValidityOfferApprovalWrapper() {}
 
@@ -2095,6 +2219,20 @@ public without sharing class SalesPriceApprovalForQuotation {
                                     this.finalApproverHierarchyPosition != null &&
                                     this.currentUserHierarchyPosition > this.finalApproverHierarchyPosition;
             this.canViewReadOnly = this.isHigherHierarchy;
+            this.isFinalApproverWithPendingLower =
+                !this.isHigherHierarchy &&
+                this.currentUserHierarchyPosition != null &&
+                this.finalApproverHierarchyPosition != null &&
+                this.currentUserHierarchyPosition == this.finalApproverHierarchyPosition &&
+                isAnyValidityOfferLowerLevelSubmitted(q, this.finalApproverHierarchyPosition);
+        }
+
+        private Boolean isAnyValidityOfferLowerLevelSubmitted(Quote q, Integer pos) {
+            if (pos > 1 && q.SM_Validity_Offer_Status__c == 'Submitted') return true;
+            if (pos > 2 && q.CH_Validity_Offer_Status__c == 'Submitted') return true;
+            if (pos > 3 && q.GS_Validity_Offer_Status__c == 'Submitted') return true;
+            if (pos > 4 && q.BM_Validity_Offer_Status__c == 'Submitted') return true;
+            return false;
         }
 
         private Integer getValidityOfferHierarchyIdx(Quote q, Id approverId) {
@@ -2159,6 +2297,8 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public Integer  finalApproverHierarchyPosition;
         @AuraEnabled public Boolean  isHigherHierarchy;
         @AuraEnabled public Boolean  canViewReadOnly;
+        @AuraEnabled public Boolean  skipSoaRestrictions;
+        @AuraEnabled public Boolean  isFinalApproverWithPendingLower;
 
         public TotalValueApprovalWrapper() {}
 
@@ -2208,6 +2348,20 @@ public without sharing class SalesPriceApprovalForQuotation {
                                     this.finalApproverHierarchyPosition != null &&
                                     this.currentUserHierarchyPosition > this.finalApproverHierarchyPosition;
             this.canViewReadOnly = this.isHigherHierarchy;
+            this.isFinalApproverWithPendingLower =
+                !this.isHigherHierarchy &&
+                this.currentUserHierarchyPosition != null &&
+                this.finalApproverHierarchyPosition != null &&
+                this.currentUserHierarchyPosition == this.finalApproverHierarchyPosition &&
+                isAnyTotalValueLowerLevelSubmitted(q, this.finalApproverHierarchyPosition);
+        }
+
+        private Boolean isAnyTotalValueLowerLevelSubmitted(Quote q, Integer pos) {
+            if (pos > 1 && q.SM_Value_Status__c == 'Submitted') return true;
+            if (pos > 2 && q.CH_Value_Status__c == 'Submitted') return true;
+            if (pos > 3 && q.GS_Value_Status__c == 'Submitted') return true;
+            if (pos > 4 && q.BM_Value_Status__c == 'Submitted') return true;
+            return false;
         }
 
         private void setTotalValueEditPermissions(Quote q) {
@@ -2250,6 +2404,8 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public Integer  finalApproverHierarchyPosition;
         @AuraEnabled public Boolean  isHigherHierarchy;
         @AuraEnabled public Boolean  canViewReadOnly;
+        @AuraEnabled public Boolean  skipSoaRestrictions;
+        @AuraEnabled public Boolean  isFinalApproverWithPendingLower;
 
         public MinimumOfferApprovalWrapper() {}
 
@@ -2289,6 +2445,19 @@ public without sharing class SalesPriceApprovalForQuotation {
                                     this.finalApproverHierarchyPosition != null &&
                                     this.currentUserHierarchyPosition > this.finalApproverHierarchyPosition;
             this.canViewReadOnly = this.isHigherHierarchy;
+            this.isFinalApproverWithPendingLower =
+                !this.isHigherHierarchy &&
+                this.currentUserHierarchyPosition != null &&
+                this.finalApproverHierarchyPosition != null &&
+                this.currentUserHierarchyPosition == this.finalApproverHierarchyPosition &&
+                isAnyMinimumOfferLowerLevelSubmitted(q, this.finalApproverHierarchyPosition);
+        }
+
+        private Boolean isAnyMinimumOfferLowerLevelSubmitted(Quote q, Integer pos) {
+            // Min offer levels start at GS (position 3)
+            if (pos > 3 && q.GS_Min_Offer_Status__c == 'Submitted') return true;
+            if (pos > 4 && q.BM_Min_Offer_Status__c == 'Submitted') return true;
+            return false;
         }
 
         private void setMinimumOfferEditPermissions(Quote q) {

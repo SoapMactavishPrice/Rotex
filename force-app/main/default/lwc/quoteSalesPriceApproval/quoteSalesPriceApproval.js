@@ -3,7 +3,6 @@ import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getAllQuotations from '@salesforce/apex/SalesPriceApprovalForQuotation.getAllQuotations';
 import updateQuoteLineItem from '@salesforce/apex/SalesPriceApprovalForQuotation.updateQuoteLineItem';
-import updateWarrantyApproval from '@salesforce/apex/SalesPriceApprovalForQuotation.updateWarrantyApproval';
 import submitWarrantyApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle';
 import submitValidityOfferApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle';
 import submitTotalValueApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitTotalValueApprovalSingle';
@@ -152,12 +151,38 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
                     return quote.hasLineItems || dashboardRows.length > 0;
                 });
+
+                // ── Re-apply Skip SOA editable-field snapshots if the toggle is still ON ──
+                // After a submit + re-fetch, processQuote resets skipEditableCommentFields/StatusFields
+                // to {}. Re-compute them from the fresh server data so the UI stays consistent.
+                if (this.skipSoaRestrictions) {
+                    this.applySkipSoaToQuotes();
+                }
             })
             .catch(error => {
                 this.showToast('Error', error.body.message, 'error');
                 this.redirectToHome();
                 setTimeout(() => { window.location.reload(); }, 2500);
             });
+    }
+
+    /**
+     * Re-applies Skip SOA editable-field snapshots to all line items using the
+     * current (freshly fetched) data, then rebuilds displayRows and approval
+     * dashboards. Called automatically by fetchQuotes() when Skip SOA is ON.
+     */
+    applySkipSoaToQuotes() {
+        if (!this.skipSoaRestrictions || !this.quotes) return;
+        this.quotes = this.quotes.map(quote => {
+            const quoteLineItems = (quote.quoteLineItems || []).map(item => ({
+                ...item,
+                skipSoaRestrictions:       true,
+                skipEditableCommentFields: this.getSkipEditableCommentFields(item),
+                skipEditableStatusFields:  this.getSkipEditableStatusFields(item)
+            }));
+            return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems) };
+        });
+        this.refreshExpandedApprovalDashboards();
     }
 
     processQuote(q) {
@@ -168,7 +193,14 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             isEditable: item.approvalStatus === 'Submitted',
             skipSoaRestrictions: this.skipSoaRestrictions,
             skipEditableCommentFields: item.skipEditableCommentFields || {},
-            skipEditableStatusFields: item.skipEditableStatusFields || {}
+            skipEditableStatusFields: item.skipEditableStatusFields || {},
+            // Snapshot the backend statuses at load time so that Skip SOA "already decided"
+            // checks always compare against the persisted value, not the live UI state.
+            origSalesManagerStatus:         item.salesManagerStatus,
+            origCountryContinentSalesStatus: item.countryContinentSalesStatus,
+            origGlobalSalesHeadStatus:       item.globalSalesHeadStatus,
+            origRotexBoardMemberStatus:      item.rotexBoardMemberStatus,
+            origManagingDirectorStatus:      item.managingDirectorStatus
         }));
 
         return {
@@ -416,13 +448,31 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const config = this.getCombinedApprovalConfig(type);
         if (!config) return false;
         const levels = ['sm', 'ch', 'gs', 'bm', 'md'];
-        return levels.some(level => {
+
+        // Normal case: current user IS the final approver and their status is still Submitted
+        const isFinalApproverEditing = levels.some(level => {
             const isCurrentUser = !!data[`is${this.capitalize(level)}CurrentUser`];
             const originalStatus = data[`original${this.capitalize(level)}${config.statusSuffix}`];
             return isCurrentUser &&
                 this.isFinalApproverLevel(data, level) &&
                 originalStatus === 'Submitted';
         });
+        if (isFinalApproverEditing) return true;
+
+        // Skip SOA case: higher hierarchy user can also edit the requested value —
+        // but ONLY if the final approver has NOT yet decided (Approved/Rejected in backend).
+        // The options are already filtered to the final approver's SOA level in
+        // filterRequestedValueOptionsBySoa, and Apex validates against the same level.
+        if (this.skipSoaRestrictions && !!data.isHigherHierarchy) {
+            const finalApproverStillPending = levels.some(level => {
+                if (!this.isFinalApproverLevel(data, level)) return false;
+                const originalStatus = data[`original${this.capitalize(level)}${config.statusSuffix}`];
+                return originalStatus !== 'Approved' && originalStatus !== 'Rejected';
+            });
+            if (finalApproverStillPending) return true;
+        }
+
+        return false;
     }
 
     buildApprovalApprover(type, data, config, level) {
@@ -481,13 +531,15 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             !isCurrentUser && isFinalApproverForThisLevel && isAtOrBelowFinal && !isAlreadyDecidedByBackend;
         // ─────────────────────────────────────────────────────────────────
 
-        // Skip SOA: final approver's own level is always editable for status + comments
-        // (even if their original status is not 'Submitted')
-        const isOwnFinalLevelSkipSoa = this.skipSoaRestrictions && isCurrentUser && isFinalApproverForThisLevel;
+        // Skip SOA: final approver's own level is editable for status + comments
+        // — but ONLY when the backend status is not already decided (Approved/Rejected).
+        // If GS has already approved and saved, Skip SOA must not re-enable that row.
+        const isOwnFinalLevelSkipSoa = this.skipSoaRestrictions && isCurrentUser &&
+            isFinalApproverForThisLevel && !isAlreadyDecidedByBackend;
 
-        // Skip SOA: any user's own level always has comment input enabled
-        // (covers Issue 3 — CH below GS as final, and Issue 2 — GS as final with non-Submitted status)
-        const isOwnLevelWithSkipSoa = this.skipSoaRestrictions && isCurrentUser;
+        // Skip SOA: any user's own level has comment input enabled
+        // — again, only when the backend status is not already decided.
+        const isOwnLevelWithSkipSoa = this.skipSoaRestrictions && isCurrentUser && !isAlreadyDecidedByBackend;
 
         // Status combobox: server-granted OR Skip SOA higher/pending managing final approver's row
         //                  OR final approver's own level with Skip SOA
@@ -995,8 +1047,14 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 const isSkipComment  = !!(item.skipEditableCommentFields && item.skipEditableCommentFields[soa.commentsField] === true);
                 const isSkipStatus   = !!(item.skipEditableStatusFields  && item.skipEditableStatusFields[soa.statusField]   === true);
                 const isOwnFinalRow  = item.isFinalDiscountApprover && !!soa.isCurrentUserRow;
+                // Non-final approver's own row: included in sequential chain so providing
+                // own comment triggers the requirement for lower levels too.
+                // Use originalStatus so a UI-only status change doesn't wrongly exclude the row.
+                const soaOrigStatus  = soa.originalStatus || soa.status || '';
+                const isOwnSkipRow   = !item.isFinalDiscountApprover && !!soa.isCurrentUserRow &&
+                    soaOrigStatus !== 'Approved' && soaOrigStatus !== 'Rejected';
 
-                if (!isSkipComment && !isSkipStatus && !isOwnFinalRow) continue;
+                if (!isSkipComment && !isSkipStatus && !isOwnFinalRow && !isOwnSkipRow) continue;
 
                 const comments = soa.commentsValue || '';
                 const status   = soa.status        || '';
@@ -1346,14 +1404,21 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     this.isFinalPreviousHierarchyRow(item, soa) &&
                     !!(item.skipEditableStatusFields && item.skipEditableStatusFields[soa.statusField] === true);
 
+                // Use the persisted (original) status for all "already decided" guards so that
+                // the final approver can still change their status/comment in-session via Skip SOA
+                // (soa.status changes in-memory as they type, originalStatus does not).
+                const soaOriginalStatus = soa.originalStatus || soa.status || '';
+
                 const isFinalApproverOwnRowWithSkip =
                     this.skipSoaRestrictions &&
                     item.isFinalDiscountApprover &&
-                    soa.isCurrentUserRow;
+                    soa.isCurrentUserRow &&
+                    soaOriginalStatus !== 'Approved' && soaOriginalStatus !== 'Rejected';
 
-                // Skip SOA: always allow the current user to see their own comment input
-                // (even when their status is already Approved — e.g. GS below BM as final approver)
-                const isOwnRowWithSkipSoa = this.skipSoaRestrictions && soa.isCurrentUserRow;
+                // Skip SOA: allow the current user to see their own comment input —
+                // only when backend status is NOT already decided.
+                const isOwnRowWithSkipSoa = this.skipSoaRestrictions && soa.isCurrentUserRow &&
+                    soaOriginalStatus !== 'Approved' && soaOriginalStatus !== 'Rejected';
 
                 const showStatusCombobox = (item.isFinalDiscountApprover && soa.isCurrentUserRow && item.isEditable)
                                         || skipFinalStatusEnabled
@@ -1392,7 +1457,21 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     prevSoaComments:  soa.previousCommentsValue || '',
                     soaComments:      soa.commentsValue || '',
                     soaCommentsField: soa.commentsField,
-                    showDiscountInput: idx === 0 && item.isFinalDiscountApprover && item.isEditable,
+                    // Issue 2: with Skip SOA ON, higher hierarchy users (above the final approver)
+                    // can also edit the discount % — but ONLY if the final approver has NOT yet
+                    // decided (Approved/Rejected in backend). Apex validation uses the final
+                    // approver's SOA level for the max-discount check.
+                    showDiscountInput: idx === 0 && (
+                        (item.isFinalDiscountApprover && item.isEditable) ||
+                        (this.skipSoaRestrictions &&
+                            maxHierarchyIndex != null &&
+                            this.getCurrentUserHierarchyIndex(item) != null &&
+                            this.getCurrentUserHierarchyIndex(item) > maxHierarchyIndex &&
+                            // Guard: final approver must not have already decided in backend
+                            finalLevel != null &&
+                            (finalLevel.originalStatus || finalLevel.status || '') !== 'Approved' &&
+                            (finalLevel.originalStatus || finalLevel.status || '') !== 'Rejected')
+                    ),
                     showStatusCombobox,
                     showStatusText:   !showStatusCombobox,
                     showCommentInput,
@@ -1408,7 +1487,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return [
             {
                 label: 'SM', name: item.salesManagerName, approverId: item.salesManagerId,
-                status: item.salesManagerStatus, statusField: 'Sales_Manager_Status__c',
+                status: item.salesManagerStatus,
+                originalStatus: item.origSalesManagerStatus,
+                statusField: 'Sales_Manager_Status__c',
                 dateTime: item.salesManagerDateTime, commentsField: 'Sales_Manager_Comments',
                 commentsValue: item.Sales_Manager_Comments,
                 previousCommentsValue: item.prevSalesManagerComments,
@@ -1416,7 +1497,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             },
             {
                 label: 'CH', name: item.countryContinentSalesName, approverId: item.countryContinentSalesId,
-                status: item.countryContinentSalesStatus, statusField: 'Country_Continent_Sales_H_LOB_Status__c',
+                status: item.countryContinentSalesStatus,
+                originalStatus: item.origCountryContinentSalesStatus,
+                statusField: 'Country_Continent_Sales_H_LOB_Status__c',
                 dateTime: item.countryHeadDateTime, commentsField: 'Country_Continent_Sales_LOB_Comments',
                 commentsValue: item.Country_Continent_Sales_LOB_Comments,
                 previousCommentsValue: item.prevCountryContinentSalesComments,
@@ -1424,7 +1507,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             },
             {
                 label: 'GS', name: item.globalSalesHeadName, approverId: item.globalSalesHeadId,
-                status: item.globalSalesHeadStatus, statusField: 'Global_Sales_Head_Status__c',
+                status: item.globalSalesHeadStatus,
+                originalStatus: item.origGlobalSalesHeadStatus,
+                statusField: 'Global_Sales_Head_Status__c',
                 dateTime: item.globalSalesHeadDateTime, commentsField: 'Global_Sales_Head_Comments',
                 commentsValue: item.Global_Sales_Head_Comments,
                 previousCommentsValue: item.prevGlobalSalesHeadComments,
@@ -1432,7 +1517,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             },
             {
                 label: 'BM', name: item.rotexBoardMemberName, approverId: item.rotexBoardMemberId,
-                status: item.rotexBoardMemberStatus, statusField: 'Rotex_Board_Member_Status__c',
+                status: item.rotexBoardMemberStatus,
+                originalStatus: item.origRotexBoardMemberStatus,
+                statusField: 'Rotex_Board_Member_Status__c',
                 dateTime: item.rotexBoardMemberDateTime, commentsField: 'Rotex_Board_Member_Comments',
                 commentsValue: item.Rotex_Board_Member_Comments,
                 previousCommentsValue: item.prevRotexBoardMemberComments,
@@ -1440,7 +1527,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             },
             {
                 label: 'MD', name: item.managingDirectorName, approverId: item.managingDirectorId,
-                status: item.managingDirectorStatus, statusField: 'Managing_Director_Status__c',
+                status: item.managingDirectorStatus,
+                originalStatus: item.origManagingDirectorStatus,
+                statusField: 'Managing_Director_Status__c',
                 dateTime: item.managingDirectorDateTime, commentsField: 'Managing_Director_Comments',
                 commentsValue: item.Managing_Director_Comments,
                 previousCommentsValue: item.prevManagingDirectorComments,
@@ -1516,9 +1605,12 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     getSkipEditableCommentFields(item) {
         const editable = {};
         this.getSoaLevels(item).forEach(soa => {
+            // Use the original backend status so toggling Skip SOA off/on after a UI change
+            // still correctly excludes rows that were already decided when the page loaded.
+            const origStatus = soa.originalStatus || soa.status || '';
             if (this.isPreviousHierarchyRow(item, soa.hierarchyIndex) &&
                 !this.hasValue(soa.commentsValue) &&
-                soa.status !== 'Approved' && soa.status !== 'Rejected') {
+                origStatus !== 'Approved' && origStatus !== 'Rejected') {
                 editable[soa.commentsField] = true;
             }
         });
@@ -1528,8 +1620,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     getSkipEditableStatusFields(item) {
         const editable = {};
         this.getSoaLevels(item).forEach(soa => {
+            const origStatus = soa.originalStatus || soa.status || '';
             if (this.isFinalPreviousHierarchyRow(item, soa) &&
-                soa.status !== 'Approved' && soa.status !== 'Rejected') {
+                origStatus !== 'Approved' && origStatus !== 'Rejected') {
                 editable[soa.statusField] = true;
             }
         });

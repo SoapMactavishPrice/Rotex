@@ -270,6 +270,14 @@ public without sharing class SalesPriceApprovalForQuotation {
         Integer finalPos = wrapper.finalApproverHierarchyPosition;
         if (finalPos == null) return;
 
+        // Issue 2: higher hierarchy can also change the Requested Warranty Terms.
+        // Validate against the final approver's SOA level (same as normal path).
+        if (String.isNotBlank(wrapper.warrantyTermsDraft) &&
+            wrapper.warrantyTermsDraft != wrapper.originalWarrantyTermsDraft) {
+            validateWarrantyTermsForApprover(wrapper.warrantyTermsDraft, finalPos);
+            q.Warranty_Terms_Draft__c = wrapper.warrantyTermsDraft;
+        }
+
         if (finalPos > 1 && String.isNotBlank(wrapper.smWarrantyComments) &&
             wrapper.smId != wrapper.finalWarrantyApprover) {
             q.SM_Warranty_Status__c    = 'Approved';
@@ -341,6 +349,14 @@ public without sharing class SalesPriceApprovalForQuotation {
     private static void applySkippedValidityOfferComments(Quote q, ValidityOfferApprovalWrapper wrapper) {
         Integer finalPos = wrapper.finalApproverHierarchyPosition;
         if (finalPos == null) return;
+
+        // Issue 2: higher hierarchy can also change the Requested Validity of Offer.
+        // Validate against the final approver's SOA level (same as normal path).
+        if (String.isNotBlank(wrapper.requestedValidityOfOffer) &&
+            wrapper.requestedValidityOfOffer != wrapper.originalRequestedValidityOfOffer) {
+            validateValidityOfferForApprover(wrapper.requestedValidityOfOffer, finalPos);
+            q.Requested_Validity_Of_Offer__c = wrapper.requestedValidityOfOffer;
+        }
 
         if (finalPos > 1 && String.isNotBlank(wrapper.smValidityOfferComments) &&
             wrapper.smId != wrapper.finalValidityOfferApprover) {
@@ -1082,42 +1098,37 @@ public without sharing class SalesPriceApprovalForQuotation {
         String minimumOfferApprovalJson
     ) {
         Savepoint sp = Database.setSavepoint();
-        try {
-            if (String.isNotBlank(quotationListStringObject)) {
-                assertSuccessfulSubmission(
-                    'Discount',
-                    updateQuoteLineItem(quotationListStringObject)
-                );
-            }
-            if (String.isNotBlank(warrantyApprovalJson)) {
-                assertSuccessfulSubmission(
-                    'Warranty Terms',
-                    submitWarrantyApprovalSingle(warrantyApprovalJson)
-                );
-            }
-            if (String.isNotBlank(totalValueApprovalJson)) {
-                assertSuccessfulSubmission(
-                    'Total Value',
-                    submitTotalValueApprovalSingle(totalValueApprovalJson)
-                );
-            }
-            if (String.isNotBlank(minimumOfferApprovalJson)) {
-                assertSuccessfulSubmission(
-                    'Min Offer Value',
-                    submitMinimumOfferApprovalSingle(minimumOfferApprovalJson)
-                );
-            }
-            if (String.isNotBlank(validityOfferApprovalJson)) {
-                assertSuccessfulSubmission(
-                    'Validity Offer',
-                    submitValidityOfferApprovalSingle(validityOfferApprovalJson)
-                );
-            }
-            return 'Success';
-        } catch (Exception e) {
-            Database.rollback(sp);
-            throw new AuraHandledException(e.getMessage());
+        if (String.isNotBlank(quotationListStringObject)) {
+            assertSuccessfulSubmission(
+                'Discount',
+                updateQuoteLineItem(quotationListStringObject)
+            );
         }
+        if (String.isNotBlank(warrantyApprovalJson)) {
+            assertSuccessfulSubmission(
+                'Warranty Terms',
+                submitWarrantyApprovalSingle(warrantyApprovalJson)
+            );
+        }
+        if (String.isNotBlank(totalValueApprovalJson)) {
+            assertSuccessfulSubmission(
+                'Total Value',
+                submitTotalValueApprovalSingle(totalValueApprovalJson)
+            );
+        }
+        if (String.isNotBlank(minimumOfferApprovalJson)) {
+            assertSuccessfulSubmission(
+                'Min Offer Value',
+                submitMinimumOfferApprovalSingle(minimumOfferApprovalJson)
+            );
+        }
+        if (String.isNotBlank(validityOfferApprovalJson)) {
+            assertSuccessfulSubmission(
+                'Validity Offer',
+                submitValidityOfferApprovalSingle(validityOfferApprovalJson)
+            );
+        }
+        return 'Success';
     }
 
     private static void assertSuccessfulSubmission(String label, String result) {
@@ -1729,6 +1740,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                String.isNotBlank(q.MD_Min_Offer_Status__c);
     }
 
+    @TestVisible
     private static Boolean isWarrantyFinallyDecided(Quote q) {
         Id finalId = q.Final_Warranty_Terms_Approver__c;
         if (finalId == null) return false;
@@ -1740,6 +1752,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         return false;
     }
 
+    @TestVisible
     private static Boolean isValidityOfferFinallyDecided(Quote q) {
         Id finalId = q.Final_Validity_Offer_Approver__c;
         if (finalId == null) return false;
@@ -1751,6 +1764,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         return false;
     }
 
+    @TestVisible
     private static Boolean isTotalValueFinallyDecided(Quote q) {
         Id finalId = q.Final_Total_Value_Approver__c;
         if (finalId == null) return false;
@@ -1762,6 +1776,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         return false;
     }
 
+    @TestVisible
     private static Boolean isMinimumOfferFinallyDecided(Quote q) {
         Id finalId = q.Final_Minimum_Offer_Value_Approver__c;
         if (finalId == null) return false;
@@ -1781,6 +1796,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         return null;
     }
 
+    @TestVisible
     private static Boolean warrantyAnyLowerSubmitted(Quote q, Integer pos) {
         if (pos > 1 && q.SM_Warranty_Status__c == 'Submitted') return true;
         if (pos > 2 && q.CH_Warranty_Status__c == 'Submitted') return true;

@@ -1664,4 +1664,1031 @@ private class SalesPriceApprovalForQuotationTest {
             Test.stopTest();
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // applyLowerHierarchySkippedWarrantyComments
+    // Positions reachable via lower-hierarchy path: 1, 2, 3, 4
+    // ═══════════════════════════════════════════════════════════════════
+
+    @isTest
+    static void testLowerHierarchySkip_Warranty_Position1() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com'  LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'   LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.WarrantyApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.WarrantyApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 1;        // SM is below final
+        w.finalApproverHierarchyPosition = 2;
+        w.smId                           = sm.Id;
+        w.isSmCurrentUser                = true;
+        w.smWarrantyComments             = 'SM lower-hierarchy skip';  // hits == 1 branch
+        w.finalWarrantyApprover          = ch.Id;
+
+        System.runAs(sm) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    @isTest
+    static void testLowerHierarchySkip_Warranty_Position2_CascadesSM() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com'  LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'   LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'    LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.WarrantyApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.WarrantyApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 2;        // CH is below final
+        w.finalApproverHierarchyPosition = 3;
+        w.smId = sm.Id; w.smWarrantyComments = 'SM auto-cascade'; // hits > 1 block
+        w.chId = ch.Id; w.isChCurrentUser = true;
+        w.chWarrantyComments             = 'CH lower skip';        // hits == 2 branch
+        w.finalWarrantyApprover          = gs.Id;
+
+        System.runAs(ch) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    @isTest
+    static void testLowerHierarchySkip_Warranty_Position3_CascadesSM_CH() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com'  LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'   LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'    LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'         LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.WarrantyApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.WarrantyApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 3;         // GS is below final
+        w.finalApproverHierarchyPosition = 4;
+        w.smId = sm.Id; w.smWarrantyComments = 'SM cascade'; // > 1
+        w.chId = ch.Id; w.chWarrantyComments = 'CH cascade'; // > 2
+        w.gsId = gs.Id; w.isGsCurrentUser = true;
+        w.gsWarrantyComments             = 'GS lower skip';   // == 3
+        w.finalWarrantyApprover          = bm.Id;
+
+        System.runAs(gs) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    @isTest
+    static void testLowerHierarchySkip_Warranty_Position4_CascadesSM_CH_GS() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com'  LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'   LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'    LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'         LIMIT 1];
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com'            LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.WarrantyApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.WarrantyApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 4;         // BM is below final
+        w.finalApproverHierarchyPosition = 5;
+        w.smId = sm.Id; w.smWarrantyComments = 'SM cascade'; // > 1
+        w.chId = ch.Id; w.chWarrantyComments = 'CH cascade'; // > 2
+        w.gsId = gs.Id; w.gsWarrantyComments = 'GS cascade'; // > 3
+        w.bmId = bm.Id; w.isBmCurrentUser = true;
+        w.bmWarrantyComments             = 'BM lower skip';   // == 4
+        w.finalWarrantyApprover          = md.Id;
+
+        System.runAs(bm) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // applyLowerHierarchySkippedTotalValueComments
+    // ═══════════════════════════════════════════════════════════════════
+
+    @isTest
+    static void testLowerHierarchySkip_TotalValue_Position1() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.TotalValueApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.TotalValueApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 1;
+        w.finalApproverHierarchyPosition = 2;
+        w.smId                           = sm.Id;
+        w.isSmCurrentUser                = true;
+        w.smValueComments                = 'SM lower skip total value'; // == 1 branch
+        w.finalTotalValueApprover        = ch.Id;
+
+        System.runAs(sm) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitTotalValueApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    @isTest
+    static void testLowerHierarchySkip_TotalValue_Position2_CascadesSM() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'   LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.TotalValueApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.TotalValueApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 2;
+        w.finalApproverHierarchyPosition = 3;
+        w.smId = sm.Id; w.smValueComments = 'SM cascade'; // > 1
+        w.chId = ch.Id; w.isChCurrentUser = true;
+        w.chValueComments                = 'CH lower skip'; // == 2
+        w.finalTotalValueApprover        = gs.Id;
+
+        System.runAs(ch) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitTotalValueApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    @isTest
+    static void testLowerHierarchySkip_TotalValue_Position3_CascadesSM_CH() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'   LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'        LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.TotalValueApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.TotalValueApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 3;
+        w.finalApproverHierarchyPosition = 4;
+        w.smId = sm.Id; w.smValueComments = 'SM cascade'; // > 1
+        w.chId = ch.Id; w.chValueComments = 'CH cascade'; // > 2
+        w.gsId = gs.Id; w.isGsCurrentUser = true;
+        w.gsValueComments                = 'GS lower skip'; // == 3
+        w.finalTotalValueApprover        = bm.Id;
+
+        System.runAs(gs) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitTotalValueApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    @isTest
+    static void testLowerHierarchySkip_TotalValue_Position4_CascadesSM_CH_GS() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'   LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'        LIMIT 1];
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com'           LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.TotalValueApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.TotalValueApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 4;
+        w.finalApproverHierarchyPosition = 5;
+        w.smId = sm.Id; w.smValueComments = 'SM cascade'; // > 1
+        w.chId = ch.Id; w.chValueComments = 'CH cascade'; // > 2
+        w.gsId = gs.Id; w.gsValueComments = 'GS cascade'; // > 3
+        w.bmId = bm.Id; w.isBmCurrentUser = true;
+        w.bmValueComments                = 'BM lower skip'; // == 4
+        w.finalTotalValueApprover        = md.Id;
+
+        System.runAs(bm) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitTotalValueApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // applyLowerHierarchySkippedValidityOfferComments
+    // ═══════════════════════════════════════════════════════════════════
+
+    @isTest
+    static void testLowerHierarchySkip_ValidityOffer_Position1() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 1;
+        w.finalApproverHierarchyPosition = 2;
+        w.smId                           = sm.Id;
+        w.isSmCurrentUser                = true;
+        w.smValidityOfferComments        = 'SM lower skip validity'; // == 1 branch
+        w.finalValidityOfferApprover     = ch.Id;
+
+        System.runAs(sm) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    @isTest
+    static void testLowerHierarchySkip_ValidityOffer_Position2_CascadesSM() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'   LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 2;
+        w.finalApproverHierarchyPosition = 3;
+        w.smId = sm.Id; w.smValidityOfferComments = 'SM cascade'; // > 1
+        w.chId = ch.Id; w.isChCurrentUser = true;
+        w.chValidityOfferComments        = 'CH lower skip'; // == 2
+        w.finalValidityOfferApprover     = gs.Id;
+
+        System.runAs(ch) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    @isTest
+    static void testLowerHierarchySkip_ValidityOffer_Position3_CascadesSM_CH() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'   LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'        LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 3;
+        w.finalApproverHierarchyPosition = 4;
+        w.smId = sm.Id; w.smValidityOfferComments = 'SM cascade'; // > 1
+        w.chId = ch.Id; w.chValidityOfferComments = 'CH cascade'; // > 2
+        w.gsId = gs.Id; w.isGsCurrentUser = true;
+        w.gsValidityOfferComments        = 'GS lower skip'; // == 3
+        w.finalValidityOfferApprover     = bm.Id;
+
+        System.runAs(gs) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    @isTest
+    static void testLowerHierarchySkip_ValidityOffer_Position4_CascadesSM_CH_GS() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'   LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'        LIMIT 1];
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com'           LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 4;
+        w.finalApproverHierarchyPosition = 5;
+        w.smId = sm.Id; w.smValidityOfferComments = 'SM cascade'; // > 1
+        w.chId = ch.Id; w.chValidityOfferComments = 'CH cascade'; // > 2
+        w.gsId = gs.Id; w.gsValidityOfferComments = 'GS cascade'; // > 3
+        w.bmId = bm.Id; w.isBmCurrentUser = true;
+        w.bmValidityOfferComments        = 'BM lower skip'; // == 4
+        w.finalValidityOfferApprover     = md.Id;
+
+        System.runAs(bm) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // applyLowerHierarchySkippedMinimumOfferComments
+    // Hierarchy starts at position 3 (GS), so reachable positions: 3, 4
+    // ═══════════════════════════════════════════════════════════════════
+
+    @isTest
+    static void testLowerHierarchySkip_MinimumOffer_Position3() {
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'      LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 3;         // GS is below final
+        w.finalApproverHierarchyPosition = 4;
+        w.gsId                           = gs.Id;
+        w.isGsCurrentUser                = true;
+        w.gsMinOfferComments             = 'GS lower skip min offer'; // == 3 branch
+        w.finalMinimumOfferValueApprover = bm.Id;
+
+        System.runAs(gs) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    @isTest
+    static void testLowerHierarchySkip_MinimumOffer_Position4_CascadesGS() {
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'      LIMIT 1];
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com'         LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
+        w.quoteId                        = q.Id;
+        w.updated                        = true;
+        w.skipSoaRestrictions            = true;
+        w.isHigherHierarchy              = false;
+        w.isFinalApproverWithPendingLower = false;
+        w.currentUserHierarchyPosition   = 4;         // BM is below final
+        w.finalApproverHierarchyPosition = 5;
+        w.gsId = gs.Id; w.gsMinOfferComments = 'GS cascade'; // > 3 block
+        w.bmId = bm.Id; w.isBmCurrentUser = true;
+        w.bmMinOfferComments             = 'BM lower skip'; // == 4 branch
+        w.finalMinimumOfferValueApprover = md.Id;
+
+        System.runAs(bm) {
+            Test.startTest();
+            String result = SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(w));
+            Test.stopTest();
+            System.assertEquals('Success', result);
+        }
+    }
+
+    /** Inserts one SOA_Matrix__c row per profile pattern so every branch
+     *  of getSoaPositionByProfile and both normalise methods gets hit. */
+    private static void insertAllSoaMatrices() {
+        insert new List<SOA_Matrix__c>{
+            // pos 0  – \bsales rep\b
+            new SOA_Matrix__c( SOA_Profile__c='Sales Rep',
+                Warranty_Terms__c='12 Months',
+                Validity_of_Offer__c='30 Days',  Max_Discount__c=5),
+            // pos 1  – \bsales manager\b
+            new SOA_Matrix__c(SOA_Profile__c='Sales Manager',
+                Warranty_Terms__c='24 Months',
+                Validity_of_Offer__c='60 Days',  Max_Discount__c=10),
+            // pos 2  – \bcountry\b
+            new SOA_Matrix__c(SOA_Profile__c='Country / Continent Sales Head / LOB Head',
+                Warranty_Terms__c='36 Months',
+                Validity_of_Offer__c='90 Days',  Max_Discount__c=20),
+            new SOA_Matrix__c( SOA_Profile__c='Global Sales Head',
+                Warranty_Terms__c='48 Months',
+                Validity_of_Offer__c='180 Days', Max_Discount__c=30),
+            // pos 4  – \bboard\b
+            new SOA_Matrix__c(SOA_Profile__c='Rotex Board Member',
+                Warranty_Terms__c=null, Validity_of_Offer__c='365 Days', Max_Discount__c=40),
+            // pos 5  – \bmanaging director\b
+            new SOA_Matrix__c(SOA_Profile__c='Managing Director / Country Manager',
+                Warranty_Terms__c='More than 48 months',
+                Validity_of_Offer__c='More than 365 Days', Max_Discount__c=50)
+            // pos 5  – \bcountry manager\b (second sub-pattern for position 5)
+        };
+    }
+
+    // @isTest
+    // static void testGetSoaPositionByProfile_AllBranches() {
+    //     insertAllSoaMatrices();   // plants all profile patterns
+
+    //     User sm  = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+    //     User md  = [SELECT Id FROM User WHERE Email = 'md@test.com'           LIMIT 1];
+
+    //     Quote q = [SELECT Id FROM Quote LIMIT 1];
+    //     q.Final_Warranty_Terms_Approver__c = md.Id;   // position 5 → widest allowed set
+    //     q.Final_Validity_Offer_Approver__c = md.Id;
+    //     update q;
+
+    //     Quote fullQ = [
+    //         SELECT Id, Name, QuoteNumber,
+    //             Warranty_Terms_Draft__c, Warranty_Terms__c,
+    //             Sales_Manager__c, Sales_Manager__r.Name,
+    //             Country_Continent_Sales_Head_LOB_Head__c,
+    //                 Country_Continent_Sales_Head_LOB_Head__r.Name,
+    //             Global_Sales_Head__c, Global_Sales_Head__r.Name,
+    //             Rotex_Board_Member__c, Rotex_Board_Member__r.Name,
+    //             Managing_Director_Country_Manager__c,
+    //                 Managing_Director_Country_Manager__r.Name,
+    //             SM_Warranty_Status__c, SM_Warranty_Date_Time__c, SM_Warranty_Comments__c,
+    //             CH_Warranty_Status__c, CH_Warranty_Date_Time__c, CH_Warranty_Comments__c,
+    //             GS_Warranty_Status__c, GS_Warranty_Date_Time__c, GS_Warranty_Comments__c,
+    //             BM_Warranty_Status__c, BM_Warranty_Date_Time__c, BM_Warranty_Comments__c,
+    //             MD_Warranty_Status__c, MD_Warranty_Date_Time__c, MD_Warranty_Comments__c,
+    //             Final_Warranty_Terms_Approver__c,
+    //             Requested_Validity_Of_Offer__c,
+    //             SM_Validity_Offer_Status__c, CH_Validity_Offer_Status__c,
+    //             GS_Validity_Offer_Status__c, BM_Validity_Offer_Status__c,
+    //             MD_Validity_Offer_Status__c, Final_Validity_Offer_Approver__c,
+    //             SM_Validity_Offer_Date_Time__c, CH_Validity_Offer_Date_Time__c,
+    //             GS_Validity_Offer_Date_Time__c, BM_Validity_Offer_Date_Time__c,
+    //             MD_Validity_Offer_Date_Time__c,
+    //             SM_Validity_Offer_Comments__c, CH_Validity_Offer_Comments__c,
+    //             GS_Validity_Offer_Comments__c, BM_Validity_Offer_Comments__c,
+    //             MD_Validity_Offer_Comments__c
+    //         FROM Quote LIMIT 1
+    //     ];
+
+    //     System.runAs(sm) {
+    //         Test.startTest();
+    //         // WarrantyApprovalWrapper.getAllowedWarrantyTermOptions calls getSoaPositionByProfile
+    //         // for every SOA_Matrix row — all 7 branches exercised in a single construction.
+    //         SalesPriceApprovalForQuotation.WarrantyApprovalWrapper ww =
+    //             new SalesPriceApprovalForQuotation.WarrantyApprovalWrapper(fullQ);
+
+    //         // ValidityOfferApprovalWrapper does the same via getAllowedValidityOfferOptions.
+    //         SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper vw =
+    //             new SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper(fullQ);
+    //         Test.stopTest();
+
+    //         System.assertNotEquals(null, ww.allowedWarrantyTerms,  'warranty options should be populated');
+    //         System.assertNotEquals(null, vw.allowedValidityOfferValues, 'validity options should be populated');
+    //     }
+    // }
+
+    /** Branch: contains 'more than 48' → returns 'more-than-48-months' */
+    @isTest
+    static void testNormalizeWarrantyTermValue_MoreThan48() {
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
+
+        insert new SOA_Matrix__c(
+            SOA_Profile__c = 'Managing Director / Country Manager',
+            Warranty_Terms__c = 'More than 48 months',
+            Max_Discount__c = 50
+        );
+
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+        q.Final_Warranty_Terms_Approver__c = md.Id;
+        update q;
+
+        SalesPriceApprovalForQuotation.WarrantyApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.WarrantyApprovalWrapper();
+        w.quoteId = q.Id;          w.updated = true;
+        w.warrantyTermsDraft         = 'More than 48 Months from date of supply';
+        w.originalWarrantyTermsDraft = 'More than 48 Months from date of supply'; // unchanged
+        w.mdId = md.Id;            w.isMdCurrentUser = true;
+        w.mdWarrantyStatus           = 'Approved';
+        w.originalMdWarrantyStatus   = 'Submitted';     // status diff → hasChanges = true
+        w.mdWarrantyComments         = 'Approved';
+        w.finalWarrantyApprover      = md.Id;
+
+        System.runAs(md) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle(JSON.serialize(w)));
+            Test.stopTest();
+        }
+    }
+
+    /** Branch: regex (\d+)\s*months? matches → returns '<N>-months' */
+    @isTest
+    static void testNormalizeWarrantyTermValue_NumericMonths() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+
+        insert new SOA_Matrix__c(
+            SOA_Profile__c = 'Sales Manager',
+            Warranty_Terms__c = '24 Months',
+            Max_Discount__c = 10
+        );
+
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+        q.Final_Warranty_Terms_Approver__c = sm.Id;
+        update q;
+
+        SalesPriceApprovalForQuotation.WarrantyApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.WarrantyApprovalWrapper();
+        w.quoteId = q.Id;          w.updated = true;
+        w.warrantyTermsDraft         = '24 Months from date of supply';
+        w.originalWarrantyTermsDraft = '24 Months from date of supply';
+        w.smId = sm.Id;            w.isSmCurrentUser = true;
+        w.smWarrantyStatus           = 'Approved';
+        w.originalSmWarrantyStatus   = 'Submitted';
+        w.smWarrantyComments         = 'SM approved';
+        w.finalWarrantyApprover      = sm.Id;
+
+        System.runAs(sm) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle(JSON.serialize(w)));
+            Test.stopTest();
+        }
+    }
+
+    /** Branch: no 'more than 48', no month digit → fallback returns normalised string as-is,
+     *  then validateWarrantyTermsForApprover finds no match and throws. */
+    @isTest
+    static void testNormalizeWarrantyTermValue_Fallback_ThrowsOnNoMatch() {
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
+
+        // One SOA row so the options list is non-empty (forces comparison loop to run)
+        insert new SOA_Matrix__c(
+            SOA_Profile__c = 'Managing Director / Country Manager',
+            Warranty_Terms__c = '24 Months',
+            Max_Discount__c = 50
+        );
+
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+        q.Final_Warranty_Terms_Approver__c = md.Id;
+        update q;
+
+        SalesPriceApprovalForQuotation.WarrantyApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.WarrantyApprovalWrapper();
+        w.quoteId = q.Id;   w.updated = true;
+        // No digit-months and no 'more than 48' → hits the final `return normalized` line
+        w.warrantyTermsDraft         = 'Custom Extended Coverage';
+        w.originalWarrantyTermsDraft = 'Original';
+        w.finalWarrantyApprover      = md.Id;
+
+        System.runAs(md) {
+            Test.startTest();
+            try {
+                SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle(JSON.serialize(w));
+                System.assert(false, 'Expected AuraHandledException for unrecognised term');
+            } catch (AuraHandledException ex) {
+                System.assert(true, 'Correctly threw for warranty term above SOA level');
+            }
+            Test.stopTest();
+        }
+    }
+
+    /** Branch: contains 'more than 365' → returns 'more-than-365-days' */
+    @isTest
+    static void testNormalizeValidityOfferValue_MoreThan365() {
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
+
+        insert new SOA_Matrix__c(
+            SOA_Profile__c = 'Managing Director / Country Manager',
+            Validity_of_Offer__c = 'More than 365 Days',
+            Max_Discount__c = 50
+        );
+
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+        q.Final_Validity_Offer_Approver__c = md.Id;
+        update q;
+
+        SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper();
+        w.quoteId = q.Id;   w.updated = true;
+        w.requestedValidityOfOffer         = 'More than 365 Days';
+        w.originalRequestedValidityOfOffer = 'More than 365 Days';
+        w.mdId = md.Id;     w.isMdCurrentUser = true;
+        w.mdValidityOfferStatus            = 'Approved';
+        w.originalMdValidityOfferStatus    = 'Submitted';
+        w.mdValidityOfferComments          = 'MD approved';
+        w.finalValidityOfferApprover       = md.Id;
+
+        System.runAs(md) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle(JSON.serialize(w)));
+            Test.stopTest();
+        }
+    }
+
+    /** Branch: regex (\d+)\s*days? matches → returns '<N>-days' */
+    @isTest
+    static void testNormalizeValidityOfferValue_NumericDays() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+
+        insert new SOA_Matrix__c(
+            SOA_Profile__c = 'Sales Manager',
+            Validity_of_Offer__c = '60 Days',
+            Max_Discount__c = 10
+        );
+
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+        q.Final_Validity_Offer_Approver__c = sm.Id;
+        update q;
+
+        SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper();
+        w.quoteId = q.Id;   w.updated = true;
+        w.requestedValidityOfOffer         = '60 Days';
+        w.originalRequestedValidityOfOffer = '60 Days';
+        w.smId = sm.Id;     w.isSmCurrentUser = true;
+        w.smValidityOfferStatus            = 'Approved';
+        w.originalSmValidityOfferStatus    = 'Submitted';
+        w.smValidityOfferComments          = 'SM approved';
+        w.finalValidityOfferApprover       = sm.Id;
+
+        System.runAs(sm) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle(JSON.serialize(w)));
+            Test.stopTest();
+        }
+    }
+
+    /** Branch: no 'more than 365', no day digit → fallback `return normalized`, then throws */
+    @isTest
+    static void testNormalizeValidityOfferValue_Fallback_ThrowsOnNoMatch() {
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
+
+        insert new SOA_Matrix__c(
+            SOA_Profile__c = 'Managing Director / Country Manager',
+            Validity_of_Offer__c = '60 Days',
+            Max_Discount__c = 50
+        );
+
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+        q.Final_Validity_Offer_Approver__c = md.Id;
+        update q;
+
+        SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper w =
+            new SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper();
+        w.quoteId = q.Id;   w.updated = true;
+        w.requestedValidityOfOffer         = 'Open-ended';   // no digit-days, no more-than-365
+        w.originalRequestedValidityOfOffer = 'Original';
+        w.finalValidityOfferApprover       = md.Id;
+
+        System.runAs(md) {
+            Test.startTest();
+            try {
+                SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle(JSON.serialize(w));
+                System.assert(false, 'Expected AuraHandledException');
+            } catch (AuraHandledException ex) {
+                System.assert(true, 'Correctly threw for validity above SOA level');
+            }
+            Test.stopTest();
+        }
+    }
+
+    // ── warrantyAnyLowerSubmitted ─────────────────────────────────────────────
+
+    @isTest
+    static void testWarrantyAnyLowerSubmitted() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+
+        // pos > 1, SM = Submitted → true
+        q.SM_Warranty_Status__c = 'Submitted';
+        update q;
+        Quote fresh = [SELECT Id, SM_Warranty_Status__c, CH_Warranty_Status__c,
+                            GS_Warranty_Status__c, BM_Warranty_Status__c
+                    FROM Quote LIMIT 1];
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.warrantyAnyLowerSubmitted(fresh, 2),
+                            'pos 2 with SM Submitted should be true');
+
+        // pos > 2, CH = Submitted → true
+        fresh.SM_Warranty_Status__c = null;
+        fresh.CH_Warranty_Status__c = 'Submitted';
+        update fresh;
+        fresh = [SELECT Id, SM_Warranty_Status__c, CH_Warranty_Status__c,
+                        GS_Warranty_Status__c, BM_Warranty_Status__c FROM Quote LIMIT 1];
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.warrantyAnyLowerSubmitted(fresh, 3),
+                            'pos 3 with CH Submitted should be true');
+
+        // pos > 3, GS = Submitted → true
+        fresh.CH_Warranty_Status__c = null;
+        fresh.GS_Warranty_Status__c = 'Submitted';
+        update fresh;
+        fresh = [SELECT Id, SM_Warranty_Status__c, CH_Warranty_Status__c,
+                        GS_Warranty_Status__c, BM_Warranty_Status__c FROM Quote LIMIT 1];
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.warrantyAnyLowerSubmitted(fresh, 4),
+                            'pos 4 with GS Submitted should be true');
+
+        // pos > 4, BM = Submitted → true
+        fresh.GS_Warranty_Status__c = null;
+        fresh.BM_Warranty_Status__c = 'Submitted';
+        update fresh;
+        fresh = [SELECT Id, SM_Warranty_Status__c, CH_Warranty_Status__c,
+                        GS_Warranty_Status__c, BM_Warranty_Status__c FROM Quote LIMIT 1];
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.warrantyAnyLowerSubmitted(fresh, 5),
+                            'pos 5 with BM Submitted should be true');
+
+        // nothing submitted → false
+        fresh.BM_Warranty_Status__c = null;
+        update fresh;
+        fresh = [SELECT Id, SM_Warranty_Status__c, CH_Warranty_Status__c,
+                        GS_Warranty_Status__c, BM_Warranty_Status__c FROM Quote LIMIT 1];
+        System.assertEquals(false, SalesPriceApprovalForQuotation.warrantyAnyLowerSubmitted(fresh, 5),
+                            'no lower submitted should be false');
+    }
+
+    // ── isWarrantyFinallyDecided ──────────────────────────────────────────────
+
+    @isTest
+    static void testIsWarrantyFinallyDecided_AllApproverPositions() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'   LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'        LIMIT 1];
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com'           LIMIT 1];
+
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+
+        // null finalId → false
+        q.Final_Warranty_Terms_Approver__c = null;
+        update q;
+        Quote fresh = fetchFullQuote();
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh),
+                            'null finalId should return false');
+
+        // SM is final, SM Approved → true
+        q.Final_Warranty_Terms_Approver__c = sm.Id;
+        q.SM_Warranty_Status__c = 'Approved';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // SM is final, SM Rejected → true
+        q.SM_Warranty_Status__c = 'Rejected';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // SM is final, SM Submitted (neither) → false
+        q.SM_Warranty_Status__c = 'Submitted';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // CH is final, CH Approved → true
+        q.Final_Warranty_Terms_Approver__c = ch.Id;
+        q.CH_Warranty_Status__c = 'Approved';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // GS is final, GS Approved → true
+        q.Final_Warranty_Terms_Approver__c = gs.Id;
+        q.GS_Warranty_Status__c = 'Approved';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // BM is final, BM Rejected → true
+        q.Final_Warranty_Terms_Approver__c = bm.Id;
+        q.BM_Warranty_Status__c = 'Rejected';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // MD is final, MD Approved → true
+        q.Final_Warranty_Terms_Approver__c = md.Id;
+        q.MD_Warranty_Status__c = 'Approved';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // finalId set but doesn't match any role field → falls through → false
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User stranger = new User(
+            FirstName='X', LastName='Y', Email='stranger@test-cov.com',
+            Username='stranger@test-cov' + System.currentTimeMillis() + '.com',
+            Alias='strgr', TimeZoneSidKey='America/Los_Angeles',
+            LocaleSidKey='en_US', EmailEncodingKey='UTF-8',
+            ProfileId=p.Id, LanguageLocaleKey='en_US'
+        );
+        insert stranger;
+        q.Final_Warranty_Terms_Approver__c = stranger.Id;
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh),
+                            'finalId not matching any approver role should return false');
+    }
+
+    // ── isValidityOfferFinallyDecided ─────────────────────────────────────────
+
+    @isTest
+    static void testIsValidityOfferFinallyDecided_AllApproverPositions() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'   LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'        LIMIT 1];
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com'           LIMIT 1];
+
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+
+        // null finalId → false
+        q.Final_Validity_Offer_Approver__c = null;
+        update q;
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+
+        // SM Approved
+        q.Final_Validity_Offer_Approver__c = sm.Id;
+        q.SM_Validity_Offer_Status__c      = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+
+        // SM Rejected
+        q.SM_Validity_Offer_Status__c = 'Rejected';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+
+        // SM neither → false
+        q.SM_Validity_Offer_Status__c = 'Submitted';
+        update q;
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+
+        // CH, GS, BM, MD each Approved
+        q.Final_Validity_Offer_Approver__c = ch.Id;
+        q.CH_Validity_Offer_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+
+        q.Final_Validity_Offer_Approver__c = gs.Id;
+        q.GS_Validity_Offer_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+
+        q.Final_Validity_Offer_Approver__c = bm.Id;
+        q.BM_Validity_Offer_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+
+        q.Final_Validity_Offer_Approver__c = md.Id;
+        q.MD_Validity_Offer_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+    }
+
+    // ── isTotalValueFinallyDecided ────────────────────────────────────────────
+
+    @isTest
+    static void testIsTotalValueFinallyDecided_AllApproverPositions() {
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'   LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'        LIMIT 1];
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com'           LIMIT 1];
+
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+
+        q.Final_Total_Value_Approver__c = null;
+        update q;
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+
+        q.Final_Total_Value_Approver__c = sm.Id;
+        q.SM_Value_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+
+        q.SM_Value_Status__c = 'Rejected';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+
+        q.SM_Value_Status__c = 'Submitted';
+        update q;
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+
+        q.Final_Total_Value_Approver__c = ch.Id;
+        q.CH_Value_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+
+        q.Final_Total_Value_Approver__c = gs.Id;
+        q.GS_Value_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+
+        q.Final_Total_Value_Approver__c = bm.Id;
+        q.BM_Value_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+
+        q.Final_Total_Value_Approver__c = md.Id;
+        q.MD_Value_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+    }
+
+    // ── isMinimumOfferFinallyDecided ──────────────────────────────────────────
+
+    @isTest
+    static void testIsMinimumOfferFinallyDecided_AllApproverPositions() {
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'      LIMIT 1];
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com'         LIMIT 1];
+
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+
+        // null finalId → false
+        q.Final_Minimum_Offer_Value_Approver__c = null;
+        update q;
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+
+        // GS Approved → true
+        q.Final_Minimum_Offer_Value_Approver__c = gs.Id;
+        q.GS_Min_Offer_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+
+        // GS Rejected → true
+        q.GS_Min_Offer_Status__c = 'Rejected';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+
+        // GS neither → false
+        q.GS_Min_Offer_Status__c = 'Submitted';
+        update q;
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+
+        // BM Approved → true
+        q.Final_Minimum_Offer_Value_Approver__c = bm.Id;
+        q.BM_Min_Offer_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+
+        // BM Rejected → true
+        q.BM_Min_Offer_Status__c = 'Rejected';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+
+        // MD Approved → true
+        q.Final_Minimum_Offer_Value_Approver__c = md.Id;
+        q.MD_Min_Offer_Status__c = 'Approved';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+
+        // MD Rejected → true
+        q.MD_Min_Offer_Status__c = 'Rejected';
+        update q;
+        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+    }
 }

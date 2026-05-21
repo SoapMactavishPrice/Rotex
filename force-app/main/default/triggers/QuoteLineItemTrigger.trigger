@@ -61,7 +61,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
             }
             
             // 2️⃣ Determine which QLIs need approval processing
-            if (Trigger.isInsert || (Trigger.isUpdate && qli.Discount_to_be_offered__c != Trigger.oldMap.get(qli.Id).Discount_to_be_offered__c)) {
+            if (Trigger.isInsert || (Trigger.isUpdate && qli.Discount_to_be_offered__c != Trigger.oldMap.get(qli.Id).Discount_to_be_offered__c && !qli.Do_not_proceed_approval__c)) {
                 System.debug('APPROVAL: QLI needs approval processing');
                 System.debug('Discount_to_be_offered__c: ' + qli.Discount_to_be_offered__c);
                 if (Trigger.isUpdate) {
@@ -90,9 +90,6 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         System.debug('Calling Sequential Approval Handler');
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(Trigger.new, Trigger.oldMap);
         System.debug('=== APPROVAL PROCESS: AFTER UPDATE TRIGGER END ===');
-
-        // Apply discount directly to UnitPrice when no approval is needed.
-        // Runs AFTER save so formula field Discount_as_per_SAP__c is freshly calculated.
         if (!QuoteLineItemApprovalHandler.directDiscountUpdateInProgress) {
             QuoteLineItemApprovalHandler.applyDirectDiscountIfNoApprovalNeeded(Trigger.new, Trigger.oldMap);
         }
@@ -276,11 +273,13 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
                 System.debug('NEGATIVE DISCOUNT: ✓✓ UnitPrice updated directly to ' + newUnitPrice);
                 
                 // ✅ Clear all approval status fields (no approval needed)
-                qli.Sales_Manager_Status__c = null;
-                qli.Country_Continent_Sales_H_LOB_Status__c = null;
-                qli.Global_Sales_Head_Status__c = null;
-                qli.Rotex_Board_Member_Status__c = null;
-                qli.Managing_Director_Status__c = null;
+                if (!qli.Do_not_proceed_approval__c) {
+                    qli.Sales_Manager_Status__c = null;
+                    qli.Country_Continent_Sales_H_LOB_Status__c = null;
+                    qli.Global_Sales_Head_Status__c = null;
+                    qli.Rotex_Board_Member_Status__c = null;
+                    qli.Managing_Director_Status__c = null;
+                }
                 
                 System.debug('NEGATIVE DISCOUNT: ✓ All approval status fields cleared');
             } else {
@@ -319,5 +318,9 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         }
         
         System.debug('=== UNIT PRICE UPDATE: AFTER UPDATE TRIGGER END ===');
+    }
+
+    if (Trigger.isAfter && Trigger.isUpdate) {
+        QuoteLineItemApprovalHandler.updateQLIUnitPrice(Trigger.new);
     }
 }

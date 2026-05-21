@@ -151,7 +151,7 @@ public class QuoteLineItemSequentialApprovalTest {
         QuoteLineItem qli = [SELECT Id, QuoteId, Discount_to_be_offered__c, 
                                     Sales_Manager_Status__c, Country_Continent_Sales_H_LOB_Status__c,
                                     Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
-                                    Global_Sales_Head__c, Rotex_Board_Member__c, 
+                                    Global_Sales_Head__c, Rotex_Board_Member__c, Do_not_proceed_approval__c,
                                     Managing_Director_Country_Manage__c, Product2.Name,
                                     Global_Sales_Head_Status__c, Rotex_Board_Member_Status__c,
                                     Managing_Director_Status__c
@@ -177,7 +177,7 @@ public class QuoteLineItemSequentialApprovalTest {
         QuoteLineItem qli = [SELECT Id, Discount_to_be_offered__c, QuoteId,
                                     Sales_Manager_Status__c, Country_Continent_Sales_H_LOB_Status__c,
                                     Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
-                                    Global_Sales_Head__c, Rotex_Board_Member__c, 
+                                    Global_Sales_Head__c, Rotex_Board_Member__c, Do_not_proceed_approval__c,
                                     Managing_Director_Country_Manage__c, Product2.Name,
                                     Global_Sales_Head_Status__c, Rotex_Board_Member_Status__c,
                                     Managing_Director_Status__c
@@ -204,7 +204,7 @@ public class QuoteLineItemSequentialApprovalTest {
         QuoteLineItem qli = [SELECT Id, Discount_to_be_offered__c, QuoteId,
                                     Sales_Manager_Status__c, Country_Continent_Sales_H_LOB_Status__c,
                                     Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
-                                    Global_Sales_Head__c, Rotex_Board_Member__c, 
+                                    Global_Sales_Head__c, Rotex_Board_Member__c, Do_not_proceed_approval__c,
                                     Managing_Director_Country_Manage__c, Product2.Name,
                                     Global_Sales_Head_Status__c, Rotex_Board_Member_Status__c,
                                     Managing_Director_Status__c
@@ -232,7 +232,7 @@ public class QuoteLineItemSequentialApprovalTest {
         QuoteLineItem qli = [SELECT Id, Discount_to_be_offered__c, QuoteId,
                                     Sales_Manager_Status__c, Country_Continent_Sales_H_LOB_Status__c,
                                     Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
-                                    Global_Sales_Head__c, Rotex_Board_Member__c, 
+                                    Global_Sales_Head__c, Rotex_Board_Member__c, Do_not_proceed_approval__c,
                                     Managing_Director_Country_Manage__c, Product2.Name,
                                     Global_Sales_Head_Status__c, Rotex_Board_Member_Status__c,
                                     Managing_Director_Status__c
@@ -260,7 +260,7 @@ public class QuoteLineItemSequentialApprovalTest {
     static void testDefineNextApprover_SalesManagerApproved_SetCountryHead() {
         QuoteLineItem qli = [SELECT Id, Discount_to_be_offered__c, Sales_Manager_Status__c,
                                     Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head_Status__c,
-                                    Rotex_Board_Member_Status__c, Sales_Manager__c,
+                                    Rotex_Board_Member_Status__c, Sales_Manager__c, Do_not_proceed_approval__c,
                                     Country_Continent_Sales_H_LOB_Status__c, Global_Sales_Head__c,
                                     Rotex_Board_Member__c, Managing_Director_Country_Manage__c,
                                     Managing_Director_Status__c
@@ -286,7 +286,7 @@ public class QuoteLineItemSequentialApprovalTest {
     static void testDefineNextApprover_CountryHeadApproved_SetGlobalHead() {
         QuoteLineItem qli = [SELECT Id, Discount_to_be_offered__c, Country_Continent_Sales_H_LOB_Status__c,
                                     Sales_Manager_Status__c, Global_Sales_Head__c, Rotex_Board_Member_Status__c,
-                                    Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
+                                    Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,Do_not_proceed_approval__c,
                                     Global_Sales_Head_Status__c, Rotex_Board_Member__c,
                                     Managing_Director_Country_Manage__c, Managing_Director_Status__c
                              FROM QuoteLineItem LIMIT 1];
@@ -312,7 +312,7 @@ public class QuoteLineItemSequentialApprovalTest {
         QuoteLineItem qli = [SELECT Id, Discount_to_be_offered__c, Global_Sales_Head_Status__c, 
                                     Country_Continent_Sales_H_LOB_Status__c, Sales_Manager_Status__c,
                                     Global_Sales_Head__c, Rotex_Board_Member_Status__c, Rotex_Board_Member__c,
-                                    Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
+                                    Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,Do_not_proceed_approval__c,
                                     Managing_Director_Country_Manage__c, Managing_Director_Status__c
                              FROM QuoteLineItem LIMIT 1];
         
@@ -337,7 +337,7 @@ public class QuoteLineItemSequentialApprovalTest {
         QuoteLineItem qli = [SELECT Id, Discount_to_be_offered__c, Rotex_Board_Member_Status__c,
                                     Sales_Manager_Status__c, Country_Continent_Sales_H_LOB_Status__c,
                                     Global_Sales_Head_Status__c, Managing_Director_Country_Manage__c,
-                                    Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
+                                    Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,Do_not_proceed_approval__c,
                                     Global_Sales_Head__c, Rotex_Board_Member__c,
                                     Managing_Director_Status__c
                              FROM QuoteLineItem LIMIT 1];
@@ -362,7 +362,7 @@ public class QuoteLineItemSequentialApprovalTest {
     static void testDefineNextApprover_DiscountWithinCurrentLevel() {
         QuoteLineItem qli = [SELECT Id, Discount_to_be_offered__c, Sales_Manager_Status__c,
                                     Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head_Status__c,
-                                    Rotex_Board_Member_Status__c, Sales_Manager__c,
+                                    Rotex_Board_Member_Status__c, Sales_Manager__c,Do_not_proceed_approval__c,
                                     Country_Continent_Sales_H_LOB_Status__c, Global_Sales_Head__c,
                                     Rotex_Board_Member__c, Managing_Director_Country_Manage__c,
                                     Managing_Director_Status__c
@@ -438,7 +438,7 @@ public class QuoteLineItemSequentialApprovalTest {
         QuoteLineItem qli = [SELECT Id, QuoteId, Sales_Manager__c, 
                                     Country_Continent_Sales_Head_LOB_Head__c,
                                     Global_Sales_Head__c, Rotex_Board_Member__c, 
-                                    Managing_Director_Country_Manage__c,
+                                    Managing_Director_Country_Manage__c,Do_not_proceed_approval__c,
                                     Product2.Name, Sales_Manager_Status__c, 
                                     Country_Continent_Sales_H_LOB_Status__c,
                                     Global_Sales_Head_Status__c, Rotex_Board_Member_Status__c, 
@@ -477,7 +477,7 @@ public class QuoteLineItemSequentialApprovalTest {
         QuoteLineItem qli = [SELECT Id, Discount_to_be_offered__c, QuoteId,
                                     Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
                                     Global_Sales_Head__c, Rotex_Board_Member__c, 
-                                    Managing_Director_Country_Manage__c,
+                                    Managing_Director_Country_Manage__c,Do_not_proceed_approval__c,
                                     Product2.Name, Sales_Manager_Status__c, 
                                     Country_Continent_Sales_H_LOB_Status__c,
                                     Global_Sales_Head_Status__c, Rotex_Board_Member_Status__c, 
@@ -507,7 +507,7 @@ public class QuoteLineItemSequentialApprovalTest {
         QuoteLineItem qli = [SELECT Id, Discount_to_be_offered__c, QuoteId,
                                     Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
                                     Global_Sales_Head__c, Rotex_Board_Member__c, 
-                                    Managing_Director_Country_Manage__c,
+                                    Managing_Director_Country_Manage__c,Do_not_proceed_approval__c,
                                     Product2.Name, Sales_Manager_Status__c, 
                                     Country_Continent_Sales_H_LOB_Status__c,
                                     Global_Sales_Head_Status__c, Rotex_Board_Member_Status__c, 
@@ -536,7 +536,7 @@ public class QuoteLineItemSequentialApprovalTest {
     @isTest
     static void testDefineNextApprover_NoOldMap() {
         QuoteLineItem qli = [SELECT Id, Discount_to_be_offered__c, Sales_Manager_Status__c,
-                                    Country_Continent_Sales_Head_LOB_Head__c,
+                                    Country_Continent_Sales_Head_LOB_Head__c,Do_not_proceed_approval__c,
                                     Country_Continent_Sales_H_LOB_Status__c, Global_Sales_Head__c,
                                     Sales_Manager__c, Global_Sales_Head_Status__c,
                                     Rotex_Board_Member__c, Rotex_Board_Member_Status__c,
@@ -569,7 +569,7 @@ public class QuoteLineItemSequentialApprovalTest {
         List<QuoteLineItem> qliList = [SELECT Id, Discount_to_be_offered__c, QuoteId,
                                               Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
                                               Global_Sales_Head__c, Rotex_Board_Member__c, 
-                                              Managing_Director_Country_Manage__c,
+                                              Managing_Director_Country_Manage__c,Do_not_proceed_approval__c,
                                               Product2.Name, Sales_Manager_Status__c, 
                                               Country_Continent_Sales_H_LOB_Status__c,
                                               Global_Sales_Head_Status__c, 

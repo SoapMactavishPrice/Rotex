@@ -565,7 +565,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         if (wrapper.skipSoaRestrictions == true &&
             (wrapper.isHigherHierarchy == true || wrapper.isFinalApproverWithPendingLower == true)) {
             applySkippedWarrantyComments(q, wrapper);
-            update q;
+            updateWarrantyApprovalQuote(q);
             return 'Success';
         }
         // Lower-hierarchy Skip SOA: current user is below the final approver

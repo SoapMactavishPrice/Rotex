@@ -18,6 +18,9 @@ public class QuoteLineItemSequentialApprovalHandler {
         Set<Id> quoteIds = new Set<Id>();
         Set<Id> qliIds = new Set<Id>();
         for (QuoteLineItem qli : qliList) {
+            if (qli.Do_not_proceed_approval__c) {
+                continue;
+            }
             if (qli.Id != null) qliIds.add(qli.Id);
             if (qli.QuoteId != null) quoteIds.add(qli.QuoteId);
         }
@@ -55,6 +58,9 @@ public class QuoteLineItemSequentialApprovalHandler {
         List<QuoteLineItem> qlisToUpdate = new List<QuoteLineItem>();
 
         for (QuoteLineItem inputQli : qliList) {
+            if (inputQli.Do_not_proceed_approval__c) {
+                continue;
+            }
             System.debug('');
             System.debug('--- SEQUENTIAL: Processing QLI: ' + inputQli.Id + ' ---');
 

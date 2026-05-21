@@ -8,7 +8,7 @@ public class editDiscountQuantityController {
             Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c, Rotex_Board_Member__c, 
             Managing_Director_Country_Manage__c, Is_Discount_Approved__c, Previous_Discount__c,
             CurrencyIsoCode,
-            Sales_Manager_Status__c, Sales_Manager_Comments__c, Sales_Manager_Date_Time__c,
+            Sales_Manager_Status__c, Sales_Manager_Comments__c, Sales_Manager_Date_Time__c, Is_QLI_Approved_going_for_Approval__c,
 
             Country_Continent_Sales_H_LOB_Status__c, 
             Country_Continent_Sales_LOB_Comments__c, 
@@ -44,34 +44,39 @@ public class editDiscountQuantityController {
             // Check if this is a re-approval scenario (Is_Discount_Approved__c is true and Previous_Discount__c is set)
             if (Test.isRunningTest() || (qli.Is_Discount_Approved__c == true && qli.Previous_Discount__c != null && qli.New_Discount_Entered__c)) {
                 System.debug('qli.Rotex_Board_Member_Date_Time__c:  '+qli.Rotex_Board_Member_Date_Time__c);
-                qli.Prev_Sales_Manager_Comments__c = qli.Sales_Manager_Comments__c;
-                qli.Prev_Country_Continent_Sales_Comments__c = qli.Country_Continent_Sales_LOB_Comments__c;
-                qli.Prev_Global_Sales_Head_Comments__c = qli.Global_Sales_Head_Comments__c;
-                qli.Prev_Rotex_Board_Member_Comments__c = qli.Rotex_Board_Member_Comments__c;
-                qli.Prev_Managing_Director_Comments__c = qli.Managing_Director_Comments__c;
 
-                qli.Prev_Sales_Manager_Date_Time__c = qli.Sales_Manager_Date_Time__c;
-                qli.Prev_Country_Head_Date_Time__c = qli.Country_Head_Date_Time__c;
-                qli.Prev_Global_Sales_Head_Date_Time__c = qli.Global_Sales_Head_Date_Time__c;
-                qli.Prev_Rotex_Board_Member_Date_Time__c = qli.Rotex_Board_Member_Date_Time__c;
-                qli.Prev_Managing_Director_Date_Time__c = qli.Managing_Director_Date_Time__c;
-
-                qli.Sales_Manager_Comments__c = null;
-                qli.Country_Continent_Sales_LOB_Comments__c = null;
-                qli.Global_Sales_Head_Comments__c = null;
-                qli.Rotex_Board_Member_Comments__c = null;
-                qli.Managing_Director_Comments__c = null;
-                qli.Sales_Manager_Date_Time__c = null;
-                qli.Country_Head_Date_Time__c = null;
-                qli.Global_Sales_Head_Date_Time__c = null;
-                qli.Rotex_Board_Member_Date_Time__c = null;
-                qli.Managing_Director_Date_Time__c = null;
-
-                qli.Sales_Manager_Status__c = null;
-                qli.Country_Continent_Sales_H_LOB_Status__c = null;
-                qli.Global_Sales_Head_Status__c = null;
-                qli.Rotex_Board_Member_Status__c = null;
-                qli.Managing_Director_Status__c = null;
+                if (qli.Previous_Discount__c != null && qli.Is_QLI_Approved_going_for_Approval__c && qli.Discount_to_be_offered__c <= qli.Previous_Discount__c) {
+                    qli.Do_not_proceed_approval__c = true;
+                } else {
+                    qli.Prev_Sales_Manager_Comments__c = qli.Sales_Manager_Comments__c;
+                    qli.Prev_Country_Continent_Sales_Comments__c = qli.Country_Continent_Sales_LOB_Comments__c;
+                    qli.Prev_Global_Sales_Head_Comments__c = qli.Global_Sales_Head_Comments__c;
+                    qli.Prev_Rotex_Board_Member_Comments__c = qli.Rotex_Board_Member_Comments__c;
+                    qli.Prev_Managing_Director_Comments__c = qli.Managing_Director_Comments__c;
+    
+                    qli.Prev_Sales_Manager_Date_Time__c = qli.Sales_Manager_Date_Time__c;
+                    qli.Prev_Country_Head_Date_Time__c = qli.Country_Head_Date_Time__c;
+                    qli.Prev_Global_Sales_Head_Date_Time__c = qli.Global_Sales_Head_Date_Time__c;
+                    qli.Prev_Rotex_Board_Member_Date_Time__c = qli.Rotex_Board_Member_Date_Time__c;
+                    qli.Prev_Managing_Director_Date_Time__c = qli.Managing_Director_Date_Time__c;
+    
+                    qli.Sales_Manager_Comments__c = null;
+                    qli.Country_Continent_Sales_LOB_Comments__c = null;
+                    qli.Global_Sales_Head_Comments__c = null;
+                    qli.Rotex_Board_Member_Comments__c = null;
+                    qli.Managing_Director_Comments__c = null;
+                    qli.Sales_Manager_Date_Time__c = null;
+                    qli.Country_Head_Date_Time__c = null;
+                    qli.Global_Sales_Head_Date_Time__c = null;
+                    qli.Rotex_Board_Member_Date_Time__c = null;
+                    qli.Managing_Director_Date_Time__c = null;
+    
+                    qli.Sales_Manager_Status__c = null;
+                    qli.Country_Continent_Sales_H_LOB_Status__c = null;
+                    qli.Global_Sales_Head_Status__c = null;
+                    qli.Rotex_Board_Member_Status__c = null;
+                    qli.Managing_Director_Status__c = null;
+                }
 
                 qli.New_Discount_Entered__c = false;
 
@@ -102,7 +107,6 @@ public class editDiscountQuantityController {
 
         update quoteLineItems;
 
-        // Update Quote Status to 'Need Revision' if new discount was entered
         if (shouldUpdateQuoteStatus && String.isNotBlank(quoteId)) {
             Quote quoteToUpdate = new Quote(
                 Id = quoteId,

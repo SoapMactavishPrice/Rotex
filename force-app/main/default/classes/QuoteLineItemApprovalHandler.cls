@@ -520,4 +520,46 @@ public class QuoteLineItemApprovalHandler {
             }
         }
     }
+
+    public static void updateQLIUnitPrice(List<QuoteLineItem> newQLIs) {
+
+        Set<Id> qliIds = new Set<Id>();
+
+        for (QuoteLineItem qli : newQLIs) {
+            if (qli.Do_not_proceed_approval__c) {
+                qliIds.add(qli.Id);
+            }
+        }
+
+        if (qliIds.isEmpty()) {
+            return;
+        }
+
+        List<QuoteLineItem> qlisToUpdate = new List<QuoteLineItem>();
+
+        for (QuoteLineItem qli : [
+            SELECT Id,
+                ListPrice,
+                Discount_to_be_offered__c,
+                Do_not_proceed_approval__c
+            FROM QuoteLineItem
+            WHERE Id IN :qliIds
+        ]) {
+
+            QuoteLineItem tempQLI = new QuoteLineItem();
+            tempQLI.Id = qli.Id;
+
+            tempQLI.UnitPrice = qli.ListPrice -
+                (qli.ListPrice * (qli.Discount_to_be_offered__c / 100));
+
+            tempQLI.UnitPrice = tempQLI.UnitPrice.setScale(2);
+            tempQLI.Do_not_proceed_approval__c = false;
+
+            qlisToUpdate.add(tempQLI);
+        }
+
+        if (!qlisToUpdate.isEmpty()) {
+            update qlisToUpdate;
+        }
+    }
 }

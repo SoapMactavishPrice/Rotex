@@ -149,7 +149,23 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     handleSave() {
         this.showSpinner = true;
 
-        // Check if any New Discount values were entered
+        const invalidDiscountItem = this.quoteLineItemList.find(item =>
+            item.Is_Discount_Approved__c &&
+            item.newDiscountValue != null &&
+            item.newDiscountValue !== '' &&
+            parseFloat(item.newDiscountValue) < parseFloat(item.Discount_as_per_SAP__c)
+        );
+
+        if (invalidDiscountItem) {
+            this.showToast(
+                'Error',
+                'New Discount Value cannot be less than Discount as per SAP.',
+                'error'
+            );
+            this.showSpinner = false;
+            return;
+        }
+
         const hasNewDiscountEntered = this.quoteLineItemList.some(item => 
             item.Is_Discount_Approved__c && 
             item.newDiscountValue != null && 
@@ -172,11 +188,12 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
                 Global_Sales_Head__c: item.Global_Sales_Head__c,
                 Rotex_Board_Member__c: item.Rotex_Board_Member__c,
                 Managing_Director_Country_Manage__c: item.Managing_Director_Country_Manage__c,
-                Is_Discount_Approved__c: item.Is_Discount_Approved__c
+                Is_Discount_Approved__c: item.Is_Discount_Approved__c,
+                Is_QLI_Approved_going_for_Approval__c: item.Is_QLI_Approved_going_for_Approval__c
             };
 
             if (item.Is_Discount_Approved__c && item.newDiscountValue != null && item.newDiscountValue !== '') {
-    
+
                 updateData.Previous_Discount__c = item.Discount_to_be_offered__c;
                 updateData.Discount_to_be_offered__c = parseFloat(item.newDiscountValue);
                 updateData.New_Discount_Entered__c = true;

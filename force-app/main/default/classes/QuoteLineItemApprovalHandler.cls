@@ -58,7 +58,7 @@ public class QuoteLineItemApprovalHandler {
         // Query related Quotes including Account
         System.debug('APPROVAL: Querying Quotes with Sales_Manager__c and Country_Continent_Sales_Head_LOB_Head__c');
         Map<Id, Quote> quoteMap = new Map<Id, Quote>([
-            SELECT Id, Name, OwnerId, Account.Name,
+            SELECT Id, Name, OwnerId, Account.Name, QuoteNumber,
             Sales_Manager__c,
             Country_Continent_Sales_Head_LOB_Head__c
             FROM Quote WHERE Id IN :quoteIds
@@ -352,6 +352,7 @@ public class QuoteLineItemApprovalHandler {
                     'Dear ' + approverUser.Name + ',<br/><br/>' +
                     'A new discount approval request has been submitted.<br/><br/>' +
                     'Quote: ' + q.Name + '<br/>' +
+                    'Quote Number: ' + q.QuoteNumber + '<br/>' +
                     'Account: ' + (q.Account != null ? q.Account.Name : 'N/A') + '<br/>' +
                     'Quote Owner: ' + owner.Name + '<br/>' +
                     'Product: ' + productName + '<br/>' +

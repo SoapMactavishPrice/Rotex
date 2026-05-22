@@ -33,7 +33,7 @@ public class QuoteLineItemSequentialApprovalHandler {
         Map<Id, Quote> quoteMap = new Map<Id, Quote>();
         if (!quoteIds.isEmpty()) {
             quoteMap = new Map<Id, Quote>([
-                SELECT Id, Name, Account.Name, Sales_Rep__c, Sales_Manager__c, OwnerId,
+                SELECT Id, Name, Account.Name, Sales_Rep__c, Sales_Manager__c, OwnerId, QuoteNumber,
                     Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c,
                     Rotex_Board_Member__c, Managing_Director_Country_Manager__c
                 FROM Quote
@@ -349,6 +349,7 @@ public class QuoteLineItemSequentialApprovalHandler {
             'Dear ' + approver.Name + ',<br/><br/>' +
             'A new discount approval request has been submitted.<br/><br/>' +
             'Quote: ' + q.Name + '<br/>' +
+            'Quote Number: ' + q.QuoteNumber + '<br/>' +
             'Account: ' + (q.Account != null ? q.Account.Name : 'N/A') + '<br/>' +
             'Quote Owner: ' + ownerName + '<br/>' +
             'Product: ' + (qli.Product2 != null ? qli.Product2.Name : 'N/A') + '<br/>' +

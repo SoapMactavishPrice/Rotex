@@ -83,7 +83,7 @@ public class editDiscountQuantityController {
                 System.debug('Re-approval: Previous Discount: ' + qli.Previous_Discount__c + ', New Discount: ' + qli.Discount_to_be_offered__c);
             }
             
-            if (qli.Discount_to_be_offered__c != null && qli.Discount_as_per_SAP__c != null && qli.Discount_to_be_offered__c > qli.Discount_as_per_SAP__c) {
+            if (qli.Discount_to_be_offered__c != null && qli.Discount_as_per_SAP__c != null && qli.Discount_to_be_offered__c > qli.Discount_as_per_SAP__c && !qli.Do_not_proceed_approval__c) {
                 for (SOA_Matrix__c matrix : matrixList) {
                     if (qli.Discount_to_be_offered__c >= matrix.Min_Discount__c && qli.Discount_to_be_offered__c <= matrix.Max_Discount__c) {
                         if (matrix.SOA_Profile__c == 'Sales Rep') {

@@ -7,7 +7,7 @@ public class editDiscountQuantityController {
             Final_Discount_Approver__c, Sales_Rep__c, Sales_Manager__c, 
             Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c, Rotex_Board_Member__c, 
             Managing_Director_Country_Manage__c, Is_Discount_Approved__c, Previous_Discount__c,
-            CurrencyIsoCode,
+            CurrencyIsoCode, Requested_Comments__c,
             Sales_Manager_Status__c, Sales_Manager_Comments__c, Sales_Manager_Date_Time__c, Is_QLI_Approved_going_for_Approval__c,
 
             Country_Continent_Sales_H_LOB_Status__c, 

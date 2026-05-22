@@ -122,35 +122,151 @@ public without sharing class SalesPriceApprovalForQuotation {
             totalValueQuoteIds.add(q.Id);
         }
 
-        List<Quote> minimumOfferQuotes = [
-            SELECT Id
-            FROM   Quote
-            WHERE  (
-                       Global_Sales_Head__c                  = :currentUserId OR
-                       Rotex_Board_Member__c                 = :currentUserId OR
-                       Managing_Director_Country_Manager__c  = :currentUserId
-                   )
-                   AND Is_Small_Order_Handling__c = true
-                   AND Total_Value__c != null
-                   AND Total_Value__c < 25000
-                   AND Is_Minimum_Offer_Value_Approved__c = false
-                   AND (
-                       GS_Min_Offer_Status__c = 'Submitted' OR
-                       BM_Min_Offer_Status__c = 'Submitted' OR
-                       MD_Min_Offer_Status__c = 'Submitted'
-                   )
-        ];
+        // List<Quote> minimumOfferQuotes = [
+        //     SELECT Id
+        //     FROM   Quote
+        //     WHERE  (
+        //                Global_Sales_Head__c                  = :currentUserId OR
+        //                Rotex_Board_Member__c                 = :currentUserId OR
+        //                Managing_Director_Country_Manager__c  = :currentUserId
+        //            )
+        //            AND Is_Small_Order_Handling__c = true
+        //            AND Total_Value__c != null
+        //            AND Total_Value__c < 25000
+        //            AND Is_Minimum_Offer_Value_Approved__c = false
+        //            AND (
+        //                GS_Min_Offer_Status__c = 'Submitted' OR
+        //                BM_Min_Offer_Status__c = 'Submitted' OR
+        //                MD_Min_Offer_Status__c = 'Submitted'
+        //            )
+        // ];
 
-        Set<Id> minimumOfferQuoteIds = new Set<Id>();
-        for (Quote q : minimumOfferQuotes) {
-            minimumOfferQuoteIds.add(q.Id);
+        // Set<Id> minimumOfferQuoteIds = new Set<Id>();
+        // for (Quote q : minimumOfferQuotes) {
+        //     minimumOfferQuoteIds.add(q.Id);
+        // }
+
+        DateTime thirtyDaysAgo = DateTime.now().addDays(-30);
+
+        // ── Approved/Rejected: Discount QLIs (last 30 days) ──
+        List<QuoteLineItem> approvedRejectedQlis = [
+            SELECT QuoteId
+            FROM   QuoteLineItem
+            WHERE  Discount_offered_SAP__c = true
+            AND (
+                (Sales_Manager__c = :currentUserId
+                    AND Sales_Manager_Status__c IN ('Approved','Rejected')
+                    AND Sales_Manager_Date_Time__c >= :thirtyDaysAgo) OR
+                (Country_Continent_Sales_Head_LOB_Head__c = :currentUserId
+                    AND Country_Continent_Sales_H_LOB_Status__c IN ('Approved','Rejected')
+                    AND Country_Head_Date_Time__c >= :thirtyDaysAgo) OR
+                (Global_Sales_Head__c = :currentUserId
+                    AND Global_Sales_Head_Status__c IN ('Approved','Rejected')
+                    AND Global_Sales_Head_Date_Time__c >= :thirtyDaysAgo) OR
+                (Rotex_Board_Member__c = :currentUserId
+                    AND Rotex_Board_Member_Status__c IN ('Approved','Rejected')
+                    AND Rotex_Board_Member_Date_Time__c >= :thirtyDaysAgo) OR
+                (Managing_Director_Country_Manage__c = :currentUserId
+                    AND Managing_Director_Status__c IN ('Approved','Rejected')
+                    AND Managing_Director_Date_Time__c >= :thirtyDaysAgo)
+            )
+        ];
+        Set<Id> approvedRejectedDiscountQuoteIds = new Set<Id>();
+        for (QuoteLineItem qli : approvedRejectedQlis) {
+            approvedRejectedDiscountQuoteIds.add(qli.QuoteId);
+        }
+
+        // ── Approved/Rejected: Warranty (last 30 days) ──
+        List<Quote> approvedRejectedWarrantyQuotes = [
+            SELECT Id FROM Quote
+            WHERE Warranty_Terms_Draft__c != null
+            AND   Warranty_Terms_Draft__c != '12 Months from date of supply'
+            AND (
+                (Sales_Manager__c = :currentUserId
+                    AND SM_Warranty_Status__c IN ('Approved','Rejected')
+                    AND SM_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
+                (Country_Continent_Sales_Head_LOB_Head__c = :currentUserId
+                    AND CH_Warranty_Status__c IN ('Approved','Rejected')
+                    AND CH_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
+                (Global_Sales_Head__c = :currentUserId
+                    AND GS_Warranty_Status__c IN ('Approved','Rejected')
+                    AND GS_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
+                (Rotex_Board_Member__c = :currentUserId
+                    AND BM_Warranty_Status__c IN ('Approved','Rejected')
+                    AND BM_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
+                (Managing_Director_Country_Manager__c = :currentUserId
+                    AND MD_Warranty_Status__c IN ('Approved','Rejected')
+                    AND MD_Warranty_Date_Time__c >= :thirtyDaysAgo)
+            )
+        ];
+        Set<Id> approvedRejectedWarrantyQuoteIds = new Set<Id>();
+        for (Quote q : approvedRejectedWarrantyQuotes) {
+            approvedRejectedWarrantyQuoteIds.add(q.Id);
+        }
+
+        // ── Approved/Rejected: Validity Offer (last 30 days) ──
+        List<Quote> approvedRejectedValidityQuotes = [
+            SELECT Id FROM Quote
+            WHERE Requested_Validity_Of_Offer__c != null
+            AND   Requested_Validity_Of_Offer__c != '30 Days'
+            AND (
+                (Sales_Manager__c = :currentUserId
+                    AND SM_Validity_Offer_Status__c IN ('Approved','Rejected')
+                    AND SM_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
+                (Country_Continent_Sales_Head_LOB_Head__c = :currentUserId
+                    AND CH_Validity_Offer_Status__c IN ('Approved','Rejected')
+                    AND CH_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
+                (Global_Sales_Head__c = :currentUserId
+                    AND GS_Validity_Offer_Status__c IN ('Approved','Rejected')
+                    AND GS_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
+                (Rotex_Board_Member__c = :currentUserId
+                    AND BM_Validity_Offer_Status__c IN ('Approved','Rejected')
+                    AND BM_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
+                (Managing_Director_Country_Manager__c = :currentUserId
+                    AND MD_Validity_Offer_Status__c IN ('Approved','Rejected')
+                    AND MD_Validity_Offer_Date_Time__c >= :thirtyDaysAgo)
+            )
+        ];
+        Set<Id> approvedRejectedValidityQuoteIds = new Set<Id>();
+        for (Quote q : approvedRejectedValidityQuotes) {
+            approvedRejectedValidityQuoteIds.add(q.Id);
+        }
+
+        // ── Approved/Rejected: Total Value (last 30 days) ──
+        List<Quote> approvedRejectedTotalValueQuotes = [
+            SELECT Id FROM Quote
+            WHERE Total_Value__c != null
+            AND (
+                (Sales_Manager__c = :currentUserId
+                    AND SM_Value_Status__c IN ('Approved','Rejected')
+                    AND SM_Value_Date_Time__c >= :thirtyDaysAgo) OR
+                (Country_Continent_Sales_Head_LOB_Head__c = :currentUserId
+                    AND CH_Value_Status__c IN ('Approved','Rejected')
+                    AND CH_Value_Date_Time__c >= :thirtyDaysAgo) OR
+                (Global_Sales_Head__c = :currentUserId
+                    AND GS_Value_Status__c IN ('Approved','Rejected')
+                    AND GS_Value_Date_Time__c >= :thirtyDaysAgo) OR
+                (Rotex_Board_Member__c = :currentUserId
+                    AND BM_Value_Status__c IN ('Approved','Rejected')
+                    AND BM_Value_Date_Time__c >= :thirtyDaysAgo) OR
+                (Managing_Director_Country_Manager__c = :currentUserId
+                    AND MD_Value_Status__c IN ('Approved','Rejected')
+                    AND MD_Value_Date_Time__c >= :thirtyDaysAgo)
+            )
+        ];
+        Set<Id> approvedRejectedTotalValueQuoteIds = new Set<Id>();
+        for (Quote q : approvedRejectedTotalValueQuotes) {
+            approvedRejectedTotalValueQuoteIds.add(q.Id);
         }
 
         Set<Id> allRelevantQuoteIds = new Set<Id>(discountQuoteIds);
         allRelevantQuoteIds.addAll(warrantyQuoteIds);
         allRelevantQuoteIds.addAll(validityOfferQuoteIds);
         allRelevantQuoteIds.addAll(totalValueQuoteIds);
-        allRelevantQuoteIds.addAll(minimumOfferQuoteIds);
+        allRelevantQuoteIds.addAll(approvedRejectedDiscountQuoteIds);  
+        allRelevantQuoteIds.addAll(approvedRejectedWarrantyQuoteIds);  
+        allRelevantQuoteIds.addAll(approvedRejectedValidityQuoteIds);  
+        allRelevantQuoteIds.addAll(approvedRejectedTotalValueQuoteIds);
 
         if (allRelevantQuoteIds.isEmpty()) {
             throw new AuraHandledException(
@@ -181,7 +297,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Managing_Director_Date_Time__c, Previous_Discount__c, Is_Discount_Approved__c,
                        Prev_Sales_Manager_Comments__c, Prev_Country_Continent_Sales_Comments__c,
                        Prev_Global_Sales_Head_Comments__c, Prev_Rotex_Board_Member_Comments__c,
-                       Prev_Managing_Director_Comments__c
+                       Prev_Managing_Director_Comments__c, Requested_Comments__c
                 FROM   QuoteLineItem
                 WHERE  QuoteId IN :allRelevantQuoteIds
                        AND Discount_offered_SAP__c = true
@@ -226,13 +342,13 @@ public without sharing class SalesPriceApprovalForQuotation {
                    GS_Value_Status__c,  GS_Value_Date_Time__c,  GS_Value_Comments__c,
                    BM_Value_Status__c,  BM_Value_Date_Time__c,  BM_Value_Comments__c,
                    MD_Value_Status__c,  MD_Value_Date_Time__c,  MD_Value_Comments__c,
-                   Final_Total_Value_Approver__c, Is_Total_Value_Approved__c, Is_Small_Order_Handling__c,
-                   SM_Min_Offer_Status__c,  SM_Min_Offer_Date_Time__c,  SM_Min_Offer_Comments__c,
-                   CH_Min_Offer_Status__c,  CH_Min_Offer_Date_Time__c,  CH_Min_Offer_Comments__c,
-                   GS_Min_Offer_Status__c,  GS_Min_Offer_Date_Time__c,  GS_Min_Offer_Comments__c,
-                   BM_Min_Offer_Status__c,  BM_Min_Offer_Date_Time__c,  BM_Min_Offer_Comments__c,
-                   MD_Min_Offer_Status__c,  MD_Min_Offer_Date_Time__c,  MD_Min_Offer_Comments__c,
-                   Final_Minimum_Offer_Value_Approver__c, Is_Minimum_Offer_Value_Approved__c
+                   Final_Total_Value_Approver__c, Is_Total_Value_Approved__c, Is_Small_Order_Handling__c, Is_all_approvals_final_approved__c
+                //    SM_Min_Offer_Status__c,  SM_Min_Offer_Date_Time__c,  SM_Min_Offer_Comments__c,
+                //    CH_Min_Offer_Status__c,  CH_Min_Offer_Date_Time__c,  CH_Min_Offer_Comments__c,
+                //    GS_Min_Offer_Status__c,  GS_Min_Offer_Date_Time__c,  GS_Min_Offer_Comments__c,
+                //    BM_Min_Offer_Status__c,  BM_Min_Offer_Date_Time__c,  BM_Min_Offer_Comments__c,
+                //    MD_Min_Offer_Status__c,  MD_Min_Offer_Date_Time__c,  MD_Min_Offer_Comments__c,
+                //    Final_Minimum_Offer_Value_Approver__c, Is_Minimum_Offer_Value_Approved__c
             FROM   Quote
             WHERE  Id IN :allRelevantQuoteIds
         ]);
@@ -390,28 +506,28 @@ public without sharing class SalesPriceApprovalForQuotation {
         else if (finalPos == 5) { q.MD_Validity_Offer_Status__c = wrapper.mdValidityOfferStatus; q.MD_Validity_Offer_Comments__c = wrapper.mdValidityOfferComments; q.MD_Validity_Offer_Date_Time__c = DateTime.now(); }
     }
 
-    private static void applySkippedMinimumOfferComments(Quote q, MinimumOfferApprovalWrapper wrapper) {
-        Integer finalPos = wrapper.finalApproverHierarchyPosition;
-        if (finalPos == null) return;
+    // private static void applySkippedMinimumOfferComments(Quote q, MinimumOfferApprovalWrapper wrapper) {
+    //     Integer finalPos = wrapper.finalApproverHierarchyPosition;
+    //     if (finalPos == null) return;
 
-        // Min offer only has GS (3), BM (4), MD (5) levels
-        if (finalPos > 3 && String.isNotBlank(wrapper.gsMinOfferComments) &&
-            wrapper.gsId != wrapper.finalMinimumOfferValueApprover) {
-            q.GS_Min_Offer_Status__c    = 'Approved';
-            q.GS_Min_Offer_Comments__c  = wrapper.gsMinOfferComments;
-            q.GS_Min_Offer_Date_Time__c = DateTime.now();
-        }
-        if (finalPos > 4 && String.isNotBlank(wrapper.bmMinOfferComments) &&
-            wrapper.bmId != wrapper.finalMinimumOfferValueApprover) {
-            q.BM_Min_Offer_Status__c    = 'Approved';
-            q.BM_Min_Offer_Comments__c  = wrapper.bmMinOfferComments;
-            q.BM_Min_Offer_Date_Time__c = DateTime.now();
-        }
+    //     // Min offer only has GS (3), BM (4), MD (5) levels
+    //     if (finalPos > 3 && String.isNotBlank(wrapper.gsMinOfferComments) &&
+    //         wrapper.gsId != wrapper.finalMinimumOfferValueApprover) {
+    //         q.GS_Min_Offer_Status__c    = 'Approved';
+    //         q.GS_Min_Offer_Comments__c  = wrapper.gsMinOfferComments;
+    //         q.GS_Min_Offer_Date_Time__c = DateTime.now();
+    //     }
+    //     if (finalPos > 4 && String.isNotBlank(wrapper.bmMinOfferComments) &&
+    //         wrapper.bmId != wrapper.finalMinimumOfferValueApprover) {
+    //         q.BM_Min_Offer_Status__c    = 'Approved';
+    //         q.BM_Min_Offer_Comments__c  = wrapper.bmMinOfferComments;
+    //         q.BM_Min_Offer_Date_Time__c = DateTime.now();
+    //     }
 
-        if      (finalPos == 3) { q.GS_Min_Offer_Status__c = wrapper.gsMinOfferStatus; q.GS_Min_Offer_Comments__c = wrapper.gsMinOfferComments; q.GS_Min_Offer_Date_Time__c = DateTime.now(); }
-        else if (finalPos == 4) { q.BM_Min_Offer_Status__c = wrapper.bmMinOfferStatus; q.BM_Min_Offer_Comments__c = wrapper.bmMinOfferComments; q.BM_Min_Offer_Date_Time__c = DateTime.now(); }
-        else if (finalPos == 5) { q.MD_Min_Offer_Status__c = wrapper.mdMinOfferStatus; q.MD_Min_Offer_Comments__c = wrapper.mdMinOfferComments; q.MD_Min_Offer_Date_Time__c = DateTime.now(); }
-    }
+    //     if      (finalPos == 3) { q.GS_Min_Offer_Status__c = wrapper.gsMinOfferStatus; q.GS_Min_Offer_Comments__c = wrapper.gsMinOfferComments; q.GS_Min_Offer_Date_Time__c = DateTime.now(); }
+    //     else if (finalPos == 4) { q.BM_Min_Offer_Status__c = wrapper.bmMinOfferStatus; q.BM_Min_Offer_Comments__c = wrapper.bmMinOfferComments; q.BM_Min_Offer_Date_Time__c = DateTime.now(); }
+    //     else if (finalPos == 5) { q.MD_Min_Offer_Status__c = wrapper.mdMinOfferStatus; q.MD_Min_Offer_Comments__c = wrapper.mdMinOfferComments; q.MD_Min_Offer_Date_Time__c = DateTime.now(); }
+    // }
 
     /**
      * Lower-hierarchy Skip SOA save for Warranty.
@@ -491,21 +607,21 @@ public without sharing class SalesPriceApprovalForQuotation {
     }
 
     /** Lower-hierarchy Skip SOA save for Minimum Offer Value. */
-    private static void applyLowerHierarchySkippedMinimumOfferComments(Quote q, MinimumOfferApprovalWrapper wrapper) {
-        Integer currentPos = wrapper.currentUserHierarchyPosition;
-        if (currentPos == null) return;
+    // private static void applyLowerHierarchySkippedMinimumOfferComments(Quote q, MinimumOfferApprovalWrapper wrapper) {
+    //     Integer currentPos = wrapper.currentUserHierarchyPosition;
+    //     if (currentPos == null) return;
 
-        // Min offer levels start at GS (3); nothing below GS in this chain
-        if (currentPos > 3 && String.isNotBlank(wrapper.gsMinOfferComments) && wrapper.gsId != wrapper.finalMinimumOfferValueApprover) {
-            q.GS_Min_Offer_Status__c    = 'Approved'; q.GS_Min_Offer_Comments__c  = wrapper.gsMinOfferComments; q.GS_Min_Offer_Date_Time__c = DateTime.now();
-        }
-        if (currentPos > 4 && String.isNotBlank(wrapper.bmMinOfferComments) && wrapper.bmId != wrapper.finalMinimumOfferValueApprover) {
-            q.BM_Min_Offer_Status__c    = 'Approved'; q.BM_Min_Offer_Comments__c  = wrapper.bmMinOfferComments; q.BM_Min_Offer_Date_Time__c = DateTime.now();
-        }
-        if      (currentPos == 3 && String.isNotBlank(wrapper.gsMinOfferComments)) { q.GS_Min_Offer_Status__c = 'Approved'; q.GS_Min_Offer_Comments__c = wrapper.gsMinOfferComments; q.GS_Min_Offer_Date_Time__c = DateTime.now(); }
-        else if (currentPos == 4 && String.isNotBlank(wrapper.bmMinOfferComments)) { q.BM_Min_Offer_Status__c = 'Approved'; q.BM_Min_Offer_Comments__c = wrapper.bmMinOfferComments; q.BM_Min_Offer_Date_Time__c = DateTime.now(); }
-        else if (currentPos == 5 && String.isNotBlank(wrapper.mdMinOfferComments)) { q.MD_Min_Offer_Status__c = 'Approved'; q.MD_Min_Offer_Comments__c = wrapper.mdMinOfferComments; q.MD_Min_Offer_Date_Time__c = DateTime.now(); }
-    }
+    //     // Min offer levels start at GS (3); nothing below GS in this chain
+    //     if (currentPos > 3 && String.isNotBlank(wrapper.gsMinOfferComments) && wrapper.gsId != wrapper.finalMinimumOfferValueApprover) {
+    //         q.GS_Min_Offer_Status__c    = 'Approved'; q.GS_Min_Offer_Comments__c  = wrapper.gsMinOfferComments; q.GS_Min_Offer_Date_Time__c = DateTime.now();
+    //     }
+    //     if (currentPos > 4 && String.isNotBlank(wrapper.bmMinOfferComments) && wrapper.bmId != wrapper.finalMinimumOfferValueApprover) {
+    //         q.BM_Min_Offer_Status__c    = 'Approved'; q.BM_Min_Offer_Comments__c  = wrapper.bmMinOfferComments; q.BM_Min_Offer_Date_Time__c = DateTime.now();
+    //     }
+    //     if      (currentPos == 3 && String.isNotBlank(wrapper.gsMinOfferComments)) { q.GS_Min_Offer_Status__c = 'Approved'; q.GS_Min_Offer_Comments__c = wrapper.gsMinOfferComments; q.GS_Min_Offer_Date_Time__c = DateTime.now(); }
+    //     else if (currentPos == 4 && String.isNotBlank(wrapper.bmMinOfferComments)) { q.BM_Min_Offer_Status__c = 'Approved'; q.BM_Min_Offer_Comments__c = wrapper.bmMinOfferComments; q.BM_Min_Offer_Date_Time__c = DateTime.now(); }
+    //     else if (currentPos == 5 && String.isNotBlank(wrapper.mdMinOfferComments)) { q.MD_Min_Offer_Status__c = 'Approved'; q.MD_Min_Offer_Comments__c = wrapper.mdMinOfferComments; q.MD_Min_Offer_Date_Time__c = DateTime.now(); }
+    // }
 
     // ── getWarrantyApprovals kept for backward-compatibility but the LWC ──
     // ── no longer needs to call it — getAllQuotations covers it now.      ──
@@ -934,92 +1050,92 @@ public without sharing class SalesPriceApprovalForQuotation {
         return 'Success';
     }
 
-    @AuraEnabled
-    public static String submitMinimumOfferApprovalSingle(String minimumOfferApprovalJson) {
-        MinimumOfferApprovalWrapper wrapper = (MinimumOfferApprovalWrapper) JSON.deserialize(
-            minimumOfferApprovalJson, MinimumOfferApprovalWrapper.class
-        );
+    // @AuraEnabled
+    // public static String submitMinimumOfferApprovalSingle(String minimumOfferApprovalJson) {
+    //     MinimumOfferApprovalWrapper wrapper = (MinimumOfferApprovalWrapper) JSON.deserialize(
+    //         minimumOfferApprovalJson, MinimumOfferApprovalWrapper.class
+    //     );
 
-        if (!wrapper.updated) {
-            return 'No changes to submit';
-        }
+    //     if (!wrapper.updated) {
+    //         return 'No changes to submit';
+    //     }
 
-        // ── Skip SOA: higher hierarchy or final-approver-with-pending-lower path ──
-        if (wrapper.skipSoaRestrictions == true &&
-            (wrapper.isHigherHierarchy == true || wrapper.isFinalApproverWithPendingLower == true)) {
-            Quote q = new Quote(Id = wrapper.quoteId);
-            applySkippedMinimumOfferComments(q, wrapper);
-            update q;
-            return 'Success';
-        }
-        // Lower-hierarchy Skip SOA: current user is below the final approver
-        if (wrapper.skipSoaRestrictions == true &&
-            wrapper.currentUserHierarchyPosition != null &&
-            wrapper.finalApproverHierarchyPosition != null &&
-            wrapper.currentUserHierarchyPosition < wrapper.finalApproverHierarchyPosition) {
-            Quote q = new Quote(Id = wrapper.quoteId);
-            applyLowerHierarchySkippedMinimumOfferComments(q, wrapper);
-            update q;
-            return 'Success';
-        }
+    //     // ── Skip SOA: higher hierarchy or final-approver-with-pending-lower path ──
+    //     if (wrapper.skipSoaRestrictions == true &&
+    //         (wrapper.isHigherHierarchy == true || wrapper.isFinalApproverWithPendingLower == true)) {
+    //         Quote q = new Quote(Id = wrapper.quoteId);
+    //         applySkippedMinimumOfferComments(q, wrapper);
+    //         update q;
+    //         return 'Success';
+    //     }
+    //     // Lower-hierarchy Skip SOA: current user is below the final approver
+    //     if (wrapper.skipSoaRestrictions == true &&
+    //         wrapper.currentUserHierarchyPosition != null &&
+    //         wrapper.finalApproverHierarchyPosition != null &&
+    //         wrapper.currentUserHierarchyPosition < wrapper.finalApproverHierarchyPosition) {
+    //         Quote q = new Quote(Id = wrapper.quoteId);
+    //         applyLowerHierarchySkippedMinimumOfferComments(q, wrapper);
+    //         update q;
+    //         return 'Success';
+    //     }
 
-        Quote q = new Quote(Id = wrapper.quoteId);
-        Boolean hasChanges = false;
-        Id finalApproverId = wrapper.finalMinimumOfferValueApprover;
+    //     Quote q = new Quote(Id = wrapper.quoteId);
+    //     Boolean hasChanges = false;
+    //     Id finalApproverId = wrapper.finalMinimumOfferValueApprover;
 
-        if (wrapper.gsMinOfferStatus != wrapper.originalGsMinOfferStatus ||
-            wrapper.gsMinOfferComments != wrapper.originalGsMinOfferComments) {
-            if (wrapper.isGsCurrentUser) {
-                if (wrapper.gsId != finalApproverId &&
-                    wrapper.gsMinOfferStatus == wrapper.originalGsMinOfferStatus &&
-                    String.isNotBlank(wrapper.gsMinOfferComments)) {
-                    q.GS_Min_Offer_Status__c = 'Approved';
-                } else {
-                    q.GS_Min_Offer_Status__c = wrapper.gsMinOfferStatus;
-                }
-                q.GS_Min_Offer_Comments__c  = wrapper.gsMinOfferComments;
-                q.GS_Min_Offer_Date_Time__c = DateTime.now();
-                hasChanges = true;
-            }
-        }
+    //     if (wrapper.gsMinOfferStatus != wrapper.originalGsMinOfferStatus ||
+    //         wrapper.gsMinOfferComments != wrapper.originalGsMinOfferComments) {
+    //         if (wrapper.isGsCurrentUser) {
+    //             if (wrapper.gsId != finalApproverId &&
+    //                 wrapper.gsMinOfferStatus == wrapper.originalGsMinOfferStatus &&
+    //                 String.isNotBlank(wrapper.gsMinOfferComments)) {
+    //                 q.GS_Min_Offer_Status__c = 'Approved';
+    //             } else {
+    //                 q.GS_Min_Offer_Status__c = wrapper.gsMinOfferStatus;
+    //             }
+    //             q.GS_Min_Offer_Comments__c  = wrapper.gsMinOfferComments;
+    //             q.GS_Min_Offer_Date_Time__c = DateTime.now();
+    //             hasChanges = true;
+    //         }
+    //     }
 
-        if (wrapper.bmMinOfferStatus != wrapper.originalBmMinOfferStatus ||
-            wrapper.bmMinOfferComments != wrapper.originalBmMinOfferComments) {
-            if (wrapper.isBmCurrentUser) {
-                if (wrapper.bmId != finalApproverId &&
-                    wrapper.bmMinOfferStatus == wrapper.originalBmMinOfferStatus &&
-                    String.isNotBlank(wrapper.bmMinOfferComments)) {
-                    q.BM_Min_Offer_Status__c = 'Approved';
-                } else {
-                    q.BM_Min_Offer_Status__c = wrapper.bmMinOfferStatus;
-                }
-                q.BM_Min_Offer_Comments__c  = wrapper.bmMinOfferComments;
-                q.BM_Min_Offer_Date_Time__c = DateTime.now();
-                hasChanges = true;
-            }
-        }
+    //     if (wrapper.bmMinOfferStatus != wrapper.originalBmMinOfferStatus ||
+    //         wrapper.bmMinOfferComments != wrapper.originalBmMinOfferComments) {
+    //         if (wrapper.isBmCurrentUser) {
+    //             if (wrapper.bmId != finalApproverId &&
+    //                 wrapper.bmMinOfferStatus == wrapper.originalBmMinOfferStatus &&
+    //                 String.isNotBlank(wrapper.bmMinOfferComments)) {
+    //                 q.BM_Min_Offer_Status__c = 'Approved';
+    //             } else {
+    //                 q.BM_Min_Offer_Status__c = wrapper.bmMinOfferStatus;
+    //             }
+    //             q.BM_Min_Offer_Comments__c  = wrapper.bmMinOfferComments;
+    //             q.BM_Min_Offer_Date_Time__c = DateTime.now();
+    //             hasChanges = true;
+    //         }
+    //     }
 
-        if (wrapper.mdMinOfferStatus != wrapper.originalMdMinOfferStatus ||
-            wrapper.mdMinOfferComments != wrapper.originalMdMinOfferComments) {
-            if (wrapper.isMdCurrentUser) {
-                if (wrapper.mdId != finalApproverId &&
-                    wrapper.mdMinOfferStatus == wrapper.originalMdMinOfferStatus &&
-                    String.isNotBlank(wrapper.mdMinOfferComments)) {
-                    q.MD_Min_Offer_Status__c = 'Approved';
-                } else {
-                    q.MD_Min_Offer_Status__c = wrapper.mdMinOfferStatus;
-                }
-                q.MD_Min_Offer_Comments__c  = wrapper.mdMinOfferComments;
-                q.MD_Min_Offer_Date_Time__c = DateTime.now();
-                hasChanges = true;
-            }
-        }
+    //     if (wrapper.mdMinOfferStatus != wrapper.originalMdMinOfferStatus ||
+    //         wrapper.mdMinOfferComments != wrapper.originalMdMinOfferComments) {
+    //         if (wrapper.isMdCurrentUser) {
+    //             if (wrapper.mdId != finalApproverId &&
+    //                 wrapper.mdMinOfferStatus == wrapper.originalMdMinOfferStatus &&
+    //                 String.isNotBlank(wrapper.mdMinOfferComments)) {
+    //                 q.MD_Min_Offer_Status__c = 'Approved';
+    //             } else {
+    //                 q.MD_Min_Offer_Status__c = wrapper.mdMinOfferStatus;
+    //             }
+    //             q.MD_Min_Offer_Comments__c  = wrapper.mdMinOfferComments;
+    //             q.MD_Min_Offer_Date_Time__c = DateTime.now();
+    //             hasChanges = true;
+    //         }
+    //     }
 
-        if (hasChanges) {
-            update q;
-        }
-        return 'Success';
-    }
+    //     if (hasChanges) {
+    //         update q;
+    //     }
+    //     return 'Success';
+    // }
 
     /**
      * @description: Updates warranty approval status and comments.
@@ -1094,8 +1210,8 @@ public without sharing class SalesPriceApprovalForQuotation {
         String quotationListStringObject,
         String warrantyApprovalJson,
         String validityOfferApprovalJson,
-        String totalValueApprovalJson,
-        String minimumOfferApprovalJson
+        String totalValueApprovalJson
+        // String minimumOfferApprovalJson
     ) {
         Savepoint sp = Database.setSavepoint();
         if (String.isNotBlank(quotationListStringObject)) {
@@ -1116,12 +1232,12 @@ public without sharing class SalesPriceApprovalForQuotation {
                 submitTotalValueApprovalSingle(totalValueApprovalJson)
             );
         }
-        if (String.isNotBlank(minimumOfferApprovalJson)) {
-            assertSuccessfulSubmission(
-                'Min Offer Value',
-                submitMinimumOfferApprovalSingle(minimumOfferApprovalJson)
-            );
-        }
+        // if (String.isNotBlank(minimumOfferApprovalJson)) {
+        //     assertSuccessfulSubmission(
+        //         'Min Offer Value',
+        //         submitMinimumOfferApprovalSingle(minimumOfferApprovalJson)
+        //     );
+        // }
         if (String.isNotBlank(validityOfferApprovalJson)) {
             assertSuccessfulSubmission(
                 'Validity Offer',
@@ -1225,7 +1341,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Managing_Director_Country_Manage__c,
                        Sales_Manager_Comments__c, Country_Continent_Sales_LOB_Comments__c,
                        Global_Sales_Head_Comments__c, Rotex_Board_Member_Comments__c,
-                       Managing_Director_Comments__c, Discount_to_be_offered__c, Discount_as_per_SAP__c
+                       Managing_Director_Comments__c, Discount_to_be_offered__c, Discount_as_per_SAP__c, Requested_Comments__c
                 FROM   QuoteLineItem
                 WHERE  Id IN :updatedQuoteLineItemIds
             ]);
@@ -1589,7 +1705,8 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public WarrantyApprovalWrapper warrantyApproval;
         @AuraEnabled public ValidityOfferApprovalWrapper validityOfferApproval;
         @AuraEnabled public TotalValueApprovalWrapper totalValueApproval;
-        @AuraEnabled public MinimumOfferApprovalWrapper minimumOfferApproval;
+        @AuraEnabled public Boolean isAllApprovalsFinalApproved;
+        // @AuraEnabled public MinimumOfferApprovalWrapper minimumOfferApproval;
 
         public QuotationWrapper() {}
 
@@ -1626,7 +1743,8 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.warrantyApproval = createWarrantyApprovalIfNeeded(quote, currentUserId);
             this.validityOfferApproval = createValidityOfferApprovalIfNeeded(quote, currentUserId);
             this.totalValueApproval = createTotalValueApprovalIfNeeded(quote, currentUserId);
-            this.minimumOfferApproval = createMinimumOfferApprovalIfNeeded(quote, currentUserId);
+            this.isAllApprovalsFinalApproved = quote.Is_all_approvals_final_approved__c == true;
+            // this.minimumOfferApproval = createMinimumOfferApprovalIfNeeded(quote, currentUserId);
 
             this.quoteLineItems = new List<QuotationLineItemWrapper>();
             for (QuoteLineItem eachLine : lineItems) {
@@ -1691,21 +1809,21 @@ public without sharing class SalesPriceApprovalForQuotation {
             return new TotalValueApprovalWrapper(q);
         }
 
-        private MinimumOfferApprovalWrapper createMinimumOfferApprovalIfNeeded(Quote q, Id currentUserId) {
-            if (!hasAnyMinimumOfferStatus(q) &&
-                (q.Total_Value__c == null ||
-                 q.Total_Value__c >= 25000 ||
-                 q.Is_Small_Order_Handling__c != true ||
-                 q.Is_Minimum_Offer_Value_Approved__c == true)) {
-                return null;
-            }
-            Boolean isInChain =
-                q.Global_Sales_Head__c                 == currentUserId ||
-                q.Rotex_Board_Member__c                == currentUserId ||
-                q.Managing_Director_Country_Manager__c == currentUserId;
-            if (!isInChain) return null;
-            return new MinimumOfferApprovalWrapper(q);
-        }
+        // private MinimumOfferApprovalWrapper createMinimumOfferApprovalIfNeeded(Quote q, Id currentUserId) {
+        //     if (!hasAnyMinimumOfferStatus(q) &&
+        //         (q.Total_Value__c == null ||
+        //          q.Total_Value__c >= 25000 ||
+        //          q.Is_Small_Order_Handling__c != true ||
+        //          q.Is_Minimum_Offer_Value_Approved__c == true)) {
+        //         return null;
+        //     }
+        //     Boolean isInChain =
+        //         q.Global_Sales_Head__c                 == currentUserId ||
+        //         q.Rotex_Board_Member__c                == currentUserId ||
+        //         q.Managing_Director_Country_Manager__c == currentUserId;
+        //     if (!isInChain) return null;
+        //     return new MinimumOfferApprovalWrapper(q);
+        // }
     }
 
     // ── "Finally decided" helpers: true once the final approver has approved or rejected ──
@@ -1734,11 +1852,11 @@ public without sharing class SalesPriceApprovalForQuotation {
                String.isNotBlank(q.MD_Value_Status__c);
     }
 
-    private static Boolean hasAnyMinimumOfferStatus(Quote q) {
-        return String.isNotBlank(q.GS_Min_Offer_Status__c) ||
-               String.isNotBlank(q.BM_Min_Offer_Status__c) ||
-               String.isNotBlank(q.MD_Min_Offer_Status__c);
-    }
+    // private static Boolean hasAnyMinimumOfferStatus(Quote q) {
+    //     return String.isNotBlank(q.GS_Min_Offer_Status__c) ||
+    //            String.isNotBlank(q.BM_Min_Offer_Status__c) ||
+    //            String.isNotBlank(q.MD_Min_Offer_Status__c);
+    // }
 
     @TestVisible
     private static Boolean isWarrantyFinallyDecided(Quote q) {
@@ -1776,15 +1894,15 @@ public without sharing class SalesPriceApprovalForQuotation {
         return false;
     }
 
-    @TestVisible
-    private static Boolean isMinimumOfferFinallyDecided(Quote q) {
-        Id finalId = q.Final_Minimum_Offer_Value_Approver__c;
-        if (finalId == null) return false;
-        if (q.Global_Sales_Head__c                     == finalId) return q.GS_Min_Offer_Status__c == 'Approved' || q.GS_Min_Offer_Status__c == 'Rejected';
-        if (q.Rotex_Board_Member__c                    == finalId) return q.BM_Min_Offer_Status__c == 'Approved' || q.BM_Min_Offer_Status__c == 'Rejected';
-        if (q.Managing_Director_Country_Manager__c     == finalId) return q.MD_Min_Offer_Status__c == 'Approved' || q.MD_Min_Offer_Status__c == 'Rejected';
-        return false;
-    }
+    // @TestVisible
+    // private static Boolean isMinimumOfferFinallyDecided(Quote q) {
+    //     Id finalId = q.Final_Minimum_Offer_Value_Approver__c;
+    //     if (finalId == null) return false;
+    //     if (q.Global_Sales_Head__c                     == finalId) return q.GS_Min_Offer_Status__c == 'Approved' || q.GS_Min_Offer_Status__c == 'Rejected';
+    //     if (q.Rotex_Board_Member__c                    == finalId) return q.BM_Min_Offer_Status__c == 'Approved' || q.BM_Min_Offer_Status__c == 'Rejected';
+    //     if (q.Managing_Director_Country_Manager__c     == finalId) return q.MD_Min_Offer_Status__c == 'Approved' || q.MD_Min_Offer_Status__c == 'Rejected';
+    //     return false;
+    // }
 
     private static Integer getHierarchyPos(Quote q, Id userId) {
         if (userId == null) return null;
@@ -1825,13 +1943,13 @@ public without sharing class SalesPriceApprovalForQuotation {
         return null;
     }
 
-    private static Integer getMinimumOfferHierarchyPos(Quote q, Id userId) {
-        if (userId == null) return null;
-        if (q.Global_Sales_Head__c                     == userId) return 3;
-        if (q.Rotex_Board_Member__c                    == userId) return 4;
-        if (q.Managing_Director_Country_Manager__c     == userId) return 5;
-        return null;
-    }
+    // private static Integer getMinimumOfferHierarchyPos(Quote q, Id userId) {
+    //     if (userId == null) return null;
+    //     if (q.Global_Sales_Head__c                     == userId) return 3;
+    //     if (q.Rotex_Board_Member__c                    == userId) return 4;
+    //     if (q.Managing_Director_Country_Manager__c     == userId) return 5;
+    //     return null;
+    // }
 
     private static String getSoaProfileByPosition(Integer position) {
 
@@ -2053,6 +2171,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String   finalDiscountApproverId;
         @AuraEnabled public Boolean  isFinalDiscountApprover;
         @AuraEnabled public Boolean  skipSoaRestrictions;
+        @AuraEnabled public String requestedComments;
 
         public QuotationLineItemWrapper() {}
 
@@ -2074,6 +2193,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.Managing_Director_Comments           = qli.Managing_Director_Comments__c;
             this.Rotex_Board_Member_Comments          = qli.Rotex_Board_Member_Comments__c;
             this.Sales_Manager_Comments               = qli.Sales_Manager_Comments__c;
+            this.requestedComments = getStringFieldSafely(qli, 'Requested_Comments__c');
             this.prevSalesManagerComments             = getStringFieldSafely(qli, 'Prev_Sales_Manager_Comments__c');
             this.prevCountryContinentSalesComments    = getStringFieldSafely(qli, 'Prev_Country_Continent_Sales_Comments__c');
             this.prevGlobalSalesHeadComments          = getStringFieldSafely(qli, 'Prev_Global_Sales_Head_Comments__c');
@@ -2523,97 +2643,97 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
     }
 
-    public class MinimumOfferApprovalWrapper {
-        @AuraEnabled public String   quoteId;
-        @AuraEnabled public String   quoteName;
-        @AuraEnabled public String   quoteNumber;
-        @AuraEnabled public Decimal  totalValue;
-        @AuraEnabled public String   finalMinimumOfferValueApprover;
-        @AuraEnabled public Boolean  updated;
+    // public class MinimumOfferApprovalWrapper {
+    //     @AuraEnabled public String   quoteId;
+    //     @AuraEnabled public String   quoteName;
+    //     @AuraEnabled public String   quoteNumber;
+    //     @AuraEnabled public Decimal  totalValue;
+    //     @AuraEnabled public String   finalMinimumOfferValueApprover;
+    //     @AuraEnabled public Boolean  updated;
 
-        @AuraEnabled public String   gsName; @AuraEnabled public String gsId;
-        @AuraEnabled public String   gsMinOfferStatus; @AuraEnabled public DateTime gsMinOfferDateTime;
-        @AuraEnabled public String   gsMinOfferComments; @AuraEnabled public Boolean isGsCurrentUser;
-        @AuraEnabled public Boolean  canGsEditStatus; @AuraEnabled public Boolean canGsEditComments;
-        @AuraEnabled public String   originalGsMinOfferStatus; @AuraEnabled public String originalGsMinOfferComments;
+    //     @AuraEnabled public String   gsName; @AuraEnabled public String gsId;
+    //     @AuraEnabled public String   gsMinOfferStatus; @AuraEnabled public DateTime gsMinOfferDateTime;
+    //     @AuraEnabled public String   gsMinOfferComments; @AuraEnabled public Boolean isGsCurrentUser;
+    //     @AuraEnabled public Boolean  canGsEditStatus; @AuraEnabled public Boolean canGsEditComments;
+    //     @AuraEnabled public String   originalGsMinOfferStatus; @AuraEnabled public String originalGsMinOfferComments;
 
-        @AuraEnabled public String   bmName; @AuraEnabled public String bmId;
-        @AuraEnabled public String   bmMinOfferStatus; @AuraEnabled public DateTime bmMinOfferDateTime;
-        @AuraEnabled public String   bmMinOfferComments; @AuraEnabled public Boolean isBmCurrentUser;
-        @AuraEnabled public Boolean  canBmEditStatus; @AuraEnabled public Boolean canBmEditComments;
-        @AuraEnabled public String   originalBmMinOfferStatus; @AuraEnabled public String originalBmMinOfferComments;
+    //     @AuraEnabled public String   bmName; @AuraEnabled public String bmId;
+    //     @AuraEnabled public String   bmMinOfferStatus; @AuraEnabled public DateTime bmMinOfferDateTime;
+    //     @AuraEnabled public String   bmMinOfferComments; @AuraEnabled public Boolean isBmCurrentUser;
+    //     @AuraEnabled public Boolean  canBmEditStatus; @AuraEnabled public Boolean canBmEditComments;
+    //     @AuraEnabled public String   originalBmMinOfferStatus; @AuraEnabled public String originalBmMinOfferComments;
 
-        @AuraEnabled public String   mdName; @AuraEnabled public String mdId;
-        @AuraEnabled public String   mdMinOfferStatus; @AuraEnabled public DateTime mdMinOfferDateTime;
-        @AuraEnabled public String   mdMinOfferComments; @AuraEnabled public Boolean isMdCurrentUser;
-        @AuraEnabled public Boolean  canMdEditStatus; @AuraEnabled public Boolean canMdEditComments;
-        @AuraEnabled public String   originalMdMinOfferStatus; @AuraEnabled public String originalMdMinOfferComments;
+    //     @AuraEnabled public String   mdName; @AuraEnabled public String mdId;
+    //     @AuraEnabled public String   mdMinOfferStatus; @AuraEnabled public DateTime mdMinOfferDateTime;
+    //     @AuraEnabled public String   mdMinOfferComments; @AuraEnabled public Boolean isMdCurrentUser;
+    //     @AuraEnabled public Boolean  canMdEditStatus; @AuraEnabled public Boolean canMdEditComments;
+    //     @AuraEnabled public String   originalMdMinOfferStatus; @AuraEnabled public String originalMdMinOfferComments;
 
-        @AuraEnabled public Integer  currentUserHierarchyPosition;
-        @AuraEnabled public Integer  finalApproverHierarchyPosition;
-        @AuraEnabled public Boolean  isHigherHierarchy;
-        @AuraEnabled public Boolean  canViewReadOnly;
-        @AuraEnabled public Boolean  skipSoaRestrictions;
-        @AuraEnabled public Boolean  isFinalApproverWithPendingLower;
+    //     @AuraEnabled public Integer  currentUserHierarchyPosition;
+    //     @AuraEnabled public Integer  finalApproverHierarchyPosition;
+    //     @AuraEnabled public Boolean  isHigherHierarchy;
+    //     @AuraEnabled public Boolean  canViewReadOnly;
+    //     @AuraEnabled public Boolean  skipSoaRestrictions;
+    //     @AuraEnabled public Boolean  isFinalApproverWithPendingLower;
 
-        public MinimumOfferApprovalWrapper() {}
+    //     public MinimumOfferApprovalWrapper() {}
 
-        public MinimumOfferApprovalWrapper(Quote q) {
-            Id currentUserId = UserInfo.getUserId();
-            this.quoteId                        = q.Id;
-            this.quoteName                      = q.Name;
-            this.quoteNumber                    = q.QuoteNumber;
-            this.totalValue                     = q.Total_Value__c;
-            this.finalMinimumOfferValueApprover = getStringFieldSafely(q, 'Final_Minimum_Offer_Value_Approver__c');
-            this.updated                        = false;
+    //     public MinimumOfferApprovalWrapper(Quote q) {
+    //         Id currentUserId = UserInfo.getUserId();
+    //         this.quoteId                        = q.Id;
+    //         this.quoteName                      = q.Name;
+    //         this.quoteNumber                    = q.QuoteNumber;
+    //         this.totalValue                     = q.Total_Value__c;
+    //         this.finalMinimumOfferValueApprover = getStringFieldSafely(q, 'Final_Minimum_Offer_Value_Approver__c');
+    //         this.updated                        = false;
 
-            this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r != null ? q.Global_Sales_Head__r.Name : null;
-            this.gsMinOfferStatus = q.GS_Min_Offer_Status__c; this.gsMinOfferDateTime = q.GS_Min_Offer_Date_Time__c;
-            this.gsMinOfferComments = q.GS_Min_Offer_Comments__c; this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId;
-            this.originalGsMinOfferStatus = q.GS_Min_Offer_Status__c; this.originalGsMinOfferComments = q.GS_Min_Offer_Comments__c;
+    //         this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r != null ? q.Global_Sales_Head__r.Name : null;
+    //         this.gsMinOfferStatus = q.GS_Min_Offer_Status__c; this.gsMinOfferDateTime = q.GS_Min_Offer_Date_Time__c;
+    //         this.gsMinOfferComments = q.GS_Min_Offer_Comments__c; this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId;
+    //         this.originalGsMinOfferStatus = q.GS_Min_Offer_Status__c; this.originalGsMinOfferComments = q.GS_Min_Offer_Comments__c;
 
-            this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r != null ? q.Rotex_Board_Member__r.Name : null;
-            this.bmMinOfferStatus = q.BM_Min_Offer_Status__c; this.bmMinOfferDateTime = q.BM_Min_Offer_Date_Time__c;
-            this.bmMinOfferComments = q.BM_Min_Offer_Comments__c; this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId;
-            this.originalBmMinOfferStatus = q.BM_Min_Offer_Status__c; this.originalBmMinOfferComments = q.BM_Min_Offer_Comments__c;
+    //         this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r != null ? q.Rotex_Board_Member__r.Name : null;
+    //         this.bmMinOfferStatus = q.BM_Min_Offer_Status__c; this.bmMinOfferDateTime = q.BM_Min_Offer_Date_Time__c;
+    //         this.bmMinOfferComments = q.BM_Min_Offer_Comments__c; this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId;
+    //         this.originalBmMinOfferStatus = q.BM_Min_Offer_Status__c; this.originalBmMinOfferComments = q.BM_Min_Offer_Comments__c;
 
-            this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r != null ? q.Managing_Director_Country_Manager__r.Name : null;
-            this.mdMinOfferStatus = q.MD_Min_Offer_Status__c; this.mdMinOfferDateTime = q.MD_Min_Offer_Date_Time__c;
-            this.mdMinOfferComments = q.MD_Min_Offer_Comments__c; this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId;
-            this.originalMdMinOfferStatus = q.MD_Min_Offer_Status__c; this.originalMdMinOfferComments = q.MD_Min_Offer_Comments__c;
+    //         this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r != null ? q.Managing_Director_Country_Manager__r.Name : null;
+    //         this.mdMinOfferStatus = q.MD_Min_Offer_Status__c; this.mdMinOfferDateTime = q.MD_Min_Offer_Date_Time__c;
+    //         this.mdMinOfferComments = q.MD_Min_Offer_Comments__c; this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId;
+    //         this.originalMdMinOfferStatus = q.MD_Min_Offer_Status__c; this.originalMdMinOfferComments = q.MD_Min_Offer_Comments__c;
 
-            setMinimumOfferHierarchyPositions(q, currentUserId);
-            setMinimumOfferEditPermissions(q);
-        }
+    //         setMinimumOfferHierarchyPositions(q, currentUserId);
+    //         setMinimumOfferEditPermissions(q);
+    //     }
 
-        private void setMinimumOfferHierarchyPositions(Quote q, Id currentUserId) {
-            this.currentUserHierarchyPosition   = getMinimumOfferHierarchyPos(q, currentUserId);
-            Id finalId = q.Final_Minimum_Offer_Value_Approver__c;
-            this.finalApproverHierarchyPosition = getMinimumOfferHierarchyPos(q, finalId);
-            this.isHigherHierarchy = this.currentUserHierarchyPosition != null &&
-                                    this.finalApproverHierarchyPosition != null &&
-                                    this.currentUserHierarchyPosition > this.finalApproverHierarchyPosition;
-            this.canViewReadOnly = this.isHigherHierarchy;
-            this.isFinalApproverWithPendingLower =
-                !this.isHigherHierarchy &&
-                this.currentUserHierarchyPosition != null &&
-                this.finalApproverHierarchyPosition != null &&
-                this.currentUserHierarchyPosition == this.finalApproverHierarchyPosition &&
-                isAnyMinimumOfferLowerLevelSubmitted(q, this.finalApproverHierarchyPosition);
-        }
+    //     private void setMinimumOfferHierarchyPositions(Quote q, Id currentUserId) {
+    //         this.currentUserHierarchyPosition   = getMinimumOfferHierarchyPos(q, currentUserId);
+    //         Id finalId = q.Final_Minimum_Offer_Value_Approver__c;
+    //         this.finalApproverHierarchyPosition = getMinimumOfferHierarchyPos(q, finalId);
+    //         this.isHigherHierarchy = this.currentUserHierarchyPosition != null &&
+    //                                 this.finalApproverHierarchyPosition != null &&
+    //                                 this.currentUserHierarchyPosition > this.finalApproverHierarchyPosition;
+    //         this.canViewReadOnly = this.isHigherHierarchy;
+    //         this.isFinalApproverWithPendingLower =
+    //             !this.isHigherHierarchy &&
+    //             this.currentUserHierarchyPosition != null &&
+    //             this.finalApproverHierarchyPosition != null &&
+    //             this.currentUserHierarchyPosition == this.finalApproverHierarchyPosition &&
+    //             isAnyMinimumOfferLowerLevelSubmitted(q, this.finalApproverHierarchyPosition);
+    //     }
 
-        private Boolean isAnyMinimumOfferLowerLevelSubmitted(Quote q, Integer pos) {
-            // Min offer levels start at GS (position 3)
-            if (pos > 3 && q.GS_Min_Offer_Status__c == 'Submitted') return true;
-            if (pos > 4 && q.BM_Min_Offer_Status__c == 'Submitted') return true;
-            return false;
-        }
+    //     private Boolean isAnyMinimumOfferLowerLevelSubmitted(Quote q, Integer pos) {
+    //         // Min offer levels start at GS (position 3)
+    //         if (pos > 3 && q.GS_Min_Offer_Status__c == 'Submitted') return true;
+    //         if (pos > 4 && q.BM_Min_Offer_Status__c == 'Submitted') return true;
+    //         return false;
+    //     }
 
-        private void setMinimumOfferEditPermissions(Quote q) {
-            Id finalId = q.Final_Minimum_Offer_Value_Approver__c;
-            if (this.isGsCurrentUser && this.gsMinOfferStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }
-            if (this.isBmCurrentUser && this.bmMinOfferStatus == 'Submitted') { this.canBmEditComments = true; this.canBmEditStatus = (q.Rotex_Board_Member__c == finalId); }
-            if (this.isMdCurrentUser && this.mdMinOfferStatus == 'Submitted') { this.canMdEditComments = true; this.canMdEditStatus = (q.Managing_Director_Country_Manager__c == finalId); }
-        }
-    }
+    //     private void setMinimumOfferEditPermissions(Quote q) {
+    //         Id finalId = q.Final_Minimum_Offer_Value_Approver__c;
+    //         if (this.isGsCurrentUser && this.gsMinOfferStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }
+    //         if (this.isBmCurrentUser && this.bmMinOfferStatus == 'Submitted') { this.canBmEditComments = true; this.canBmEditStatus = (q.Rotex_Board_Member__c == finalId); }
+    //         if (this.isMdCurrentUser && this.mdMinOfferStatus == 'Submitted') { this.canMdEditComments = true; this.canMdEditStatus = (q.Managing_Director_Country_Manager__c == finalId); }
+    //     }
+    // }
 }

@@ -1,12 +1,13 @@
 <template>
     <lightning-card>
         <!-- ── Card Header ── -->
-        <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-p-horizontal_medium slds-p-bottom_small slds-p-top_x-small">
-            <span></span>
-            <h4 style="font-size: 22px; font-weight: 700; color: #181818; letter-spacing: -0.3px;">
+        <div class="header-container">
+            <h4 class="header-title">
                 Quote Approvals
             </h4>
+
             <lightning-input
+                if:true={showSkipSOAButton}
                 type="toggle"
                 label="Skip SOA"
                 checked={skipSoaRestrictions}
@@ -21,13 +22,34 @@
         </template>
 
         <template if:true={quotes}>
-            <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            <!-- ── Tab Navigation ── -->
+            <div class="tab-nav-container">
+                <button class={allTabClass} onclick={handleTabChange} data-tab="all">
+                    All Pending
+                    <span class="tab-badge">{allCount}</span>
+                </button>
+                <button class={pendingTabClass} onclick={handleTabChange} data-tab="pending">
+                    Pending
+                    <span class="tab-badge">{pendingCount}</span>
+                </button>
+                <button class={approvedTabClass} onclick={handleTabChange} data-tab="approved">
+                    Approved
+                    <span class="tab-badge">{approvedCount}</span>
+                </button>
+                <button class={rejectedTabClass} onclick={handleTabChange} data-tab="rejected">
+                    Rejected
+                    <span class="tab-badge">{rejectedCount}</span>
+                </button>
+            </div>
 
-                <template for:each={quotes} for:item="quote">
+            <div class="slds-p-horizontal_medium slds-p-bottom_medium slds-p-top_small">
+
+                <template if:true={hasFilteredQuotes}>
+                <template for:each={filteredQuotes} for:item="quote">
                     <div key={quote.quoteId} class="slds-m-bottom_medium quote-panel">
 
                         <!-- ── Quote Header ── -->
-                        <div class="quote-header">
+                        <div class={quote.quoteHeaderClass}>
                             <div class="quote-header-inner">
                                 <div class="quote-header-grid">
                                     <div class="header-field">
@@ -223,14 +245,14 @@
                                                 <th scope="col" style="width:8%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center; white-space:normal; word-break:break-word;">Product Code</th>
                                                 <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">List Price</th>
                                                 <th scope="col" style="width:3%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Qty</th>
-                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc.SAP%</th>
-                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">P.Disc.%</th>
+                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc. SAP%</th>
+                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Pr. Disc.%</th>
                                                 <th scope="col" style="width:7%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc.%</th>
-                                                <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">SOA</th>
+                                                <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">SOA User</th>
                                                 <th scope="col" style="width:8%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Status</th>
-                                                <th scope="col" style="width:8%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Date / Time</th>
-                                                <th scope="col" style="width:16%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Previous Comments</th>
-                                                <th scope="col" style="width:21%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Comments</th>
+                                                <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Requestor Comments</th>
+                                                <th scope="col" style="width:16%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Previous Approver Comments</th>
+                                                <th scope="col" style="width:21%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Approver Comments</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -273,27 +295,18 @@
                                                     <!-- Status -->
                                                     <td style="border:1px solid #000; padding:8px; vertical-align:top;">
                                                         <template if:true={row.showStatusCombobox}>
-                                                            <lightning-combobox
-                                                                name="ApprovalStatus"
-                                                                data-parent={row.parentId}
-                                                                data-id={row.quoteLineItemId}
-                                                                data-field="approvalStatus"
-                                                                data-stage-field={row.soaStatusField}
-                                                                value={row.approvalStatus}
-                                                                options={statusOptions}
-                                                                onchange={handleLineItemChanges}
-                                                                variant="label-hidden"
-                                                                dropdown-alignment="auto">
-                                                            </lightning-combobox>
+                                                            <lightning-combobox name="ApprovalStatus" data-parent={row.parentId} data-id={row.quoteLineItemId} data-field="approvalStatus" data-stage-field={row.soaStatusField} value={row.approvalStatus} options={statusOptions} onchange={handleLineItemChanges} variant="label-hidden" dropdown-alignment="auto"></lightning-combobox>
                                                         </template>
                                                         <template if:true={row.showStatusText}>
                                                             <span class={row.statusBadgeClass}>{row.soaStatus}</span>
                                                         </template>
+                                                        <template if:true={row.soaDateTime}>
+                                                            <div style="font-size:11px; color:#706e6b; white-space:nowrap; margin-top:4px;">{row.soaDateTime}</div>
+                                                        </template>
                                                     </td>
-
-                                                    <!-- Date/Time -->
-                                                    <td style="border:1px solid #000; padding:8px; vertical-align:top; font-size:11px; color:#706e6b; white-space:nowrap;">{row.soaDateTime}</td>
-
+                                                    <td style="border:1px solid #000; padding:8px; vertical-align:top;">
+                                                        <span style="white-space:pre-wrap; overflow-wrap:anywhere; display:block; color:#3e3e3c; line-height:1.45;">{row.requestedComments}</span>
+                                                    </td>
                                                     <!-- Previous Comments -->
                                                     <td style="border:1px solid #000; padding:8px; vertical-align:top;">
                                                         <span style="white-space:pre-wrap; overflow-wrap:anywhere; display:block; color:#3e3e3c; line-height:1.45;">{row.prevSoaComments}</span>
@@ -325,7 +338,8 @@
                                 </div>
                             </template>
 
-                            <!-- ── Submit Button ── -->
+                            <!-- ── Submit Button (hidden in Approved/Rejected tabs) ── -->
+                            <template if:false={isApprovedOrRejectedTab}>
                             <div class="slds-m-top_medium slds-text-align_center slds-p-horizontal_medium slds-p-bottom_medium submit-btn-wrap">
                                 <lightning-button
                                     label="Submit"
@@ -335,10 +349,18 @@
                                     disabled={quote.isUnifiedSubmitDisabled}>
                                 </lightning-button>
                             </div>
+                            </template>
 
                         </template>
                         <!-- ── End Collapsible ── -->
 
+                    </div>
+                </template>
+                </template>
+                <!-- ── Empty State ── -->
+                <template if:false={hasFilteredQuotes}>
+                    <div class="tab-empty-state">
+                        <p>No quotes found for the selected filter.</p>
                     </div>
                 </template>
 

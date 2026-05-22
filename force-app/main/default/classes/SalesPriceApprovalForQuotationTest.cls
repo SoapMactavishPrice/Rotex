@@ -189,7 +189,7 @@ private class SalesPriceApprovalForQuotationTest {
                 GS_Min_Offer_Status__c, GS_Min_Offer_Date_Time__c, GS_Min_Offer_Comments__c,
                 BM_Min_Offer_Status__c, BM_Min_Offer_Date_Time__c, BM_Min_Offer_Comments__c,
                 MD_Min_Offer_Status__c, MD_Min_Offer_Date_Time__c, MD_Min_Offer_Comments__c,
-                Final_Minimum_Offer_Value_Approver__c
+                Final_Minimum_Offer_Value_Approver__c, Is_all_approvals_final_approved__c
             FROM Quote LIMIT 1
         ];
     }
@@ -216,7 +216,7 @@ private class SalesPriceApprovalForQuotationTest {
                 Prev_Sales_Manager_Comments__c, Prev_Country_Continent_Sales_Comments__c,
                 Prev_Global_Sales_Head_Comments__c, Prev_Rotex_Board_Member_Comments__c,
                 Prev_Managing_Director_Comments__c, Previous_Discount__c,
-                Is_Discount_Approved__c
+                Is_Discount_Approved__c, Requested_Comments__c
             FROM QuoteLineItem WHERE QuoteId = :quoteId
         ];
     }
@@ -298,27 +298,27 @@ private class SalesPriceApprovalForQuotationTest {
         }
     }
 
-    @isTest
-    static void testGetAllQuotations_WithMinimumOffer() {
-        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+    // @isTest
+    // static void testGetAllQuotations_WithMinimumOffer() {
+    //     User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
 
-        QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];
-        qli.UnitPrice = 10000;
-        qli.Quantity  = 1;
-        update qli;
+    //     QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];
+    //     qli.UnitPrice = 10000;
+    //     qli.Quantity  = 1;
+    //     update qli;
 
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        q.Is_Small_Order_Handling__c        = true;
-        q.Is_Minimum_Offer_Value_Approved__c = false;
-        q.GS_Min_Offer_Status__c            = 'Submitted';
-        update q;
+    //     Quote q = [SELECT Id FROM Quote LIMIT 1];
+    //     q.Is_Small_Order_Handling__c        = true;
+    //     q.Is_Minimum_Offer_Value_Approved__c = false;
+    //     q.GS_Min_Offer_Status__c            = 'Submitted';
+    //     update q;
 
-        System.runAs(gs) {
-            Test.startTest();
-            SalesPriceApprovalForQuotation.getAllQuotations();
-            Test.stopTest();
-        }
-    }
+    //     System.runAs(gs) {
+    //         Test.startTest();
+    //         SalesPriceApprovalForQuotation.getAllQuotations();
+    //         Test.stopTest();
+    //     }
+    // }
 
     @isTest
     static void testGetAllQuotations_NoRelevantQuotes() {
@@ -1037,108 +1037,108 @@ private class SalesPriceApprovalForQuotationTest {
 
     // ── submitMinimumOfferApprovalSingle ─────────────────────────────────
 
-    @isTest
-    static void testSubmitMinimumOfferApprovalSingle() {
-        User globalHead = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
-            new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
-        wrapper.quoteId = q.Id; wrapper.updated = true;
-        wrapper.gsMinOfferStatus = 'Approved'; wrapper.originalGsMinOfferStatus = 'Submitted';
-        wrapper.gsMinOfferComments = 'OK'; wrapper.originalGsMinOfferComments = null;
-        wrapper.isGsCurrentUser = true; wrapper.gsId = globalHead.Id;
-        wrapper.finalMinimumOfferValueApprover = globalHead.Id;
-        System.runAs(globalHead) {
-            Test.startTest();
-            SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
-            Test.stopTest();
-        }
-    }
+    // @isTest
+    // static void testSubmitMinimumOfferApprovalSingle() {
+    //     User globalHead = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+    //     Quote q = [SELECT Id FROM Quote LIMIT 1];
+    //     SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
+    //         new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
+    //     wrapper.quoteId = q.Id; wrapper.updated = true;
+    //     wrapper.gsMinOfferStatus = 'Approved'; wrapper.originalGsMinOfferStatus = 'Submitted';
+    //     wrapper.gsMinOfferComments = 'OK'; wrapper.originalGsMinOfferComments = null;
+    //     wrapper.isGsCurrentUser = true; wrapper.gsId = globalHead.Id;
+    //     wrapper.finalMinimumOfferValueApprover = globalHead.Id;
+    //     System.runAs(globalHead) {
+    //         Test.startTest();
+    //         SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
+    //         Test.stopTest();
+    //     }
+    // }
 
-    @isTest
-    static void testSubmitMinimumOfferApprovalSingle_NoChanges() {
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
-            new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
-        wrapper.quoteId = q.Id; wrapper.updated = false;
-        Test.startTest();
-        SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
-        Test.stopTest();
-    }
+    // @isTest
+    // static void testSubmitMinimumOfferApprovalSingle_NoChanges() {
+    //     Quote q = [SELECT Id FROM Quote LIMIT 1];
+    //     SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
+    //         new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
+    //     wrapper.quoteId = q.Id; wrapper.updated = false;
+    //     Test.startTest();
+    //     SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
+    //     Test.stopTest();
+    // }
 
-    @isTest
-    static void testSubmitMinimumOfferApprovalSingle_GS_AutoApprove() {
-        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
-        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
-            new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
-        wrapper.quoteId = q.Id; wrapper.updated = true;
-        wrapper.gsId = gs.Id; wrapper.isGsCurrentUser = true;
-        wrapper.gsMinOfferStatus = 'Submitted'; wrapper.originalGsMinOfferStatus = 'Submitted';
-        wrapper.gsMinOfferComments = 'GS auto'; wrapper.originalGsMinOfferComments = null;
-        wrapper.finalMinimumOfferValueApprover = bm.Id;
-        System.runAs(gs) {
-            Test.startTest();
-            SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
-            Test.stopTest();
-        }
-    }
+    // @isTest
+    // static void testSubmitMinimumOfferApprovalSingle_GS_AutoApprove() {
+    //     User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+    //     User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
+    //     Quote q = [SELECT Id FROM Quote LIMIT 1];
+    //     SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
+    //         new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
+    //     wrapper.quoteId = q.Id; wrapper.updated = true;
+    //     wrapper.gsId = gs.Id; wrapper.isGsCurrentUser = true;
+    //     wrapper.gsMinOfferStatus = 'Submitted'; wrapper.originalGsMinOfferStatus = 'Submitted';
+    //     wrapper.gsMinOfferComments = 'GS auto'; wrapper.originalGsMinOfferComments = null;
+    //     wrapper.finalMinimumOfferValueApprover = bm.Id;
+    //     System.runAs(gs) {
+    //         Test.startTest();
+    //         SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
+    //         Test.stopTest();
+    //     }
+    // }
 
-    @isTest
-    static void testSubmitMinimumOfferApprovalSingle_BM() {
-        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
-            new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
-        wrapper.quoteId = q.Id; wrapper.updated = true;
-        wrapper.bmId = bm.Id; wrapper.isBmCurrentUser = true;
-        wrapper.bmMinOfferStatus = 'Approved'; wrapper.originalBmMinOfferStatus = 'Submitted';
-        wrapper.bmMinOfferComments = 'BM approved'; wrapper.originalBmMinOfferComments = null;
-        wrapper.finalMinimumOfferValueApprover = bm.Id;
-        System.runAs(bm) {
-            Test.startTest();
-            SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
-            Test.stopTest();
-        }
-    }
+    // @isTest
+    // static void testSubmitMinimumOfferApprovalSingle_BM() {
+    //     User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
+    //     Quote q = [SELECT Id FROM Quote LIMIT 1];
+    //     SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
+    //         new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
+    //     wrapper.quoteId = q.Id; wrapper.updated = true;
+    //     wrapper.bmId = bm.Id; wrapper.isBmCurrentUser = true;
+    //     wrapper.bmMinOfferStatus = 'Approved'; wrapper.originalBmMinOfferStatus = 'Submitted';
+    //     wrapper.bmMinOfferComments = 'BM approved'; wrapper.originalBmMinOfferComments = null;
+    //     wrapper.finalMinimumOfferValueApprover = bm.Id;
+    //     System.runAs(bm) {
+    //         Test.startTest();
+    //         SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
+    //         Test.stopTest();
+    //     }
+    // }
 
-    @isTest
-    static void testSubmitMinimumOfferApprovalSingle_BM_AutoApprove() {
-        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
-        User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
-            new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
-        wrapper.quoteId = q.Id; wrapper.updated = true;
-        wrapper.bmId = bm.Id; wrapper.isBmCurrentUser = true;
-        wrapper.bmMinOfferStatus = 'Submitted'; wrapper.originalBmMinOfferStatus = 'Submitted';
-        wrapper.bmMinOfferComments = 'BM auto'; wrapper.originalBmMinOfferComments = null;
-        wrapper.finalMinimumOfferValueApprover = md.Id;
-        System.runAs(bm) {
-            Test.startTest();
-            SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
-            Test.stopTest();
-        }
-    }
+    // @isTest
+    // static void testSubmitMinimumOfferApprovalSingle_BM_AutoApprove() {
+    //     User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
+    //     User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
+    //     Quote q = [SELECT Id FROM Quote LIMIT 1];
+    //     SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
+    //         new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
+    //     wrapper.quoteId = q.Id; wrapper.updated = true;
+    //     wrapper.bmId = bm.Id; wrapper.isBmCurrentUser = true;
+    //     wrapper.bmMinOfferStatus = 'Submitted'; wrapper.originalBmMinOfferStatus = 'Submitted';
+    //     wrapper.bmMinOfferComments = 'BM auto'; wrapper.originalBmMinOfferComments = null;
+    //     wrapper.finalMinimumOfferValueApprover = md.Id;
+    //     System.runAs(bm) {
+    //         Test.startTest();
+    //         SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
+    //         Test.stopTest();
+    //     }
+    // }
 
-    @isTest
-    static void testSubmitMinimumOfferApprovalSingle_MD() {
-        User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
-            new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
-        wrapper.quoteId = q.Id; wrapper.updated = true;
-        wrapper.mdId = md.Id; wrapper.isMdCurrentUser = true;
-        wrapper.mdMinOfferStatus = 'Approved'; wrapper.originalMdMinOfferStatus = 'Submitted';
-        wrapper.mdMinOfferComments = 'MD approved'; wrapper.originalMdMinOfferComments = null;
-        wrapper.finalMinimumOfferValueApprover = md.Id;
-        System.runAs(md) {
-            Test.startTest();
-            SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
-            Test.stopTest();
-        }
-    }
+    // @isTest
+    // static void testSubmitMinimumOfferApprovalSingle_MD() {
+    //     User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
+    //     Quote q = [SELECT Id FROM Quote LIMIT 1];
+    //     SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper wrapper =
+    //         new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
+    //     wrapper.quoteId = q.Id; wrapper.updated = true;
+    //     wrapper.mdId = md.Id; wrapper.isMdCurrentUser = true;
+    //     wrapper.mdMinOfferStatus = 'Approved'; wrapper.originalMdMinOfferStatus = 'Submitted';
+    //     wrapper.mdMinOfferComments = 'MD approved'; wrapper.originalMdMinOfferComments = null;
+    //     wrapper.finalMinimumOfferValueApprover = md.Id;
+    //     System.runAs(md) {
+    //         Test.startTest();
+    //         SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(wrapper));
+    //         Test.stopTest();
+    //     }
+    // }
 
     // ── updateWarrantyApproval ────────────────────────────────────────────
 
@@ -1478,7 +1478,7 @@ private class SalesPriceApprovalForQuotationTest {
         q.Warranty_Terms_Draft__c          = '24 Months from date of supply';
         q.Final_Warranty_Terms_Approver__c = sm.Id;
         q.Is_Small_Order_Handling__c        = true;
-        q.Is_Minimum_Offer_Value_Approved__c = false;
+        // q.Is_Minimum_Offer_Value_Approved__c = false;
         q.Final_Minimum_Offer_Value_Approver__c = sm.Id;
         update q;
 
@@ -1613,30 +1613,30 @@ private class SalesPriceApprovalForQuotationTest {
         }
     }
 
-    @isTest
-    static void testMinimumOfferApprovalWrapper_Constructor() {
-        User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
-        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+    // @isTest
+    // static void testMinimumOfferApprovalWrapper_Constructor() {
+    //     User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
+    //     User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
 
-        QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];
-        qli.UnitPrice = 10000;
-        qli.Quantity  = 1;
-        update qli;
+    //     QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];
+    //     qli.UnitPrice = 10000;
+    //     qli.Quantity  = 1;
+    //     update qli;
 
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        q.Is_Small_Order_Handling__c        = true;
-        q.Is_Minimum_Offer_Value_Approved__c = false;
-        q.Final_Minimum_Offer_Value_Approver__c = gs.Id;
-        q.GS_Min_Offer_Status__c             = 'Submitted';
-        update q;
+    //     Quote q = [SELECT Id FROM Quote LIMIT 1];
+    //     q.Is_Small_Order_Handling__c        = true;
+    //     q.Is_Minimum_Offer_Value_Approved__c = false;
+    //     q.Final_Minimum_Offer_Value_Approver__c = gs.Id;
+    //     q.GS_Min_Offer_Status__c             = 'Submitted';
+    //     update q;
 
-        Quote fullQ = fetchFullQuote();
-        System.runAs(md) {
-            Test.startTest();
-            new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper(fullQ);
-            Test.stopTest();
-        }
-    }
+    //     Quote fullQ = fetchFullQuote();
+    //     System.runAs(md) {
+    //         Test.startTest();
+    //         new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper(fullQ);
+    //         Test.stopTest();
+    //     }
+    // }
 
     @isTest
     static void testSkipSoaDoesNotAutoApproveFinalApproverRow() {
@@ -2046,62 +2046,62 @@ private class SalesPriceApprovalForQuotationTest {
     // Hierarchy starts at position 3 (GS), so reachable positions: 3, 4
     // ═══════════════════════════════════════════════════════════════════
 
-    @isTest
-    static void testLowerHierarchySkip_MinimumOffer_Position3() {
-        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
-        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'      LIMIT 1];
-        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+    // @isTest
+    // static void testLowerHierarchySkip_MinimumOffer_Position3() {
+    //     User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+    //     User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'      LIMIT 1];
+    //     Quote q  = [SELECT Id FROM Quote LIMIT 1];
 
-        SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper w =
-            new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
-        w.quoteId                        = q.Id;
-        w.updated                        = true;
-        w.skipSoaRestrictions            = true;
-        w.isHigherHierarchy              = false;
-        w.isFinalApproverWithPendingLower = false;
-        w.currentUserHierarchyPosition   = 3;         // GS is below final
-        w.finalApproverHierarchyPosition = 4;
-        w.gsId                           = gs.Id;
-        w.isGsCurrentUser                = true;
-        w.gsMinOfferComments             = 'GS lower skip min offer'; // == 3 branch
-        w.finalMinimumOfferValueApprover = bm.Id;
+    //     SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper w =
+    //         new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
+    //     w.quoteId                        = q.Id;
+    //     w.updated                        = true;
+    //     w.skipSoaRestrictions            = true;
+    //     w.isHigherHierarchy              = false;
+    //     w.isFinalApproverWithPendingLower = false;
+    //     w.currentUserHierarchyPosition   = 3;         // GS is below final
+    //     w.finalApproverHierarchyPosition = 4;
+    //     w.gsId                           = gs.Id;
+    //     w.isGsCurrentUser                = true;
+    //     w.gsMinOfferComments             = 'GS lower skip min offer'; // == 3 branch
+    //     w.finalMinimumOfferValueApprover = bm.Id;
 
-        System.runAs(gs) {
-            Test.startTest();
-            String result = SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(w));
-            Test.stopTest();
-            System.assertEquals('Success', result);
-        }
-    }
+    //     System.runAs(gs) {
+    //         Test.startTest();
+    //         String result = SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(w));
+    //         Test.stopTest();
+    //         System.assertEquals('Success', result);
+    //     }
+    // }
 
-    @isTest
-    static void testLowerHierarchySkip_MinimumOffer_Position4_CascadesGS() {
-        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
-        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'      LIMIT 1];
-        User md = [SELECT Id FROM User WHERE Email = 'md@test.com'         LIMIT 1];
-        Quote q  = [SELECT Id FROM Quote LIMIT 1];
+    // @isTest
+    // static void testLowerHierarchySkip_MinimumOffer_Position4_CascadesGS() {
+    //     User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+    //     User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'      LIMIT 1];
+    //     User md = [SELECT Id FROM User WHERE Email = 'md@test.com'         LIMIT 1];
+    //     Quote q  = [SELECT Id FROM Quote LIMIT 1];
 
-        SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper w =
-            new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
-        w.quoteId                        = q.Id;
-        w.updated                        = true;
-        w.skipSoaRestrictions            = true;
-        w.isHigherHierarchy              = false;
-        w.isFinalApproverWithPendingLower = false;
-        w.currentUserHierarchyPosition   = 4;         // BM is below final
-        w.finalApproverHierarchyPosition = 5;
-        w.gsId = gs.Id; w.gsMinOfferComments = 'GS cascade'; // > 3 block
-        w.bmId = bm.Id; w.isBmCurrentUser = true;
-        w.bmMinOfferComments             = 'BM lower skip'; // == 4 branch
-        w.finalMinimumOfferValueApprover = md.Id;
+    //     SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper w =
+    //         new SalesPriceApprovalForQuotation.MinimumOfferApprovalWrapper();
+    //     w.quoteId                        = q.Id;
+    //     w.updated                        = true;
+    //     w.skipSoaRestrictions            = true;
+    //     w.isHigherHierarchy              = false;
+    //     w.isFinalApproverWithPendingLower = false;
+    //     w.currentUserHierarchyPosition   = 4;         // BM is below final
+    //     w.finalApproverHierarchyPosition = 5;
+    //     w.gsId = gs.Id; w.gsMinOfferComments = 'GS cascade'; // > 3 block
+    //     w.bmId = bm.Id; w.isBmCurrentUser = true;
+    //     w.bmMinOfferComments             = 'BM lower skip'; // == 4 branch
+    //     w.finalMinimumOfferValueApprover = md.Id;
 
-        System.runAs(bm) {
-            Test.startTest();
-            String result = SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(w));
-            Test.stopTest();
-            System.assertEquals('Success', result);
-        }
-    }
+    //     System.runAs(bm) {
+    //         Test.startTest();
+    //         String result = SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle(JSON.serialize(w));
+    //         Test.stopTest();
+    //         System.assertEquals('Success', result);
+    //     }
+    // }
 
     /** Inserts one SOA_Matrix__c row per profile pattern so every branch
      *  of getSoaPositionByProfile and both normalise methods gets hit. */
@@ -2640,55 +2640,55 @@ private class SalesPriceApprovalForQuotationTest {
 
     // ── isMinimumOfferFinallyDecided ──────────────────────────────────────────
 
-    @isTest
-    static void testIsMinimumOfferFinallyDecided_AllApproverPositions() {
-        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
-        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'      LIMIT 1];
-        User md = [SELECT Id FROM User WHERE Email = 'md@test.com'         LIMIT 1];
+    // @isTest
+    // static void testIsMinimumOfferFinallyDecided_AllApproverPositions() {
+    //     User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+    //     User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'      LIMIT 1];
+    //     User md = [SELECT Id FROM User WHERE Email = 'md@test.com'         LIMIT 1];
 
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
+    //     Quote q = [SELECT Id FROM Quote LIMIT 1];
 
-        // null finalId → false
-        q.Final_Minimum_Offer_Value_Approver__c = null;
-        update q;
-        System.assertEquals(false, SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+    //     // null finalId → false
+    //     q.Final_Minimum_Offer_Value_Approver__c = null;
+    //     update q;
+    //     System.assertEquals(false, SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
 
-        // GS Approved → true
-        q.Final_Minimum_Offer_Value_Approver__c = gs.Id;
-        q.GS_Min_Offer_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+    //     // GS Approved → true
+    //     q.Final_Minimum_Offer_Value_Approver__c = gs.Id;
+    //     q.GS_Min_Offer_Status__c = 'Approved';
+    //     update q;
+    //     System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
 
-        // GS Rejected → true
-        q.GS_Min_Offer_Status__c = 'Rejected';
-        update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+    //     // GS Rejected → true
+    //     q.GS_Min_Offer_Status__c = 'Rejected';
+    //     update q;
+    //     System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
 
-        // GS neither → false
-        q.GS_Min_Offer_Status__c = 'Submitted';
-        update q;
-        System.assertEquals(false, SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+    //     // GS neither → false
+    //     q.GS_Min_Offer_Status__c = 'Submitted';
+    //     update q;
+    //     System.assertEquals(false, SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
 
-        // BM Approved → true
-        q.Final_Minimum_Offer_Value_Approver__c = bm.Id;
-        q.BM_Min_Offer_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+    //     // BM Approved → true
+    //     q.Final_Minimum_Offer_Value_Approver__c = bm.Id;
+    //     q.BM_Min_Offer_Status__c = 'Approved';
+    //     update q;
+    //     System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
 
-        // BM Rejected → true
-        q.BM_Min_Offer_Status__c = 'Rejected';
-        update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+    //     // BM Rejected → true
+    //     q.BM_Min_Offer_Status__c = 'Rejected';
+    //     update q;
+    //     System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
 
-        // MD Approved → true
-        q.Final_Minimum_Offer_Value_Approver__c = md.Id;
-        q.MD_Min_Offer_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+    //     // MD Approved → true
+    //     q.Final_Minimum_Offer_Value_Approver__c = md.Id;
+    //     q.MD_Min_Offer_Status__c = 'Approved';
+    //     update q;
+    //     System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
 
-        // MD Rejected → true
-        q.MD_Min_Offer_Status__c = 'Rejected';
-        update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
-    }
+    //     // MD Rejected → true
+    //     q.MD_Min_Offer_Status__c = 'Rejected';
+    //     update q;
+    //     System.assertEquals(true,  SalesPriceApprovalForQuotation.isMinimumOfferFinallyDecided(fetchFullQuote()));
+    // }
 }

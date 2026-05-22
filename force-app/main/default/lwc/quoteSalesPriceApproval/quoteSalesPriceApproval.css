@@ -485,3 +485,145 @@ lightning-textarea.comment-input {
         grid-template-columns: 1fr;
     }
 }
+
+.header-container {
+    position: relative;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    min-height: 52px;
+    padding: 8px 16px;
+    border-bottom: 1px solid #e0dedc;
+    box-sizing: border-box;
+}
+
+.header-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 22px;
+    font-weight: 700;
+    color: #181818;
+    letter-spacing: -0.3px;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.quote-header--final-approved {
+    background-color: #d4f5e2;
+}
+
+.header-container lightning-input {
+    margin: 0;
+}
+
+/* ══════════════════════════════════════════════
+   Tab Navigation
+   ══════════════════════════════════════════════ */
+.tab-nav-container {
+    display: flex;
+    gap: 2px;
+    padding: 10px 16px 0;
+    background: #f8f8f8;
+    border-bottom: 2px solid #e0dedc;
+}
+
+.tab-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 20px 10px;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: #706e6b;
+    cursor: pointer;
+    border-radius: 4px 4px 0 0;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+}
+
+.tab-btn:hover {
+    color: #007764;
+    background: #edf7f5;
+}
+
+.tab-btn.tab-btn--active {
+    color: #007764;
+    background: #edf7f5;
+    border-bottom: 3px solid #007764;
+}
+
+/* Pending tab accent */
+.tab-btn[data-tab="pending"].tab-btn--active {
+    color: #b45309;
+    border-bottom-color: #f59e0b;
+    background: #fffbeb;
+}
+.tab-btn[data-tab="pending"].tab-btn--active .tab-badge {
+    background: #f59e0b;
+    color: #1c1c00;
+}
+
+/* Approved tab accent */
+.tab-btn[data-tab="approved"].tab-btn--active {
+    color: #027a48;
+    border-bottom-color: #12b76a;
+    background: #ecfdf5;
+}
+.tab-btn[data-tab="approved"].tab-btn--active .tab-badge {
+    background: #12b76a;
+    color: #fff;
+}
+
+/* Rejected tab accent */
+.tab-btn[data-tab="rejected"].tab-btn--active {
+    color: #c0392b;
+    border-bottom-color: #e74c3c;
+    background: #fff5f5;
+}
+.tab-btn[data-tab="rejected"].tab-btn--active .tab-badge {
+    background: #e74c3c;
+    color: #fff;
+}
+
+/* Badge pill */
+.tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: 700;
+    background: #c9c7c5;
+    color: #3e3e3c;
+    line-height: 1;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tab-btn--active .tab-badge {
+    background: #007764;
+    color: #fff;
+}
+
+/* ── Empty State ── */
+.tab-empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #706e6b;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.tab-empty-state p {
+    margin: 0;
+    line-height: 1.5;
+}
+

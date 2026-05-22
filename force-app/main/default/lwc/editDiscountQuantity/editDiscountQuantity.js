@@ -14,6 +14,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     @track showSpinner = false;
     @track quoteLineItemList = [];
     @track currencyCode = '';
+
     showToast(toastTitle, toastMsg, toastType) {
         const event = new ShowToastEvent({
             title: toastTitle,
@@ -25,14 +26,12 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     }
 
     closeModal() {
-        
         this[NavigationMixin.Navigate]({
             type: 'standard__recordPage',
             attributes: {
                 recordId: this.recordId,
                 objectApiName: 'Quote',
                 actionName: 'view',
-
             }
         });
         setTimeout(() => {
@@ -59,19 +58,33 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
         getQuoteLineItem({
             qId: this.recordId
         }).then((result) => {
-            // let data = JSON.parse(result);
             console.log('data:>>> ', result);
-            // Initialize newDiscountValue for items that need it
             this.quoteLineItemList = result.map(item => ({
                 ...item,
                 newDiscountValue: null,
-                isDiscountOfferedDisabled: item.Is_Discount_Approved__c || this.hasSubmittedApproverStatus(item)
+                isDiscountOfferedDisabled: item.Is_Discount_Approved__c || this.hasSubmittedApproverStatus(item),
+                // Requested Comments is enabled only when Discount to be offered has a value
+                isRequestedCommentsDisabled: this.computeRequestedCommentsDisabled(item, null),
+                requestedCommentsPlaceholder: 'Enter comments...'
             }));
             if (result && result.length > 0) {
-            this.currencyCode = result[0].CurrencyIsoCode;
+                this.currencyCode = result[0].CurrencyIsoCode;
             }
             console.log('quoteLineItemList ', this.quoteLineItemList);
-        })
+        });
+    }
+
+    /**
+     * Requested Comments is enabled when:
+     *  - Discount_to_be_offered__c has a value, OR
+     *  - newDiscountValue (New Discount column) has a value
+     * Returns true = disabled, false = enabled
+     */
+    computeRequestedCommentsDisabled(item, overrideNewDiscount) {
+        const newDiscount = overrideNewDiscount !== undefined ? overrideNewDiscount : item.newDiscountValue;
+        const hasDiscountOffered = item.Discount_to_be_offered__c != null && item.Discount_to_be_offered__c !== '';
+        const hasNewDiscount = newDiscount != null && newDiscount !== '';
+        return !(hasDiscountOffered || hasNewDiscount);
     }
 
     hasSubmittedApproverStatus(item) {
@@ -87,63 +100,83 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     handleCustomerPartNoChange(event) {
         const id = event.target.dataset.id;
         const value = event.target.value;
-        const updatedItems = this.quoteLineItemList.map(item => {
+        this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
                 return { ...item, Customer_Part_No__c: value };
             }
             return item;
         });
-        this.quoteLineItemList = updatedItems;
     }
 
     handleDiscountChange(event) {
         const id = event.target.dataset.id;
         const value = event.target.value;
-        const updatedItems = this.quoteLineItemList.map(item => {
+        this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
-                return { ...item, Discount_to_be_offered__c: parseInt(value) };
+                const updatedItem = {
+                    ...item,
+                    Discount_to_be_offered__c: value !== '' ? parseInt(value) : null,
+                    // Clear old Requested Comments whenever a new discount value is entered
+                    Requested_Comments__c: null
+                };
+                updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(updatedItem, item.newDiscountValue);
+                return updatedItem;
             }
             return item;
         });
-        this.quoteLineItemList = updatedItems;
     }
 
     handlePFChargeChanges(event) {
         const id = event.target.dataset.id;
         const value = event.target.value;
-        const updatedItems = this.quoteLineItemList.map(item => {
+        this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
                 return { ...item, P_F_Charges__c: parseInt(value) };
             }
             return item;
         });
-        this.quoteLineItemList = updatedItems;
     }
 
     handleQuantityChange(event) {
         const id = event.target.dataset.id;
         const value = event.target.value;
-        const updatedItems = this.quoteLineItemList.map(item => {
+        this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
                 return { ...item, Quantity: parseInt(value) };
             }
             return item;
         });
-        this.quoteLineItemList = updatedItems;
     }
 
     handleNewDiscountChange(event) {
         const id = event.target.dataset.id;
         const value = event.target.value;
-        const updatedItems = this.quoteLineItemList.map(item => {
+        const parsedValue = value !== '' ? parseFloat(value) : null;
+        this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
-                // Store the new discount value temporarily
-                return { ...item, newDiscountValue: parseFloat(value) };
+                const updatedItem = {
+                    ...item,
+                    newDiscountValue: parsedValue,
+                    // Clear old Requested Comments whenever a new discount value is entered
+                    Requested_Comments__c: null
+                };
+                updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(updatedItem, parsedValue);
+                return updatedItem;
             }
             return item;
         });
-        this.quoteLineItemList = updatedItems;
         console.log('New Discount entered for item:', id, 'Value:', value);
+    }
+
+    handleRequestedCommentsChange(event) {
+        const id = event.target.dataset.id;
+        const value = event.target.value;
+        this.quoteLineItemList = this.quoteLineItemList.map(item => {
+            if (item.Id === id) {
+                return { ...item, Requested_Comments__c: value };
+            }
+            return item;
+        });
     }
 
     handleSave() {
@@ -166,9 +199,9 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             return;
         }
 
-        const hasNewDiscountEntered = this.quoteLineItemList.some(item => 
-            item.Is_Discount_Approved__c && 
-            item.newDiscountValue != null && 
+        const hasNewDiscountEntered = this.quoteLineItemList.some(item =>
+            item.Is_Discount_Approved__c &&
+            item.newDiscountValue != null &&
             item.newDiscountValue !== ''
         );
 
@@ -180,6 +213,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
                 Customer_Part_No__c: item.Customer_Part_No__c,
                 P_F_Charges__c: item.P_F_Charges__c ? parseFloat(item.P_F_Charges__c) : 0,
                 Discount_as_per_SAP__c: parseFloat(item.Discount_as_per_SAP__c),
+                Requested_Comments__c: item.Requested_Comments__c || null,
 
                 Final_Discount_Approver__c: item.Final_Discount_Approver__c,
                 Sales_Rep__c: item.Sales_Rep__c,
@@ -193,7 +227,6 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             };
 
             if (item.Is_Discount_Approved__c && item.newDiscountValue != null && item.newDiscountValue !== '') {
-
                 updateData.Previous_Discount__c = item.Discount_to_be_offered__c;
                 updateData.Discount_to_be_offered__c = parseFloat(item.newDiscountValue);
                 updateData.New_Discount_Entered__c = true;
@@ -231,7 +264,6 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             this.showToast('Error', error?.body?.message, 'error');
             this.errorResponseMessage = error;
             this.showSpinner = false;
-        })
+        });
     }
-
 }

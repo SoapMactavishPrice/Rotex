@@ -559,6 +559,17 @@ lightning-textarea.comment-input {
 }
 
 /* Pending tab accent */
+.tab-btn[data-tab="all"].tab-btn--active {
+    color: #b45309;
+    border-bottom-color: #f59e0b;
+    background: #fffbeb;
+}
+.tab-btn[data-tab="all"].tab-btn--active .tab-badge {
+    background: #f59e0b;
+    color: #1c1c00;
+}
+
+/* Pending tab accent */
 .tab-btn[data-tab="pending"].tab-btn--active {
     color: #b45309;
     border-bottom-color: #f59e0b;
@@ -626,4 +637,3 @@ lightning-textarea.comment-input {
     margin: 0;
     line-height: 1.5;
 }
-

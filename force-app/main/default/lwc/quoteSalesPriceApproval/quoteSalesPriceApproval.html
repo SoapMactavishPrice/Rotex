@@ -24,13 +24,13 @@
         <template if:true={quotes}>
             <!-- ── Tab Navigation ── -->
             <div class="tab-nav-container">
+                <button class={pendingTabClass} onclick={handleTabChange} data-tab="pending">
+                    My Pending
+                    <span class="tab-badge">{pendingCount}</span>
+                </button>
                 <button class={allTabClass} onclick={handleTabChange} data-tab="all">
                     All Pending
                     <span class="tab-badge">{allCount}</span>
-                </button>
-                <button class={pendingTabClass} onclick={handleTabChange} data-tab="pending">
-                    Pending
-                    <span class="tab-badge">{pendingCount}</span>
                 </button>
                 <button class={approvedTabClass} onclick={handleTabChange} data-tab="approved">
                     Approved

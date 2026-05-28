@@ -62,7 +62,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             this.quoteLineItemList = result.map(item => ({
                 ...item,
                 newDiscountValue: null,
-                isDiscountOfferedDisabled: item.Is_Discount_Approved__c || this.hasSubmittedApproverStatus(item),
+                isDiscountOfferedDisabled: item.Item_Type__c == 'ARC' ||item.Is_Discount_Approved__c || this.hasSubmittedApproverStatus(item),
                 // Requested Comments is enabled only when Discount to be offered has a value
                 isRequestedCommentsDisabled: this.computeRequestedCommentsDisabled(item, null),
                 requestedCommentsPlaceholder: 'Enter comments...'

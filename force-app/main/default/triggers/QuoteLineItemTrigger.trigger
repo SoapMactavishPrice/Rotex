@@ -95,7 +95,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         }
     }
 
-    // ── AFTER INSERT: Apply Discount_as_per_SAP__c to UnitPrice on creation ──────
+    // ── AFTER INSERT: Apply Discount_to_be_offered__c to UnitPrice on creation ──────
     if (Trigger.isAfter && Trigger.isInsert) {
         Set<Id> insertedIds = new Set<Id>();
         for (QuoteLineItem qli : Trigger.new) {
@@ -103,18 +103,18 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         }
 
         if (!insertedIds.isEmpty()) {
-            // Re-query so formula field Discount_as_per_SAP__c is freshly calculated
+            // Re-query so formula field Discount_to_be_offered__c is freshly calculated
             List<QuoteLineItem> freshInserted = [
-                SELECT Id, ListPrice, Discount_as_per_SAP__c
+                SELECT Id, ListPrice, Discount_to_be_offered__c, Item_Type__c
                 FROM QuoteLineItem
                 WHERE Id IN :insertedIds
             ];
 
             List<QuoteLineItem> toUpdate = new List<QuoteLineItem>();
             for (QuoteLineItem fresh : freshInserted) {
-                if (fresh.ListPrice == null || fresh.ListPrice == 0) continue;
-                // Use 0% if Discount_as_per_SAP__c is blank → UnitPrice = ListPrice
-                Decimal disc = (fresh.Discount_as_per_SAP__c != null) ? fresh.Discount_as_per_SAP__c : 0;
+                if (fresh.ListPrice == null || fresh.ListPrice == 0 || fresh.Item_Type__c == 'ARC') continue;
+                // Use 0% if Discount_to_be_offered__c is blank → UnitPrice = ListPrice
+                Decimal disc = (fresh.Discount_to_be_offered__c != null) ? fresh.Discount_to_be_offered__c : 0;
                 Decimal newUnitPrice = (fresh.ListPrice * (1 - disc / 100)).setScale(2);
                 System.debug('INSERT DISCOUNT: QLI ' + fresh.Id +
                     ' → disc=' + disc + '%, UnitPrice=' + newUnitPrice);
@@ -123,7 +123,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
 
             if (!toUpdate.isEmpty()) {
                 update toUpdate;
-                System.debug('INSERT DISCOUNT: Applied Discount_as_per_SAP__c to UnitPrice for ' +
+                System.debug('INSERT DISCOUNT: Applied Discount_to_be_offered__c to UnitPrice for ' +
                     toUpdate.size() + ' QLI(s)');
             }
         }

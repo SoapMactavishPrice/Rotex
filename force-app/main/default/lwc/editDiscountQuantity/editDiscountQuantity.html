@@ -12,13 +12,13 @@
                             <th style="width:16%">Product Name</th>
                             <th style="width:10%">Customer Part No.</th>
                             <th style="width:8%; text-align:right;">List Price ({currencyCode})</th>
+                            <th style="width:8%; text-align:right;">Sales Price ({currencyCode})</th>
                             <th style="width:8%; text-align:right;">Discount (SAP) (%)</th>
                             <th style="width:9%">Discount Offered (%)</th>
                             <th style="width:9%">New Discount (%)</th>
                             <th style="width:14%">Requested Comments</th>
                             <th style="width:8%;">P&F Charges (%)</th>
                             <th style="width:8%">Quantity</th>
-                            <th style="width:10%; text-align:right;">Sales Price ({currencyCode})</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -32,6 +32,7 @@
                                     </lightning-input>
                                 </td>
                                 <td class="amount">{item.ListPrice}</td>
+                                <td class="amount">{item.UnitPrice}</td>
                                 <td class="amount">{item.Discount_as_per_SAP__c}%</td>
                                 <td>
                                     <lightning-input type="number" data-id={item.Id} variant="label-hidden"
@@ -70,7 +71,6 @@
                                         value={item.Quantity} class="input-field" onchange={handleQuantityChange}>
                                     </lightning-input>
                                 </td>
-                                <td class="amount highlight">{item.UnitPrice}</td>
                             </tr>
                         </template>
                     </tbody>

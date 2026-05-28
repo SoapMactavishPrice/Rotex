@@ -23,10 +23,15 @@ public without sharing class SalesPriceApprovalForQuotation {
             FROM   QuoteLineItem
             WHERE  (
                        Sales_Manager__c                       = :currentUserId OR
+                       Sales_Manager__r.DelegatedApproverId   = :currentUserId OR
                        Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR
+                       Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId OR
                        Global_Sales_Head__c                   = :currentUserId OR
+                       Global_Sales_Head__r.DelegatedApproverId = :currentUserId OR
                        Managing_Director_Country_Manage__c    = :currentUserId OR
-                       Rotex_Board_Member__c                  = :currentUserId
+                       Managing_Director_Country_Manage__r.DelegatedApproverId = :currentUserId OR
+                       Rotex_Board_Member__c                  = :currentUserId OR
+                       Rotex_Board_Member__r.DelegatedApproverId = :currentUserId
                    )
                    AND Discount_offered_SAP__c = true
                    AND Is_Discount_Approved__c = false
@@ -49,10 +54,15 @@ public without sharing class SalesPriceApprovalForQuotation {
             FROM   Quote
             WHERE  (
                        Sales_Manager__c                          = :currentUserId OR
+                       Sales_Manager__r.DelegatedApproverId      = :currentUserId OR
                        Country_Continent_Sales_Head_LOB_Head__c  = :currentUserId OR
+                       Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId OR
                        Global_Sales_Head__c                      = :currentUserId OR
+                       Global_Sales_Head__r.DelegatedApproverId  = :currentUserId OR
                        Rotex_Board_Member__c                     = :currentUserId OR
-                       Managing_Director_Country_Manager__c      = :currentUserId
+                       Rotex_Board_Member__r.DelegatedApproverId = :currentUserId OR
+                       Managing_Director_Country_Manager__c      = :currentUserId OR
+                       Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId
                    )
                    AND Warranty_Terms_Draft__c != null
                    AND Warranty_Terms_Draft__c != '12 Months from date of supply'
@@ -75,10 +85,15 @@ public without sharing class SalesPriceApprovalForQuotation {
             FROM   Quote
             WHERE  (
                        Sales_Manager__c                          = :currentUserId OR
+                       Sales_Manager__r.DelegatedApproverId      = :currentUserId OR
                        Country_Continent_Sales_Head_LOB_Head__c  = :currentUserId OR
+                       Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId OR
                        Global_Sales_Head__c                      = :currentUserId OR
+                       Global_Sales_Head__r.DelegatedApproverId  = :currentUserId OR
                        Rotex_Board_Member__c                     = :currentUserId OR
-                       Managing_Director_Country_Manager__c      = :currentUserId
+                       Rotex_Board_Member__r.DelegatedApproverId = :currentUserId OR
+                       Managing_Director_Country_Manager__c      = :currentUserId OR
+                       Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId
                    )
                    AND Requested_Validity_Of_Offer__c != null
                    AND Requested_Validity_Of_Offer__c != '30 Days'
@@ -101,10 +116,15 @@ public without sharing class SalesPriceApprovalForQuotation {
             FROM   Quote
             WHERE  (
                        Sales_Manager__c                          = :currentUserId OR
+                       Sales_Manager__r.DelegatedApproverId      = :currentUserId OR
                        Country_Continent_Sales_Head_LOB_Head__c  = :currentUserId OR
+                       Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId OR
                        Global_Sales_Head__c                      = :currentUserId OR
+                       Global_Sales_Head__r.DelegatedApproverId  = :currentUserId OR
                        Rotex_Board_Member__c                     = :currentUserId OR
-                       Managing_Director_Country_Manager__c      = :currentUserId
+                       Rotex_Board_Member__r.DelegatedApproverId = :currentUserId OR
+                       Managing_Director_Country_Manager__c      = :currentUserId OR
+                       Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId
                    )
                    AND Total_Value__c != null
                    AND Is_Total_Value_Approved__c = false
@@ -154,19 +174,19 @@ public without sharing class SalesPriceApprovalForQuotation {
             FROM   QuoteLineItem
             WHERE  Discount_offered_SAP__c = true
             AND (
-                (Sales_Manager__c = :currentUserId
+                ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId)
                     AND Sales_Manager_Status__c IN ('Approved','Rejected')
                     AND Sales_Manager_Date_Time__c >= :thirtyDaysAgo) OR
-                (Country_Continent_Sales_Head_LOB_Head__c = :currentUserId
+                ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId)
                     AND Country_Continent_Sales_H_LOB_Status__c IN ('Approved','Rejected')
                     AND Country_Head_Date_Time__c >= :thirtyDaysAgo) OR
-                (Global_Sales_Head__c = :currentUserId
+                ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId)
                     AND Global_Sales_Head_Status__c IN ('Approved','Rejected')
                     AND Global_Sales_Head_Date_Time__c >= :thirtyDaysAgo) OR
-                (Rotex_Board_Member__c = :currentUserId
+                ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId)
                     AND Rotex_Board_Member_Status__c IN ('Approved','Rejected')
                     AND Rotex_Board_Member_Date_Time__c >= :thirtyDaysAgo) OR
-                (Managing_Director_Country_Manage__c = :currentUserId
+                ((Managing_Director_Country_Manage__c = :currentUserId OR Managing_Director_Country_Manage__r.DelegatedApproverId = :currentUserId)
                     AND Managing_Director_Status__c IN ('Approved','Rejected')
                     AND Managing_Director_Date_Time__c >= :thirtyDaysAgo)
             )
@@ -182,19 +202,19 @@ public without sharing class SalesPriceApprovalForQuotation {
             WHERE Warranty_Terms_Draft__c != null
             AND   Warranty_Terms_Draft__c != '12 Months from date of supply'
             AND (
-                (Sales_Manager__c = :currentUserId
+                ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId)
                     AND SM_Warranty_Status__c IN ('Approved','Rejected')
                     AND SM_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
-                (Country_Continent_Sales_Head_LOB_Head__c = :currentUserId
+                ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId)
                     AND CH_Warranty_Status__c IN ('Approved','Rejected')
                     AND CH_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
-                (Global_Sales_Head__c = :currentUserId
+                ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId)
                     AND GS_Warranty_Status__c IN ('Approved','Rejected')
                     AND GS_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
-                (Rotex_Board_Member__c = :currentUserId
+                ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId)
                     AND BM_Warranty_Status__c IN ('Approved','Rejected')
                     AND BM_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
-                (Managing_Director_Country_Manager__c = :currentUserId
+                ((Managing_Director_Country_Manager__c = :currentUserId OR Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId)
                     AND MD_Warranty_Status__c IN ('Approved','Rejected')
                     AND MD_Warranty_Date_Time__c >= :thirtyDaysAgo)
             )
@@ -210,19 +230,19 @@ public without sharing class SalesPriceApprovalForQuotation {
             WHERE Requested_Validity_Of_Offer__c != null
             AND   Requested_Validity_Of_Offer__c != '30 Days'
             AND (
-                (Sales_Manager__c = :currentUserId
+                ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId)
                     AND SM_Validity_Offer_Status__c IN ('Approved','Rejected')
                     AND SM_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
-                (Country_Continent_Sales_Head_LOB_Head__c = :currentUserId
+                ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId)
                     AND CH_Validity_Offer_Status__c IN ('Approved','Rejected')
                     AND CH_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
-                (Global_Sales_Head__c = :currentUserId
+                ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId)
                     AND GS_Validity_Offer_Status__c IN ('Approved','Rejected')
                     AND GS_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
-                (Rotex_Board_Member__c = :currentUserId
+                ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId)
                     AND BM_Validity_Offer_Status__c IN ('Approved','Rejected')
                     AND BM_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
-                (Managing_Director_Country_Manager__c = :currentUserId
+                ((Managing_Director_Country_Manager__c = :currentUserId OR Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId)
                     AND MD_Validity_Offer_Status__c IN ('Approved','Rejected')
                     AND MD_Validity_Offer_Date_Time__c >= :thirtyDaysAgo)
             )
@@ -237,19 +257,19 @@ public without sharing class SalesPriceApprovalForQuotation {
             SELECT Id FROM Quote
             WHERE Total_Value__c != null
             AND (
-                (Sales_Manager__c = :currentUserId
+                ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId)
                     AND SM_Value_Status__c IN ('Approved','Rejected')
                     AND SM_Value_Date_Time__c >= :thirtyDaysAgo) OR
-                (Country_Continent_Sales_Head_LOB_Head__c = :currentUserId
+                ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId)
                     AND CH_Value_Status__c IN ('Approved','Rejected')
                     AND CH_Value_Date_Time__c >= :thirtyDaysAgo) OR
-                (Global_Sales_Head__c = :currentUserId
+                ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId)
                     AND GS_Value_Status__c IN ('Approved','Rejected')
                     AND GS_Value_Date_Time__c >= :thirtyDaysAgo) OR
-                (Rotex_Board_Member__c = :currentUserId
+                ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId)
                     AND BM_Value_Status__c IN ('Approved','Rejected')
                     AND BM_Value_Date_Time__c >= :thirtyDaysAgo) OR
-                (Managing_Director_Country_Manager__c = :currentUserId
+                ((Managing_Director_Country_Manager__c = :currentUserId OR Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId)
                     AND MD_Value_Status__c IN ('Approved','Rejected')
                     AND MD_Value_Date_Time__c >= :thirtyDaysAgo)
             )
@@ -286,7 +306,10 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Country_Continent_Sales_Head_LOB_Head__c, Country_Continent_Sales_H_LOB_Status__c,
                        Managing_Director_Country_Manage__c, Managing_Director_Status__c,
                        Rotex_Board_Member__c, Rotex_Board_Member_Status__c,
-                       Final_Discount_Approver__c,
+                       Final_Discount_Approver__c, Final_Discount_Approver__r.DelegatedApproverId,
+                       Sales_Rep__r.DelegatedApproverId, Sales_Manager__r.DelegatedApproverId,
+                       Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId, Global_Sales_Head__r.DelegatedApproverId,
+                       Rotex_Board_Member__r.DelegatedApproverId, Managing_Director_Country_Manage__r.DelegatedApproverId,
                        Country_Continent_Sales_LOB_Comments__c, Global_Sales_Head_Comments__c,
                        Managing_Director_Comments__c, Rotex_Board_Member_Comments__c,
                        Sales_Manager_Comments__c, Sales_Manager__r.Name,
@@ -321,9 +344,11 @@ public without sharing class SalesPriceApprovalForQuotation {
                    Total_Value__c, Avg_Discount_Requested__c, Avg_Discount_Approved__c,
                    Rev_No__c, Validity_of_Offer__c, Payment_Terms__c,
                    Warranty_Terms__c, Delivery_Period__c, Warranty_Terms_Draft__c,
-                   Sales_Manager__r.Name, Country_Continent_Sales_Head_LOB_Head__r.Name,
-                   Global_Sales_Head__r.Name, Rotex_Board_Member__r.Name,
-                   Managing_Director_Country_Manager__r.Name,
+                   Sales_Manager__r.Name, Sales_Manager__r.DelegatedApproverId,
+                   Country_Continent_Sales_Head_LOB_Head__r.Name, Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId,
+                   Global_Sales_Head__r.Name, Global_Sales_Head__r.DelegatedApproverId,
+                   Rotex_Board_Member__r.Name, Rotex_Board_Member__r.DelegatedApproverId,
+                   Managing_Director_Country_Manager__r.Name, Managing_Director_Country_Manager__r.DelegatedApproverId,
                    SM_Warranty_Status__c,  SM_Warranty_Date_Time__c,  SM_Warranty_Comments__c,
                    CH_Warranty_Status__c,  CH_Warranty_Date_Time__c,  CH_Warranty_Comments__c,
                    GS_Warranty_Status__c,  GS_Warranty_Date_Time__c,  GS_Warranty_Comments__c,
@@ -631,11 +656,11 @@ public without sharing class SalesPriceApprovalForQuotation {
 
         List<Quote> quotes = [
             SELECT Id, Name, QuoteNumber, Warranty_Terms_Draft__c, Warranty_Terms__c,
-                   Sales_Manager__c, Sales_Manager__r.Name,
-                   Country_Continent_Sales_Head_LOB_Head__c, Country_Continent_Sales_Head_LOB_Head__r.Name,
-                   Global_Sales_Head__c, Global_Sales_Head__r.Name,
-                   Rotex_Board_Member__c, Rotex_Board_Member__r.Name,
-                   Managing_Director_Country_Manager__c, Managing_Director_Country_Manager__r.Name,
+                   Sales_Manager__c, Sales_Manager__r.Name, Sales_Manager__r.DelegatedApproverId,
+                   Country_Continent_Sales_Head_LOB_Head__c, Country_Continent_Sales_Head_LOB_Head__r.Name, Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId,
+                   Global_Sales_Head__c, Global_Sales_Head__r.Name, Global_Sales_Head__r.DelegatedApproverId,
+                   Rotex_Board_Member__c, Rotex_Board_Member__r.Name, Rotex_Board_Member__r.DelegatedApproverId,
+                   Managing_Director_Country_Manager__c, Managing_Director_Country_Manager__r.Name, Managing_Director_Country_Manager__r.DelegatedApproverId,
                    SM_Warranty_Status__c, SM_Warranty_Date_Time__c, SM_Warranty_Comments__c,
                    CH_Warranty_Status__c, CH_Warranty_Date_Time__c, CH_Warranty_Comments__c,
                    GS_Warranty_Status__c, GS_Warranty_Date_Time__c, GS_Warranty_Comments__c,
@@ -645,10 +670,15 @@ public without sharing class SalesPriceApprovalForQuotation {
             FROM   Quote
             WHERE  (
                        Sales_Manager__c                         = :currentUserId OR
+                       Sales_Manager__r.DelegatedApproverId     = :currentUserId OR
                        Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR
+                       Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId OR
                        Global_Sales_Head__c                     = :currentUserId OR
+                       Global_Sales_Head__r.DelegatedApproverId = :currentUserId OR
                        Rotex_Board_Member__c                    = :currentUserId OR
-                       Managing_Director_Country_Manager__c     = :currentUserId
+                       Rotex_Board_Member__r.DelegatedApproverId = :currentUserId OR
+                       Managing_Director_Country_Manager__c     = :currentUserId OR
+                       Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId
                    )
                    AND Warranty_Terms_Draft__c != null
                    AND Warranty_Terms_Draft__c != '12 Months from date of supply'
@@ -1257,12 +1287,21 @@ public without sharing class SalesPriceApprovalForQuotation {
         return [
             SELECT Id,
                    Sales_Manager__c,
+                   Sales_Manager__r.DelegatedApproverId,
                    Country_Continent_Sales_Head_LOB_Head__c,
+                   Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId,
                    Global_Sales_Head__c,
+                   Global_Sales_Head__r.DelegatedApproverId,
                    Rotex_Board_Member__c,
+                   Rotex_Board_Member__r.DelegatedApproverId,
                    Managing_Director_Country_Manager__c,
+                   Managing_Director_Country_Manager__r.DelegatedApproverId,
                    Final_Warranty_Terms_Approver__c,
-                   Final_Validity_Offer_Approver__c
+                   Final_Warranty_Terms_Approver__r.DelegatedApproverId,
+                   Final_Validity_Offer_Approver__c,
+                   Final_Validity_Offer_Approver__r.DelegatedApproverId,
+                   Final_Total_Value_Approver__c,
+                   Final_Total_Value_Approver__r.DelegatedApproverId
             FROM Quote
             WHERE Id = :quoteId
             LIMIT 1
@@ -1336,9 +1375,10 @@ public without sharing class SalesPriceApprovalForQuotation {
                 SELECT Id, Final_Discount_Approver__c, Sales_Rep_Status__c, Sales_Manager_Status__c,
                        Country_Continent_Sales_H_LOB_Status__c, Global_Sales_Head_Status__c,
                        Rotex_Board_Member_Status__c, Managing_Director_Status__c,
-                       Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
-                       Global_Sales_Head__c, Rotex_Board_Member__c,
-                       Managing_Director_Country_Manage__c,
+                       Sales_Manager__c, Sales_Manager__r.DelegatedApproverId,
+                       Country_Continent_Sales_Head_LOB_Head__c, Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId,
+                       Global_Sales_Head__c, Global_Sales_Head__r.DelegatedApproverId, Rotex_Board_Member__c, Rotex_Board_Member__r.DelegatedApproverId,
+                       Managing_Director_Country_Manage__c, Managing_Director_Country_Manage__r.DelegatedApproverId, Final_Discount_Approver__r.DelegatedApproverId, Sales_Rep__r.DelegatedApproverId,
                        Sales_Manager_Comments__c, Country_Continent_Sales_LOB_Comments__c,
                        Global_Sales_Head_Comments__c, Rotex_Board_Member_Comments__c,
                        Managing_Director_Comments__c, Discount_to_be_offered__c, Discount_as_per_SAP__c, Requested_Comments__c
@@ -1624,11 +1664,11 @@ public without sharing class SalesPriceApprovalForQuotation {
 
     private static Integer getApproverIndex(QuoteLineItem qli, Id approverId) {
         if (qli == null || approverId == null) return null;
-        if (qli.Sales_Manager__c                          == approverId) return 1;
-        if (qli.Country_Continent_Sales_Head_LOB_Head__c  == approverId) return 2;
-        if (qli.Global_Sales_Head__c                      == approverId) return 3;
-        if (qli.Rotex_Board_Member__c                     == approverId) return 4;
-        if (qli.Managing_Director_Country_Manage__c       == approverId) return 5;
+        if (qli.Sales_Manager__c                          == approverId || qli.Sales_Manager__r.DelegatedApproverId == approverId) return 1;
+        if (qli.Country_Continent_Sales_Head_LOB_Head__c  == approverId || qli.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == approverId) return 2;
+        if (qli.Global_Sales_Head__c                      == approverId || qli.Global_Sales_Head__r.DelegatedApproverId == approverId) return 3;
+        if (qli.Rotex_Board_Member__c                     == approverId || qli.Rotex_Board_Member__r.DelegatedApproverId == approverId) return 4;
+        if (qli.Managing_Director_Country_Manage__c       == approverId || qli.Managing_Director_Country_Manage__r.DelegatedApproverId == approverId) return 5;
         return null;
     }
 
@@ -1906,11 +1946,11 @@ public without sharing class SalesPriceApprovalForQuotation {
 
     private static Integer getHierarchyPos(Quote q, Id userId) {
         if (userId == null) return null;
-        if (q.Sales_Manager__c                         == userId) return 1;
-        if (q.Country_Continent_Sales_Head_LOB_Head__c == userId) return 2;
-        if (q.Global_Sales_Head__c                     == userId) return 3;
-        if (q.Rotex_Board_Member__c                    == userId) return 4;
-        if (q.Managing_Director_Country_Manager__c     == userId) return 5;
+        if (q.Sales_Manager__c                         == userId || q.Sales_Manager__r.DelegatedApproverId == userId) return 1;
+        if (q.Country_Continent_Sales_Head_LOB_Head__c == userId || q.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == userId) return 2;
+        if (q.Global_Sales_Head__c                     == userId || q.Global_Sales_Head__r.DelegatedApproverId == userId) return 3;
+        if (q.Rotex_Board_Member__c                    == userId || q.Rotex_Board_Member__r.DelegatedApproverId == userId) return 4;
+        if (q.Managing_Director_Country_Manager__c     == userId || q.Managing_Director_Country_Manager__r.DelegatedApproverId == userId) return 5;
         return null;
     }
 
@@ -1925,21 +1965,21 @@ public without sharing class SalesPriceApprovalForQuotation {
 
     private static Integer getValidityOfferHierarchyPos(Quote q, Id userId) {
         if (userId == null) return null;
-        if (q.Sales_Manager__c                         == userId) return 1;
-        if (q.Country_Continent_Sales_Head_LOB_Head__c == userId) return 2;
-        if (q.Global_Sales_Head__c                     == userId) return 3;
-        if (q.Rotex_Board_Member__c                    == userId) return 4;
-        if (q.Managing_Director_Country_Manager__c     == userId) return 5;
+        if (q.Sales_Manager__c                         == userId || q.Sales_Manager__r.DelegatedApproverId == userId) return 1;
+        if (q.Country_Continent_Sales_Head_LOB_Head__c == userId || q.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == userId) return 2;
+        if (q.Global_Sales_Head__c                     == userId || q.Global_Sales_Head__r.DelegatedApproverId == userId) return 3;
+        if (q.Rotex_Board_Member__c                    == userId || q.Rotex_Board_Member__r.DelegatedApproverId == userId) return 4;
+        if (q.Managing_Director_Country_Manager__c     == userId || q.Managing_Director_Country_Manager__r.DelegatedApproverId == userId) return 5;
         return null;
     }
 
     private static Integer getTotalValueHierarchyPos(Quote q, Id userId) {
         if (userId == null) return null;
-        if (q.Sales_Manager__c                         == userId) return 1;
-        if (q.Country_Continent_Sales_Head_LOB_Head__c == userId) return 2;
-        if (q.Global_Sales_Head__c                     == userId) return 3;
-        if (q.Rotex_Board_Member__c                    == userId) return 4;
-        if (q.Managing_Director_Country_Manager__c     == userId) return 5;
+        if (q.Sales_Manager__c                         == userId || q.Sales_Manager__r.DelegatedApproverId == userId) return 1;
+        if (q.Country_Continent_Sales_Head_LOB_Head__c == userId || q.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == userId) return 2;
+        if (q.Global_Sales_Head__c                     == userId || q.Global_Sales_Head__r.DelegatedApproverId == userId) return 3;
+        if (q.Rotex_Board_Member__c                    == userId || q.Rotex_Board_Member__r.DelegatedApproverId == userId) return 4;
+        if (q.Managing_Director_Country_Manager__c     == userId || q.Managing_Director_Country_Manager__r.DelegatedApproverId == userId) return 5;
         return null;
     }
 
@@ -2169,6 +2209,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String   currentStage;
         @AuraEnabled public String   currentStageField;
         @AuraEnabled public String   finalDiscountApproverId;
+        @AuraEnabled public String   finalDiscountApproverDelegatedId;
         @AuraEnabled public Boolean  isFinalDiscountApprover;
         @AuraEnabled public Boolean  skipSoaRestrictions;
         @AuraEnabled public String requestedComments;
@@ -2187,6 +2228,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.bcheck  = true; this.bcheck1 = true; this.bcheck2 = true;
             this.bcheck3 = true; this.bcheck4 = true; this.bcheck5 = true;
             this.finalDiscountApproverId = qli.Final_Discount_Approver__c;
+            this.finalDiscountApproverDelegatedId = qli.Final_Discount_Approver__r != null ? String.valueOf(qli.Final_Discount_Approver__r.DelegatedApproverId) : null;
 
             this.Country_Continent_Sales_LOB_Comments = qli.Country_Continent_Sales_LOB_Comments__c;
             this.Global_Sales_Head_Comments           = qli.Global_Sales_Head_Comments__c;
@@ -2217,12 +2259,12 @@ public without sharing class SalesPriceApprovalForQuotation {
             String comments   = '';
             Id     currUser   = UserInfo.getUserId();
 
-            if      (qli.Sales_Rep__c                              == currUser) { this.bcheck  = false; hod = qli.Sales_Rep__c;                              stage = qli.Sales_Rep_Status__c;                      stageField = 'Sales_Rep_Status__c';                         comments = qli.Approval_Comments__c; }
-            else if (qli.Sales_Manager__c                          == currUser) { this.bcheck1 = false; hod = qli.Sales_Manager__c;                          stage = qli.Sales_Manager_Status__c;                  stageField = 'Sales_Manager_Status__c';                     comments = qli.Sales_Manager_Comments__c; }
-            else if (qli.Country_Continent_Sales_Head_LOB_Head__c  == currUser) { this.bcheck2 = false; hod = qli.Country_Continent_Sales_Head_LOB_Head__c;  stage = qli.Country_Continent_Sales_H_LOB_Status__c;  stageField = 'Country_Continent_Sales_H_LOB_Status__c';     comments = qli.Country_Continent_Sales_LOB_Comments__c; }
-            else if (qli.Global_Sales_Head__c                      == currUser) { this.bcheck5 = false; hod = qli.Global_Sales_Head__c;                      stage = qli.Global_Sales_Head_Status__c;              stageField = 'Global_Sales_Head_Status__c';                 comments = qli.Global_Sales_Head_Comments__c; }
-            else if (qli.Rotex_Board_Member__c                     == currUser) { this.bcheck3 = false; hod = qli.Rotex_Board_Member__c;                     stage = qli.Rotex_Board_Member_Status__c;             stageField = 'Rotex_Board_Member_Status__c';                comments = qli.Rotex_Board_Member_Comments__c; }
-            else if (qli.Managing_Director_Country_Manage__c       == currUser) { this.bcheck4 = false; hod = qli.Managing_Director_Country_Manage__c;       stage = qli.Managing_Director_Status__c;              stageField = 'Managing_Director_Status__c';                 comments = qli.Managing_Director_Comments__c; }
+            if      (qli.Sales_Rep__c                              == currUser || qli.Sales_Rep__r.DelegatedApproverId == currUser) { this.bcheck  = false; hod = qli.Sales_Rep__c;                              stage = qli.Sales_Rep_Status__c;                      stageField = 'Sales_Rep_Status__c';                         comments = qli.Approval_Comments__c; }
+            else if (qli.Sales_Manager__c                          == currUser || qli.Sales_Manager__r.DelegatedApproverId == currUser) { this.bcheck1 = false; hod = qli.Sales_Manager__c;                          stage = qli.Sales_Manager_Status__c;                  stageField = 'Sales_Manager_Status__c';                     comments = qli.Sales_Manager_Comments__c; }
+            else if (qli.Country_Continent_Sales_Head_LOB_Head__c  == currUser || qli.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == currUser) { this.bcheck2 = false; hod = qli.Country_Continent_Sales_Head_LOB_Head__c;  stage = qli.Country_Continent_Sales_H_LOB_Status__c;  stageField = 'Country_Continent_Sales_H_LOB_Status__c';     comments = qli.Country_Continent_Sales_LOB_Comments__c; }
+            else if (qli.Global_Sales_Head__c                      == currUser || qli.Global_Sales_Head__r.DelegatedApproverId == currUser) { this.bcheck5 = false; hod = qli.Global_Sales_Head__c;                      stage = qli.Global_Sales_Head_Status__c;              stageField = 'Global_Sales_Head_Status__c';                 comments = qli.Global_Sales_Head_Comments__c; }
+            else if (qli.Rotex_Board_Member__c                     == currUser || qli.Rotex_Board_Member__r.DelegatedApproverId == currUser) { this.bcheck3 = false; hod = qli.Rotex_Board_Member__c;                     stage = qli.Rotex_Board_Member_Status__c;             stageField = 'Rotex_Board_Member_Status__c';                comments = qli.Rotex_Board_Member_Comments__c; }
+            else if (qli.Managing_Director_Country_Manage__c       == currUser || qli.Managing_Director_Country_Manage__r.DelegatedApproverId == currUser) { this.bcheck4 = false; hod = qli.Managing_Director_Country_Manage__c;       stage = qli.Managing_Director_Status__c;              stageField = 'Managing_Director_Status__c';                 comments = qli.Managing_Director_Comments__c; }
 
             this.hodUserId        = hod;
             this.currentStage     = stage;

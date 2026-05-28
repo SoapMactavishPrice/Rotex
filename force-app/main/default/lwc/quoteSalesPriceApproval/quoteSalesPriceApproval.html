@@ -290,6 +290,17 @@
                                                     <!-- SOA Label — no CSS class on span, all inline -->
                                                     <td style="border:1px solid #000; padding:8px; vertical-align:top;">
                                                         <span style="color:#444; font-weight:600; font-size:11.5px; white-space:pre-wrap; overflow-wrap:anywhere;">{row.soaDisplay}</span>
+                                                        <!-- Add Task link -->
+                                                        <template if:true={row.soaDisplay}>
+                                                            <a href="javascript:void(0);"
+                                                                data-approver-id={row.soaApproverId}
+                                                                data-approver-name={row.soaApproverName}
+                                                                data-quote-id={row.parentId}
+                                                                onclick={handleAddTaskClick}
+                                                                class="add-task-link">
+                                                                (Add Task)
+                                                            </a>
+                                                        </template>
                                                     </td>
 
                                                     <!-- Status -->
@@ -373,6 +384,30 @@
                     </lightning-button>
                 </div>
 
+            </div>
+        </template>
+        
+        <!-- Task creation modal -->
+        <template if:true={showTaskModal}>
+            <div class="task-modal-overlay" onclick={handleTaskModalClose}>
+                <div class="task-modal-container" onclick={stopPropagation}>
+                    <div class="task-modal-header">
+                        <span class="task-modal-title">
+                            Create Task – {taskModalApproverName}
+                        </span>
+                        <button class="task-modal-close" onclick={handleTaskModalClose}>✕</button>
+                    </div>
+                    <div class="task-modal-body">
+                        <c-create-task-from-task
+                            is-modal="true"
+                            pre-assigned-to-id={taskModalApproverId}
+                            pre-what-id={taskModalQuoteId}
+                            pre-what-object-api-name="Quote"
+                            onclose={handleTaskModalClose}
+                            ontaskcreated={handleTaskCreated}>
+                        </c-create-task-from-task>
+                    </div>
+                </div>
             </div>
         </template>
     </lightning-card>

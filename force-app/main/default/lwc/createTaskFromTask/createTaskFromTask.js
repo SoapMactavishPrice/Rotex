@@ -9,9 +9,13 @@ import getObjectInfoFromId from '@salesforce/apex/TaskController.getObjectInfoFr
 
 export default class CreateTaskFromTask extends NavigationMixin(LightningElement) {
     @api recordId;
+    @api isModal = false;           // true -> modal mode; skip task navigation on save/cancel
+    @api preAssignedToId  = null;   // pre-populate Assigned To
+    @api preWhatId        = null;   // pre-populate Related To record
+    @api preWhatObjectApiName = null; // pre-populate Related To object type (e.g. 'Quote')
 
     @track subject = '';
-    @track priority = '';
+    @track priority = 'Normal';
     @track status = 'Open';
     @track dueDate = '';
     @track ownerId = '';
@@ -43,6 +47,14 @@ export default class CreateTaskFromTask extends NavigationMixin(LightningElement
         { label: 'Contact', value: 'Contact' },
         { label: 'Lead', value: 'Lead' }
     ];
+
+    get cardTitle() {
+        return this.isModal ? 'Create Task' : 'Create Task from Task';
+    }
+
+    get showNameTypeAndLeadContactLookup() {
+        return !this.isModal;
+    }
 
     get whoObjectApiName() {
         return this.nameType || 'Contact';
@@ -86,7 +98,19 @@ export default class CreateTaskFromTask extends NavigationMixin(LightningElement
                     };
                 });
                 
-                this.loadTaskDetails();
+                if (this.isModal && this.preAssignedToId) {
+                    // Modal mode: skip loading parent task, apply pre-populated values
+                    this.ownerId = this.preAssignedToId;
+                    if (this.preWhatId && this.preWhatObjectApiName) {
+                        this.whatId        = this.preWhatId;
+                        this.relatedToType = this.preWhatObjectApiName;
+                        this.relatedToLabel = this.relatedToObjectsMap.get(this.preWhatObjectApiName)
+                                                || this.preWhatObjectApiName;
+                    }
+                    this.isLoading = false;
+                } else {
+                    this.loadTaskDetails();
+                }
             })
             .catch(error => {
                 this.errorMessage = error.body?.message || 'Error loading related objects';
@@ -210,8 +234,12 @@ export default class CreateTaskFromTask extends NavigationMixin(LightningElement
     }
 
     handleCancel() {
-        this.resetState();
-        this.navigateToTask(this.recordId);
+        if (this.isModal) {
+            this.dispatchEvent(new CustomEvent('close'));
+        } else {
+            this.resetState();
+            this.navigateToTask(this.recordId);
+        }
     }
 
     resetState() {
@@ -251,11 +279,16 @@ export default class CreateTaskFromTask extends NavigationMixin(LightningElement
             Description: this.description || null
         };
 
-        createTask({ newTask: newTask, parentTaskId: this.recordId })
+        createTask({ newTask: newTask, parentTaskId: this.isModal ? null : this.recordId })
             .then(taskId => {
                 this.showToast('Success', 'Task created successfully', 'success');
-                this.navigateToTask(taskId);
-                this.closeQuickAction();
+                if (this.isModal) {
+                    this.dispatchEvent(new CustomEvent('taskcreated', { detail: { taskId } }));
+                    this.dispatchEvent(new CustomEvent('close'));
+                } else {
+                    this.navigateToTask(taskId);
+                    this.closeQuickAction();
+                }
             })
             .catch(error => {
                 this.errorMessage = error.body?.message || 'Error creating task';

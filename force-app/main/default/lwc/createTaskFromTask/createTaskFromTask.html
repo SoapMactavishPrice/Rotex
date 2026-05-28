@@ -1,5 +1,5 @@
 <template>
-    <lightning-card title="Create Task from Task" icon-name="standard:task">
+    <lightning-card title={cardTitle} icon-name="standard:task">
         <div class="slds-p-around_medium">
             
             <template if:true={isLoading}>
@@ -55,7 +55,7 @@
                         </div>
                     </div>
 
-                    <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                    <div class="slds-grid slds-gutters slds-m-bottom_medium" if:true={showNameTypeAndLeadContactLookup}>
                         <div class="slds-col slds-size_1-of-2">
                             <lightning-combobox
                                 label="Name Type"

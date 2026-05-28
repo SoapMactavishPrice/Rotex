@@ -22,6 +22,11 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     @track skipSoaRestrictions = false;
     @track activeTab = 'pending';
 
+    @track showTaskModal = false;
+    @track taskModalApproverId = null;
+    @track taskModalApproverName = null;
+    @track taskModalQuoteId = null;
+
     /**
      * ✅ FIX: warrantyApprovalsMap is now populated inside fetchQuotes() from
      *         the warrantyApproval embedded in every QuotationWrapper returned
@@ -406,7 +411,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const quoteRecordUrl = `/lightning/r/Quote/${q.quoteId}/view`;
         const processedLineItems = (q.quoteLineItems || []).map(item => ({
             ...item,
-            isFinalDiscountApprover: item.finalDiscountApproverId === this.userId,
+            isFinalDiscountApprover: item.finalDiscountApproverId === this.userId || item.finalDiscountApproverDelegatedId === this.userId,
             origApprovalStatus: item.approvalStatus,
             isEditable: item.approvalStatus === 'Submitted' || item.updated === true,
             skipSoaRestrictions: this.skipSoaRestrictions,
@@ -1687,6 +1692,8 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     approvalStatus: isFinalApproverOwnRowWithSkip ? soa.status : item.approvalStatus,
                     soaStatusField:   soa.statusField,
                     soaDisplay:       soa.name ? `${soa.label} - ${soa.name}` : '',
+                    soaApproverId:    soa.approverId,
+                    soaApproverName:  soa.name || '',
                     soaStatus,
                     statusBadgeClass: this.getStatusBadgeClass(soaStatus),
                     soaDateTime:      formattedDateTime,
@@ -2170,6 +2177,30 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             type: 'standard__namedPage',
             attributes: { pageName: 'home' }
         });
+    }
+
+    handleAddTaskClick(event) {
+        event.preventDefault();
+        this.taskModalApproverId   = event.currentTarget.dataset.approverId;
+        this.taskModalApproverName = event.currentTarget.dataset.approverName;
+        this.taskModalQuoteId      = event.currentTarget.dataset.quoteId;
+        this.showTaskModal = true;
+    }
+
+    handleTaskModalClose() {
+        this.showTaskModal         = false;
+        this.taskModalApproverId   = null;
+        this.taskModalApproverName = null;
+        this.taskModalQuoteId      = null;
+    }
+
+    handleTaskCreated() {
+        this.showToast('Success', 'Task created successfully for approver', 'success');
+        this.handleTaskModalClose();
+    }
+
+    stopPropagation(event) {
+        event.stopPropagation();
     }
 
     showToast(title, msg, variant) {

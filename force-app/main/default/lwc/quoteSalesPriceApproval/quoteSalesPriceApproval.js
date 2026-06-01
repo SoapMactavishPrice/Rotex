@@ -271,6 +271,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     fetchQuotes(preserveExpandedQuoteIds = []) {
         getAllQuotations()
             .then(result => {
+                console.log('Raw result from server', result);
                 const newWarrantyMap      = new Map();
                 const newValidityMap      = new Map();
                 const newTotalValueMap    = new Map();

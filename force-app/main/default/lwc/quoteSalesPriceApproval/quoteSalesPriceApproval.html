@@ -208,6 +208,7 @@
                                                                             data-approval-type={approvalRow.type}
                                                                             data-field={approver.field}
                                                                             onchange={handleCombinedApprovalCommentChange}
+                                                                            max-length="255"
                                                                             variant="label-hidden"
                                                                             class="comment-input">
                                                                         </lightning-textarea>
@@ -334,6 +335,7 @@
                                                                 data-id={row.quoteLineItemId}
                                                                 oninput={handleLineItemChanges}
                                                                 onchange={handleLineItemChanges}
+                                                                max-length="255"
                                                                 variant="label-hidden"
                                                                 class="comment-input">
                                                             </lightning-textarea>

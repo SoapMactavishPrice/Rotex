@@ -1700,7 +1700,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     prevSoaComments:  soa.previousCommentsValue || '',
                     soaComments:      soa.commentsValue || '',
                     soaCommentsField: soa.commentsField,
-                    requestedComments: item.Requested_Comments__c || '',
+                    requestedComments: item.requestedComments || '',
                     showDiscountInput: idx === 0 && !isFinalApproverDecided && (
                         (item.isFinalDiscountApprover && item.isEditable) ||
                         (this.skipSoaRestrictions &&

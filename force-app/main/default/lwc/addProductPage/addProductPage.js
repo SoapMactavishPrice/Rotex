@@ -3,6 +3,7 @@ import findProducts from '@salesforce/apex/AddProductPageQuote.findProduct';
 import saveProducts from '@salesforce/apex/AddProductPageQuote.saveProducts';
 import getproductfamily from '@salesforce/apex/AddProductPageQuote.getproductfamily';
 import getCustomerDiscount from '@salesforce/apex/AddProductPageQuote.getCustomerDiscount';
+import findProductsOptimized from '@salesforce/apex/AddProductPageQuote.findProductsOptimized';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { RefreshEvent } from 'lightning/refresh';
 const DELAY = 300;
@@ -28,6 +29,14 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
     cols = COLS;
 
     @track showSpinner = true;
+    @track searchDisabled = true;
+
+    get searchDisability() {
+
+        return this.searchDisabled
+            || this.showSpinner;
+
+    }
 
     @track recId;
     @wire(CurrentPageReference)
@@ -73,6 +82,127 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
     @track showErrorMsg = false;
     @track filteredData = [];
     @track DisableNext = true;
+    @track selectedItemType = '';
+
+
+    @track showViewCart = false;
+    @track cartProducts = [];
+    @track allSelectedProductIds = new Set();
+
+    // Add this method
+    showToast(title, message, variant) {
+        this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
+    }
+
+    // Add to Cart method
+    addToCart() {
+        console.log('addToCart called, selected products count:', this.selectedProductCode.length);
+
+        if (this.selectedProductCode.length === 0) {
+            this.showToast('Error', 'Please select at least one product', 'error');
+            return;
+        }
+
+        // Get selected products from AllProductData
+        let selectedProducts = [];
+        for (let i = 0; i < this.AllProductData.length; i++) {
+            if (this.selectedProductCode.includes(this.AllProductData[i].Id)) {
+                let product = JSON.parse(JSON.stringify(this.AllProductData[i]));
+                product.Quantity = product.ARCQuantity || 1;
+                product.Price = product.ListPrice;
+                product.Discount = this.customerSAPdiscount;
+                selectedProducts.push(product);
+            }
+        }
+
+        console.log('Selected products to add:', selectedProducts.length);
+        console.log('Existing cart products:', this.cartProducts.length);
+
+        if (selectedProducts.length === 0) {
+            this.showToast('Info', 'No products selected', 'info');
+            return;
+        }
+
+        // Add to existing cart
+        this.cartProducts = [...this.cartProducts, ...selectedProducts];
+        console.log('Cart total products after add:', this.cartProducts.length);
+
+        // Clear selections
+        this.selectedProductCode = [];
+        this.allSelectedProductIds.clear();
+        this.SelectedProductData = [];
+        this.selectedRows = [];
+        this.SelectedRecordCount = 0;
+        this.DisableNext = true;
+
+        // Clear selection in datatable
+        const datatable = this.template.querySelector('[data-id="datatable"]');
+        if (datatable) {
+            datatable.selectedRows = [];
+        }
+
+        // Show success message
+        this.showToast('Success', `${selectedProducts.length} product(s) added to cart. Total in cart: ${this.cartProducts.length}`, 'success');
+
+        // Always show View Cart button when cart has items
+        this.showViewCart = this.cartProducts.length > 0;
+    }
+
+    // View Cart method
+    viewCart() {
+        console.log('viewCart called, cart products:', this.cartProducts.length);
+
+        if (this.cartProducts.length === 0) {
+            this.showToast('Info', 'Cart is empty', 'info');
+            return;
+        }
+
+        // Prepare cart products for edit page
+        let cartItems = [];
+        for (let i = 0; i < this.cartProducts.length; i++) {
+            let product = this.cartProducts[i];
+            let productCopy = JSON.parse(JSON.stringify(product));
+            let newPrice = productCopy.ListPrice;
+            if (this.customerSAPdiscount > 0 && !productCopy.IsARC) {
+                newPrice = productCopy.ListPrice * (1 - (this.customerSAPdiscount / 100));
+                newPrice = newPrice.toFixed(2);
+            }
+            productCopy.NetPrice = newPrice;
+
+            let newPriceNum = Number(newPrice) || 0;
+            let incoPercent = Number(productCopy.IncoTerms) || 0;
+            productCopy.Price = parseFloat((newPriceNum + (newPriceNum * incoPercent / 100)).toFixed(2));
+
+            cartItems.push(productCopy);
+        }
+
+        this.SelectedProductData = cartItems;
+        this.isFirstPage = false;
+        this.isSecondPage = true;
+    }
+
+    // Delete product from cart
+    deleteProductFromCart(event) {
+        const productId = event.currentTarget.dataset.id;
+
+        // Remove from cart products
+        this.cartProducts = this.cartProducts.filter(product => product.Id !== productId);
+
+        // Remove from current view
+        this.SelectedProductData = this.SelectedProductData.filter(product => product.Id !== productId);
+
+        // Update View Cart button visibility
+        this.showViewCart = this.cartProducts.length > 0;
+
+        // Show success message
+        this.showToast('Success', 'Product removed from cart', 'success');
+
+        // If cart becomes empty, go back to add products page
+        if (this.cartProducts.length === 0) {
+            this.showViewCart = false;
+            this.handleback();
+        }
+    }
 
     connectedCallback() {
         this.mapIdQuantity = new Map();
@@ -95,15 +225,16 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         this.cols = this.cols.filter(col => col.fieldName !== 'IsARC');
 
         // this.openModal();
-        findProducts({ recordId: this.recId, productFamily: [] }).then(result => {
-            console.log('connectedCallback = ', result);
-            let dataObj = JSON.parse(result);
-            console.log(dataObj);
-            this.AllProductData = dataObj.productList;
-            this.ShowTableData = this.AllProductData;
-            this.paginiateData(JSON.stringify(this.AllProductData));
-            this.page = 1;
-        });
+        // findProducts({ recordId: this.recId, productFamily: [] }).then(result => {
+        //     console.log('connectedCallback = ', result);
+        //     let dataObj = JSON.parse(result);
+        //     console.log(dataObj);
+        //     this.AllProductData = dataObj.productList;
+        //     this.ShowTableData = this.AllProductData;
+        //     this.paginiateData(JSON.stringify(this.AllProductData));
+        //     this.page = 1;
+        // });
+        this.showSpinner = false;
         this.handlerGetCustomerDiscount();
     }
 
@@ -117,6 +248,94 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
 
     get options() {
         return this.prodfamilylst;
+    }
+
+    get itemsOptions() {
+        let items = [
+            { label: '--None--', value: '' },
+            { label: 'Spares / Special', value: 'Spares / Special' },
+            { label: 'Coil', value: 'Coil' },
+            { label: 'SOV (0-15000)', value: 'SOV (0-15000)' },
+            { label: 'SOV (15001-30000)', value: 'SOV (15001-30000)' },
+            { label: 'SOV (30001-45000)', value: 'SOV (30001-45000)' },
+            { label: 'SOV (45001-60000)', value: 'SOV (45001-60000)' },
+            { label: 'Valve', value: 'Valve' },
+            { label: 'Others', value: 'Others' }
+
+        ];
+
+        return items;
+    }
+
+
+    handleItemOptions(event) {
+        this.showSpinner = true;
+        let option = event.target.value;
+        this.selectedItemType = option;
+
+        if (option == '') {
+            this.AllProductData = [];
+            this.ShowTableData = [];
+            this.showSpinner = false;
+            this.searchDisabled = true;
+            return;
+        }
+
+        findProductsOptimized({
+            recordId: this.recId,
+            searchKey: this.searchKey,
+            itemType: option
+        })
+            .then(chunks => {
+                console.log('Received chunks:', chunks.length);
+
+                // Combine all chunks
+                let allProducts = [];
+                let priceBook = '';
+
+                chunks.forEach(chunkStr => {
+                    try {
+                        let chunkObj = JSON.parse(chunkStr);
+
+                        if (chunkObj.error) {
+                            throw new Error(chunkObj.error);
+                        }
+
+                        if (!priceBook && chunkObj.priceBook) {
+                            priceBook = chunkObj.priceBook;
+                            this.PriceBook = priceBook;
+                        }
+
+                        if (chunkObj.productList && Array.isArray(chunkObj.productList)) {
+                            allProducts = allProducts.concat(chunkObj.productList);
+                        }
+
+                        console.log(`Chunk ${chunkObj.chunkIndex + 1}/${chunkObj.totalChunks}: ${chunkObj.productList?.length || 0} products`);
+                    } catch (parseError) {
+                        console.error('Error parsing chunk:', parseError);
+                        throw parseError;
+                    }
+                });
+
+                console.log('Total products loaded:', allProducts.length);
+
+                this.AllProductData = allProducts;
+                this.ShowTableData = allProducts;
+                this.paginiateData(JSON.stringify(this.AllProductData));
+                this.page = 1;
+                this.showSpinner = false;
+                this.searchDisabled = false;
+            })
+            .catch(error => {
+                console.error('Error loading products:', error);
+                this.showSpinner = false;
+                this.searchDisabled = true;
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Error',
+                    message: 'Failed to load products: ' + (error.body?.message || error.message),
+                    variant: 'error',
+                }));
+            });
     }
 
     @track disabledApplayButton = true;
@@ -146,6 +365,10 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
 
             if (result != null) {
                 this.customerSAPdiscount = parseFloat(result);
+                // Add negative handling - same as Opportunity
+                if (this.customerSAPdiscount < 0) {
+                    this.customerSAPdiscount = this.customerSAPdiscount * -1;
+                }
             }
         })
     }
@@ -157,7 +380,7 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         this.selectedProductCode = [];
         this.AllProductData = [];
         this.SelectedProductData = [];
-        findProducts({ recordId: this.recId, productFamily: [] }).then(result => {
+        findProducts({ recordId: this.recId, productFamily: [], searchKey: '', itemType: '' }).then(result => {
             console.log(result);
             let dataObj = JSON.parse(result);
             console.log(dataObj);
@@ -212,118 +435,80 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
     @track tempEvent;
     SelectedProduct(event) {
         this.tempEvent = event;
-        //console.log('SelectedProduct called..');
-        if (true) {
-            const selRows = event.detail.selectedRows;
+        const selRows = event.detail.selectedRows;
+        const currentPageIds = this.ShowTableData.map(item => item.Id);
 
-            // console.log('selRows..', selRows.length);
-            // console.log('All..', this.selectedRows.length);
-            if (this.selectedRows.length < selRows.length) {
-                //console.log('Selected');
-                for (let i = 0; i < selRows.length; i++) {
+        // Remove selections that are no longer selected on current page
+        for (let i = 0; i < currentPageIds.length; i++) {
+            const isSelected = selRows.some(row => row.Id === currentPageIds[i]);
+            if (!isSelected && this.allSelectedProductIds.has(currentPageIds[i])) {
+                this.allSelectedProductIds.delete(currentPageIds[i]);
+            }
+        }
 
-                    this.selectedProductCode.push(selRows[i].Id);
-                    //this.SelectedProductData.push(selRows[i]);
-                }
-            } else {
+        // Add newly selected products
+        for (let i = 0; i < selRows.length; i++) {
+            this.allSelectedProductIds.add(selRows[i].Id);
+        }
 
-                var selectedRowsProductCode = [];
-                var selProductCode = [];
-                for (let i = 0; i < this.selectedRows.length; i++) {
-                    selectedRowsProductCode.push(this.selectedRows[i].Id);
-                }
-                // console.log('selectedRowsProductCode..159', selectedRowsProductCode.length);
-                for (let i = 0; i < selRows.length; i++) {
-                    selProductCode.push(selRows[i].Id);
-                }
-                //console.log('selProductCode..162', selProductCode.length);
-                //console.log('length', selectedRowsProductCode.filter(x => selProductCode.indexOf(x) === -1));
-                var deselectedRecProductCode = selectedRowsProductCode.filter(x => selProductCode.indexOf(x) === -1);
-                for (let i = 0; i < deselectedRecProductCode.length; i++) {
-                    this.selectedProductCode = this.selectedProductCode.filter(function (e) { return e !== deselectedRecProductCode[i] })
+        // Update selectedProductCode array
+        this.selectedProductCode = Array.from(this.allSelectedProductIds);
+        this.SelectedRecordCount = this.selectedProductCode.length;
+        this.selectedRows = selRows;
+        this.DisableNext = this.selectedProductCode.length === 0;
+
+        // Build SelectedProductData from all selected products across all pages
+        this.SelectedProductData = [];
+        for (let i = 0; i < this.selectedProductCode.length; i++) {
+            let found = false;
+            for (let j = 0; j < this.ShowTableData.length; j++) {
+                if (this.selectedProductCode.includes(this.ShowTableData[j].Id)) {
+                    this.SelectedProductData.push(this.ShowTableData[j]);
+                    found = true;
+                    break;
                 }
             }
-            this.selectedRows = selRows;
-            this.selectedProductCode = [...new Set(this.selectedProductCode)];
-            this.SelectedRecordCount = this.selectedProductCode.length;
-
-            this.SelectedProductData = [];
-            for (let i = 0; i < this.selectedProductCode.length; i++) {
+            if (!found) {
                 for (let j = 0; j < this.AllProductData.length; j++) {
                     if (this.selectedProductCode.includes(this.AllProductData[j].Id)) {
                         this.SelectedProductData.push(this.AllProductData[j]);
+                        break;
                     }
                 }
             }
-            this.SelectedProductData = [...new Set(this.SelectedProductData)];
-            if (this.selectedProductCode.length > 0) {
-                this.DisableNext = false;
-            } else {
-                this.DisableNext = true;
-            }
         }
-        //this.paginiateData(JSON.stringify(this.SelectedProductData));
-        this.isProductSelect = true;
-
+        this.SelectedProductData = [...new Set(this.SelectedProductData)];
     }
 
+
     goBackToRecord() {
-        setTimeout(() => {
-            window.location.reload();
-        }, 1200);
 
-        this.isFirstPage = true;
-        this.isSecondPage = false;
-        this.SelectedProductData = [];
-        this.selectedProductCode = [];
-        this[NavigationMixin.Navigate]({
-            type: 'standard__recordPage',
-            attributes: {
-                recordId: this.recId,
-                objectApiName: 'Quote',
-                actionName: 'view',
+        this.closeModal();
 
-            }
-        });
-        //this.isModalOpen = false;
+        window.location.replace(
+            `/lightning/r/Quote/${this.recId}/view`
+        );
     }
 
     closeModal() {
-        this.isModalOpen = false;
-        this.SelectedRecordCount = 0;
 
+        this.isModalOpen = false;
+
+        this.SelectedRecordCount = 0;
         this.PriceBook = '';
         this.ShowTableData = [];
         this.selectedProductCode = [];
         this.AllProductData = [];
         this.SelectedProductData = [];
 
-        this.lstResult = [];
-        this.hasRecords = true;
+        this.cartProducts = [];
+        this.showViewCart = false;
+
+        this.allSelectedProductIds.clear();
+
         this.searchKey = '';
-        this.isSearchLoading = false;
-        this.isFirstPage = true;
-        this.isSecondPage = false;
-        this.selectedRows = [];
-        this.ShowViewAll = false;
-        this.ShowSelected = true;
-        this.showErrorMsg = false;
-        this.filteredData = [];
-        this.FilterForm = { "ProductFamily": "" };
-        this.datafilterval = false;
-        this.DisableNext = true;
+        this.selectedItemType = '';
 
-        //window.location.reload();
-
-        // this[NavigationMixin.Navigate]({
-        //     type: 'standard__recordPage',
-        //     attributes: {
-        //         recordId: this.recId,
-        //         objectApiName: 'Opportunity',
-        //         actionName: 'view',
-
-        //     }
-        // });
     }
 
     nextDetails() {
@@ -404,157 +589,247 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
 
 
     saveDetails() {
-        var deletedProducts = []
-        this.template.querySelectorAll('tr').forEach(ele => {
-            if (ele.classList.value.includes('slds-hide') && !ele.id.includes('firstRow')) {
-                var temp = ele.id.split('-');
-                if (temp.length > 0) {
-                    deletedProducts.push(temp[0]);
-                }
-            }
-        });
-        // console.log('hiddendProducts = ', deletedProducts);
-        for (var i = 0; i < this.SelectedProductData.length; i++) {
-            var obj = this.SelectedProductData[i];
-            for (var key in obj) {
-                var value = obj[key];
-                if (key === 'Id') {
-                    if (this.mapIdQuantity.get(value) != undefined) {
-                        obj.Quantity = this.mapIdQuantity.get(value);
-                    }
-                    if (this.mapIdSalesPrice.get(value) != undefined) {
-                        obj.Price = this.mapIdSalesPrice.get(value);
-                    }
-                    if (this.mapIdDate.get(value) != undefined) {
-                        obj.PDate = this.mapIdDate.get(value);
-                    }
-                    if (this.mapIdLineDescription.get(value) != undefined) {
-                        obj.LineDescription = this.mapIdLineDescription.get(value);
-                    }
-                    if (this.mapIdDiscount.get(value) != undefined) {
-                        obj.Discount = this.mapIdDiscount.get(value);
-                    }
-
-                }
-            }
-            this.SelectedProductData[i] = obj;
-        }
-        var DataToSave = this.SelectedProductData;
-        this.SelectedProductData = [];
         var isValidate = true;
-        for (var i = 0; i < DataToSave.length; i++) {
-            if (!deletedProducts.includes(DataToSave[i]["Id"])) {
-                this.SelectedProductData.push(DataToSave[i]);
-            }
-        }
-
         for (var i = 0; i < this.SelectedProductData.length; i++) {
             if (this.SelectedProductData[i]["Quantity"] == 0 || this.SelectedProductData[i]["Quantity"] == undefined) {
                 isValidate = false;
                 break;
             }
         }
-        if (isValidate) {
-            this.isFirstPage = false;
-            console.log(' SelectedProductData ' + JSON.stringify(this.SelectedProductData));
+
+        if (isValidate && this.SelectedProductData.length > 0) {
+            this.showSpinner = true;
             let str = JSON.stringify(this.SelectedProductData);
-            saveProducts({ recordData: str, recId: this.recId,customerSAPdiscount:this.customerSAPdiscount }).then(result => {
-                this.selectedRecord = [];
+            saveProducts({ recordData: str, recId: this.recId, customerSAPdiscount: this.customerSAPdiscount })
+                .then(result => {
+                    this.showSpinner = false;
+                    this.showToast('Success', 'Products Added Successfully', 'success');
 
+                    // Clear cart
+                    this.cartProducts = [];
+                    this.showViewCart = false;
+                    this.allSelectedProductIds.clear();
+                    this.selectedProductCode = [];
 
-                this.dispatchEvent(new ShowToastEvent({
-                    title: 'Success',
-                    message: 'Product Added Successfully',
-                    variant: 'success',
-                }));
-                this.dispatchEvent(new RefreshEvent());
-                this.goBackToRecord();
+                    // Close modal and refresh
+                    this.isModalOpen = false;
+                    this.dispatchEvent(new RefreshEvent());
 
+                    this.closeModal();
 
+                    setTimeout(() => {
 
+                        window.location.replace(
+                            `/lightning/r/Quote/${this.recId}/view`
+                        );
 
-            })
+                    }, 500);
+                })
                 .catch(error => {
-                    this.dispatchEvent(
-                        new ShowToastEvent({
-                            title: 'Error Product Adding',
-                            message: error.body.message,
-                            variant: 'error',
-                        }),
-                    );
-                    this.updateRecordView();
-                    //this.closeModal();
+                    this.showSpinner = false;
+                    this.showToast('Error', error.body.message, 'error');
                 });
         } else {
-            this.dispatchEvent(new ShowToastEvent({
-                title: 'Error',
-                message: 'Quantity should be non-Zero',
-                variant: 'error',
-            }));
+            this.showToast('Error', 'Quantity should be non-Zero for all products', 'error');
         }
-
     }
 
     handleback() {
-        //this.ShowTableData = this.AllProductData;
-
         this.ShowSelected = true;
         this.isFirstPage = true;
         this.isSecondPage = false;
-        mapIdQuantity = '';
-        mapIdSalesPrice = '';
-        mapIdDate = '';
-        mapIdDiscount = '';
-        mapIdLineDescription = '';
+        this.showViewCart = this.cartProducts.length > 0;
 
-        this.fillselectedRows();
-        this.RecalculateselectedProductCode();
+        // Clear maps
+        this.mapIdQuantity = new Map();
+        this.mapIdSalesPrice = new Map();
+        this.mapIdDate = new Map();
+        this.mapIdDiscount = new Map();
+        this.mapIdLineDescription = new Map();
+
+        // Clear selection
+        this.selectedProductCode = [];
+        this.SelectedProductData = [];
+        this.selectedRows = [];
+        this.SelectedRecordCount = 0;
+        this.DisableNext = true;
+        this.searchKey = '';
+        this.FilterForm = { "ProductFamily": "" };
+
+        // Clear Item Type selection
+        const itemTypeCombobox = this.template.querySelector('lightning-combobox[name="itemType"]');
+        if (itemTypeCombobox) {
+            itemTypeCombobox.value = '';
+        }
+        this.selectedItemType = '';
+
+        // Reload product list
+        this.AllProductData = [];
+        this.ShowTableData = [];
+        this.getProductList();
         this.paginiateData(JSON.stringify(this.AllProductData));
         this.page = 1;
+    }
 
+    getProductList() {
+        if (!this.selectedItemType || this.selectedItemType === '') {
+            this.AllProductData = [];
+            this.ShowTableData = [];
+            this.showSpinner = false;
+            return;
+        }
+
+        findProductsOptimized({
+            recordId: this.recId,
+            searchKey: this.searchKey,
+            itemType: this.selectedItemType
+        }).then(chunks => {
+            let allProducts = [];
+            chunks.forEach(chunkStr => {
+                let chunkObj = JSON.parse(chunkStr);
+                if (chunkObj.productList && Array.isArray(chunkObj.productList)) {
+                    allProducts = allProducts.concat(chunkObj.productList);
+                }
+            });
+            this.AllProductData = allProducts;
+            this.ShowTableData = allProducts;
+            this.paginiateData(JSON.stringify(this.AllProductData));
+            this.page = 1;
+            this.showSpinner = false;
+        }).catch(error => {
+            this.showSpinner = false;
+            this.showToast('Error', 'Failed to load products', 'error');
+        });
     }
 
 
     showFilteredProducts(event) {
-        // console.log('event.keyCode = ', event.keyCode);
-        if (event.keyCode == 13) {
-            this.isFirstPage = false;
-            this.showErrorMsg = false;
-            // findProducts({ recordId: this.recId, productFamily: [] }).then(result => {
-            //     let dataObj = JSON.parse(result);
-            //     //console.log(dataObj);
-            //     this.ShowTableData = dataObj.productList;
-            //     this.filteredData = dataObj.productList;
-            //     this.fillselectedRows();
-            //     this.isFirstPage = true;
-            //     this.ShowViewAll = true;
-            //     this.ShowSelected = true;
-            //     /*const searchBoxWrapper = this.template.querySelector('.lookupContainer');
-            //     searchBoxWrapper.classList.remove('slds-show');
-            //     searchBoxWrapper.classList.add('slds-hide');*/
-            // });
-        } else {
-            this.handleKeyChange(event);
-            const searchBoxWrapper = this.template.querySelector('.lookupContainer');
-            searchBoxWrapper.classList.add('slds-show');
-            searchBoxWrapper.classList.remove('slds-hide');
-        }
+
+        this.searchKey =
+
+            event.target.value;
+
+        clearTimeout(
+
+            this.typingTimeout
+
+        );
+
+        this.typingTimeout =
+
+            setTimeout(() => {
+
+                if (
+
+                    this.selectedItemType
+
+                ) {
+
+                    this.handleItemOptions({
+
+                        target: {
+
+                            value:
+
+                                this.selectedItemType
+
+                        }
+
+                    });
+
+                }
+
+            }, 500);
+
     }
 
-    handleKeyChange(event) {
+    // handleKeyChange(event) {
 
-        this.isSearchLoading = true;
-        this.searchKey = event.target.value;
-        var data = [];
-        for (var i = 0; i < this.AllProductData.length; i++) {
-            if (this.AllProductData[i] != undefined && (this.AllProductData[i].Name.toLowerCase().includes(this.searchKey.toLowerCase()) || this.AllProductData[i].ProductCode.includes(this.searchKey))) {
-                data.push(this.AllProductData[i]);
-            }
-        }
-        this.paginiateData(JSON.stringify(data));
-        this.page = 1;
-        this.recordPerPage(1, this.SelectedProductData, data);
-    }
+    //     this.searchKey =
+
+    //         event.target.value
+    //             ?
+    //             event.target.value
+    //                 .trim()
+    //                 .toLowerCase()
+    //             :
+    //             '';
+
+    //     let data = [];
+
+    //     for (
+
+    //         let i = 0;
+
+    //         i < this.AllProductData.length;
+
+    //         i++
+
+    //     ) {
+
+    //         let rec =
+
+    //             this.AllProductData[i];
+
+    //         let prodName =
+
+    //             rec.Name
+    //                 ?
+    //                 rec.Name.toLowerCase()
+    //                 :
+    //                 '';
+
+    //         let prodCode =
+
+    //             rec.ProductCode
+    //                 ?
+    //                 String(
+    //                     rec.ProductCode
+    //                 )
+    //                     .trim()
+    //                     .toLowerCase()
+    //                 :
+    //                 '';
+
+    //         if (
+
+    //             prodName.includes(
+    //                 this.searchKey
+    //             )
+
+    //             ||
+
+    //             prodCode.includes(
+    //                 this.searchKey
+    //             )
+
+    //         ) {
+
+    //             data.push(rec);
+
+    //         }
+
+    //     }
+
+    //     this.paginiateData(
+
+    //         JSON.stringify(data)
+
+    //     );
+
+    //     this.page = 1;
+
+    //     this.recordPerPage(
+
+    //         1,
+
+    //         this.SelectedProductData,
+
+    //         data
+
+    //     );
+
+    // }
 
 
 
@@ -695,7 +970,7 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
 
         this.isFirstPage = true;
         setTimeout(() => {
-            findProducts({ recordId: this.recId, productFamily: [] }).then(result => {
+            findProducts({ recordId: this.recId, productFamily: [], searchKey: this.searchKey, itemType: this.selectedItemType }).then(result => {
                 let dataObj = JSON.parse(result);
                 //console.log('filter code', this.FilterForm["ProductCode"]);
                 //console.log('Family code', this.FilterForm["ProductFamily"]);
@@ -718,10 +993,50 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
                                     for (let j = 0; j < this.FilterForm["ProductFamily"].length; j++) {
                                         if (this.FilterForm["ProductFamily"][j] == this.filteredData[i].Family) {
                                             console.log('search key', this.searchKey);
-                                            if (this.filteredData[i].Name.toLowerCase().includes(this.searchKey.toLowerCase())) {
-                                                console.log('inside name key',);
-                                                filteredProductData.push(this.filteredData[i]);
-                                                break;
+                                            let productName =
+
+                                                this.filteredData[i]
+                                                    .Name
+                                                    ?
+                                                    this.filteredData[i]
+                                                        .Name
+                                                        .toLowerCase()
+                                                    :
+                                                    '';
+
+                                            let productCode =
+
+                                                this.filteredData[i]
+                                                    .ProductCode
+                                                    ?
+                                                    String(
+                                                        this.filteredData[i]
+                                                            .ProductCode
+                                                    )
+                                                        .toLowerCase()
+                                                    :
+                                                    '';
+
+                                            if (
+
+                                                productName.includes(
+                                                    this.searchKey
+                                                        .toLowerCase()
+                                                )
+
+                                                ||
+
+                                                productCode.includes(
+                                                    this.searchKey
+                                                        .toLowerCase()
+                                                )
+
+                                            ) {
+
+                                                filteredProductData.push(
+                                                    this.filteredData[i]
+                                                );
+
                                             } else {
                                                 console.log('else name key',);
                                             }
@@ -731,8 +1046,50 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
                                         }
                                     }
                                 } else {
-                                    if (this.filteredData[i].Name.toLowerCase().includes(this.searchKey.toLowerCase())) {
-                                        filteredProductData.push(this.filteredData[i]);
+                                    let productName =
+
+                                        this.filteredData[i]
+                                            .Name
+                                            ?
+                                            this.filteredData[i]
+                                                .Name
+                                                .toLowerCase()
+                                            :
+                                            '';
+
+                                    let productCode =
+
+                                        this.filteredData[i]
+                                            .ProductCode
+                                            ?
+                                            String(
+                                                this.filteredData[i]
+                                                    .ProductCode
+                                            )
+                                                .toLowerCase()
+                                            :
+                                            '';
+
+                                    if (
+
+                                        productName.includes(
+                                            this.searchKey
+                                                .toLowerCase()
+                                        )
+
+                                        ||
+
+                                        productCode.includes(
+                                            this.searchKey
+                                                .toLowerCase()
+                                        )
+
+                                    ) {
+
+                                        filteredProductData.push(
+                                            this.filteredData[i]
+                                        );
+
                                     }
                                 }
 
@@ -755,9 +1112,56 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
                     for (let i = 0; i < this.filteredData.length; i++) {
                         for (let j = 0; j < this.FilterForm["ProductFamily"].length; j++) {
                             if (this.FilterForm["ProductFamily"][j] == this.filteredData[i].Family) {
-                                if (this.filteredData[i].Name.toLowerCase().includes(this.searchKey.toLowerCase())) {
-                                    filteredProductData.push(this.filteredData[i]);
-                                    break;
+                                let productName =
+
+                                    this.filteredData[i]
+                                        .Name
+                                        ?
+                                        this.filteredData[i]
+                                            .Name
+                                            .toLowerCase()
+                                        :
+                                        '';
+
+                                let productCode =
+
+                                    this.filteredData[i]
+                                        .ProductCode
+                                        ?
+                                        String(
+                                            this.filteredData[i]
+                                                .ProductCode
+                                        )
+                                            .toLowerCase()
+                                        :
+                                        '';
+
+                                if (
+
+                                    productName.includes(
+
+                                        this.searchKey
+                                            .toLowerCase()
+
+                                    )
+
+                                    ||
+
+                                    productCode.includes(
+
+                                        this.searchKey
+                                            .toLowerCase()
+
+                                    )
+
+                                ) {
+
+                                    filteredProductData.push(
+
+                                        this.filteredData[i]
+
+                                    );
+
                                 }
                             }
                         }
@@ -783,11 +1187,56 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
                         for (let i = 0; i < this.filteredData.length; i++) {
                             //for (let j = 0; j < this.FilterForm["ProductFamily"].length; j++) {
                             //if (this.FilterForm["ProductFamily"][j] == this.filteredData[i].Family) {
-                            if (this.filteredData[i].Name.toLowerCase().includes(this.searchKey.toLowerCase())) {
-                                filteredProductData.push(this.filteredData[i]);
-                                break;
-                                //}
-                                //}
+                            let productName =
+
+                                this.filteredData[i]
+                                    .Name
+                                    ?
+                                    this.filteredData[i]
+                                        .Name
+                                        .toLowerCase()
+                                    :
+                                    '';
+
+                            let productCode =
+
+                                this.filteredData[i]
+                                    .ProductCode
+                                    ?
+                                    String(
+                                        this.filteredData[i]
+                                            .ProductCode
+                                    )
+                                        .toLowerCase()
+                                    :
+                                    '';
+
+                            if (
+
+                                productName.includes(
+
+                                    this.searchKey
+                                        .toLowerCase()
+
+                                )
+
+                                ||
+
+                                productCode.includes(
+
+                                    this.searchKey
+                                        .toLowerCase()
+
+                                )
+
+                            ) {
+
+                                filteredProductData.push(
+
+                                    this.filteredData[i]
+
+                                );
+
                             }
                         }
                         this.showErrorMsg = false;
@@ -922,16 +1371,24 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         this.startingRecord = ((page - 1) * this.pageSize);
         this.endingRecord = (this.pageSize * page);
         this.endingRecord = (this.endingRecord > this.totalRecountCount) ? this.totalRecountCount : this.endingRecord;
-        //this.fillselectedRows();
         this.ShowTableData = tempdata.slice(this.startingRecord, this.endingRecord);
-
         this.startingRecord = this.startingRecord + 1;
-        console.log('this.selectedProductCode 664', this.selectedProductCode.length);
-        this.fillselectedRows();
-        this.RecalculateselectedProductCode();
-        console.log('this.selectedProductCode 666', this.selectedProductCode.length);
-        this.template.querySelector('[data-id="datatable"]').selectedRows = this.selectedProductCode;
 
+        // Preserve selections when changing pages
+        this.selectedRows = [];
+        for (let i = 0; i < this.ShowTableData.length; i++) {
+            if (this.allSelectedProductIds.has(this.ShowTableData[i].Id)) {
+                this.selectedRows.push(this.ShowTableData[i]);
+            }
+        }
+
+        // Update the datatable selected rows
+        setTimeout(() => {
+            const datatable = this.template.querySelector('[data-id="datatable"]');
+            if (datatable) {
+                datatable.selectedRows = this.selectedRows;
+            }
+        }, 100);
     }
 
 

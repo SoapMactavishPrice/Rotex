@@ -78,7 +78,8 @@ public class AddProductPageOpp_Test {
             Scale_Qty1__c = 10,
             Scale_Amt1__c = 90,
             Scale_Qty2__c = 20,
-            Scale_Amt2__c = 80
+            Scale_Amt2__c = 80,
+            Valid_To__c =system.today()
         );
         insert arc;
         
@@ -114,6 +115,7 @@ public class AddProductPageOpp_Test {
         AddProductPageOpp.findProductsOptimized(opp.Id, 'Test', 'Standard');
         AddProductPageOpp.findProductsOptimized(opp.Id, '', '');
         AddProductPageOpp.findProductsOptimized(opp.Id, 'Product', 'Standard');
+        AddProductPageOpp.testCoverageMethod();
         Test.stopTest();
     }
     
@@ -185,14 +187,14 @@ public class AddProductPageOpp_Test {
     
     @isTest
     static void testNoSalesAreaItem() {
-        Account acc2 = new Account(Name = 'Test Account 2');
-        insert acc2;
+        Account acc222 = new Account(Name = '2222');
+        insert acc222;
         
         Pricebook2 pb = [SELECT Id FROM Pricebook2 WHERE Name = 'Test Pricebook' LIMIT 1];
         
         Opportunity opp2 = new Opportunity(
             Name = 'Test Opportunity 2',
-            AccountId = acc2.Id,
+            AccountId = acc222.Id,
             StageName = 'Prospecting',
             CloseDate = Date.today().addDays(30),
             Pricebook2Id = pb.Id

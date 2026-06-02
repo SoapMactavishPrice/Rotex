@@ -65,7 +65,7 @@ public class OpportunityTriggerHandler {
             Product2.ProductCode,
             Discount, Item_Group__c, Item_Description__c, Specification__c, HSN_SAC_Code__c, Location_Code__c,
             Unit__c, Unit_of_Measure_Code__c, Description, Customer_Part_No__c, Item_Number__c,
-            Discount_to_be_offered__c, Discount_as_per_SAP__c
+            Discount_to_be_offered__c, Discount_as_per_SAP__c, Item_Type__c
             FROM OpportunityLineItem
             WHERE OpportunityId IN :oldOpportunityMap.keySet()
         ]) {
@@ -108,7 +108,7 @@ public class OpportunityTriggerHandler {
                     newQuote.Name = opp.Name;
                     newQuote.Status = 'Draft';
                     newQuote.ExpirationDate = System.today() + 14;
-                    newQuote.Quote_Valid_Till__c = System.today() + 14;
+                    newQuote.Quote_Valid_Till__c = System.today() + 30;
                     newQuote.Quote_Date__c = System.today();
                     newQuote.RFQ_No__c = opp.Customer_Enquiry_Ref_No__c;
                     newQuote.RFQ_Date__c = opp.Enquiry_Receive_Date__c;
@@ -149,6 +149,22 @@ public class OpportunityTriggerHandler {
             insert qList;
         }
         
+        Map<Id, String> oppQuoteMap = new Map<Id, String>();
+        
+        for (Quote q : [
+            SELECT Id, OpportunityId, QuoteNumber
+            FROM Quote
+            WHERE Id IN :qList
+        ]) {
+            oppQuoteMap.put(q.OpportunityId, q.QuoteNumber);
+        }
+        
+        for (Opportunity opp : newOpportunities) {
+            if (oppQuoteMap.containsKey(opp.Id)) {
+                opp.Quotation_No__c = oppQuoteMap.get(opp.Id);
+            }
+        }
+        
         // Prepare QLI
         for (Opportunity opp : newOpportunities) {
             if (ExistingOppLineItemMap.containsKey(opp.Id)) {
@@ -171,6 +187,7 @@ public class OpportunityTriggerHandler {
                     qli.UnitPrice = oli.UnitPrice;
                     qli.Product2Id = oli.Product2Id;
                     qli.PricebookEntryId = oli.PricebookEntryId;
+                    qli.Item_Type__c = oli.Item_Type__c;
                     
                     // Custom fields
                     qli.Item_Group__c = oli.Item_Group__c;

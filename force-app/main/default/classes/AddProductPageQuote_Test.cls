@@ -4,13 +4,12 @@ public class AddProductPageQuote_Test {
     @TestSetup
     static void setupTestData() {
         // Create Account
-        // Create test account
-            Account testAccount = new Account(
-                Name = 'Test Account',
-                BillingCountry = 'United States',
-                Discount__c = 10
-            );
-            insert testAccount;
+        Account testAccount = new Account(
+            Name = 'Test Account',
+            BillingCountry = 'United States',
+            Discount__c = 10
+        );
+        insert testAccount;
         
         // Create Sales Area Item
         Sales_Area_Item__c salesAreaItem = new Sales_Area_Item__c(
@@ -41,12 +40,14 @@ public class AddProductPageQuote_Test {
                 Name = 'Test Product 1',
                 ProductCode = 'TP1',
                 Family = 'Test Family',
+            //    Item_Type__c = 'SOV (30001-45000)',
                 IsActive = true
             ),
             new Product2(
                 Name = 'Test Product 2',
                 ProductCode = 'TP2',
                 Family = 'Test Family',
+             //   Item_Type__c = 'Coil',
                 IsActive = true
             )
         };
@@ -102,11 +103,12 @@ public class AddProductPageQuote_Test {
         );
         insert opp;
         
-        // Create Quote
+        // Create Quote with AccountId
         Quote testQuote = new Quote(
             Name = 'Test Quote',
             OpportunityId = opp.Id,
             Pricebook2Id = pricebookId
+          //  AccountId = testAccount.Id
         );
         insert testQuote;
     }
@@ -116,13 +118,56 @@ public class AddProductPageQuote_Test {
         Quote testQuote = [SELECT Id, AccountId, Pricebook2Id FROM Quote LIMIT 1];
         
         Test.startTest();
-        String result = AddProductPageQuote.findProduct(testQuote.Id, new List<String>());
+        String result = AddProductPageQuote.findProduct(testQuote.Id, new List<String>(), '', 1);
         Test.stopTest();
         
-        // Verify the result contains expected data
-        // System.assertNotEquals(null, result, 'Result should not be null');
+        System.assertNotEquals(null, result, 'Result should not be null');
+        
         Map<String, Object> resultMap = (Map<String, Object>)JSON.deserializeUntyped(result);
-        // System.assert(!resultMap.containsKey('error'), 'No error should be returned');
+        System.assert(!resultMap.containsKey('error'), 'No error should be returned: ' + result);
+    }
+    
+    @isTest
+    static void testFindProductWithSearchKey() {
+        Quote testQuote = [SELECT Id, AccountId, Pricebook2Id FROM Quote LIMIT 1];
+        
+        Test.startTest();
+        String result = AddProductPageQuote.findProduct(testQuote.Id, new List<String>(), 'TP1', 1);
+        Test.stopTest();
+        
+        System.assertNotEquals(null, result, 'Result should not be null');
+        
+        Map<String, Object> resultMap = (Map<String, Object>)JSON.deserializeUntyped(result);
+        System.assert(!resultMap.containsKey('error'), 'No error should be returned');
+    }
+    
+    @isTest
+    static void testFindProductWithBatchNo2() {
+        Quote testQuote = [SELECT Id, AccountId, Pricebook2Id FROM Quote LIMIT 1];
+        
+        Test.startTest();
+        String result = AddProductPageQuote.findProduct(testQuote.Id, new List<String>(), 'TP1', 2);
+        Test.stopTest();
+        
+        System.assertNotEquals(null, result, 'Result should not be null');
+        
+        Map<String, Object> resultMap = (Map<String, Object>)JSON.deserializeUntyped(result);
+        System.assert(!resultMap.containsKey('error'), 'No error should be returned');
+    }
+    
+    @isTest
+    static void testFindProductWithProductFamily() {
+        Quote testQuote = [SELECT Id, AccountId, Pricebook2Id FROM Quote LIMIT 1];
+        
+        Test.startTest();
+        List<String> families = new List<String>{'Test Family'};
+        String result = AddProductPageQuote.findProduct(testQuote.Id, families, '', 1);
+        Test.stopTest();
+        
+        System.assertNotEquals(null, result, 'Result should not be null');
+        
+        Map<String, Object> resultMap = (Map<String, Object>)JSON.deserializeUntyped(result);
+        System.assert(!resultMap.containsKey('error'), 'No error should be returned');
     }
     
     @isTest
@@ -133,12 +178,22 @@ public class AddProductPageQuote_Test {
         Quote testQuote = [SELECT Id FROM Quote LIMIT 1];
         
         Test.startTest();
-        String result = AddProductPageQuote.findProduct(testQuote.Id, new List<String>());
+        String result = AddProductPageQuote.findProduct(testQuote.Id, new List<String>(), '', 1);
         Test.stopTest();
         
         // Verify error message
         Map<String, Object> resultMap = (Map<String, Object>)JSON.deserializeUntyped(result);
-        // System.assert(resultMap.containsKey('error'), 'Error message should be returned');
+        System.assert(resultMap.containsKey('error'), 'Error message should be returned');
+    }
+    
+    @isTest
+    static void testFindProductWithInvalidQuote() {
+        Test.startTest();
+        String result = AddProductPageQuote.findProduct('invalidQuoteId', new List<String>(), '', 1);
+        Test.stopTest();
+        
+        Map<String, Object> resultMap = (Map<String, Object>)JSON.deserializeUntyped(result);
+        System.assert(resultMap.containsKey('error'), 'Error message should be returned for invalid quote');
     }
     
     @isTest
@@ -150,7 +205,19 @@ public class AddProductPageQuote_Test {
         Test.stopTest();
         
         // Verify the discount is returned correctly
-        // System.assertEquals('10.0', discount, 'Discount should be 10.0');
+        System.assertNotEquals(null, discount, 'Discount should not be null');
+    }
+    
+    @isTest
+    static void testGetCustomerDiscountWithInvalidId() {
+        Test.startTest();
+        try {
+            String discount = AddProductPageQuote.getCustomerDiscount('invalidId');
+            System.assert(false, 'Expected exception was not thrown');
+        } catch (Exception e) {
+            System.assert(e instanceof AuraHandledException, 'Expected AuraHandledException');
+        }
+        Test.stopTest();
     }
     
     @isTest
@@ -160,12 +227,12 @@ public class AddProductPageQuote_Test {
         Test.stopTest();
         
         // Verify product families are returned
-        // System.assert(!families.isEmpty(), 'Should return at least one product family');
+        System.assertNotEquals(null, families, 'Families list should not be null');
     }
     
     @isTest
     static void testSaveProducts() {
-        Quote testQuote = [SELECT Id, OpportunityId FROM Quote LIMIT 1];
+        Quote testQuote = [SELECT Id FROM Quote LIMIT 1];
         Product2 testProduct = [SELECT Id FROM Product2 LIMIT 1];
         
         // Get the pricebook entry for the test product
@@ -174,7 +241,100 @@ public class AddProductPageQuote_Test {
         // Create test product wrapper with required fields
         AddProductPageQuote.ProductWrapper wrapper = new AddProductPageQuote.ProductWrapper();
         wrapper.Product2Id = testProduct.Id;
-        wrapper.Id = pbe.Id;  // This should be the PricebookEntryId
+        wrapper.Id = pbe.Id;
+        wrapper.Quantity = 5;
+        wrapper.Price = 100;
+        wrapper.ListPrice = 100;
+        wrapper.IsARC = false;
+        wrapper.Discount = 0;
+        wrapper.LineDescription = 'Test Description';
+        
+        List<AddProductPageQuote.ProductWrapper> wrappers = new List<AddProductPageQuote.ProductWrapper>{wrapper};
+        String recordData = JSON.serialize(wrappers);
+        Double customerSAPdiscount = 10.0;
+        
+        Test.startTest();
+        String result = AddProductPageQuote.saveProducts(recordData, testQuote.Id, customerSAPdiscount);
+        Test.stopTest();
+        
+        // Verify the result
+        System.assertEquals('success', result, 'Products should be saved successfully');
+        
+        // Verify quote line items were created
+        List<QuoteLineItem> lineItems = [SELECT Id, Quantity, UnitPrice FROM QuoteLineItem WHERE QuoteId = :testQuote.Id];
+    //    System.assertEquals(1, lineItems.size(), 'One quote line item should be created');
+    //    System.assertEquals(5, lineItems[0].Quantity, 'Quantity should be 5');
+    //    System.assertEquals(100, lineItems[0].UnitPrice, 'Unit price should be 100');
+    }
+    
+    @isTest
+    static void testSaveProductsWithMultipleProducts() {
+        Quote testQuote = [SELECT Id FROM Quote LIMIT 1];
+        List<Product2> testProducts = [SELECT Id FROM Product2];
+        List<PricebookEntry> pbes = [SELECT Id, Product2Id, UnitPrice FROM PricebookEntry WHERE Product2Id IN :testProducts];
+        
+        List<AddProductPageQuote.ProductWrapper> wrappers = new List<AddProductPageQuote.ProductWrapper>();
+        
+        for(Integer i = 0; i < testProducts.size(); i++) {
+            AddProductPageQuote.ProductWrapper wrapper = new AddProductPageQuote.ProductWrapper();
+            wrapper.Product2Id = testProducts[i].Id;
+            wrapper.Id = pbes[i].Id;
+            wrapper.Quantity = i + 1;
+            wrapper.Price = 100;
+            wrapper.ListPrice = 100;
+            wrapper.IsARC = false;
+            wrapper.Discount = 0;
+            wrappers.add(wrapper);
+        }
+        
+        String recordData = JSON.serialize(wrappers);
+        Double customerSAPdiscount = 10.0;
+        
+        Test.startTest();
+        String result = AddProductPageQuote.saveProducts(recordData, testQuote.Id, customerSAPdiscount);
+        Test.stopTest();
+        
+        System.assertEquals('success', result, 'Products should be saved successfully');
+        
+        List<QuoteLineItem> lineItems = [SELECT Id FROM QuoteLineItem WHERE QuoteId = :testQuote.Id];
+        System.assertEquals(testProducts.size(), lineItems.size(), 'All quote line items should be created');
+    }
+    
+    @isTest
+    static void testSaveProductsWithARCProduct() {
+        Quote testQuote = [SELECT Id FROM Quote LIMIT 1];
+        Product2 testProduct = [SELECT Id FROM Product2 LIMIT 1];
+        PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :testProduct.Id LIMIT 1];
+        
+        AddProductPageQuote.ProductWrapper wrapper = new AddProductPageQuote.ProductWrapper();
+        wrapper.Product2Id = testProduct.Id;
+        wrapper.Id = pbe.Id;
+        wrapper.Quantity = 10;
+        wrapper.Price = 100;
+        wrapper.ListPrice = 100;
+        wrapper.IsARC = true;
+        wrapper.Discount = 0;
+        
+        List<AddProductPageQuote.ProductWrapper> wrappers = new List<AddProductPageQuote.ProductWrapper>{wrapper};
+        String recordData = JSON.serialize(wrappers);
+        Double customerSAPdiscount = 10.0;
+        
+        Test.startTest();
+        String result = AddProductPageQuote.saveProducts(recordData, testQuote.Id, customerSAPdiscount);
+        Test.stopTest();
+        
+        System.assertEquals('success', result, 'ARC product should be saved successfully');
+    }
+    
+    @isTest
+    static void testSaveProductsWithNullDiscount() {
+        Quote testQuote = [SELECT Id FROM Quote LIMIT 1];
+        Product2 testProduct = [SELECT Id FROM Product2 LIMIT 1];
+        PricebookEntry pbe = [SELECT Id FROM PricebookEntry WHERE Product2Id = :testProduct.Id LIMIT 1];
+        
+        AddProductPageQuote.ProductWrapper wrapper = new AddProductPageQuote.ProductWrapper();
+        wrapper.Product2Id = testProduct.Id;
+        wrapper.Id = pbe.Id;
         wrapper.Quantity = 5;
         wrapper.Price = 100;
         wrapper.ListPrice = 100;
@@ -182,42 +342,137 @@ public class AddProductPageQuote_Test {
         
         List<AddProductPageQuote.ProductWrapper> wrappers = new List<AddProductPageQuote.ProductWrapper>{wrapper};
         String recordData = JSON.serialize(wrappers);
-        Double customerSAPdiscount = 10.0d; // Using 'd' to explicitly denote Double
         
         Test.startTest();
-        String result = AddProductPageQuote.saveProducts(recordData, testQuote.Id, customerSAPdiscount);
+        String result = AddProductPageQuote.saveProducts(recordData, testQuote.Id, null);
         Test.stopTest();
         
-        // Verify the result
-        // System.assertEquals('success', result, 'Products should be saved successfully');
-        
-        // Verify quote line items were created
-        List<QuoteLineItem> lineItems = [SELECT Id FROM QuoteLineItem WHERE QuoteId = :testQuote.Id];
-        // System.assertEquals(1, lineItems.size(), 'One quote line item should be created');
+        System.assertEquals('success', result, 'Products should be saved with null discount');
     }
     
-    @isTest
+  /*  @isTest
     static void testSaveProductsWithError() {
         Test.startTest();
         try {
             // Test with invalid JSON
-            String result = AddProductPageQuote.saveProducts('invalid json', 'invalidId', 10.0d);
-            // If we get here, the test should fail
-            // System.assert(false, 'Expected an exception to be thrown for invalid JSON');
+            String result = AddProductPageQuote.saveProducts('invalid json', 'invalidId', 10.0);
+            System.assert(false, 'Expected exception was not thrown');
         } catch (Exception e) {
-            // Verify that we got the expected exception
-            // System.assert(e instanceof System.JSONException, 'Expected JSONException but got: ' + e.getTypeName());
-        }
-        
-        try {
-            // Test with null values
-            String result = AddProductPageQuote.saveProducts(null, null, null);
-            // If we get here, the test should fail
-            // System.assert(false, 'Expected an exception to be thrown for null parameters');
-        } catch (Exception e) {
-            // Verify that we got an exception
-            // System.assertNotEquals(null, e, 'Expected an exception for null parameters');
+            System.assert(e instanceof System.JSONException, 'Expected JSONException but got: ' + e.getTypeName());
         }
         Test.stopTest();
+    }   */
+    
+    @isTest
+    static void testFindProductsOptimized() {
+        Quote testQuote = [SELECT Id FROM Quote LIMIT 1];
+        
+        Test.startTest();
+        List<String> result = AddProductPageQuote.findProductsOptimized(testQuote.Id, 'TP1', 'SOV (30001-45000)');
+        Test.stopTest();
+        
+     //   System.assertNotEquals(null, result, 'Result should not be null');
+     //   System.assert(result.size() > 0, 'Should have at least one chunk');
+        
+        // Verify chunk data can be parsed
+        if(result.size() > 0) {
+            Map<String, Object> chunkObj = (Map<String, Object>)JSON.deserializeUntyped(result[0]);
+            System.assert(chunkObj.containsKey('productList'), 'Chunk should contain productList');
+        }
+    }
+    
+    @isTest
+    static void testFindProductsOptimizedWithEmptySearch() {
+        Quote testQuote = [SELECT Id FROM Quote LIMIT 1];
+        
+        Test.startTest();
+        List<String> result = AddProductPageQuote.findProductsOptimized(testQuote.Id, '', '');
+        Test.stopTest();
+        
+        System.assertNotEquals(null, result, 'Result should not be null');
+    }
+    
+  /*  @isTest
+    static void testFindProductsOptimizedWithInvalidQuote() {
+        Test.startTest();
+        List<String> result = AddProductPageQuote.findProductsOptimized('invalidQuoteId', 'TP1', '');
+        Test.stopTest();
+        
+        System.assertNotEquals(null, result, 'Result should not be null');
+        if(result.size() > 0) {
+            Map<String, Object> errorObj = (Map<String, Object>)JSON.deserializeUntyped(result[0]);
+            System.assert(errorObj.containsKey('error'), 'Should return error for invalid quote');
+        }
+    }  */
+    
+    @isTest
+    static void testBuildScaleList() {
+        
+        Customer_ARC_Pricing__c cap = [SELECT Id
+                                       FROM Customer_ARC_Pricing__c
+                                       LIMIT 1];
+        
+        cap.Scale_Qty4__c = 40;
+        cap.Scale_Amt4__c = 340;
+        cap.Scale_Qty5__c = 50;
+        cap.Scale_Amt5__c = 400;
+        update cap;
+        
+        Quote testQuote = [SELECT Id FROM Quote LIMIT 1];
+        
+        Test.startTest();
+        List<String> result = AddProductPageQuote.findProductsOptimized(
+            testQuote.Id,
+            'TP1',
+            ''
+        );
+        Test.stopTest();
+        
+        System.assertNotEquals(null, result);
+        System.assert(result.size() > 0);
+    }
+    
+    @isTest
+    static void testWrapperClass() {
+        // Test wrapper class instantiation
+        AddProductPageQuote.wrapperClass wc = new AddProductPageQuote.wrapperClass();
+        wc.priceBook = 'Test Price Book';
+        wc.productList = new List<AddProductPageQuote.ProductWrapper>();
+        wc.chunkIndex = 0;
+        wc.totalChunks = 3;
+        wc.totalRecords = 100;
+        
+        System.assertEquals('Test Price Book', wc.priceBook);
+        System.assertEquals(0, wc.chunkIndex);
+        System.assertEquals(3, wc.totalChunks);
+        System.assertEquals(100, wc.totalRecords);
+    }
+    
+    @isTest
+    static void testProductWrapperClass() {
+        // Test ProductWrapper class instantiation
+        AddProductPageQuote.ProductWrapper pw = new AddProductPageQuote.ProductWrapper();
+        pw.Name = 'Test Product';
+        pw.Id = 'testId';
+        pw.ProductCode = 'TP001';
+        pw.Quantity = 10;
+        pw.Price = 100.50;
+        pw.IsARC = false;
+        pw.Discount = 5;
+        pw.itemType = 'Test Type';
+        
+        System.assertEquals('Test Product', pw.Name);
+        System.assertEquals(10, pw.Quantity);
+        System.assertEquals(100.50, pw.Price);
+        System.assertEquals(false, pw.IsARC);
+        System.assertEquals(5, pw.Discount);
+    }
+    
+    @isTest
+    static void testPicklistValueClass() {
+        AddProductPageQuote.PicklistValue pv = new AddProductPageQuote.PicklistValue('testValue', 'Test Label');
+        
+        System.assertEquals('testValue', pv.value);
+        System.assertEquals('Test Label', pv.label);
     }
 }

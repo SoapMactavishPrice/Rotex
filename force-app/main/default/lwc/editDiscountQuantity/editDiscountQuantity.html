@@ -37,8 +37,8 @@
                                 <td>
                                     <lightning-input type="number" data-id={item.Id} variant="label-hidden"
                                         value={item.Discount_to_be_offered__c} class="input-field"
-                                        disabled={item.isDiscountOfferedDisabled}
-                                        onchange={handleDiscountChange}>
+                                        disabled={item.isDiscountOfferedDisabled} onchange={handleDiscountChange}
+                                        step="any">
                                     </lightning-input>
                                 </td>
                                 <td>
@@ -68,7 +68,8 @@
                                 </td>
                                 <td>
                                     <lightning-input type="number" data-id={item.Id} variant="label-hidden"
-                                        value={item.Quantity} class="input-field" onchange={handleQuantityChange}>
+                                        value={item.Quantity} class="input-field" onchange={handleQuantityChange}
+                                        step="any">
                                     </lightning-input>
                                 </td>
                             </tr>

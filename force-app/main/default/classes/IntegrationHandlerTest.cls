@@ -928,4 +928,90 @@ static void testGetLineItem() {
         // No assertions needed - just verifying no exceptions are thrown
       //  System.assert(true, 'Methods should handle exceptions gracefully');
     }
+    
+    
+    @isTest
+    static void testUploadPOAttachment() {
+        Account acc = new Account(Name = 'Test Account');
+        insert acc;
+        
+        Opportunity opp = new Opportunity(Name = 'Test Opp', StageName = 'Prospecting', CloseDate = Date.today(), AccountId = acc.Id);
+        insert opp;
+        
+        Quote quote = new Quote(Name = 'Test Quote', OpportunityId = opp.Id);
+        insert quote;
+        
+        String fileName = 'test.pdf';
+        String base64Data = EncodingUtil.base64Encode(Blob.valueOf('Test content'));
+        
+        Test.startTest();
+        Map<String, Object> result = IntegrationHandler.uploadPOAttachment(quote.Id, fileName, base64Data);
+        Test.stopTest();
+    }
+    
+    @isTest
+    static void testUploadPOAttachmentWithBlankParams() {
+        Test.startTest();
+        Map<String, Object> result = IntegrationHandler.uploadPOAttachment('', '', '');
+        Test.stopTest();
+    }
+    
+    @isTest
+    static void testGetPOAttachment() {
+        Account acc = new Account(Name = 'Test Account');
+        insert acc;
+        
+        Opportunity opp = new Opportunity(Name = 'Test Opp', StageName = 'Prospecting', CloseDate = Date.today(), AccountId = acc.Id);
+        insert opp;
+        
+        Quote quote = new Quote(Name = 'Test Quote', OpportunityId = opp.Id);
+        insert quote;
+        
+        ContentVersion cv = new ContentVersion();
+        cv.Title = 'test.pdf';
+        cv.PathOnClient = 'test.pdf';
+        cv.VersionData = EncodingUtil.base64Decode(EncodingUtil.base64Encode(Blob.valueOf('Test')));
+        cv.FirstPublishLocationId = quote.Id;
+        insert cv;
+        
+        Test.startTest();
+        Map<String, Object> result = IntegrationHandler.getPOAttachment(quote.Id);
+        Test.stopTest();
+    }
+    
+    @isTest
+    static void testGetPOAttachmentNoAttachment() {
+        Account acc = new Account(Name = 'Test Account');
+        insert acc;
+        
+        Opportunity opp = new Opportunity(Name = 'Test Opp', StageName = 'Prospecting', CloseDate = Date.today(), AccountId = acc.Id);
+        insert opp;
+        
+        Quote quote = new Quote(Name = 'Test Quote', OpportunityId = opp.Id);
+        insert quote;
+        
+        Test.startTest();
+        Map<String, Object> result = IntegrationHandler.getPOAttachment(quote.Id);
+        Test.stopTest();
+    }
+    
+    @isTest
+    static void testGetFileData() {
+        ContentVersion cv = new ContentVersion();
+        cv.Title = 'test.pdf';
+        cv.PathOnClient = 'test.pdf';
+        cv.VersionData = EncodingUtil.base64Decode(EncodingUtil.base64Encode(Blob.valueOf('Test content')));
+        insert cv;
+        
+        Test.startTest();
+        Map<String, Object> result = IntegrationHandler.getFileData(cv.Id);
+        Test.stopTest();
+    }
+    
+    @isTest
+    static void testGetFileDataInvalidId() {
+        Test.startTest();
+        Map<String, Object> result = IntegrationHandler.getFileData('invalid');
+        Test.stopTest();
+    }
 }

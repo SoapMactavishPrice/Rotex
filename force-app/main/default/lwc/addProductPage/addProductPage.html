@@ -5,12 +5,12 @@
 
 	<!-- <template if:true={isModalOpen} style="max-width: 90rem !important;width:90% !important;"> -->
 	<template if:true={isModalOpen}>
-		<section role="dialog" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1"
-			class="slds-modal slds-fade-in-open">
+		<section role="dialog" aria-labelledby="modal-heading-01" aria-modal="true"
+			aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
 			<div class="slds-modal__container" style="max-width: 80rem !important;width: 80% !important;">
 				<header class="slds-modal__header">
-					<button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close"
-						onclick={closeModal}>
+					<button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+						title="Close" onclick={closeModal}>
 						<lightning-icon icon-name="utility:close" alternative-text="close" variant="inverse"
 							size="small"></lightning-icon>
 						<span class="slds-assistive-text">Close</span>
@@ -36,9 +36,23 @@
 												role="none">
 												<div class="searchBoxWrapper slds-show">
 													<!--Lookup Input Field-->
-													<lightning-input type="search" data-source="searchInputField" onclick={toggleResult}
-														value={searchKey} variant="label-hidden" placeholder="Search Product here..."
-														onkeyup={showFilteredProducts} class="searchBox"></lightning-input>
+													<!-- <lightning-input type="search" data-source="searchInputField"
+														onclick={toggleResult} value={searchKey} variant="label-hidden"
+														placeholder="Search Product here..."
+														onkeyup={showFilteredProducts}
+														class="searchBox"></lightning-input> -->
+
+													<lightning-input type="search" value={searchKey}
+														variant="label-hidden" placeholder="Search Product here..."
+														onkeyup={showFilteredProducts} class="searchBox"
+														disabled={searchDisability}>
+													</lightning-input>
+
+													<lightning-combobox name="itemType" label="Item Type"
+														value={itemDefault} placeholder="Select Item"
+														options={itemsOptions} onchange={handleItemOptions}>
+
+													</lightning-combobox>
 													<span if:true={showErrorMsg} style="color:red">First, enter keywords
 														for a product. Then add filters and click Apply.</span>
 												</div>
@@ -56,11 +70,14 @@
 																<span style="pointer-events: none;"
 																	class="slds-media__figure slds-listbox__option-icon">
 																	<span class="slds-icon_container">
-																		<lightning-icon icon-name="standard:product_item" size="small"
+																		<lightning-icon
+																			icon-name="standard:product_item"
+																			size="small"
 																			alternative-text="icon"></lightning-icon>
 																	</span>
 																</span>
-																<span style="pointer-events: none;" class="slds-media__body">
+																<span style="pointer-events: none;"
+																	class="slds-media__body">
 																	<span
 																		class="slds-listbox__option-text slds-listbox__option-text_entity">{obj.Name}</span>
 																	<span
@@ -71,7 +88,8 @@
 													</template>
 													<!--ERROR msg, if there is no records..-->
 													<template if:false={hasRecords}>
-														<li class="slds-listbox__item" style="text-align: center; font-weight: bold;">No Records
+														<li class="slds-listbox__item"
+															style="text-align: center; font-weight: bold;">No Records
 															Found....</li>
 													</template>
 												</ul>
@@ -99,13 +117,15 @@
 
 
 
-						<div class="demo-only demo-only--sizing slds-grid slds-wrap slds-scrollable_y" style="height:21rem;">
+						<div class="demo-only demo-only--sizing slds-grid slds-wrap slds-scrollable_y"
+							style="height:21rem;">
 							<div class="slds-size_3-of-3">
 								<div class="slds-text-align_center slds-m-top_x-small">
 									<div class="slds-col slds-box">
 
-										<lightning-datatable data={ShowTableData} key-field="Id" columns={cols} if:false={showSpinner}
-											data-id="datatable" selected-rows={selectedProductCode} onrowselection={SelectedProduct}>
+										<lightning-datatable data={ShowTableData} key-field="Id" columns={cols}
+											if:false={showSpinner} data-id="datatable"
+											selected-rows={selectedProductCode} onrowselection={SelectedProduct}>
 										</lightning-datatable>
 										<template if:true={showSpinner}>
 											<div class="slds-is-relative" style="min-height: 40vh;">
@@ -122,19 +142,22 @@
 							<div class="slds-size_3-of-3 divclas" if:true={datafilterval}>
 								<div class="slds-box_x-small">
 									<div class="slds-panel__header">
-										<h2 id="modal-heading-01" class="slds-panel__header-title slds-text-heading_small slds-truncate">
+										<h2 id="modal-heading-01"
+											class="slds-panel__header-title slds-text-heading_small slds-truncate">
 											Quick
 											Filters
 										</h2>
 									</div>
-									<lightning-input type="text" value={FilterForm.ProductCode} label="Product Code" name="ProductCode"
-										onchange={handleChange}></lightning-input><br />
-									<lightning-checkbox-group name="ProductFamily" label="Product Family" options={options}
-										value={FilterForm.ProductFamily} onchange={handleChange}></lightning-checkbox-group>
+									<lightning-input type="text" value={FilterForm.ProductCode} label="Product Code"
+										name="ProductCode" onchange={handleChange}></lightning-input><br />
+									<lightning-checkbox-group name="ProductFamily" label="Product Family"
+										options={options} value={FilterForm.ProductFamily}
+										onchange={handleChange}></lightning-checkbox-group>
 								</div>
 								<lightning-button class="" label="Cancel" onclick={clearFilter}></lightning-button>
 								<lightning-button class="slds-float_right slds-m-right_medium" variant="brand"
-									disabled={disabledApplayButton} onclick={ApplyFilter} label="Apply"></lightning-button>
+									disabled={disabledApplayButton} onclick={ApplyFilter}
+									label="Apply"></lightning-button>
 							</div>
 						</div>
 						<!-- <div class="slds-grid slds-gutters slds-scrollable_y" style="height:23rem;"
@@ -163,7 +186,8 @@
 										</div>
 									</th>
 									<th class="" scope="col">
-										<div class="slds-truncate" title="Discount(SAP)"><span class="slds-truncate">Discount (SAP)</span>
+										<div class="slds-truncate" title="Discount(SAP)"><span
+												class="slds-truncate">Discount (SAP)</span>
 										</div>
 									</th>
 									<th class="" scope="col">
@@ -177,14 +201,19 @@
 									</th>
 
 									<th class="" scope="col">
-										<div class="slds-truncate" title="Quantity"><span class="slds-required requiredHeader">*</span><span
+										<div class="slds-truncate" title="Quantity"><span
+												class="slds-required requiredHeader">*</span><span
 												class="slds-truncate">Quantity</span>
 										</div>
 									</th>
 									<th class="" scope="col">
 										<div class="slds-truncate" title="Sales Price"><span
-												class="slds-required requiredHeader">*</span><span class="slds-truncate">Sales Price</span>
+												class="slds-required requiredHeader">*</span><span
+												class="slds-truncate">Sales Price</span>
 										</div>
+									</th>
+									<th class="" scope="col">
+										<div class="slds-truncate" title="Actions">Actions</div>
 									</th>
 								</tr>
 							</thead>
@@ -200,8 +229,9 @@
 											</div>
 										</th>
 										<td>
-											<lightning-input type="text" value={product.ListPrice} placeholder="0" data-target-id={product.Id}
-												variant="label-hidden" disabled></lightning-input>
+											<lightning-input type="text" value={product.ListPrice} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												disabled></lightning-input>
 										</td>
 										<template if:true={product.IsARC}>
 											<td></td>
@@ -210,14 +240,14 @@
 										<template if:false={product.IsARC}>
 											<td style="text-align: center;">{customerSAPdiscount}</td>
 											<td>
-												<lightning-input type="text" value={product.Discount} data-target-id={product.Id}
-													variant="label-hidden" onchange={handleDiscountChange}
-													disabled></lightning-input>
+												<lightning-input type="text" value={product.Discount}
+													data-target-id={product.Id} variant="label-hidden"
+													onchange={handleDiscountChange} disabled></lightning-input>
 											</td>
 										</template>
 										<td>
-											<lightning-input type="text" value={product.NetPrice} placeholder="0" data-target-id={product.Id}
-												variant="label-hidden" disabled>
+											<lightning-input type="text" value={product.NetPrice} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden" disabled>
 											</lightning-input>
 										</td>
 
@@ -236,12 +266,20 @@
 										<td style="text-align: center;">{product.IncoTerms}</td>
 
 										<td>
-											<lightning-input type="text" value={product.Quantity} placeholder="0" data-target-id={product.Id}
-												variant="label-hidden" onchange={handleQuantityChange}></lightning-input>
+											<lightning-input type="text" value={product.Quantity} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleQuantityChange}></lightning-input>
 										</td>
 										<td>
-											<lightning-input type="text" value={product.Price} placeholder="0" data-target-id={product.Id}
-												variant="label-hidden" onchange={handleSalesPriceChange} disabled></lightning-input>
+											<lightning-input type="text" value={product.Price} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleSalesPriceChange} disabled></lightning-input>
+										</td>
+										<td>
+											<lightning-button-icon icon-name="utility:delete" alternative-text="Delete"
+												onclick={deleteProductFromCart} data-id={product.Id}
+												variant="destructive" title="Remove Product">
+											</lightning-button-icon>
 										</td>
 										<!-- <td>
                                             <lightning-input type="text" value={product.LineDescription}
@@ -260,39 +298,41 @@
 						</table>
 					</template>
 					<footer class="slds-modal__footer">
-						<div style="display:flex; justify-content: center;">
-							<div class="slds-align_absolute-center" if:true={isFirstPage}>
-								<lightning-button disabled={bDisableFirst} icon-name="utility:jump_to_left" label="First"
-									class="slds-p-horizontal_x-small" alternative-text="first page"
-									onclick={firstPage}></lightning-button>
-								<lightning-button disabled={bDisableFirst} icon-name="utility:chevronleft" label="Previous"
-									alternative-text="Previous" onclick={previousHandler}></lightning-button>
-								&nbsp;
-								<span class="slds-badge slds-badge_lightest" style="margin-right: 10px;margin-left: 10px;">
-									<!-- Page {page} of {totalPage} | Total: {totalRecountCount} -->
-									Page {newcurrentPage} of {newtotalPages} | Total: {newtotalRecords}
-								</span>
-								&nbsp;
-								<lightning-button disabled={bDisableLast} icon-name="utility:chevronright" label="Next"
-									alternative-text="Next" onclick={nextHandler} class="slds-p-horizontal_x-small"
-									icon-position="right"></lightning-button>
-								<lightning-button disabled={bDisableLast} icon-name="utility:jump_to_right" label="Last"
-									alternative-text="last page" onclick={lastPage} icon-position="right"></lightning-button>
-							</div>
+						<div
+							style="display:flex; justify-content: center; gap: 10px; flex-wrap: wrap; align-items: center;">
+							<template if:true={isFirstPage}>
+								<!-- Pagination -->
+								<div class="slds-align_absolute-center"
+									style="display: flex; gap: 5px; align-items: center;">
+									<lightning-button disabled={bDisableFirst} icon-name="utility:jump_to_left"
+										label="First" class="slds-p-horizontal_x-small"
+										onclick={firstPage}></lightning-button>
+									<lightning-button disabled={bDisableFirst} icon-name="utility:chevronleft"
+										label="Previous" onclick={previousHandler}></lightning-button>
+									<span class="slds-badge slds-badge_lightest" style="margin: 0 5px;">
+										Page {page} of {totalPage} | Total: {totalRecountCount}
+									</span>
+									<lightning-button disabled={bDisableLast} icon-name="utility:chevronright"
+										label="Next" onclick={nextHandler} icon-position="right"></lightning-button>
+									<lightning-button disabled={bDisableLast} icon-name="utility:jump_to_right"
+										label="Last" onclick={lastPage} icon-position="right"></lightning-button>
+								</div>
+							</template>
 
 							<template if:false={isFirstPage}>
-								<lightning-button class="slds-float_left" onclick={handleback} label="Back"></lightning-button>
+								<lightning-button onclick={handleback} label="Back"></lightning-button>
 							</template>
+
 							<template if:true={isFirstPage}>
-								<lightning-button class="slds-m-left_small" onclick={goBackToRecord} label="Cancel"></lightning-button>
-							</template>
-							<template if:true={isFirstPage}>
-								<lightning-button class="slds-m-left_small" onclick={nextDetails} label="Next" variant="brand"
+								<lightning-button onclick={goBackToRecord} label="Cancel"></lightning-button>
+								<lightning-button onclick={addToCart} label="Add to Cart" variant="brand"
 									disabled={DisableNext}></lightning-button>
+								<lightning-button onclick={viewCart} label="View Cart" variant="success"
+									if:true={showViewCart}></lightning-button>
 							</template>
+
 							<template if:false={isFirstPage}>
-								<lightning-button class="slds-m-left_small" variant="brand" onclick={saveDetails}
-									label="Save"></lightning-button>
+								<lightning-button variant="brand" onclick={saveDetails} label="Save"></lightning-button>
 							</template>
 						</div>
 					</footer>

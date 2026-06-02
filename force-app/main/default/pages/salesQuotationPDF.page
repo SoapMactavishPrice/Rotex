@@ -147,9 +147,9 @@ color: #008080; -->
                     <div class="normalText" style="line-height:14px;">
                         <strong>{!quData.Account.SAP_Customer_Code__c}</strong><br/>
                         <strong>{!quData.Account.Name}</strong><br/>
-                        {!quData.Account.Street__c}<br/>
-                        {!quData.Account.City__c} {!quData.Account.District__c} {!quData.Account.Postal_Code__c}
-                        {!quData.Account.State__c} {!quData.Account.Country__c}<br/>
+                        {!quData.Bill_To_Street__c}<br/>
+                        {!quData.Bill_To_City__c} {!quData.Bill_To_District__c} {!quData.Bill_To_Postal_Code__c}
+                        {!quData.Bill_To_State__c} {!quData.Bill_To_Country__c}<br/>
                         Email: {!quData.Account.Email_Id__c}<br/>
                         <strong>GST No : {!quData.Account.GSTIN_No__c}</strong>
                     </div>

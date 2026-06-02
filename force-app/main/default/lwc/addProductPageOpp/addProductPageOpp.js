@@ -85,34 +85,306 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
     @track filteredData = [];
     @track DisableNext = true;
 
-    connectedCallback() {
-        //this.measureLoadTime();
+    // Update these properties (remove showAddToCart, keep showViewCart)
+    @track showViewCart = false;
+    @track cartProducts = [];
+    // Add with your other @track properties
+    @track allSelectedProductIds = new Set(); // Track all selected products across pages
 
+    addToCart() {
+        console.log('addToCart called, selected products count:', this.selectedProductCode.length);
+
+        if (this.selectedProductCode.length === 0) {
+            this.showToast('Error', 'Please select at least one product', 'error');
+            return;
+        }
+
+        // Get selected products from AllProductData (all pages)
+        let selectedProducts = [];
+        for (let i = 0; i < this.AllProductData.length; i++) {
+            if (this.selectedProductCode.includes(this.AllProductData[i].Id)) {
+                let product = JSON.parse(JSON.stringify(this.AllProductData[i]));
+                product.Quantity = product.ARCQuantity || 1;
+                product.Price = product.ListPrice;
+                product.Discount = this.customerSAPdiscount;
+                selectedProducts.push(product);
+            }
+        }
+
+        console.log('Selected products to add:', selectedProducts.length);
+        console.log('Existing cart products:', this.cartProducts.length);
+
+        if (selectedProducts.length === 0) {
+            this.showToast('Info', 'No products selected', 'info');
+            return;
+        }
+
+        // Add to existing cart
+        this.cartProducts = [...this.cartProducts, ...selectedProducts];
+        console.log('Cart total products after add:', this.cartProducts.length);
+
+        // Clear selections
+        this.selectedProductCode = [];
+        this.allSelectedProductIds.clear();
+        this.SelectedProductData = [];
+        this.selectedRows = [];
+        this.SelectedRecordCount = 0;
+        this.DisableNext = true;
+
+        // Clear selection in datatable
+        const datatable = this.template.querySelector('[data-id="datatable"]');
+        if (datatable) {
+            datatable.selectedRows = [];
+        }
+
+        // Show success message
+        this.showToast('Success', `${selectedProducts.length} product(s) added to cart. Total in cart: ${this.cartProducts.length}`, 'success');
+
+        // Always show View Cart button when cart has items
+        this.showViewCart = this.cartProducts.length > 0;
+    }
+    viewCart() {
+        console.log('viewCart called, cart products:', this.cartProducts.length);
+
+        if (this.cartProducts.length === 0) {
+            this.showToast('Info', 'Cart is empty', 'info');
+            return;
+        }
+
+        // Prepare cart products for edit page
+        let cartItems = [];
+        for (let i = 0; i < this.cartProducts.length; i++) {
+            let product = this.cartProducts[i];
+            let productCopy = JSON.parse(JSON.stringify(product));
+            let newPrice = productCopy.ListPrice;
+            if (this.customerSAPdiscount > 0 && !productCopy.IsARC) {
+                newPrice = productCopy.ListPrice * (1 - (this.customerSAPdiscount / 100));
+                newPrice = newPrice.toFixed(2);
+            }
+            productCopy.NetPrice = newPrice;
+
+            let newPriceNum = Number(newPrice) || 0;
+            let incoPercent = Number(productCopy.IncoTerms) || 0;
+            productCopy.Price = parseFloat((newPriceNum + (newPriceNum * incoPercent / 100)).toFixed(2));
+
+            cartItems.push(productCopy);
+        }
+
+        this.SelectedProductData = cartItems;
+        this.isFirstPage = false;
+        this.isSecondPage = true;
+    }
+
+    // Add this method to your class
+    showToast(title, message, variant) {
+        this.dispatchEvent(new ShowToastEvent({
+            title: title,
+            message: message,
+            variant: variant
+        }));
+    }
+
+    // Delete product from cart (no confirmation)
+    deleteProductFromCart(event) {
+        const productId = event.currentTarget.dataset.id;
+
+        // Remove from cart products
+        this.cartProducts = this.cartProducts.filter(product => product.Id !== productId);
+
+        // Remove from current view
+        this.SelectedProductData = this.SelectedProductData.filter(product => product.Id !== productId);
+
+        // Update View Cart button visibility
+        this.showViewCart = this.cartProducts.length > 0;
+
+        // Show success message
+        this.showToast('Success', 'Product removed from cart', 'success');
+
+        // If cart becomes empty, go back to add products page
+        if (this.cartProducts.length === 0) {
+            this.showViewCart = false;
+            this.handleback();
+        }
+    }
+
+    handleback() {
+        this.ShowSelected = true;
+        this.isFirstPage = true;
+        this.isSecondPage = false;
+
+        // Show View Cart button if cart has products
+        this.showViewCart = this.cartProducts.length > 0;
+
+        // Clear maps
         this.mapIdQuantity = new Map();
         this.mapIdSalesPrice = new Map();
         this.mapIdDate = new Map();
         this.mapIdDiscount = new Map();
         this.mapIdLineDescription = new Map();
 
-        //this.isModalOpen = true;
+        // Clear selection
+        this.selectedProductCode = [];
+        this.SelectedProductData = [];
+        this.selectedRows = [];
+        this.SelectedRecordCount = 0;
+        this.DisableNext = true;
+
+        // Clear Item Type selection
+        const itemTypeCombobox = this.template.querySelector('lightning-combobox[name="itemType"]');
+        if (itemTypeCombobox) {
+            itemTypeCombobox.value = '';
+        }
+
+        // Clear search
+        this.searchKey = '';
+
+        // Clear filters
+        this.FilterForm = { "ProductFamily": "" };
+
+        // Reload product list
+        this.AllProductData = [];
+        this.ShowTableData = [];
+        this.getProductList();
+        this.paginiateData(JSON.stringify(this.AllProductData));
+        this.page = 1;
+    }
+
+
+
+    // saveDetails() {
+    //     var deletedProducts = []
+    //     this.template.querySelectorAll('tr').forEach(ele => {
+    //         if (ele.classList.value.includes('slds-hide') && !ele.id.includes('firstRow')) {
+    //             var temp = ele.id.split('-');
+    //             if (temp.length > 0) {
+    //                 deletedProducts.push(temp[0]);
+    //             }
+    //         }
+    //     });
+
+    //     // console.log('hiddendProducts = ', deletedProducts);
+    //     for (var i = 0; i < this.SelectedProductData.length; i++) {
+    //         var obj = this.SelectedProductData[i];
+    //         for (var key in obj) {
+    //             var value = obj[key];
+    //             if (key === 'Id') {
+    //                 if (this.mapIdQuantity.get(value) != undefined) {
+    //                     obj.Quantity = this.mapIdQuantity.get(value);
+    //                 }
+    //                 if (this.mapIdSalesPrice.get(value) != undefined) {
+    //                     obj.Price = this.mapIdSalesPrice.get(value);
+    //                 }
+    //                 if (this.mapIdDate.get(value) != undefined) {
+    //                     obj.PDate = this.mapIdDate.get(value);
+    //                 }
+    //                 if (this.mapIdLineDescription.get(value) != undefined) {
+    //                     obj.LineDescription = this.mapIdLineDescription.get(value);
+    //                 }
+    //                 if (this.mapIdDiscount.get(value) != undefined) {
+    //                     obj.Discount = this.mapIdDiscount.get(value);
+    //                 }
+
+    //             }
+    //         }
+    //         this.SelectedProductData[i] = obj;
+    //     }
+    //     var DataToSave = this.SelectedProductData;
+    //     this.SelectedProductData = [];
+    //     var isValidate = true;
+    //     for (var i = 0; i < DataToSave.length; i++) {
+    //         if (!deletedProducts.includes(DataToSave[i]["Id"])) {
+    //             this.SelectedProductData.push(DataToSave[i]);
+    //         }
+    //     }
+
+    //     for (var i = 0; i < this.SelectedProductData.length; i++) {
+    //         console.log(' SelectedProductData::> ' + this.SelectedProductData[i]["IsARC"]);
+    //         if (this.SelectedProductData[i]["Quantity"] == 0 || this.SelectedProductData[i]["Quantity"] == undefined) {
+    //             isValidate = false;
+    //             break;
+    //         }
+    //     }
+
+    //     if (isValidate) {
+    //         this.isFirstPage = false;
+    //         let str = JSON.stringify(this.SelectedProductData);
+    //         saveProducts({ recordData: str, recId: this.recId, customerSAPdiscount: this.customerSAPdiscount }).then(result => {
+    //             this.selectedRecord = [];
+
+
+    //             this.dispatchEvent(new ShowToastEvent({
+    //                 title: 'Success',
+    //                 message: 'Product Added Successfully',
+    //                 variant: 'success',
+    //             }));
+    //             this.dispatchEvent(new RefreshEvent());
+    //             this.goBackToRecord();
+
+
+
+
+    //         })
+    //             .catch(error => {
+    //                 this.dispatchEvent(
+    //                     new ShowToastEvent({
+    //                         title: 'Error Product Adding',
+    //                         message: error.body.message,
+    //                         variant: 'error',
+    //                     }),
+    //                 );
+    //                 //this.updateRecordView();
+    //                 //this.closeModal();
+    //             });
+    //     } else {
+    //         this.dispatchEvent(new ShowToastEvent({
+    //             title: 'Error',
+    //             message: 'Quantity should be non-Zero',
+    //             variant: 'error',
+    //         }));
+    //     }
+
+    // }
+
+    connectedCallback() {
+        this.mapIdQuantity = new Map();
+        this.mapIdSalesPrice = new Map();
+        this.mapIdDate = new Map();
+        this.mapIdDiscount = new Map();
+        this.mapIdLineDescription = new Map();
+
         this.ShowTableData = [];
         this.selectedProductCode = [];
         this.AllProductData = [];
         this.SelectedProductData = [];
-        this.isModalOpen = true;
-        console.log('connected call back called');
 
-        // this.getproductfamily();
+        this.isModalOpen = true;
+
+        this.cartProducts = [];
+        this.showViewCart = false;
 
         this.cols = this.cols.filter(col => col.fieldName !== 'ListPrice');
         this.cols = this.cols.filter(col => col.fieldName !== 'IsARC');
 
-        // this.openModal();
-        //this.getProductList();
+        this.showSpinner = true;
 
+        console.log('connected callback called');
+
+        // DON'T load products here - wait for user to select Item Type
+        // setTimeout(() => {
+        //     if (this.recId) {
+        //         this.getProductList();  // REMOVE THIS
+        //         this.getproductfamily();
+        //     }
+        //     this.showSpinner = false;
+        // }, 100);
+
+        // Only load product families, not products
+        this.getproductfamily();
+        this.handlerGetCustomerDiscount();
         this.showSpinner = false;
-
     }
+
+
 
     getProductList() {
         // findProducts({
@@ -183,7 +455,7 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         return this.prodfamilylst;
     }
 
-   get itemsOptions() {
+    get itemsOptions() {
         let items = [
             { label: '--None--', value: '' },
             { label: 'Spares / Special', value: 'Spares / Special' },
@@ -227,11 +499,12 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         this.showSpinner = true;
         let option = event.target.value;
 
-        if (option == '') {
+        if (option == '' || option == '--None--') {
             this.AllProductData = [];
             this.ShowTableData = [];
             this.showSpinner = false;
             this.searchDisabled = true;
+            this.showToast('Info', 'Please select an Item Type to view products', 'info');
             return;
         }
 
@@ -240,57 +513,51 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
             searchKey: this.searchKey,
             itemType: option
         })
-        .then(chunks => {
-            console.log('Received chunks:', chunks.length);
-            
-            // Combine all chunks
-            let allProducts = [];
-            let priceBook = '';
-            
-            chunks.forEach(chunkStr => {
-                try {
-                    let chunkObj = JSON.parse(chunkStr);
-                    
-                    if (chunkObj.error) {
-                        throw new Error(chunkObj.error);
+            .then(chunks => {
+                console.log('Received chunks:', chunks.length);
+
+                let allProducts = [];
+                let priceBook = '';
+
+                chunks.forEach(chunkStr => {
+                    try {
+                        let chunkObj = JSON.parse(chunkStr);
+                        if (chunkObj.error) {
+                            throw new Error(chunkObj.error);
+                        }
+                        if (!priceBook && chunkObj.priceBook) {
+                            priceBook = chunkObj.priceBook;
+                        }
+                        if (chunkObj.productList && Array.isArray(chunkObj.productList)) {
+                            allProducts = allProducts.concat(chunkObj.productList);
+                        }
+                        console.log(`Chunk ${chunkObj.chunkIndex + 1}/${chunkObj.totalChunks}: ${chunkObj.productList.length} products`);
+                    } catch (parseError) {
+                        console.error('Error parsing chunk:', parseError);
+                        throw parseError;
                     }
-                    
-                    // Get pricebook from first chunk
-                    if (!priceBook && chunkObj.priceBook) {
-                        priceBook = chunkObj.priceBook;
-                    }
-                    
-                    // Merge products from this chunk
-                    if (chunkObj.productList && Array.isArray(chunkObj.productList)) {
-                        allProducts = allProducts.concat(chunkObj.productList);
-                    }
-                    
-                    console.log(`Chunk ${chunkObj.chunkIndex + 1}/${chunkObj.totalChunks}: ${chunkObj.productList.length} products`);
-                } catch (parseError) {
-                    console.error('Error parsing chunk:', parseError);
-                    throw parseError;
-                }
+                });
+
+                console.log('Total products loaded:', allProducts.length);
+
+                this.AllProductData = allProducts;
+                this.ShowTableData = allProducts;
+                this.paginiateData(JSON.stringify(this.AllProductData));
+                this.page = 1;
+                this.showSpinner = false;
+                this.searchDisabled = false;
+                console.log('Cart products preserved:', this.cartProducts.length);
+            })
+            .catch(error => {
+                console.error('Error loading products:', error);
+                this.showSpinner = false;
+                this.searchDisabled = true;
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Error',
+                    message: 'Failed to load products: ' + (error.body?.message || error.message),
+                    variant: 'error',
+                }));
             });
-            
-            console.log('Total products loaded:', allProducts.length);
-            
-            this.AllProductData = allProducts;
-            this.ShowTableData = allProducts;
-            this.paginiateData(JSON.stringify(this.AllProductData));
-            this.page = 1;
-            this.showSpinner = false;
-            this.searchDisabled = false;
-        })
-        .catch(error => {
-            console.error('Error loading products:', error);
-            this.showSpinner = false;
-            this.searchDisabled = true;
-            this.dispatchEvent(new ShowToastEvent({
-                title: 'Error',
-                message: 'Failed to load products: ' + (error.body?.message || error.message),
-                variant: 'error',
-            }));
-        });
     }
 
     @track customerSAPdiscount = 0;
@@ -438,93 +705,82 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
     @track tempEvent;
     SelectedProduct(event) {
         this.tempEvent = event;
-        //console.log('SelectedProduct called..');
-        if (true) {
-            const selRows = event.detail.selectedRows;
+        const selRows = event.detail.selectedRows;
+        const currentPageIds = this.ShowTableData.map(item => item.Id);
 
-            // console.log('selRows..', selRows.length);
-            // console.log('All..', this.selectedRows.length);
-            if (this.selectedRows.length < selRows.length) {
-                //console.log('Selected');
-                for (let i = 0; i < selRows.length; i++) {
+        // Remove selections that are no longer selected on current page
+        for (let i = 0; i < currentPageIds.length; i++) {
+            const isSelected = selRows.some(row => row.Id === currentPageIds[i]);
+            if (!isSelected && this.allSelectedProductIds.has(currentPageIds[i])) {
+                this.allSelectedProductIds.delete(currentPageIds[i]);
+            }
+        }
 
-                    this.selectedProductCode.push(selRows[i].Id);
-                    //this.SelectedProductData.push(selRows[i]);
-                }
-            } else {
+        // Add newly selected products
+        for (let i = 0; i < selRows.length; i++) {
+            this.allSelectedProductIds.add(selRows[i].Id);
+        }
 
-                var selectedRowsProductCode = [];
-                var selProductCode = [];
-                for (let i = 0; i < this.selectedRows.length; i++) {
-                    selectedRowsProductCode.push(this.selectedRows[i].Id);
-                }
-                // console.log('selectedRowsProductCode..159', selectedRowsProductCode.length);
-                for (let i = 0; i < selRows.length; i++) {
-                    selProductCode.push(selRows[i].Id);
-                }
-                //console.log('selProductCode..162', selProductCode.length);
-                //console.log('length', selectedRowsProductCode.filter(x => selProductCode.indexOf(x) === -1));
-                var deselectedRecProductCode = selectedRowsProductCode.filter(x => selProductCode.indexOf(x) === -1);
-                for (let i = 0; i < deselectedRecProductCode.length; i++) {
-                    this.selectedProductCode = this.selectedProductCode.filter(function (e) { return e !== deselectedRecProductCode[i] })
+        // Update selectedProductCode array
+        this.selectedProductCode = Array.from(this.allSelectedProductIds);
+        this.SelectedRecordCount = this.selectedProductCode.length;
+
+        // Update selectedRows for current page display
+        this.selectedRows = selRows;
+
+        // Update DisableNext button
+        this.DisableNext = this.selectedProductCode.length === 0;
+
+        // Build SelectedProductData from all selected products across all pages
+        this.SelectedProductData = [];
+        for (let i = 0; i < this.selectedProductCode.length; i++) {
+            // First check in current ShowTableData
+            let found = false;
+            for (let j = 0; j < this.ShowTableData.length; j++) {
+                if (this.selectedProductCode.includes(this.ShowTableData[j].Id)) {
+                    this.SelectedProductData.push(this.ShowTableData[j]);
+                    found = true;
+                    break;
                 }
             }
-            this.selectedRows = selRows;
-            this.selectedProductCode = [...new Set(this.selectedProductCode)];
-            this.SelectedRecordCount = this.selectedProductCode.length;
-
-            this.SelectedProductData = [];
-            for (let i = 0; i < this.selectedProductCode.length; i++) {
+            // If not in current page, check in AllProductData
+            if (!found) {
                 for (let j = 0; j < this.AllProductData.length; j++) {
                     if (this.selectedProductCode.includes(this.AllProductData[j].Id)) {
                         this.SelectedProductData.push(this.AllProductData[j]);
+                        break;
                     }
                 }
             }
-            this.SelectedProductData = [...new Set(this.SelectedProductData)];
-
-            if (this.selectedProductCode.length > 0) {
-                this.DisableNext = false;
-            } else {
-                this.DisableNext = true;
-            }
         }
-        //this.paginiateData(JSON.stringify(this.SelectedProductData));
-        this.isProductSelect = true;
 
+        this.SelectedProductData = [...new Set(this.SelectedProductData)];
     }
 
     goBackToRecord() {
-        setTimeout(() => {
-            window.location.reload();
-        }, 1200);
 
-        this.isFirstPage = true;
-        this.isSecondPage = false;
-        this.SelectedProductData = [];
-        this.selectedProductCode = [];
+        this.closeModal();
+
         this[NavigationMixin.Navigate]({
-            type: 'standard__recordPage',
+            type: 'standard__webPage',
             attributes: {
-                recordId: this.recId,
-                objectApiName: 'Opportunity',
-                actionName: 'view',
-
+                url: `/lightning/r/Opportunity/${this.recId}/view`
             }
         });
-        //this.isModalOpen = false;
+
+        setTimeout(() => {
+            window.location.reload();
+        }, 300);
     }
 
     closeModal() {
         this.isModalOpen = false;
         this.SelectedRecordCount = 0;
-
         this.PriceBook = '';
         this.ShowTableData = [];
         this.selectedProductCode = [];
         this.AllProductData = [];
         this.SelectedProductData = [];
-
         this.lstResult = [];
         this.hasRecords = true;
         this.searchKey = '';
@@ -540,19 +796,11 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         this.datafilterval = false;
         this.DisableNext = true;
 
-        //window.location.reload();
-
-        // this[NavigationMixin.Navigate]({
-        //     type: 'standard__recordPage',
-        //     attributes: {
-        //         recordId: this.recId,
-        //         objectApiName: 'Opportunity',
-        //         actionName: 'view',
-
-        //     }
-        // });
+        // Clear cart and selections
+        this.cartProducts = [];
+        this.showViewCart = false;
+        this.allSelectedProductIds.clear();
     }
-
     nextDetails() {
         this.isFirstPage = false;
         this.isSecondPage = true;
@@ -639,7 +887,7 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
             }
         });
 
-        // console.log('hiddendProducts = ', deletedProducts);
+        // Update quantities and prices from maps
         for (var i = 0; i < this.SelectedProductData.length; i++) {
             var obj = this.SelectedProductData[i];
             for (var key in obj) {
@@ -660,20 +908,23 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
                     if (this.mapIdDiscount.get(value) != undefined) {
                         obj.Discount = this.mapIdDiscount.get(value);
                     }
-
                 }
             }
             this.SelectedProductData[i] = obj;
         }
+
         var DataToSave = this.SelectedProductData;
         this.SelectedProductData = [];
         var isValidate = true;
+
+        // Filter out deleted products
         for (var i = 0; i < DataToSave.length; i++) {
             if (!deletedProducts.includes(DataToSave[i]["Id"])) {
                 this.SelectedProductData.push(DataToSave[i]);
             }
         }
 
+        // Validate quantities
         for (var i = 0; i < this.SelectedProductData.length; i++) {
             console.log(' SelectedProductData::> ' + this.SelectedProductData[i]["IsARC"]);
             if (this.SelectedProductData[i]["Quantity"] == 0 || this.SelectedProductData[i]["Quantity"] == undefined) {
@@ -682,93 +933,113 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
             }
         }
 
-        if (isValidate) {
-            this.isFirstPage = false;
+        if (isValidate && this.SelectedProductData.length > 0) {
+            // Show spinner while saving
+            this.showSpinner = true;
+
             let str = JSON.stringify(this.SelectedProductData);
-            saveProducts({ recordData: str, recId: this.recId, customerSAPdiscount: this.customerSAPdiscount }).then(result => {
-                this.selectedRecord = [];
+            saveProducts({ recordData: str, recId: this.recId, customerSAPdiscount: this.customerSAPdiscount })
+                .then(result => {
+                    this.showSpinner = false;
+                    this.dispatchEvent(new ShowToastEvent({
+                        title: 'Success',
+                        message: 'Products Added Successfully',
+                        variant: 'success',
+                    }));
 
+                    // Clear cart
+                    this.cartProducts = [];
+                    this.showViewCart = false;
 
-                this.dispatchEvent(new ShowToastEvent({
-                    title: 'Success',
-                    message: 'Product Added Successfully',
-                    variant: 'success',
-                }));
-                this.dispatchEvent(new RefreshEvent());
-                this.goBackToRecord();
+                    // Clear all selections
+                    this.allSelectedProductIds.clear();
+                    this.selectedProductCode = [];
 
+                    // Close modal and refresh the record page
+                    this.isModalOpen = false;
+                    this.dispatchEvent(new RefreshEvent());
 
+                    // Navigate to record page
+                    setTimeout(() => {
 
+                        this.closeModal();
 
-            })
+                        this[NavigationMixin.Navigate]({
+                            type: 'standard__webPage',
+                            attributes: {
+                                url: `/lightning/r/Opportunity/${this.recId}/view`
+                            }
+                        });
+
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 300);
+
+                    }, 500);
+                })
                 .catch(error => {
-                    this.dispatchEvent(
-                        new ShowToastEvent({
-                            title: 'Error Product Adding',
-                            message: error.body.message,
-                            variant: 'error',
-                        }),
-                    );
-                    //this.updateRecordView();
-                    //this.closeModal();
+                    this.showSpinner = false;
+                    this.dispatchEvent(new ShowToastEvent({
+                        title: 'Error Product Adding',
+                        message: error.body.message,
+                        variant: 'error',
+                    }));
                 });
         } else {
-            this.dispatchEvent(new ShowToastEvent({
-                title: 'Error',
-                message: 'Quantity should be non-Zero',
-                variant: 'error',
-            }));
+            if (this.SelectedProductData.length === 0) {
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Error',
+                    message: 'No products to save',
+                    variant: 'error',
+                }));
+            } else {
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Error',
+                    message: 'Quantity should be non-Zero for all products',
+                    variant: 'error',
+                }));
+            }
         }
-
     }
+    // handleback() {
+    //     //this.ShowTableData = this.AllProductData;
 
-    handleback() {
-        //this.ShowTableData = this.AllProductData;
+    //     this.ShowSelected = true;
+    //     this.isFirstPage = true;
+    //     this.isSecondPage = false;
+    //     mapIdQuantity = '';
+    //     mapIdSalesPrice = '';
+    //     mapIdDate = '';
+    //     mapIdDiscount = '';
+    //     mapIdLineDescription = '';
 
-        this.ShowSelected = true;
-        this.isFirstPage = true;
-        this.isSecondPage = false;
-        mapIdQuantity = '';
-        mapIdSalesPrice = '';
-        mapIdDate = '';
-        mapIdDiscount = '';
-        mapIdLineDescription = '';
+    //     this.fillselectedRows();
+    //     this.RecalculateselectedProductCode();
+    //     this.paginiateData(JSON.stringify(this.AllProductData));
+    //     this.page = 1;
 
-        this.fillselectedRows();
-        this.RecalculateselectedProductCode();
-        this.paginiateData(JSON.stringify(this.AllProductData));
-        this.page = 1;
-
-    }
+    // }
 
     handleSearchKeyChange(event) {
         this.searchKey = event.target.value;
         clearTimeout(this.typingTimeout);
         this.typingTimeout = setTimeout(() => {
-            this.getProductList();
+            // Only search if products are already loaded and Item Type is selected
+            if (this.AllProductData.length > 0) {
+                this.handleKeyChange(event);
+            }
         }, 1000);
     }
 
     showFilteredProducts(event) {
-        // console.log('event.keyCode = ', event.keyCode);
         if (event.keyCode == 13) {
             this.isFirstPage = false;
             this.showErrorMsg = false;
-            // findProducts({ recordId: this.recId, productFamily: [] }).then(result => {
-            //     let dataObj = JSON.parse(result);
-            //     //console.log(dataObj);
-            //     this.ShowTableData = dataObj.productList;
-            //     this.filteredData = dataObj.productList;
-            //     this.fillselectedRows();
-            //     this.isFirstPage = true;
-            //     this.ShowViewAll = true;
-            //     this.ShowSelected = true;
-            //     /*const searchBoxWrapper = this.template.querySelector('.lookupContainer');
-            //     searchBoxWrapper.classList.remove('slds-show');
-            //     searchBoxWrapper.classList.add('slds-hide');*/
-            // });
         } else {
-            this.handleKeyChange(event);
+            // Only handle key change if products are loaded
+            if (this.AllProductData.length > 0) {
+                this.handleKeyChange(event);
+            }
             const searchBoxWrapper = this.template.querySelector('.lookupContainer');
             searchBoxWrapper.classList.add('slds-show');
             searchBoxWrapper.classList.remove('slds-hide');
@@ -776,7 +1047,6 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
     }
 
     handleKeyChange(event) {
-
         this.isSearchLoading = true;
         this.searchKey = event.target.value;
         var data = [];
@@ -788,6 +1058,10 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         this.paginiateData(JSON.stringify(data));
         this.page = 1;
         this.recordPerPage(1, this.SelectedProductData, data);
+
+        // Cart products remain unchanged
+        console.log('Cart preserved during search:', this.cartProducts.length);
+        console.log('Selected product IDs preserved:', Array.from(this.allSelectedProductIds));
     }
 
 
@@ -1118,27 +1392,20 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
 
     }
 
-    previousHandler() {
-        if (this.page > 1) {
-            this.page = this.page - 1;
-            //console.log('this.SelectedProductData 611', this.SelectedProductData.length);
-            this.recordPerPage(this.page, this.SelectedProductData, this.paginationDataList);
-        }
-        // this.template.querySelector('[data-id="datatable"]').selectedRows = this.SelectedProductData;
-
-    }
-
     nextHandler() {
         if ((this.page < this.totalPage) && this.page !== this.totalPage) {
             this.page = this.page + 1;
-            //console.log('this.SelectedProductData 619', this.SelectedProductData.length);
             this.recordPerPage(this.page, this.SelectedProductData, this.paginationDataList);
         }
+        // Cart remains unchanged
+    }
 
-        //console.log('json -->', JSON.parse(this.template.querySelector('[data-id="datatable"]').selectedRows));
-
-
-
+    previousHandler() {
+        if (this.page > 1) {
+            this.page = this.page - 1;
+            this.recordPerPage(this.page, this.SelectedProductData, this.paginationDataList);
+        }
+        // Cart remains unchanged
     }
 
     lastPage() {
@@ -1158,16 +1425,24 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         this.startingRecord = ((page - 1) * this.pageSize);
         this.endingRecord = (this.pageSize * page);
         this.endingRecord = (this.endingRecord > this.totalRecountCount) ? this.totalRecountCount : this.endingRecord;
-        //this.fillselectedRows();
         this.ShowTableData = tempdata.slice(this.startingRecord, this.endingRecord);
-
         this.startingRecord = this.startingRecord + 1;
-        console.log('this.selectedProductCode 664', this.selectedProductCode.length);
-        this.fillselectedRows();
-        this.RecalculateselectedProductCode();
-        console.log('this.selectedProductCode 666', this.selectedProductCode.length);
-        this.template.querySelector('[data-id="datatable"]').selectedRows = this.selectedProductCode;
 
+        // Preserve selections when changing pages
+        this.selectedRows = [];
+        for (let i = 0; i < this.ShowTableData.length; i++) {
+            if (this.allSelectedProductIds.has(this.ShowTableData[i].Id)) {
+                this.selectedRows.push(this.ShowTableData[i]);
+            }
+        }
+
+        // Update the datatable selected rows
+        setTimeout(() => {
+            const datatable = this.template.querySelector('[data-id="datatable"]');
+            if (datatable) {
+                datatable.selectedRows = this.selectedRows;
+            }
+        }, 100);
     }
 
 

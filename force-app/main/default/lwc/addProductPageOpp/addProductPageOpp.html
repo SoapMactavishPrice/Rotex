@@ -29,8 +29,8 @@
 							<div class="slds-col" style="width:100%">
 								<div class="slds-form-element" onmouseleave={toggleResult}>
 									<div class="slds-combobox_container slds-has-selection">
-										<div class="lookupInputContainer slds-combobox slds-dropdown-trigger" aria-expanded="false" aria-haspopup="listbox"
-											role="combobox">
+										<div class="lookupInputContainer slds-combobox slds-dropdown-trigger"
+											aria-expanded="false" aria-haspopup="listbox" role="combobox">
 											<div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_left-right"
 												role="none">
 												<div class="searchBoxWrapper slds-show">
@@ -40,19 +40,22 @@
 														placeholder="Search Product here..."
 														onchange={handleSearchKeyChange} class="searchBox">
 													</lightning-input> -->
-													<lightning-input type="search" data-source="searchInputField" onchange={showFilteredProducts}
-														onclick={toggleResult} value={searchKey} variant="label-hidden"
+													<lightning-input type="search" data-source="searchInputField"
+														onchange={showFilteredProducts} onclick={toggleResult}
+														value={searchKey} variant="label-hidden"
 														placeholder="Search Product here..."
-														onkeyup={showFilteredProducts} class="searchBox" disabled={searchDisability}>
+														onkeyup={showFilteredProducts} class="searchBox"
+														disabled={searchDisability}>
 													</lightning-input>
-													
+
 													<!-- <lightning-combobox name="progress" label="Status" value={value}
 														placeholder="Select Progress" options={options}
 														onchange={handleChange}></lightning-combobox> -->
 
 													<lightning-combobox name="itemType" label="Item Type"
 														value={itemDefault} placeholder="Select Item"
-														options={itemsOptions} onchange={handleItemOptions}></lightning-combobox>
+														options={itemsOptions}
+														onchange={handleItemOptions}></lightning-combobox>
 													<span if:true={showErrorMsg} style="color:red">First, enter keywords
 														for a product. Then add filters and click Apply.</span>
 												</div>
@@ -80,7 +83,7 @@
 																	class="slds-media__body">
 																	<span
 																		class="slds-listbox__option-text slds-listbox__option-text_entity">{obj.Name}</span>
-																<span
+																	<span
 																		class="slds-listbox__option-text slds-listbox__option-text_entity">{obj.ProductCode}</span>
 																</span>
 															</div>
@@ -206,6 +209,10 @@
 										</div>
 									</th>
 
+									<th class="" scope="col">
+										<div class="slds-truncate" title="Actions">Actions</div>
+									</th>
+
 								</tr>
 							</thead>
 							<tbody>
@@ -270,6 +277,12 @@
 												onchange={handleSalesPriceChange} disabled>
 											</lightning-input>
 										</td>
+										<td>
+											<lightning-button-icon icon-name="utility:delete" alternative-text="Delete"
+												onclick={deleteProductFromCart} data-id={product.Id}
+												variant="destructive" title="Remove Product">
+											</lightning-button-icon>
+										</td>
 										<!-- <td>
                                             <lightning-input type="text" value={product.LineDescription}
                                                 variant="label-hidden" data-target-id={product.Id}
@@ -287,43 +300,42 @@
 						</table>
 					</template>
 					<footer class="slds-modal__footer">
-						<div style="display:flex; justify-content: center;">
-							<div class="slds-align_absolute-center" if:true={isFirstPage}>
-								<lightning-button disabled={bDisableFirst} icon-name="utility:jump_to_left"
-									label="First" class="slds-p-horizontal_x-small" alternative-text="first page"
-									onclick={firstPage}></lightning-button>
-								<lightning-button disabled={bDisableFirst} icon-name="utility:chevronleft"
-									label="Previous" alternative-text="Previous" onclick={previousHandler}>
-								</lightning-button>
-								&nbsp;
-								<span class="slds-badge slds-badge_lightest"
-									style="margin-right: 10px;margin-left: 10px;">
-									Page {page} of {totalPage} | Total: {totalRecountCount}
-								</span>
-								&nbsp;
-								<lightning-button disabled={bDisableLast} icon-name="utility:chevronright" label="Next"
-									alternative-text="Next" onclick={nextHandler} class="slds-p-horizontal_x-small"
-									icon-position="right"></lightning-button>
-								<lightning-button disabled={bDisableLast} icon-name="utility:jump_to_right" label="Last"
-									alternative-text="last page" onclick={lastPage} icon-position="right">
-								</lightning-button>
-							</div>
+						<div
+							style="display:flex; justify-content: center; gap: 10px; flex-wrap: wrap; align-items: center;">
+							<template if:true={isFirstPage}>
+								<!-- Pagination -->
+								<div class="slds-align_absolute-center"
+									style="display: flex; gap: 5px; align-items: center;">
+									<lightning-button disabled={bDisableFirst} icon-name="utility:jump_to_left"
+										label="First" class="slds-p-horizontal_x-small"
+										onclick={firstPage}></lightning-button>
+									<lightning-button disabled={bDisableFirst} icon-name="utility:chevronleft"
+										label="Previous" onclick={previousHandler}></lightning-button>
+									<span class="slds-badge slds-badge_lightest" style="margin: 0 5px;">
+										Page {page} of {totalPage} | Total: {totalRecountCount}
+									</span>
+									<lightning-button disabled={bDisableLast} icon-name="utility:chevronright"
+										label="Next" onclick={nextHandler} icon-position="right"></lightning-button>
+									<lightning-button disabled={bDisableLast} icon-name="utility:jump_to_right"
+										label="Last" onclick={lastPage} icon-position="right"></lightning-button>
+								</div>
+							</template>
 
 							<template if:false={isFirstPage}>
-								<lightning-button class="slds-float_left" onclick={handleback} label="Back">
-								</lightning-button>
+								<lightning-button onclick={handleback} label="Back"></lightning-button>
 							</template>
+
 							<template if:true={isFirstPage}>
-								<lightning-button class="slds-m-left_small" onclick={goBackToRecord} label="Cancel">
-								</lightning-button>
+								<lightning-button onclick={goBackToRecord} label="Cancel"></lightning-button>
+								<lightning-button onclick={addToCart} label="Add to Cart" variant="brand"
+									disabled={DisableNext}></lightning-button>
+								<!-- View Cart button always visible when cart has items, regardless of page -->
+								<lightning-button onclick={viewCart} label="View Cart" variant="success"
+									if:true={showViewCart}></lightning-button>
 							</template>
-							<template if:true={isFirstPage}>
-								<lightning-button class="slds-m-left_small" onclick={nextDetails} label="Nexttt"
-									variant="brand" disabled={DisableNext}></lightning-button>
-							</template>
+
 							<template if:false={isFirstPage}>
-								<lightning-button class="slds-m-left_small" variant="brand" onclick={saveDetails}
-									label="Save"></lightning-button>
+								<lightning-button variant="brand" onclick={saveDetails} label="Save"></lightning-button>
 							</template>
 						</div>
 					</footer>

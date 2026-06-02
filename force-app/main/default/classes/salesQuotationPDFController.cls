@@ -20,7 +20,7 @@ public class salesQuotationPDFController {
     public string PaymentTerms {get;set;}
     public string QuoteNumber {get;set;}
     public String shipToAddress { get; set; }
-
+    
     public salesQuotationPDFController(){
         qId = ApexPages.currentPage().getparameters().get('id');
         System.debug('qId: ' + qId);
@@ -61,7 +61,7 @@ return;
                       Transport_Details__c,Delivery_Location__c,Opportunity.Customer_Enquiry_Ref_No__c,Prices__c,Total_IGST_Amount__c,
                       Total_CGST_Amount__c,Total_SGST_Amount__c,Payment_Terms_Approval_Status__c,Warranty_Terms_Approval_Status__c,
                       Is_Small_Order_Handling__c,Minimum_Offer_Approval_Status__c,
-                      Bill_To_Street__c,Bill_To_City__c,Bill_To_Postal_Code__c,Bill_To_State__c,Bill_To_Country__c,
+                      Bill_To_Street__c,Bill_To_City__c,Bill_To_District__c,Bill_To_Postal_Code__c,Bill_To_State__c,Bill_To_Country__c,
                       Ship_To_Street__c,Ship_To_City__c,Ship_To_Postal_Code__c,Ship_To_State__c,Ship_To_Country__c,
                       Grand_Total__c,Customer_Reference_No__c,Project_Details__c,
                       Final_Warranty_Terms_Approver__c,MD_Warranty_Status__c,BM_Warranty_Status__c,GS_Warranty_Status__c,CH_Warranty_Status__c,SM_Warranty_Status__c,
@@ -87,8 +87,8 @@ return;
                 }
             }
         }
-
-
+        
+        
         QuoteNumber = quData.QuoteNumber;
         pdf = Page.salesQuotationPDF;
         pdfUrl = '/apex/salesQuotationPDF?id=' + qId + '#toolbar=0';
@@ -111,7 +111,7 @@ return;
         
         // Join address with comma
         shipToAddress = String.join(shipParts, ', ');
-
+        
         if (String.isNotBlank(quData.Email)) {
             emailId = quData.Email;
         } else {
@@ -132,72 +132,72 @@ return;
             ));
             isValid = false;
         }
-       
-        if (quData.Final_Warranty_Terms_Approver__c != null && (
-                quData.MD_Warranty_Status__c == 'Submitted' ||
-                quData.BM_Warranty_Status__c == 'Submitted' ||
-                quData.GS_Warranty_Status__c == 'Submitted' ||
-                quData.CH_Warranty_Status__c == 'Submitted' ||
-                quData.SM_Warranty_Status__c == 'Submitted'
-            )
-        ) {
-            ApexPages.addMessage(new ApexPages.Message(
-                ApexPages.Severity.ERROR,
-                'Warranty Terms Approval Is Still In Submitted Status (Pending Approval)'
-            ));
-            isValid = false;
-        }
-        if (quData.Final_Validity_Offer_Approver__c != null && (
-                quData.MD_Validity_Offer_Status__c == 'Submitted' ||
-                quData.BM_Validity_Offer_Status__c == 'Submitted' ||
-                quData.GS_Validity_Offer_Status__c == 'Submitted' ||
-                quData.CH_Validity_Offer_Status__c == 'Submitted' ||
-                quData.SM_Validity_Offer_Status__c == 'Submitted'
-            )
-        ) {
-            ApexPages.addMessage(new ApexPages.Message(
-                ApexPages.Severity.ERROR,
-                'Validity Of Offer Approval Is Still In Submitted Status (Pending Approval)'
-            ));
-            isValid = false;
-        }
         
-       /*if (quData.Payment_Terms_Approval_Status__c == 'Submitted') {
-            ApexPages.addMessage(new ApexPages.Message(
-                ApexPages.Severity.ERROR,
-                'Payment Terms approval is still in Submitted status (Pending Approval)'
-            ));
-            isValid = false;
-        }*/
+        if (quData.Final_Warranty_Terms_Approver__c != null && (
+            quData.MD_Warranty_Status__c == 'Submitted' ||
+            quData.BM_Warranty_Status__c == 'Submitted' ||
+            quData.GS_Warranty_Status__c == 'Submitted' ||
+            quData.CH_Warranty_Status__c == 'Submitted' ||
+            quData.SM_Warranty_Status__c == 'Submitted'
+        )
+           ) {
+               ApexPages.addMessage(new ApexPages.Message(
+                   ApexPages.Severity.ERROR,
+                   'Warranty Terms Approval Is Still In Submitted Status (Pending Approval)'
+               ));
+               isValid = false;
+           }
+        if (quData.Final_Validity_Offer_Approver__c != null && (
+            quData.MD_Validity_Offer_Status__c == 'Submitted' ||
+            quData.BM_Validity_Offer_Status__c == 'Submitted' ||
+            quData.GS_Validity_Offer_Status__c == 'Submitted' ||
+            quData.CH_Validity_Offer_Status__c == 'Submitted' ||
+            quData.SM_Validity_Offer_Status__c == 'Submitted'
+        )
+           ) {
+               ApexPages.addMessage(new ApexPages.Message(
+                   ApexPages.Severity.ERROR,
+                   'Validity Of Offer Approval Is Still In Submitted Status (Pending Approval)'
+               ));
+               isValid = false;
+           }
+        
+        /*if (quData.Payment_Terms_Approval_Status__c == 'Submitted') {
+ApexPages.addMessage(new ApexPages.Message(
+ApexPages.Severity.ERROR,
+'Payment Terms approval is still in Submitted status (Pending Approval)'
+));
+isValid = false;
+}*/
         
         if (quData.Final_Minimum_Offer_Value_Approver__c != null && (
-                quData.MD_Min_Offer_Status__c == 'Submitted' ||
-                quData.BM_Min_Offer_Status__c == 'Submitted' ||
-                quData.GS_Min_Offer_Status__c == 'Submitted' ||
-                quData.CH_Min_Offer_Status__c == 'Submitted' ||
-                quData.SM_Min_Offer_Status__c == 'Submitted'
-            )
-        ) {
-            ApexPages.addMessage(new ApexPages.Message(
-                ApexPages.Severity.ERROR,
-                'Minimum Offer Approval Is Still In Submitted Status (Pending Approval)'
-            ));
-            isValid = false;
-        }
+            quData.MD_Min_Offer_Status__c == 'Submitted' ||
+            quData.BM_Min_Offer_Status__c == 'Submitted' ||
+            quData.GS_Min_Offer_Status__c == 'Submitted' ||
+            quData.CH_Min_Offer_Status__c == 'Submitted' ||
+            quData.SM_Min_Offer_Status__c == 'Submitted'
+        )
+           ) {
+               ApexPages.addMessage(new ApexPages.Message(
+                   ApexPages.Severity.ERROR,
+                   'Minimum Offer Approval Is Still In Submitted Status (Pending Approval)'
+               ));
+               isValid = false;
+           }
         if (quData.Final_Total_Value_Approver__c != null && (
-                quData.MD_Value_Status__c == 'Submitted' ||
-                quData.BM_Value_Status__c == 'Submitted' ||
-                quData.GS_Value_Status__c == 'Submitted' ||
-                quData.CH_Value_Status__c == 'Submitted' ||
-                quData.SM_Value_Status__c == 'Submitted'
-            )
-        ) {
-            ApexPages.addMessage(new ApexPages.Message(
-                ApexPages.Severity.ERROR,
-                'Total Quote Value Approval Is Still In Submitted Status (Pending Approval)'
-            ));
-            isValid = false;
-        }
+            quData.MD_Value_Status__c == 'Submitted' ||
+            quData.BM_Value_Status__c == 'Submitted' ||
+            quData.GS_Value_Status__c == 'Submitted' ||
+            quData.CH_Value_Status__c == 'Submitted' ||
+            quData.SM_Value_Status__c == 'Submitted'
+        )
+           ) {
+               ApexPages.addMessage(new ApexPages.Message(
+                   ApexPages.Severity.ERROR,
+                   'Total Quote Value Approval Is Still In Submitted Status (Pending Approval)'
+               ));
+               isValid = false;
+           }
         //quoteRecord.QuotationNo = quData.QuoteNumber;
         
         
@@ -245,7 +245,7 @@ return;
                 break;
             }
         }
-
+        
         if (qItem.size() > 0) {
             for (QuoteLineItem qli : qItem) {
                 QuoteLineItemWrapper ql = new QuoteLineItemWrapper();
@@ -256,8 +256,8 @@ return;
                 ql.HSNCODE = qli.HSN_Code__c;
                 ql.Quantity = qli.Quantity;
                 ql.UoM = qli.Product2.Base_UOM__c;
-              //ql.Rate = qli.UnitPrice;
-              ql.Rate = qli.Unit_Price__c;
+                //ql.Rate = qli.UnitPrice;
+                ql.Rate = qli.Unit_Price__c;
                 ql.Totalvalue = qli.Total_Value__c;
                 ql.CustomerPartNo =qli.Customer_Part_No__c;
                 totalQuantity += qli.Quantity;
@@ -267,10 +267,10 @@ return;
                     System.debug('totalValueINR: ' + totalValueINR);
                 }
                 
-               /* Integer totalValueINRInt = totalValueINR.intValue(); // Convert to Integer if needed
-                String totalValueINRWords = convertCurrencytowords.convert(totalValueINRInt);
-                
-                no2words = totalValueINRWords + ' Rupees Only.';*/
+                /* Integer totalValueINRInt = totalValueINR.intValue(); // Convert to Integer if needed
+String totalValueINRWords = convertCurrencytowords.convert(totalValueINRInt);
+
+no2words = totalValueINRWords + ' Rupees Only.';*/
                 // Convert Grand Total (including GST)
                 Decimal gt = quData.Grand_Total__c != null ? quData.Grand_Total__c : 0;
                 Integer gtInt = gt.intValue();   // Converter requires integer
@@ -304,20 +304,20 @@ return;
         }  
     }
     public static String forceWrap(String s, Integer interval) {
-    if (String.isBlank(s)) return s;
-    String out = '';
-    Integer cnt = 0;
-    for (Integer i = 0; i < s.length(); i++) {
-        out += s.substring(i, i+1);
-        cnt++;
-        if (cnt >= interval) {
-            out += '<br/>';  // force line break
-            cnt = 0;
+        if (String.isBlank(s)) return s;
+        String out = '';
+        Integer cnt = 0;
+        for (Integer i = 0; i < s.length(); i++) {
+            out += s.substring(i, i+1);
+            cnt++;
+            if (cnt >= interval) {
+                out += '<br/>';  // force line break
+                cnt = 0;
+            }
         }
+        return out;
     }
-    return out;
-}
-
+    
     public PageReference save() {
         if (!isValid) {
             return null;
@@ -413,16 +413,16 @@ return;
             System.debug(CC_Addresses);
         }
         
-       /* LatestPublishedVersionIds.add(contentVersion.ContentDocument.LatestPublishedVersionId);
-        
-        if (LatestPublishedVersionIds.size() > 0) {
-            List<String> LatestPublishedVersionIdList = new List<String>();
-            LatestPublishedVersionIdList.addAll(LatestPublishedVersionIds);
-            email.setEntityAttachments(LatestPublishedVersionIdList);
-        } */
+        /* LatestPublishedVersionIds.add(contentVersion.ContentDocument.LatestPublishedVersionId);
+
+if (LatestPublishedVersionIds.size() > 0) {
+List<String> LatestPublishedVersionIdList = new List<String>();
+LatestPublishedVersionIdList.addAll(LatestPublishedVersionIds);
+email.setEntityAttachments(LatestPublishedVersionIdList);
+} */
         
         email.setEntityAttachments(new List<String>{ contentVersion.ContentDocument.LatestPublishedVersionId });
-
+        
         
         if (String.isNotBlank(quData.Opportunity.Owner.Email)) {
             email.setReplyTo(quData.Opportunity.Owner.Email);
@@ -430,8 +430,25 @@ return;
         }
         email.setSubject(subject);
         email.setHtmlBody(body);
+        email.setUseSignature(true);
+        
+        email.setSaveAsActivity(true);
+        email.setWhatId(quData.Id);
         
         Messaging.SendEmailResult[] results = Messaging.sendEmail(new Messaging.SingleEmailMessage[] { email });
+        
+        if(results != null &&
+           results.size() > 0 &&
+           results[0].isSuccess()) {
+               
+               Quote qToUpdate = new Quote(
+                   Id = quData.Id,
+                   Status = 'In Review with Customer',
+                   In_Review_with_Customer_Date_Time__c = System.now()
+               );
+               
+               update qToUpdate;
+           }
         
         PageReference pageRef = new PageReference('/' + qId);
         pageRef.setRedirect(true);
@@ -507,8 +524,8 @@ public String CSwiftCode {get;set;}*/
         // public String Part_No_c {get;set;}
         // public String Product_Description {get;set;}
         public String getWrappedDescription() {
-    return salesQuotationPDFController.forceWrap(this.GoodsDescription, 20);
-}
-
+            return salesQuotationPDFController.forceWrap(this.GoodsDescription, 20);
+        }
+        
     }
 }

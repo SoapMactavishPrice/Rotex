@@ -196,7 +196,7 @@ public class QuoteLineItemApprovalHandler {
                 System.debug('APPROVAL: ✓ Discount (' + qli.Discount_to_be_offered__c +
                              '%) ≤ owner SOA limit (' + ownerMaxDiscount +
                              '%) → applying directly to UnitPrice, no approval chain required');
-                if (qli.ListPrice != null) {
+                if (qli.ListPrice != null && qli.Item_Type__c != 'ARC') {
                     qli.UnitPrice = qli.ListPrice * (1 - qli.Discount_to_be_offered__c / 100);
                     System.debug('APPROVAL: ✓ UnitPrice updated to: ' + qli.UnitPrice);
                 } else {
@@ -541,7 +541,7 @@ public class QuoteLineItemApprovalHandler {
         for (QuoteLineItem qli : [
             SELECT Id,
                 ListPrice,
-                Discount_to_be_offered__c,
+                Discount_to_be_offered__c, Item_Type__c, 
                 Do_not_proceed_approval__c
             FROM QuoteLineItem
             WHERE Id IN :qliIds
@@ -549,10 +549,12 @@ public class QuoteLineItemApprovalHandler {
 
             QuoteLineItem tempQLI = new QuoteLineItem();
             tempQLI.Id = qli.Id;
-
-            tempQLI.UnitPrice = qli.ListPrice -
+            
+            if (qli.Item_Type__c != 'ARC'){
+                      tempQLI.UnitPrice = qli.ListPrice -
                 (qli.ListPrice * (qli.Discount_to_be_offered__c / 100));
-
+            }
+      
             tempQLI.UnitPrice = tempQLI.UnitPrice.setScale(2);
             tempQLI.Do_not_proceed_approval__c = false;
 

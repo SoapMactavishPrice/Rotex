@@ -62,7 +62,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             this.quoteLineItemList = result.map(item => ({
                 ...item,
                 newDiscountValue: null,
-                isDiscountOfferedDisabled: item.Item_Type__c == 'ARC' ||item.Is_Discount_Approved__c || this.hasSubmittedApproverStatus(item),
+                isDiscountOfferedDisabled: item.Item_Type__c == 'ARC' || item.Is_Discount_Approved__c || this.hasSubmittedApproverStatus(item),
                 // Requested Comments is enabled only when Discount to be offered has a value
                 isRequestedCommentsDisabled: this.computeRequestedCommentsDisabled(item, null),
                 requestedCommentsPlaceholder: 'Enter comments...'
@@ -108,18 +108,42 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
         });
     }
 
+    // handleDiscountChange(event) {
+    //     const id = event.target.dataset.id;
+    //     const value = event.target.value;
+    //     this.quoteLineItemList = this.quoteLineItemList.map(item => {
+    //         if (item.Id === id) {
+    //             const updatedItem = {
+    //                 ...item,
+    //                 Discount_to_be_offered__c: value !== '' ? parseInt(value) : null,
+    //                 // Clear old Requested Comments whenever a new discount value is entered
+    //                 Requested_Comments__c: null
+    //             };
+    //             updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(updatedItem, item.newDiscountValue);
+    //             return updatedItem;
+    //         }
+    //         return item;
+    //     });
+    // }
+
     handleDiscountChange(event) {
         const id = event.target.dataset.id;
         const value = event.target.value;
+
         this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
                 const updatedItem = {
                     ...item,
-                    Discount_to_be_offered__c: value !== '' ? parseInt(value) : null,
-                    // Clear old Requested Comments whenever a new discount value is entered
+                    Discount_to_be_offered__c: value !== '' ? parseFloat(value) : null,
                     Requested_Comments__c: null
                 };
-                updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(updatedItem, item.newDiscountValue);
+
+                updatedItem.isRequestedCommentsDisabled =
+                    this.computeRequestedCommentsDisabled(
+                        updatedItem,
+                        item.newDiscountValue
+                    );
+
                 return updatedItem;
             }
             return item;
@@ -137,12 +161,27 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
         });
     }
 
+    // handleQuantityChange(event) {
+    //     const id = event.target.dataset.id;
+    //     const value = event.target.value;
+    //     this.quoteLineItemList = this.quoteLineItemList.map(item => {
+    //         if (item.Id === id) {
+    //             return { ...item, Quantity: parseInt(value) };
+    //         }
+    //         return item;
+    //     });
+    // }
+
     handleQuantityChange(event) {
         const id = event.target.dataset.id;
         const value = event.target.value;
+
         this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
-                return { ...item, Quantity: parseInt(value) };
+                return {
+                    ...item,
+                    Quantity: value !== '' ? parseFloat(value) : null
+                };
             }
             return item;
         });

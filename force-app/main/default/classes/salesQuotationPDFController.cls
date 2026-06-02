@@ -60,7 +60,7 @@ return;
                       Account.GSTIN_No__c,Account.Email_Id__c,Warranty_Terms__c,Special_Remarks__c,Delivery_Period__c,Liquidate_Terms__c,
                       Transport_Details__c,Delivery_Location__c,Opportunity.Customer_Enquiry_Ref_No__c,Prices__c,Total_IGST_Amount__c,
                       Total_CGST_Amount__c,Total_SGST_Amount__c,Payment_Terms_Approval_Status__c,Warranty_Terms_Approval_Status__c,
-                      Is_Small_Order_Handling__c,Minimum_Offer_Approval_Status__c,
+                      Is_Small_Order_Handling__c,Minimum_Offer_Approval_Status__c, Opportunity.Project_Contact__r.Name,
                       Bill_To_Street__c,Bill_To_City__c,Bill_To_District__c,Bill_To_Postal_Code__c,Bill_To_State__c,Bill_To_Country__c,
                       Ship_To_Street__c,Ship_To_City__c,Ship_To_Postal_Code__c,Ship_To_State__c,Ship_To_Country__c,
                       Grand_Total__c,Customer_Reference_No__c,Project_Details__c,

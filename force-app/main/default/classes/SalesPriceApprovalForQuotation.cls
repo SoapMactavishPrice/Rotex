@@ -323,6 +323,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Prev_Managing_Director_Comments__c, Requested_Comments__c
                 FROM   QuoteLineItem
                 WHERE  QuoteId IN :allRelevantQuoteIds
+                       AND Quote.Status != 'Rejected'
                        AND Discount_offered_SAP__c = true
                        AND (
                            Sales_Manager_Status__c != null OR
@@ -375,7 +376,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                 //    MD_Min_Offer_Status__c,  MD_Min_Offer_Date_Time__c,  MD_Min_Offer_Comments__c,
                 //    Final_Minimum_Offer_Value_Approver__c, Is_Minimum_Offer_Value_Approved__c
             FROM   Quote
-            WHERE  Id IN :allRelevantQuoteIds
+            WHERE  Id IN :allRelevantQuoteIds AND Status != 'Rejected'
         ]);
 
         Map<Id, List<QuoteLineItem>> quoteToQliMap = new Map<Id, List<QuoteLineItem>>();

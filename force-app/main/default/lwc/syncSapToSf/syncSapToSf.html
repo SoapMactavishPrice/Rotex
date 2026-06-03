@@ -1,0 +1,101 @@
+<template>
+    <lightning-card>
+        <div slot="title" class="slds-media slds-media_center">
+            <div class="slds-media__body">
+                <h2 class="slds-card__header-title">Sync SAP to Salesforce</h2>
+            </div>
+        </div>
+
+        <div class="slds-card__body slds-card__body_inner">
+
+            <!-- Customer Section -->
+            <div class="sync-section sync-section_customer">
+                <div class="section-header">
+                    <lightning-icon icon-name="standard:contact" size="x-small" class="section-icon"></lightning-icon>
+                    <span class="slds-text-title slds-text-color_weak section-label">Customer</span>
+                </div>
+
+                <div class="slds-form-element">
+                    <label class="slds-form-element__label" for="customerInput">
+                        <abbr class="slds-required" title="required">*</abbr>Customer Code
+                    </label>
+                    <div class="slds-form-element__control">
+                        <input
+                            id="customerInput"
+                            type="text"
+                            class="slds-input"
+                            placeholder="e.g. 1001162"
+                            value={customerCode}
+                            oninput={handleCustomerCodeChange}
+                            onkeydown={handleCustomerKeyDown}
+                            disabled={isCustomerLoading}
+                        />
+                    </div>
+                </div>
+
+                <div class="action-row">
+                    <div class="status-indicator">
+                        <span class={customerDotClass}></span>
+                        <span class="slds-text-body_small slds-text-color_weak">{customerStatusText}</span>
+                    </div>
+                    <lightning-button
+                        label="Get Customer"
+                        variant="brand"
+                        icon-name="utility:right"
+                        icon-position="right"
+                        onclick={handleGetCustomer}
+                        disabled={isCustomerButtonDisabled}>
+                    </lightning-button>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="section-divider">
+                <div class="divider-line"></div>
+                <div class="divider-line"></div>
+            </div>
+
+            <!-- Material Section -->
+            <div class="sync-section sync-section_material">
+                <div class="section-header">
+                    <lightning-icon icon-name="standard:product" size="x-small" class="section-icon"></lightning-icon>
+                    <span class="slds-text-title slds-text-color_weak section-label">Material</span>
+                </div>
+
+                <div class="slds-form-element">
+                    <label class="slds-form-element__label" for="materialInput">
+                        <abbr class="slds-required" title="required">*</abbr>Material Code
+                    </label>
+                    <div class="slds-form-element__control">
+                        <input
+                            id="materialInput"
+                            type="text"
+                            class="slds-input"
+                            placeholder="e.g. 93000016976"
+                            value={materialCode}
+                            oninput={handleMaterialCodeChange}
+                            onkeydown={handleMaterialKeyDown}
+                            disabled={isMaterialLoading}>
+                    </div>
+                </div>
+
+                <div class="action-row">
+                    <div class="status-indicator">
+                        <span class={materialDotClass}></span>
+                        <span class="slds-text-body_small slds-text-color_weak">{materialStatusText}</span>
+                    </div>
+                    <lightning-button
+                        label="Get Material"
+                        variant="brand"
+                        class="btn-material"
+                        icon-name="utility:right"
+                        icon-position="right"
+                        onclick={handleGetMaterial}
+                        disabled={isMaterialButtonDisabled}>
+                    </lightning-button>
+                </div>
+            </div>
+        </div>
+
+    </lightning-card>
+</template>

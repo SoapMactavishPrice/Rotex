@@ -1726,7 +1726,7 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
                 quoteWrapper.LD_Clause_Comments = (q.LD_Clause_Applicable__c == 'Yes') ? q.LD_Clause_comments__c : '';
                 
                 quoteWrapper.Remarks = 'This quotation has been approved after completing Rotex SOA Process for further action';
-                quoteWrapper.Special_Remarks = q.Special_Remarks__c;
+                quoteWrapper.Special_Remarks = q.Special_Remarks__c ?? '';
                 
                 // Add Partner Details
                 quoteWrapper.to_Partner = new List < PartnerWrapper > ();

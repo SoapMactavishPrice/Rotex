@@ -51,8 +51,10 @@ public class UtilityCls {
             } else {
                 // strUrl = '&$filter=created_on_date eq \'' + formattedDate + '\' or changed_on_date eq \'' + formattedDate2 + '\' ';
                 // strUrl = '&$filter= changed_on_date eq \'' + formattedDate2 + '\' &$filter=customer_number%20eq%20%271000934%27%20';
-                if (apiName == 'Customer_Master_API_2') {
+                if ((apiName == 'Customer_Master_API' || apiName == 'Customer_Master_API_2') && String.isNotBlank(filterData)) {
                     strUrl = '&$filter=customer_number%20eq%20%27' + filterData + '%27%20';
+                } else if (apiName == 'Material_Master_API' && String.isNotBlank(filterData)) {
+                    strUrl = '&$filter=item_no%20eq%20%27' + filterData + '%27%20';
                 } else {
                     if (apiName != 'Inco_Terms') {
                         strUrl = '&$filter=created_on_date eq \'' + formattedDate + '\' or changed_on_date eq \'' + formattedDate2 + '\' ';

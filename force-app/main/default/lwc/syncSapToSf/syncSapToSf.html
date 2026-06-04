@@ -1,5 +1,7 @@
 <template>
     <lightning-card>
+        
+
         <div slot="title" class="slds-media slds-media_center">
             <div class="slds-media__body">
                 <h2 class="slds-card__header-title">Sync SAP to Salesforce</h2>
@@ -10,6 +12,11 @@
 
             <!-- Customer Section -->
             <div class="sync-section sync-section_customer">
+                <template if:true={isCustomerLoading}>
+                    <div class="slds-spinner_container">
+                        <lightning-spinner size="medium" alternative-text="Loading..."></lightning-spinner>
+                    </div>
+                </template>
                 <div class="section-header">
                     <lightning-icon icon-name="standard:contact" size="x-small" class="section-icon"></lightning-icon>
                     <span class="slds-text-title slds-text-color_weak section-label">Customer</span>
@@ -57,6 +64,11 @@
 
             <!-- Material Section -->
             <div class="sync-section sync-section_material">
+                <template if:true={isMaterialLoading}>
+                    <div class="slds-spinner_container">
+                        <lightning-spinner size="medium" alternative-text="Loading..."></lightning-spinner>
+                    </div>
+                </template>
                 <div class="section-header">
                     <lightning-icon icon-name="standard:product" size="x-small" class="section-icon"></lightning-icon>
                     <span class="slds-text-title slds-text-color_weak section-label">Material</span>
@@ -94,6 +106,71 @@
                         disabled={isMaterialButtonDisabled}>
                     </lightning-button>
                 </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="section-divider">
+                <div class="divider-line"></div>
+                <div class="divider-line"></div>
+            </div>
+
+            <!-- Pricing Section -->
+            <div class="sync-section sync-section_pricing">
+                <template if:true={isPricingLoading}>
+                    <div class="slds-spinner_container">
+                        <lightning-spinner size="medium" alternative-text="Loading..."></lightning-spinner>
+                    </div>
+                </template>
+                <div class="section-header">
+                    <lightning-icon
+                        icon-name="utility:moneybag"
+                        size="x-small"
+                        class="section-icon">
+                    </lightning-icon>
+
+                    <span class="slds-text-title slds-text-color_weak section-label">
+                        Pricing
+                    </span>
+                </div>
+
+                <div class="slds-form-element">
+                    <label class="slds-form-element__label" for="pricingInput">
+                        <abbr class="slds-required" title="required">*</abbr>
+                        Material Code
+                    </label>
+
+                    <div class="slds-form-element__control">
+                        <input
+                            id="pricingInput"
+                            type="text"
+                            class="slds-input"
+                            placeholder="e.g. 93000016976"
+                            value={pricingMaterialCode}
+                            oninput={handlePricingCodeChange}
+                            disabled={isPricingLoading}
+                        />
+                    </div>
+                </div>
+
+                <div class="action-row">
+                    <div class="status-indicator">
+                        <span class={pricingDotClass}></span>
+                        <span class="slds-text-body_small slds-text-color_weak">
+                            {pricingStatusText}
+                        </span>
+                    </div>
+
+                    <lightning-button
+                        label="Update Pricing"
+                        variant="brand"
+                        class="btn-pricing"
+                        icon-name="utility:right"
+                        icon-position="right"
+                        onclick={handleUpdatePricing}
+                        disabled={isPricingButtonDisabled}>
+                    </lightning-button>
+                </div>
+
             </div>
         </div>
 

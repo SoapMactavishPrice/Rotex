@@ -1171,7 +1171,118 @@ system.debug('grandchild created');
             System.debug('Exception: ' + e.getMessage());
         } finally {
             // Log the API call
-            UtilityCls.logApiCall('Pricing_Master_API', '', '', resp.getBody(), '', resp.getStatusCode());
+            System.debug('resp ==> ' + resp);
+            if (resp != null) {
+                UtilityCls.logApiCall('Pricing_Master_API', '', '', resp.getBody(), '', resp.getStatusCode());
+            }
+        }
+    }
+
+    @future(callout=true)
+    public static void PricingMaster(String pCode, Boolean overload) {
+        HttpResponse resp;
+        try {
+            // Date dateOfExc = date.valueOf('2024-07-08');
+            Date dateOfExc = Date.today();
+            resp = UtilityCls.doGetWithBasicAuth('Pricing_Master_API', 'DAILY', dateOfExc, dateOfExc, pCode);
+            if (resp.getStatusCode() == 200) {
+                system.debug('resp' + resp.getBody());
+                
+                List < PricebookEntry > upsertPBElist = new List < PricebookEntry > ();
+                Set < String > productCodeSet = new Set < String > ();
+                
+                // Deserialize JSON response into wrapper class
+                IntegrationRequestBuilder.pricingMasterMainResponse respWrapper = IntegrationRequestBuilder.pricingMasterMainResponseParse(resp.getBody());
+                List < IntegrationRequestBuilder.pricingMasterList > parentWrappers = respWrapper.d.results;
+                for (IntegrationRequestBuilder.pricingMasterList parent: parentWrappers) {
+                    productCodeSet.add(parent.Material);
+                }
+                
+                List < Product2 > productList = [
+                    SELECT Id, Name, ProductCode
+                    FROM Product2
+                    WHERE ProductCode IN: productCodeSet
+                ];
+                
+                Map < String, String > productIdMap = new Map < String, String > ();
+                Set < String > productIdSet = new Set < String > ();
+                for (Product2 p: productList) {
+                    productIdMap.put(p.ProductCode, p.Id);
+                    productIdSet.add(p.Id);
+                }
+                
+                System.debug(productIdMap);
+                
+                List < Pricebook2 > pricebookList = [SELECT Id, Name, Distribution_Channel__c FROM Pricebook2 WHERE Distribution_Channel__c != null];
+                
+                Map < String, String > pbMap = new Map < String, String > ();
+                for (Pricebook2 pb: pricebookList) {
+                    pbMap.put(pb.Distribution_Channel__c, pb.Id);
+                }
+                
+                List < PricebookEntry > existingPBEList = [
+                    SELECT Id, Name, CurrencyIsoCode, ProductCode, Distribution_Channel__c, Sales_Org__c, Valid_From__c,
+                    Valid_To__c, Pricing_Unit__c, UnitPrice, Unit_of_Measure__c
+                    FROM PricebookEntry
+                    WHERE Product2Id =: productIdSet
+                    AND Distribution_Channel__c != null
+                ];
+                
+                Map < String, String > pbeListMap = new Map < String, String > ();
+                
+                for (PricebookEntry pbe: existingPBEList) {
+                    String mapLabel = pbe.ProductCode + '_' + pbe.Sales_Org__c + '_' + pbe.Distribution_Channel__c + '_' + pbe.CurrencyIsoCode;
+                    pbeListMap.put(mapLabel, pbe.Id);
+                }
+                
+                // System.debug(pbeListMap);
+                
+                for (IntegrationRequestBuilder.pricingMasterList parent: parentWrappers) {
+                    if (productIdMap.containsKey(parent.Material)) {
+                        // System.debug(parent);
+                        String getMapLabel = parent.Material + '_' + parent.Sales_Org + '_' + parent.Distribution_Channel + '_' + parent.Codition_Curr;
+                        PricebookEntry upsertPBE = new PricebookEntry();
+                        if (pbeListMap.containsKey(getMapLabel)) {
+                            System.debug('YESSSSS');
+                            upsertPBE.Id = pbeListMap.get(getMapLabel);
+                        } else {
+                            System.debug('NOOOOO');
+                            upsertPBE.Pricebook2Id = pbMap.get(parent.Distribution_Channel);
+                            upsertPBE.Product2Id = productIdMap.get(parent.Material);
+                            upsertPBE.Sales_Org__c = parent.Sales_Org;
+                            upsertPBE.Distribution_Channel__c = parent.Distribution_Channel;
+                            upsertPBE.CurrencyIsoCode = parent.Codition_Curr;
+                            upsertPBE.IsActive = true;
+                            upsertPBE.UseStandardPrice = false;
+                        }
+                        upsertPBE.UnitPrice = Decimal.valueOf(parent.Condition_Amt);
+                        upsertPBE.Pricing_Unit__c = Decimal.valueOf(parent.Pricing_Unit);
+                        upsertPBE.Unit_of_Measure__c = parent.Unit_of_Measure;
+                        upsertPBE.Valid_From__c = Date.valueOf(parent.Valid_from);
+                        if (String.isNotBlank(parent.Valid_TO) && parent.Valid_TO.contains('9999')) {
+                            upsertPBE.Valid_To__c = Date.valueOf('2030-12-31');
+                        } else {
+                            upsertPBE.Valid_To__c = Date.valueOf(parent.Valid_TO);
+                        }
+                        upsertPBElist.add(upsertPBE);
+                        System.debug(upsertPBE);
+                    } else {
+                        System.debug('Product ' + parent.Material + 'Not Found in SF system');
+                    }
+                }
+                if (upsertPBElist.size() > 0) {
+                    upsert upsertPBElist;
+                }
+            }
+        } catch (Exception e) {
+            System.debug('Exception: ' + e.getMessage());
+        }
+        finally {
+            // Log the API call
+            System.debug('resp ==> ' + resp);
+            if (resp != null) {
+                UtilityCls.logApiCall('Pricing_Master_API', '', '', resp.getBody(), '', resp.getStatusCode());
+            }
         }
     }
     
@@ -2250,5 +2361,4 @@ UPSERT prodList;
         }
         return result;
     }
-    
 }

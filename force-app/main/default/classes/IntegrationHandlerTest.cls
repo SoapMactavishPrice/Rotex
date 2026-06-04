@@ -113,9 +113,15 @@ private class IntegrationHandlerTest {
                 }
                 when 'pricing' {
                     return '{ "d": { "results": [ ' +
-                        '{ "Material": "PROD001", "Sales_Org": "SORG01", "Distribution_Channel": "DIST01", ' +
-                        '"Codition_Curr": "USD", "Condition_Amt": "100.50", "Pricing_Unit": "1", "Unit_of_Measure": "EA", ' +
-                        '"Valid_from": "2024-07-08", "Valid_TO": "2024-12-31" } ' +
+                        '{ "Material": "PROD001", ' +
+                        '"Sales_Org": "1000", ' +
+                        '"Distribution_Channel": "10", ' +
+                        '"Codition_Curr": "USD", ' +
+                        '"Condition_Amt": "100.50", ' +
+                        '"Pricing_Unit": "1", ' +
+                        '"Unit_of_Measure": "EA", ' +
+                        '"Valid_from": "2024-07-08", ' +
+                        '"Valid_TO": "2024-12-31" } ' +
                     '] } }';
                 }
                 when 'discount' {
@@ -439,6 +445,66 @@ private class IntegrationHandlerTest {
     
         //System.assertEquals(1, entries.size());
         //System.assertEquals(p.Id, entries[0].Product2Id);
+    }
+
+    @isTest
+    static void testPricingMasterOverload() {
+        Id standardPricebookId = Test.getStandardPricebookId();
+        Pricebook2 stdPb = new Pricebook2(
+            Id = standardPricebookId,
+            Name = 'Standard Price Book',
+            IsActive = true
+        );
+        upsert stdPb;
+
+        Product2 product = new Product2(
+            Name = 'Test Product',
+            ProductCode = 'PROD001',
+            IsActive = true
+        );
+        insert product;
+
+        List<PricebookEntry> existingStandardEntries = [
+            SELECT Id
+            FROM PricebookEntry
+            WHERE Pricebook2Id = :standardPricebookId
+                AND Product2Id = :product.Id
+                AND CurrencyIsoCode = 'USD'
+            LIMIT 1
+        ];
+
+        if (existingStandardEntries.isEmpty()) {
+            PricebookEntry standardEntry = new PricebookEntry(
+                Pricebook2Id = standardPricebookId,
+                Product2Id = product.Id,
+                UnitPrice = 1,
+                IsActive = true,
+                CurrencyIsoCode = 'USD'
+            );
+            insert standardEntry;
+        }
+
+        Pricebook2 distributionPricebook = new Pricebook2(
+            Name = 'Distribution 10 Pricebook',
+            IsActive = true,
+            Distribution_Channel__c = '10'
+        );
+        insert distributionPricebook;
+
+        Test.setMock(HttpCalloutMock.class, new MockHttpResponseGenerator('pricing'));
+
+        Test.startTest();
+        IntegrationHandler.PricingMaster(product.ProductCode, true);
+        Test.stopTest();
+
+        List<API_Log__c> apiLogs = [
+            SELECT Id, Api_Name__c, Status_Code__c
+            FROM API_Log__c
+            WHERE Api_Name__c = 'Pricing_Master_API'
+                AND Status_Code__c = '200'
+        ];
+
+        System.assertEquals(1, apiLogs.size(), 'Expected the overloaded PricingMaster method to complete the pricing callout.');
     }
 
     // Test for DiscountMaster method

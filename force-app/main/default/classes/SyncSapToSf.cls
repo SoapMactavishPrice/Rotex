@@ -26,7 +26,14 @@ public with sharing class SyncSapToSf {
         }
 
         Integer syncedCount = upsertMaterials(payload.materials, payload.dateOfExc);
+        IntegrationHandler.PricingMaster(materialCode, true);
         return new SyncResult(true, 'Material sync completed. Records synced: ' + syncedCount, 'success');
+    }
+
+    @AuraEnabled
+    public static SyncResult getPricingMaster(String materialCode) {
+        IntegrationHandler.PricingMaster(materialCode);
+        return new SyncResult(true, 'Pricing sync completed.', 'success');
     }
 
     public static Integer getCustomerMaster(String customerCode) {

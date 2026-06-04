@@ -2,12 +2,16 @@ import { LightningElement } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import syncCustomer from '@salesforce/apex/SyncSapToSf.syncCustomer';
 import getMaterialMaster from '@salesforce/apex/SyncSapToSf.getMaterialMaster';
+import getPricingMaster from '@salesforce/apex/SyncSapToSf.getPricingMaster';
 
 export default class SyncSapToSf extends LightningElement {
     customerCode = '';
     materialCode = '';
     isCustomerLoading = false;
     isMaterialLoading = false;
+
+    pricingMaterialCode = '';
+    isPricingLoading = false;
 
     get isCustomerButtonDisabled() {
         return this.isCustomerLoading || !this.customerCode.trim();
@@ -17,12 +21,20 @@ export default class SyncSapToSf extends LightningElement {
         return this.isMaterialLoading || !this.materialCode.trim();
     }
 
+    get isPricingButtonDisabled() {
+        return this.isPricingLoading || !this.pricingMaterialCode.trim();
+    }
+
     handleCustomerCodeChange(event) {
         this.customerCode = event.target.value;
     }
 
     handleMaterialCodeChange(event) {
         this.materialCode = event.target.value;
+    }
+
+    handlePricingCodeChange(event) {
+        this.pricingMaterialCode = event.target.value;
     }
 
     async handleGetCustomer() {
@@ -38,6 +50,14 @@ export default class SyncSapToSf extends LightningElement {
             loadingProperty: 'isMaterialLoading',
             action: () => getMaterialMaster({ materialCode: this.materialCode.trim() }),
             successTitle: 'Material synced'
+        });
+    }
+
+    async handleUpdatePricing() {
+        await this.runSync({
+            loadingProperty: 'isPricingLoading',
+            action: () => getPricingMaster({ materialCode: this.pricingMaterialCode.trim() }),
+            successTitle: 'Pricing updated'
         });
     }
 

@@ -1,4 +1,4 @@
-trigger QuoteTrigger on Quote (before insert, before update, after insert) {
+trigger QuoteTrigger on Quote (before insert, before update, after insert, after update) {
     System.debug('In QuoteTrigger');
 
     // BEFORE INSERT
@@ -13,6 +13,11 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert) {
     if (Trigger.isAfter && Trigger.isInsert) {
         QuoteTotalValueApprovalHandler.handleAfterInsert(Trigger.new);
         // QuoteMinimumOfferValueApprovalHandler.handleAfterInsert(Trigger.new);
+        QuoteTriggerHandler.updateOpportunityCloseDateFromQuote(Trigger.new,null);
+    }
+    
+    if (Trigger.isAfter && Trigger.isUpdate) {
+        QuoteFinalApprovalNotificationHandler.handleQuotesAfterUpdate(Trigger.new, Trigger.oldMap);
     }
     
     // BEFORE UPDATE
@@ -35,6 +40,10 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert) {
                 }
         }
         
+        QuoteTriggerHandler.validateRejectedReason(
+            Trigger.new,
+            Trigger.oldMap
+        );
         // Handle warranty approval process for quote updates
         QuoteWarrantyApprovalHandler.handleBeforeUpdate(Trigger.new, Trigger.oldMap);
         
@@ -46,5 +55,11 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert) {
 
         // Handle minimum offer value approval process for quote updates
         // QuoteMinimumOfferValueApprovalHandler.handleBeforeUpdate(Trigger.new, Trigger.oldMap);
+    }
+    
+    if (Trigger.isAfter && Trigger.isUpdate) {
+        
+        QuoteTriggerHandler.updateOpportunityStageOnQuoteApproval(Trigger.new,Trigger.oldMap);
+         QuoteTriggerHandler.updateOpportunityCloseDateFromQuote(Trigger.new,Trigger.oldMap);
     }
 }

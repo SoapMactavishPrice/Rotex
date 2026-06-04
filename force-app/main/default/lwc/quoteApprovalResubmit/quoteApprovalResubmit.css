@@ -1,0 +1,32 @@
+.content {
+    display: grid;
+    gap: 1rem;
+}
+
+.summary {
+    border-top: 1px solid var(--slds-g-color-border-base-1, #d8dde6);
+    display: grid;
+    gap: 0.25rem;
+    padding-top: 0.875rem;
+}
+
+.summary__label {
+    color: var(--slds-g-color-neutral-base-50, #706e6b);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.summary__value {
+    color: var(--slds-g-color-neutral-base-10, #181818);
+    overflow-wrap: anywhere;
+}
+
+.empty-state {
+    color: var(--slds-g-color-neutral-base-50, #706e6b);
+    padding: 1rem 0;
+}
+
+.submit-button {
+    margin-left: 0.5rem;
+}

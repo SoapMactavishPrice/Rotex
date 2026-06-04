@@ -321,6 +321,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
     }
 
     if (Trigger.isAfter && Trigger.isUpdate) {
+        QuoteFinalApprovalNotificationHandler.handleQuoteLineItemsAfterUpdate(Trigger.new, Trigger.oldMap);
         QuoteLineItemApprovalHandler.updateQLIUnitPrice(Trigger.new);
     }
 }

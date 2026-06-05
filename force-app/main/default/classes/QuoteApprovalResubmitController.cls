@@ -166,7 +166,17 @@ public without sharing class QuoteApprovalResubmitController {
         if (q.OwnerId == currentUserId || q.CreatedById == currentUserId) {
             return;
         }
-        throw new AuraHandledException('Only the Quote Owner or the Quote Created By user can resubmit this approval.');
+
+        List<User> crrUsers = [SELECT Id FROM User WHERE Profile.Name = 'CRR'];
+        if (!crrUsers.isEmpty()) {
+            for (User crrUser : crrUsers) {
+                if (currentUserId == crrUser.Id) {
+                    return;
+                }
+            }
+        }
+
+        throw new AuraHandledException('Only the Quote Owner/Quote Created By user/CRR Profile users can resubmit this approval.');
     }
 
     private static void resetWarrantyForResubmit(Quote source, Quote target) {

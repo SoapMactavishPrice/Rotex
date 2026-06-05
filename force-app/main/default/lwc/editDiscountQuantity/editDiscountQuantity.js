@@ -249,6 +249,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
                 Id: item.Id,
                 Quantity: item.Quantity ? parseFloat(item.Quantity) : 0,
                 Discount_to_be_offered__c: item.Discount_to_be_offered__c ? parseFloat(item.Discount_to_be_offered__c) : 0,
+                Requested_Discount__c: item.Discount_to_be_offered__c ? parseFloat(item.Discount_to_be_offered__c) : 0,
                 Customer_Part_No__c: item.Customer_Part_No__c,
                 P_F_Charges__c: item.P_F_Charges__c ? parseFloat(item.P_F_Charges__c) : 0,
                 Discount_as_per_SAP__c: parseFloat(item.Discount_as_per_SAP__c),
@@ -268,6 +269,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             if (item.Is_Discount_Approved__c && item.newDiscountValue != null && item.newDiscountValue !== '') {
                 updateData.Previous_Discount__c = item.Discount_to_be_offered__c;
                 updateData.Discount_to_be_offered__c = parseFloat(item.newDiscountValue);
+                updateData.Requested_Discount__c = parseFloat(item.newDiscountValue);
                 updateData.New_Discount_Entered__c = true;
 
                 updateData.Sales_Manager_Comments__c = item.Sales_Manager_Comments__c;

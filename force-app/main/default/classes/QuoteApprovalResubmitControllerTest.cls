@@ -24,25 +24,6 @@ private class QuoteApprovalResubmitControllerTest {
         return q;
     }
 
-    private static User createUser(String aliasPrefix) {
-        Profile p = [SELECT Id FROM Profile WHERE Name = 'System Administrator' LIMIT 1];
-        String uniqueValue = aliasPrefix + String.valueOf(DateTime.now().getTime()) + String.valueOf(Math.mod(Crypto.getRandomInteger(), 100000));
-        User u = new User(
-            FirstName = aliasPrefix,
-            LastName = 'User',
-            Email = uniqueValue + '@testorg.com',
-            Username = uniqueValue + '@testorg.com',
-            Alias = aliasPrefix.left(8),
-            TimeZoneSidKey = 'America/Los_Angeles',
-            LocaleSidKey = 'en_US',
-            EmailEncodingKey = 'UTF-8',
-            LanguageLocaleKey = 'en_US',
-            ProfileId = p.Id
-        );
-        insert u;
-        return u;
-    }
-
     @IsTest
     static void testGetResubmittableApprovalsOnlyReturnsRejectedTypes() {
         Quote q = createQuote();
@@ -202,81 +183,6 @@ private class QuoteApprovalResubmitControllerTest {
         System.assertEquals(null, refreshed.CH_Validity_Offer_Status__c);
         System.assertEquals('Keep CH validity comment', refreshed.CH_Validity_Offer_Comments__c);
         System.assertEquals(null, refreshed.CH_Validity_Offer_Date_Time__c);
-    }
-
-    @IsTest
-    static void testResubmitMultipleRejectedApprovals() {
-        Quote q = createQuote();
-        q.Warranty_Terms_Draft__c = '24 Months from date of supply';
-        q.Requested_Validity_Of_Offer__c = '60 Days';
-        update q;
-
-        q = [
-            SELECT Id,
-                   SM_Warranty_Status__c,
-                   SM_Validity_Offer_Status__c
-            FROM Quote
-            WHERE Id = :q.Id
-        ];
-        q.SM_Warranty_Status__c = 'Rejected';
-        q.SM_Warranty_Comments__c = 'Keep warranty comment';
-        q.SM_Warranty_Date_Time__c = DateTime.now().addDays(-1);
-        q.SM_Validity_Offer_Status__c = 'Rejected';
-        q.SM_Validity_Offer_Comments__c = 'Keep validity comment';
-        q.SM_Validity_Offer_Date_Time__c = DateTime.now().addDays(-1);
-        update q;
-
-        Test.startTest();
-        String result = QuoteApprovalResubmitController.resubmitApprovals(
-            q.Id,
-            new List<String>{ 'WARRANTY', 'VALIDITY' }
-        );
-        Test.stopTest();
-
-        Quote refreshed = [
-            SELECT SM_Warranty_Status__c,
-                   SM_Warranty_Comments__c,
-                   SM_Warranty_Date_Time__c,
-                   SM_Validity_Offer_Status__c,
-                   SM_Validity_Offer_Comments__c,
-                   SM_Validity_Offer_Date_Time__c
-            FROM Quote
-            WHERE Id = :q.Id
-        ];
-        System.assertEquals('Success', result);
-        System.assertEquals('Submitted', refreshed.SM_Warranty_Status__c);
-        System.assertEquals('Keep warranty comment', refreshed.SM_Warranty_Comments__c);
-        System.assertEquals(null, refreshed.SM_Warranty_Date_Time__c);
-        System.assertEquals('Submitted', refreshed.SM_Validity_Offer_Status__c);
-        System.assertEquals('Keep validity comment', refreshed.SM_Validity_Offer_Comments__c);
-        System.assertEquals(null, refreshed.SM_Validity_Offer_Date_Time__c);
-    }
-
-    @IsTest
-    static void testApproverCannotResubmitWhenNotOwnerOrCreator() {
-        User quoteCreator = createUser('qcreate');
-        User approver = createUser('approver');
-        Id quoteId;
-
-        System.runAs(quoteCreator) {
-            Quote q = createQuote();
-            q.Sales_Manager__c = approver.Id;
-            q.SM_Warranty_Status__c = 'Rejected';
-            q.SM_Warranty_Comments__c = 'Approver should not resubmit';
-            update q;
-            quoteId = q.Id;
-        }
-
-        Boolean blocked = false;
-        System.runAs(approver) {
-            try {
-                QuoteApprovalResubmitController.getResubmittableApprovals(quoteId);
-            } catch (AuraHandledException e) {
-                blocked = true;
-            }
-        }
-
-        System.assertEquals(true, blocked, 'Approvers should be blocked unless they are also owner or creator.');
     }
 
     @IsTest

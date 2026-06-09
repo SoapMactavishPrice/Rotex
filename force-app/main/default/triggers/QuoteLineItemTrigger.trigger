@@ -61,12 +61,20 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
             }
             
             // 2️⃣ Determine which QLIs need approval processing
-            if (Trigger.isInsert || (Trigger.isUpdate && qli.Discount_to_be_offered__c != Trigger.oldMap.get(qli.Id).Discount_to_be_offered__c && !qli.Do_not_proceed_approval__c)) {
+            System.debug('Trigger.isInsert ==> ' + Trigger.isInsert + ', Trigger.isUpdate ==> ' + Trigger.isUpdate + ', Discount_to_be_offered__c: ' + qli.Discount_to_be_offered__c + ', Old Discount: ' + (Trigger.isUpdate ? Trigger.oldMap.get(qli.Id).Discount_to_be_offered__c : null) + ', Is_Discount_Only_Rejected__c: ' + qli.Is_Discount_Only_Rejected__c + ', Do_not_proceed_approval__c: ' + qli.Do_not_proceed_approval__c);
+            if (Trigger.isInsert || (Trigger.isUpdate && qli.Discount_to_be_offered__c != null && (qli.Discount_to_be_offered__c != Trigger.oldMap.get(qli.Id).Discount_to_be_offered__c || (qli.Is_Edited_Through_Edit_Discount__c && qli.Is_Discount_Only_Rejected__c)) && !qli.Do_not_proceed_approval__c)) {
                 System.debug('APPROVAL: QLI needs approval processing');
                 System.debug('Discount_to_be_offered__c: ' + qli.Discount_to_be_offered__c);
                 if (Trigger.isUpdate) {
                     System.debug('Old Discount: ' + Trigger.oldMap.get(qli.Id).Discount_to_be_offered__c);
                 }
+                // Blank the approval status fields for re-processing 
+                qli.Sales_Manager_Status__c = null;
+                qli.Country_Continent_Sales_H_LOB_Status__c = null;
+                qli.Global_Sales_Head_Status__c = null;
+                qli.Rotex_Board_Member_Status__c = null;
+                qli.Managing_Director_Status__c = null;
+
                 qliToProcess.add(qli);
             } else {
                 System.debug('APPROVAL: QLI does NOT need approval processing (discount unchanged)');

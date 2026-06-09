@@ -41,6 +41,7 @@ public class editDiscountQuantityController {
         ];
 
         for (QuoteLineItem qli : quoteLineItems) {
+            qli.Is_Edited_Through_Edit_Discount__c = true;
             // Check if this is a re-approval scenario (Is_Discount_Approved__c is true and Previous_Discount__c is set)
             if (Test.isRunningTest() || (qli.Is_Discount_Approved__c == true && qli.Previous_Discount__c != null && qli.New_Discount_Entered__c)) {
                 System.debug('qli.Rotex_Board_Member_Date_Time__c:  '+qli.Rotex_Board_Member_Date_Time__c);
@@ -70,12 +71,6 @@ public class editDiscountQuantityController {
                     qli.Global_Sales_Head_Date_Time__c = null;
                     qli.Rotex_Board_Member_Date_Time__c = null;
                     qli.Managing_Director_Date_Time__c = null;
-    
-                    qli.Sales_Manager_Status__c = null;
-                    qli.Country_Continent_Sales_H_LOB_Status__c = null;
-                    qli.Global_Sales_Head_Status__c = null;
-                    qli.Rotex_Board_Member_Status__c = null;
-                    qli.Managing_Director_Status__c = null;
                 }
 
                 qli.New_Discount_Entered__c = false;

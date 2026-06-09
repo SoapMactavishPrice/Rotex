@@ -8,6 +8,8 @@ import submitValidityOfferApprovalSingle from '@salesforce/apex/SalesPriceApprov
 import submitTotalValueApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitTotalValueApprovalSingle';
 // import submitMinimumOfferApprovalSingle from '@salesforce/apex/SalesPriceApprovalForQuotation.submitMinimumOfferApprovalSingle';
 import submitUnifiedQuoteApprovals from '@salesforce/apex/SalesPriceApprovalForQuotation.submitUnifiedQuoteApprovals';
+import getQuoteFiles from '@salesforce/apex/SalesPriceApprovalForQuotation.getQuoteFiles';
+
 import USER_ID from '@salesforce/user/Id';
 import { NavigationMixin } from 'lightning/navigation';
 
@@ -27,12 +29,12 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     @track taskModalApproverName = null;
     @track taskModalQuoteId = null;
 
-    /**
-     * ✅ FIX: warrantyApprovalsMap is now populated inside fetchQuotes() from
-     *         the warrantyApproval embedded in every QuotationWrapper returned
-     *         by getAllQuotations().  Previously this map was always empty
-     *         because getWarrantyApprovals() was imported but never called.
-     */
+    @track showFilesModal = false;
+    @track filesModalQuoteId = null;
+    @track filesModalQuoteNumber = null;
+    @track modalFiles = [];
+    @track isLoadingFiles = false;
+
     @track warrantyApprovalsMap = new Map();
     @track validityOfferApprovalsMap = new Map();
     @track totalValueApprovalsMap = new Map();
@@ -98,6 +100,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     get showSkipSOAButton() {
         return this.activeTab === 'all';
+    }
+
+    get hasModalFiles() {
+        return this.modalFiles && this.modalFiles.length > 0;
     }
 
     // ── Tab class getters ──
@@ -2171,6 +2177,46 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 this.isSaveDisabled = false;
             }
         }, 1000);
+    }
+
+    handleOpenFilesModal(event) {
+        event.preventDefault();
+        const quoteId = event.currentTarget.dataset.quoteId;
+        const quote = this.quotes.find(q => q.quoteId === quoteId);
+        this.filesModalQuoteId = quoteId;
+        this.filesModalQuoteNumber = quote ? quote.quoteNumber : '';
+        this.showFilesModal = true;
+        this.isLoadingFiles = true;
+        this.modalFiles = [];
+
+        getQuoteFiles({ quoteId })
+            .then(files => {
+                this.modalFiles = files;
+                this.isLoadingFiles = false;
+            })
+            .catch(error => {
+                this.isLoadingFiles = false;
+                this.showToast('Error', error.body?.message || 'Failed to load files', 'error');
+            });
+    }
+
+    handleFilesModalClose() {
+        this.showFilesModal = false;
+        this.filesModalQuoteId = null;
+        this.filesModalQuoteNumber = null;
+        this.modalFiles = [];
+    }
+
+    handlePreviewFile(event) {
+        event.preventDefault();
+        const fileId = event.currentTarget.dataset.fileId;
+        this[NavigationMixin.Navigate]({
+            type: 'standard__namedPage',
+            attributes: { pageName: 'filePreview' },
+            state: {
+                selectedRecordId: fileId
+            }
+        });
     }
 
     redirectToHome() {

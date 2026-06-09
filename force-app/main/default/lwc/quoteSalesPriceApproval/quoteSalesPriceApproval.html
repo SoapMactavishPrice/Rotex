@@ -62,16 +62,21 @@
                                                     data-quote-id={quote.quoteId}
                                                     onclick={handleToggleExpand}
                                                     class="action-link"
-                                                    style="cursor: pointer;">(open)</a>
+                                                    style="cursor: pointer;">(Open)</a>
                                             </template>
                                             <template if:true={quote.isExpanded}>
                                                 <a
                                                     data-quote-id={quote.quoteId}
                                                     onclick={handleToggleExpand}
                                                     class="action-link"
-                                                    style="cursor: pointer;">(close)</a>
+                                                    style="cursor: pointer;">(Close)</a>
                                             </template>
-                                            <a href={quote.quoteRecordUrl} target="_blank" class="action-link">(view)</a>
+                                            <a href={quote.quoteRecordUrl} target="_blank" class="action-link">(View)</a>
+                                            <a href="javascript:void(0);"
+                                                data-quote-id={quote.quoteId}
+                                                onclick={handleOpenFilesModal}
+                                                class="action-link"
+                                                style="cursor: pointer;">(View Files)</a>
                                         </span>
                                     </div>
                                     <div class="header-field">
@@ -408,6 +413,44 @@
                             onclose={handleTaskModalClose}
                             ontaskcreated={handleTaskCreated}>
                         </c-create-task-from-task>
+                    </div>
+                </div>
+            </div>
+        </template>
+        <template if:true={showFilesModal}>
+            <div class="task-modal-overlay" onclick={handleFilesModalClose}>
+                <div class="task-modal-container" onclick={stopPropagation}>
+                    <div class="task-modal-header">
+                        <span class="task-modal-title">Files – {filesModalQuoteNumber}</span>
+                        <button class="task-modal-close" onclick={handleFilesModalClose}>✕</button>
+                    </div>
+                    <div class="task-modal-body" style="padding: 16px;">
+                        <template if:true={isLoadingFiles}>
+                            <lightning-spinner alternative-text="Loading files" size="small"></lightning-spinner>
+                        </template>
+                        <template if:false={isLoadingFiles}>
+                            <template if:true={hasModalFiles}>
+                                <ul style="list-style:none; margin:0; padding:0;">
+                                    <template for:each={modalFiles} for:item="file">
+                                        <li key={file.id} style="display:flex; align-items:center; justify-content:space-between; padding:8px 4px; border-bottom:1px solid #e0dedc;">
+                                            <span style="font-size:13px; color:#181818;">{file.title}</span>
+                                            <lightning-button-icon
+                                                icon-name="utility:preview"
+                                                alternative-text="Preview File"
+                                                title="Preview File"
+                                                data-file-id={file.id}
+                                                data-file-type={file.fileType}
+                                                onclick={handlePreviewFile}
+                                                variant="bare">
+                                            </lightning-button-icon>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </template>
+                            <template if:false={hasModalFiles}>
+                                <p style="color:#706e6b; text-align:center; padding:24px 0;">No files found for this quote.</p>
+                            </template>
+                        </template>
                     </div>
                 </div>
             </div>

@@ -2145,6 +2145,41 @@ public without sharing class SalesPriceApprovalForQuotation {
         return null;
     }
 
+    @AuraEnabled
+    public static List<Map<String, String>> getQuoteFiles(Id quoteId) {
+        List<Map<String, String>> result = new List<Map<String, String>>();
+
+        List<ContentDocumentLink> links = [
+            SELECT ContentDocumentId
+            FROM ContentDocumentLink
+            WHERE LinkedEntityId = :quoteId
+        ];
+
+        if (links.isEmpty()) return result;
+
+        Set<Id> docIds = new Set<Id>();
+        for (ContentDocumentLink cdl : links) {
+            docIds.add(cdl.ContentDocumentId);
+        }
+
+        List<ContentVersion> versions = [
+            SELECT ContentDocumentId, Title, FileType
+            FROM ContentVersion
+            WHERE ContentDocumentId IN :docIds
+            AND IsLatest = true
+        ];
+
+        for (ContentVersion cv : versions) {
+            Map<String, String> fileInfo = new Map<String, String>();
+            fileInfo.put('id', cv.ContentDocumentId);
+            fileInfo.put('title', cv.Title);
+            fileInfo.put('fileType', cv.FileType);
+            result.add(fileInfo);
+        }
+
+        return result;
+    }
+
     public class ApprovalValueOption {
         @AuraEnabled public String label;
         @AuraEnabled public String value;

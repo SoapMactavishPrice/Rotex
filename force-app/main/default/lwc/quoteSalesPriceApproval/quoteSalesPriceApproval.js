@@ -447,6 +447,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             approvalDashboardRows: [],
             isCombinedApprovalSubmitDisabled: true,
             isUnifiedSubmitDisabled: true,
+            quoteValidTill: q.quoteValidTill || '',
             quoteLineItems: processedLineItems,
             displayRows: this.buildDisplayRows(processedLineItems)
         };
@@ -819,6 +820,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     formatApprovalValue(value) {
         if (value === undefined || value === null) return '';
+        const num = Number(value);
+        if (!isNaN(num) && String(value).trim() !== '') {
+            return num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
         return String(value);
     }
 
@@ -835,6 +840,23 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         } catch (e) {
             return '';
         }
+    }
+
+    formatCurrency(value) {
+        if (value === undefined || value === null || value === '') return '';
+        const num = Number(value);
+        if (isNaN(num)) return String(value);
+        return num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    formatSalesPrice(listPrice, discount) {
+        if (listPrice === undefined || listPrice === null) return '';
+        const lp = Number(listPrice);
+        const d  = Number(discount);
+        if (isNaN(lp)) return '';
+        const disc = isNaN(d) ? 0 : d;
+        const sp = lp * (1 - disc / 100);
+        return this.formatCurrency(sp);
     }
 
     capitalize(value) {
@@ -1727,7 +1749,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     showStatusText:   !showStatusCombobox,
                     showCommentInput,
                     soaCommentsDisabled: !(soa.isCurrentUserRow && item.isEditable) && !isFinalApproverOwnRowWithSkip && !isOwnRowWithSkipSoa && !skipSoaHigherHierarchyFinalRow,
-                    rowStyle: ''
+                    rowStyle: '',
+                    listPriceFormatted: this.formatCurrency(item.listPrice),
+                    salesPrice:        this.formatSalesPrice(item.listPrice, item.d2)
                 });
             });
         });

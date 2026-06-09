@@ -181,7 +181,7 @@ private class SalesPriceApprovalForQuotationTest {
                 GS_Warranty_Status__c, GS_Warranty_Date_Time__c, GS_Warranty_Comments__c,
                 BM_Warranty_Status__c, BM_Warranty_Date_Time__c, BM_Warranty_Comments__c,
                 MD_Warranty_Status__c, MD_Warranty_Date_Time__c, MD_Warranty_Comments__c,
-                Final_Warranty_Terms_Approver__c,
+                Final_Warranty_Terms_Approver__c, Quote_Valid_Till__c,
                 Final_Warranty_Terms_Approver__r.DelegatedApproverId,
                 SM_Validity_Offer_Status__c, SM_Validity_Offer_Date_Time__c, SM_Validity_Offer_Comments__c,
                 CH_Validity_Offer_Status__c, CH_Validity_Offer_Date_Time__c, CH_Validity_Offer_Comments__c,

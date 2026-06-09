@@ -7,7 +7,7 @@ public class editDiscountQuantityController {
             Final_Discount_Approver__c, Sales_Rep__c, Sales_Manager__c, 
             Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c, Rotex_Board_Member__c, 
             Managing_Director_Country_Manage__c, Is_Discount_Approved__c, Previous_Discount__c,
-            CurrencyIsoCode, Requested_Comments__c, Item_Type__c,
+            CurrencyIsoCode, Requested_Comments__c, Item_Type__c, Is_Discount_Only_Rejected__c,
             Sales_Manager_Status__c, Sales_Manager_Comments__c, Sales_Manager_Date_Time__c, Is_QLI_Approved_going_for_Approval__c,
 
             Country_Continent_Sales_H_LOB_Status__c, 
@@ -41,7 +41,9 @@ public class editDiscountQuantityController {
         ];
 
         for (QuoteLineItem qli : quoteLineItems) {
-            qli.Is_Edited_Through_Edit_Discount__c = true;
+            if (qli.Is_Discount_Only_Rejected__c) {
+                qli.Is_Discount_Only_Rejected_Static__c = qli.Is_Discount_Only_Rejected__c;
+            }
             // Check if this is a re-approval scenario (Is_Discount_Approved__c is true and Previous_Discount__c is set)
             if (Test.isRunningTest() || (qli.Is_Discount_Approved__c == true && qli.Previous_Discount__c != null && qli.New_Discount_Entered__c)) {
                 System.debug('qli.Rotex_Board_Member_Date_Time__c:  '+qli.Rotex_Board_Member_Date_Time__c);
@@ -71,6 +73,12 @@ public class editDiscountQuantityController {
                     qli.Global_Sales_Head_Date_Time__c = null;
                     qli.Rotex_Board_Member_Date_Time__c = null;
                     qli.Managing_Director_Date_Time__c = null;
+
+                    qli.Sales_Manager_Status__c = null;
+                    qli.Country_Continent_Sales_H_LOB_Status__c = null;
+                    qli.Global_Sales_Head_Status__c = null;
+                    qli.Rotex_Board_Member_Status__c = null;
+                    qli.Managing_Director_Status__c = null;
                 }
 
                 qli.New_Discount_Entered__c = false;

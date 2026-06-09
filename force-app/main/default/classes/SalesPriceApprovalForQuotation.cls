@@ -368,7 +368,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                    GS_Value_Status__c,  GS_Value_Date_Time__c,  GS_Value_Comments__c,
                    BM_Value_Status__c,  BM_Value_Date_Time__c,  BM_Value_Comments__c,
                    MD_Value_Status__c,  MD_Value_Date_Time__c,  MD_Value_Comments__c,
-                   Final_Total_Value_Approver__c, Is_Total_Value_Approved__c, Is_Small_Order_Handling__c, Is_all_approvals_final_approved__c
+                   Final_Total_Value_Approver__c, Is_Total_Value_Approved__c, Is_Small_Order_Handling__c, Is_all_approvals_final_approved__c, Quote_Valid_Till__c
                 //    SM_Min_Offer_Status__c,  SM_Min_Offer_Date_Time__c,  SM_Min_Offer_Comments__c,
                 //    CH_Min_Offer_Status__c,  CH_Min_Offer_Date_Time__c,  CH_Min_Offer_Comments__c,
                 //    GS_Min_Offer_Status__c,  GS_Min_Offer_Date_Time__c,  GS_Min_Offer_Comments__c,
@@ -1747,6 +1747,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public ValidityOfferApprovalWrapper validityOfferApproval;
         @AuraEnabled public TotalValueApprovalWrapper totalValueApproval;
         @AuraEnabled public Boolean isAllApprovalsFinalApproved;
+        @AuraEnabled public String quoteValidTill;
         // @AuraEnabled public MinimumOfferApprovalWrapper minimumOfferApproval;
 
         public QuotationWrapper() {}
@@ -1786,6 +1787,9 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.totalValueApproval = createTotalValueApprovalIfNeeded(quote, currentUserId);
             this.isAllApprovalsFinalApproved = quote.Is_all_approvals_final_approved__c == true;
             // this.minimumOfferApproval = createMinimumOfferApprovalIfNeeded(quote, currentUserId);
+            this.quoteValidTill = quote.Quote_Valid_Till__c != null
+                ? String.valueOf(quote.Quote_Valid_Till__c.format())
+                : '';
 
             this.quoteLineItems = new List<QuotationLineItemWrapper>();
             for (QuoteLineItem eachLine : lineItems) {

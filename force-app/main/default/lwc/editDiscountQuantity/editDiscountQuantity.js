@@ -254,6 +254,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
                 P_F_Charges__c: item.P_F_Charges__c ? parseFloat(item.P_F_Charges__c) : 0,
                 Discount_as_per_SAP__c: parseFloat(item.Discount_as_per_SAP__c),
                 Requested_Comments__c: item.Requested_Comments__c || null,
+                Is_Discount_Only_Rejected__c: item.Is_Discount_Only_Rejected__c,
 
                 Final_Discount_Approver__c: item.Final_Discount_Approver__c,
                 Sales_Rep__c: item.Sales_Rep__c,

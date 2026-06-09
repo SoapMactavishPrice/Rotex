@@ -56,32 +56,27 @@
                                         <span class="field-label">Quote No.</span>
                                         <span class="field-value">
                                             {quote.quoteNumber}
-                                            <!-- CHANGE 1: (open)/(close) link replaces chevron toggle -->
                                             <template if:false={quote.isExpanded}>
-                                                <a
-                                                    data-quote-id={quote.quoteId}
-                                                    onclick={handleToggleExpand}
-                                                    class="action-link"
-                                                    style="cursor: pointer;">(Open)</a>
+                                                <a data-quote-id={quote.quoteId} onclick={handleToggleExpand} class="action-link" style="cursor: pointer;">(Open)</a>
                                             </template>
                                             <template if:true={quote.isExpanded}>
-                                                <a
-                                                    data-quote-id={quote.quoteId}
-                                                    onclick={handleToggleExpand}
-                                                    class="action-link"
-                                                    style="cursor: pointer;">(Close)</a>
+                                                <a data-quote-id={quote.quoteId} onclick={handleToggleExpand} class="action-link" style="cursor: pointer;">(Close)</a>
                                             </template>
                                             <a href={quote.quoteRecordUrl} target="_blank" class="action-link">(View)</a>
-                                            <a href="javascript:void(0);"
-                                                data-quote-id={quote.quoteId}
-                                                onclick={handleOpenFilesModal}
-                                                class="action-link"
-                                                style="cursor: pointer;">(View Files)</a>
+                                            <a href="javascript:void(0);" data-quote-id={quote.quoteId} onclick={handleOpenFilesModal} class="action-link" style="cursor: pointer;">(View Files)</a>
                                         </span>
                                     </div>
                                     <div class="header-field">
                                         <span class="field-label">Customer Name</span>
                                         <span class="field-value">{quote.accountName}</span>
+                                    </div>
+                                    <div class="header-field">
+                                        <span class="field-label">Quote Owner</span>
+                                        <span class="field-value">{quote.quoteOwnerName}</span>
+                                    </div>
+                                    <div class="header-field">
+                                        <span class="field-label">Valid Till</span>
+                                        <span class="field-value">{quote.quoteValidTill}</span>
                                     </div>
                                     <div class="header-field">
                                         <span class="field-label">Total Value</span>
@@ -248,12 +243,12 @@
                                         <thead>
                                             <tr style="background-color:#007764;">
                                                 <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left; white-space:normal; word-break:break-word;">Product Name</th>
-                                                <th scope="col" style="width:8%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center; white-space:normal; word-break:break-word;">Product Code</th>
-                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">List Price</th>
+                                                <th scope="col" style="width:5.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">List Price</th>
                                                 <th scope="col" style="width:3%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Qty</th>
                                                 <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc. SAP%</th>
                                                 <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Pr. Disc.%</th>
                                                 <th scope="col" style="width:7%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc.%</th>
+                                                <th scope="col" style="width:5.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Sales Price</th>
                                                 <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">SOA User</th>
                                                 <th scope="col" style="width:8%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Status</th>
                                                 <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Requestor Comments</th>
@@ -267,9 +262,11 @@
 
                                                     <!-- Product-level cells (merged rows) -->
                                                     <template if:true={row.isFirstRow}>
-                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; white-space:normal; word-break:break-word; overflow-wrap:break-word;">{row.productName}</td>
-                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center; color:#706e6b; font-size:13px; white-space:normal; word-break:break-word;">{row.productCode}</td>
-                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.listPrice}</td>
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; white-space:normal; word-break:break-word; overflow-wrap:break-word;">
+                                                            {row.productName}<br/>
+                                                            <strong>({row.productCode})</strong>
+                                                        </td>
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.listPriceFormatted}</td>
                                                         <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.quantity}</td>
                                                         <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.d1}</td>
                                                         <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.previousDiscount}</td>
@@ -291,6 +288,7 @@
                                                                 {row.d2}
                                                             </template>
                                                         </td>
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.salesPrice}</td>
                                                     </template>
 
                                                     <!-- SOA Label — no CSS class on span, all inline -->
@@ -321,9 +319,12 @@
                                                             <div style="font-size:11px; color:#706e6b; white-space:nowrap; margin-top:4px;">{row.soaDateTime}</div>
                                                         </template>
                                                     </td>
-                                                    <td style="border:1px solid #000; padding:8px; vertical-align:top;">
-                                                        <span style="white-space:pre-wrap; overflow-wrap:anywhere; display:block; color:#3e3e3c; line-height:1.45;">{row.requestedComments}</span>
-                                                    </td>
+                                                    <!-- Requestor Comments -->
+                                                    <template if:true={row.isFirstRow}>
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle;">
+                                                            <span style="white-space:pre-wrap; overflow-wrap:anywhere; display:block; color:#3e3e3c; line-height:1.45;">{row.requestedComments}</span>
+                                                        </td>
+                                                    </template>
                                                     <!-- Previous Comments -->
                                                     <td style="border:1px solid #000; padding:8px; vertical-align:top;">
                                                         <span style="white-space:pre-wrap; overflow-wrap:anywhere; display:block; color:#3e3e3c; line-height:1.45;">{row.prevSoaComments}</span>

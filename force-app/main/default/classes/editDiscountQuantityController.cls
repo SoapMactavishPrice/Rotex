@@ -41,6 +41,7 @@ public class editDiscountQuantityController {
         ];
 
         for (QuoteLineItem qli : quoteLineItems) {
+            qli.Is_Edited_Through_Edit_Discount__c = true;
             if (qli.Is_Discount_Only_Rejected__c) {
                 qli.Is_Discount_Only_Rejected_Static__c = qli.Is_Discount_Only_Rejected__c;
             }

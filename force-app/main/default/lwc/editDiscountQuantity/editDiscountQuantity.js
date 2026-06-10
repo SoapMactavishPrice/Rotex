@@ -268,6 +268,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             };
 
             if (item.Is_Discount_Approved__c && item.newDiscountValue != null && item.newDiscountValue !== '') {
+                updateData.Is_Edited_Through_Edit_Discount__c = true;
                 updateData.Previous_Discount__c = item.Discount_to_be_offered__c;
                 updateData.Discount_to_be_offered__c = parseFloat(item.newDiscountValue);
                 updateData.Requested_Discount__c = parseFloat(item.newDiscountValue);

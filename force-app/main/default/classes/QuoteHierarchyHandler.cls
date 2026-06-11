@@ -92,7 +92,10 @@ public class QuoteHierarchyHandler {
             
             // ✅ Sales Rep = Account Owner
             q.Sales_Rep__c = baseUser.Id;
-            
+            if (baseUser.SOA_Profile__c != null && baseUser.SOA_Profile__c == 'Sales Manager') {
+                q.Sales_Manager__c = baseUser.Id;
+            }
+
             // 🔁 Traverse hierarchy
             User currentMgr = baseUser;
             Integer level = 0;

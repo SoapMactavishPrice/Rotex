@@ -9,64 +9,78 @@
                 <table class="custom-table">
                     <thead>
                         <tr>
-                            <th style="width:16%">Product Name</th>
-                            <th style="width:10%">Customer Part No.</th>
-                            <th style="width:8%; text-align:right;">List Price ({currencyCode})</th>
-                            <th style="width:8%; text-align:right;">Sales Price ({currencyCode})</th>
-                            <th style="width:8%; text-align:right;">Discount (SAP) (%)</th>
-                            <th style="width:9%">Discount Offered (%)</th>
-                            <th style="width:9%">New Discount (%)</th>
-                            <th style="width:14%">Requested Comments</th>
-                            <th style="width:8%;">P&F Charges (%)</th>
-                            <th style="width:8%">Quantity</th>
+                            <th class="col-product">Product Name</th>
+                            <th class="col-partno">Customer Part No.</th>
+                            <th class="col-num" style="text-align: right;">List Price ({currencyCode})</th>
+                            <th class="col-num" style="text-align: right;">Sales Price ({currencyCode})</th>
+                            <th style="text-align: center; width: 7%;">Disc. SAP (%)</th>
+                            <th class="col-input">Desired Price ({currencyCode})</th>
+                            <th class="col-input">Disc. Offered (%)</th>
+                            <th class="col-input">New Disc. (%)</th>
+                            <th class="col-comments">Req. Comments</th>
+                            <th class="col-input">P&amp;F (%)</th>
+                            <th class="col-input">Qty</th>
                         </tr>
                     </thead>
                     <tbody>
                         <template for:each={quoteLineItemList} for:item="item">
                             <tr key={item.Id}>
-                                <td>{item.Product2.Name}</td>
-                                <td>
+                                <td class="col-product cell-wrap">{item.Product2.Name}</td>
+                                <td class="col-partno">
                                     <lightning-input type="text" data-id={item.Id} variant="label-hidden"
                                         value={item.Customer_Part_No__c} class="input-field"
                                         onchange={handleCustomerPartNoChange}>
                                     </lightning-input>
                                 </td>
-                                <td class="amount">{item.ListPrice}</td>
-                                <td class="amount">{item.UnitPrice}</td>
-                                <td class="amount">{item.Discount_as_per_SAP__c}%</td>
-                                <td>
+                                <td class="col-num amount">{item.ListPrice}</td>
+                                <td class="col-num amount">{item.UnitPrice}</td>
+                                <td class="col-num amount" style="text-align: center;">{item.Discount_as_per_SAP__c}%</td>
+                                <td class="col-input">
                                     <lightning-input type="number" data-id={item.Id} variant="label-hidden"
-                                        value={item.Discount_to_be_offered__c} class="input-field"
-                                        disabled={item.isDiscountOfferedDisabled} onchange={handleDiscountChange}
-                                        step="any">
+                                        value={item.desiredPriceValue} class="input-field"
+                                        disabled={item.isDesiredPriceDisabled}
+                                        onchange={handleDesiredPriceChange}
+                                        step="0.01">
                                     </lightning-input>
                                 </td>
-                                <td>
+                                <td class="col-input">
+                                    <lightning-input type="number" data-id={item.Id} variant="label-hidden"
+                                        value={item.Discount_to_be_offered__c} class="input-field"
+                                        disabled={item.isDiscountOfferedDisabled}
+                                        onchange={handleDiscountChange}
+                                        step="0.01">
+                                    </lightning-input>
+                                </td>
+                                <td class="col-input">
                                     <template if:true={item.Is_Discount_Approved__c}>
                                         <lightning-input type="number" data-id={item.Id} variant="label-hidden"
                                             value={item.newDiscountValue} class="input-field"
-                                            onchange={handleNewDiscountChange}>
+                                            disabled={item.isNewDiscountDisabled}
+                                            onchange={handleNewDiscountChange}
+                                            step="0.01">
                                         </lightning-input>
                                     </template>
                                     <template if:false={item.Is_Discount_Approved__c}>
                                         <span class="slds-text-color_weak">-</span>
                                     </template>
                                 </td>
-                                <td>
-                                    <lightning-input type="text" data-id={item.Id} variant="label-hidden"
-                                        value={item.Requested_Comments__c} class="input-field"
+                                <td class="col-comments">
+                                    <lightning-textarea data-id={item.Id} variant="label-hidden"
+                                        value={item.Requested_Comments__c} class="input-field textarea-field"
                                         disabled={item.isRequestedCommentsDisabled}
                                         placeholder={item.requestedCommentsPlaceholder}
+                                        max-length="255"
                                         onchange={handleRequestedCommentsChange}>
-                                    </lightning-input>
+                                    </lightning-textarea>
                                 </td>
-                                <td>
+                                <td class="col-input">
                                     <lightning-input type="number" data-id={item.Id} variant="label-hidden"
                                         value={item.P_F_Charges__c} class="input-field"
-                                        onchange={handlePFChargeChanges}>
+                                        onchange={handlePFChargeChanges}
+                                        step="0.01">
                                     </lightning-input>
                                 </td>
-                                <td>
+                                <td class="col-input">
                                     <lightning-input type="number" data-id={item.Id} variant="label-hidden"
                                         value={item.Quantity} class="input-field" onchange={handleQuantityChange}
                                         step="any">

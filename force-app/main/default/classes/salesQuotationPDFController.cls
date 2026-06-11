@@ -20,6 +20,10 @@ public class salesQuotationPDFController {
     public string PaymentTerms {get;set;}
     public string QuoteNumber {get;set;}
     public String shipToAddress { get; set; }
+
+    public String userSignature { get; set; }
+    public String attachmentData { get; set; }
+    public List<Map<String, String>> attachedFiles { get; set; }
     
     public salesQuotationPDFController(){
         qId = ApexPages.currentPage().getparameters().get('id');
@@ -100,6 +104,14 @@ return;
         isValid = true;
         createNew = true;
         body = 'Dear Sir/Madam, <br/><br/>Please find attached Quote PDF.';
+        try {
+            User currentUser = [SELECT EmailEncodingKey, Email, Signature FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
+            userSignature = String.isNotBlank(currentUser.Signature) 
+            ? currentUser.Signature.replace('\n', '<br/>') 
+            : '';
+        } catch (Exception e) {
+            userSignature = '';
+        }
         // Build Ship To Address – skip empty fields
         List<String> shipParts = new List<String>();
         
@@ -319,6 +331,7 @@ no2words = totalValueINRWords + ' Rupees Only.';*/
     }
     
     public PageReference save() {
+        attachmentData = ApexPages.currentPage().getParameters().get('attachmentData');
         if (!isValid) {
             return null;
         }
@@ -350,13 +363,61 @@ no2words = totalValueINRWords + ' Rupees Only.';*/
         contentDocumentLink.LinkedEntityId = quData.Id;
         contentDocumentLink.ShareType = 'V';
         upsert contentDocumentLink;
-        
+
+        // Save user-uploaded files to Quote record
+        if (String.isNotBlank(attachmentData)) {
+            try {
+                List<Object> fileList = (List<Object>) JSON.deserializeUntyped(attachmentData);
+                List<ContentVersion> uploadedCVs = new List<ContentVersion>();
+
+                for (Object fileObj : fileList) {
+                    Map<String, Object> fileMap = (Map<String, Object>) fileObj;
+                    String fileName   = (String) fileMap.get('name');
+                    String fileBase64 = (String) fileMap.get('data');
+
+                    ContentVersion cv = new ContentVersion();
+                    cv.ContentLocation = 'S';
+                    cv.PathOnClient    = fileName;
+                    cv.Title           = fileName;
+                    cv.isMajorVersion  = false;
+                    cv.VersionData     = EncodingUtil.base64Decode(fileBase64);
+                    uploadedCVs.add(cv);
+                }
+
+                if (!uploadedCVs.isEmpty()) {
+                    insert uploadedCVs;
+
+                    Set<Id> cvIds = new Set<Id>();
+                    for (ContentVersion cv : uploadedCVs) cvIds.add(cv.Id);
+
+                    List<ContentVersion> insertedCVs = [
+                        SELECT Id, ContentDocumentId
+                        FROM ContentVersion
+                        WHERE Id IN :cvIds
+                    ];
+
+                    List<ContentDocumentLink> cdls = new List<ContentDocumentLink>();
+                    for (ContentVersion cv : insertedCVs) {
+                        ContentDocumentLink cdl = new ContentDocumentLink();
+                        cdl.ContentDocumentId = cv.ContentDocumentId;
+                        cdl.LinkedEntityId    = qId;
+                        cdl.ShareType         = 'V';
+                        cdls.add(cdl);
+                    }
+                    insert cdls;
+                }
+            } catch (Exception e) {
+                System.debug('Error saving uploaded attachments: ' + e.getMessage());
+            }
+        }
+
         PageReference pageRef = new PageReference('/' + qId);
         pageRef.setRedirect(true);
         return pageRef;    
     }
     
     public PageReference saveAndSend() {
+        attachmentData = ApexPages.currentPage().getParameters().get('attachmentData');
         if (!isValid || String.isBlank(emailId) || String.isBlank(subject)) {
             ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Email Id and subject are mandatory fields, please verify.'));
             return null;
@@ -421,7 +482,73 @@ LatestPublishedVersionIdList.addAll(LatestPublishedVersionIds);
 email.setEntityAttachments(LatestPublishedVersionIdList);
 } */
         
-        email.setEntityAttachments(new List<String>{ contentVersion.ContentDocument.LatestPublishedVersionId });
+        // ── Step 1: collect all LatestPublishedVersionIds for email ──
+        List<String> attachmentIds = new List<String>();
+
+        // Always attach the generated Quote PDF first
+        attachmentIds.add(contentVersion.ContentDocument.LatestPublishedVersionId);
+
+        // ── Step 2: process user-uploaded files ──
+        if (String.isNotBlank(attachmentData)) {
+            try {
+                List<Object> fileList = (List<Object>) JSON.deserializeUntyped(attachmentData);
+
+                // Bulk-insert all ContentVersions at once
+                List<ContentVersion> uploadedCVs = new List<ContentVersion>();
+                for (Object fileObj : fileList) {
+                    Map<String, Object> fileMap = (Map<String, Object>) fileObj;
+                    String fileName   = (String) fileMap.get('name');
+                    String fileBase64 = (String) fileMap.get('data');
+
+                    ContentVersion cv = new ContentVersion();
+                    cv.ContentLocation = 'S';
+                    cv.PathOnClient    = fileName;
+                    cv.Title           = fileName;
+                    cv.isMajorVersion  = false;
+                    cv.VersionData     = EncodingUtil.base64Decode(fileBase64);
+                    uploadedCVs.add(cv);
+                }
+
+                if (!uploadedCVs.isEmpty()) {
+                    insert uploadedCVs;
+
+                    // Re-query to get ContentDocumentId + LatestPublishedVersionId
+                    Set<Id> cvIds = new Set<Id>();
+                    for (ContentVersion cv : uploadedCVs) cvIds.add(cv.Id);
+
+                    List<ContentVersion> insertedCVs = [
+                        SELECT Id, ContentDocumentId, ContentDocument.LatestPublishedVersionId
+                        FROM ContentVersion
+                        WHERE Id IN :cvIds
+                    ];
+
+                    // Bulk-insert ContentDocumentLinks to link files to the Quote
+                    List<ContentDocumentLink> cdlsList = new List<ContentDocumentLink>();
+                    for (ContentVersion cv : insertedCVs) {
+                        ContentDocumentLink cdl = new ContentDocumentLink();
+                        cdl.ContentDocumentId = cv.ContentDocumentId;
+                        cdl.LinkedEntityId    = qId;
+                        cdl.ShareType         = 'V';
+                        cdlsList.add(cdl);
+
+                        // Add to email attachment list
+                        attachmentIds.add(cv.ContentDocument.LatestPublishedVersionId);
+                    }
+                    insert cdlsList;
+
+                    System.debug('Uploaded files linked to Quote: ' + cdlsList.size());
+                }
+            } catch (Exception e) {
+                System.debug('Error processing uploaded attachments: ' + e.getMessage());
+                ApexPages.addMessage(new ApexPages.Message(
+                    ApexPages.Severity.WARNING,
+                    'Quote PDF saved but some attachments could not be processed: ' + e.getMessage()
+                ));
+            }
+        }
+
+        System.debug('Total email attachments: ' + attachmentIds.size());
+        email.setEntityAttachments(attachmentIds);
         
         
         if (String.isNotBlank(quData.Opportunity.Owner.Email)) {

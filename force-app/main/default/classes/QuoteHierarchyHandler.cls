@@ -149,14 +149,19 @@ public class QuoteHierarchyHandler {
         if (!quoteIdsToUpdateLineItems.isEmpty()) {
             List<QuoteLineItem> qliToUpdate = new List<QuoteLineItem>();
             
-            for (QuoteLineItem qli : [
+            List<QuoteLineItem> filteredQLIs = [
                 SELECT Id, QuoteId, Sales_Rep__c, Sales_Manager__c,
                        Country_Continent_Sales_Head_LOB_Head__c,
                        Global_Sales_Head__c, Rotex_Board_Member__c,
                        Managing_Director_Country_Manage__c
                 FROM QuoteLineItem
                 WHERE QuoteId IN :quoteIdsToUpdateLineItems
-            ]) {
+            ];
+
+            System.debug('Filtered QLIs count: ' + filteredQLIs.size());
+            System.debug('Filtered QLIs: ' + filteredQLIs);
+
+            for (QuoteLineItem qli : filteredQLIs) {
                 Quote parentQuote = hierarchyByQuoteId.get(qli.QuoteId);
                 if (parentQuote == null) continue;
                 

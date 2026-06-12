@@ -1,4 +1,4 @@
-public class editDiscountQuantityController {
+public without sharing class editDiscountQuantityController {
     @AuraEnabled(cacheable=true)
     public static List<QuoteLineItem> getQuoteLineItem(String qId) {
         return [

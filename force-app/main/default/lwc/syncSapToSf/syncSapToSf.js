@@ -3,12 +3,16 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import syncCustomer from '@salesforce/apex/SyncSapToSf.syncCustomer';
 import getMaterialMaster from '@salesforce/apex/SyncSapToSf.getMaterialMaster';
 import getPricingMaster from '@salesforce/apex/SyncSapToSf.getPricingMaster';
+import getCustomerArcPricing from '@salesforce/apex/SyncSapToSf.getCustomerArcPricing';
 
 export default class SyncSapToSf extends LightningElement {
     customerCode = '';
     materialCode = '';
+    arcPricingCustomerCode = '';
+
     isCustomerLoading = false;
     isMaterialLoading = false;
+    isArcPricingLoading = false;
 
     pricingMaterialCode = '';
     isPricingLoading = false;
@@ -25,6 +29,10 @@ export default class SyncSapToSf extends LightningElement {
         return this.isPricingLoading || !this.pricingMaterialCode.trim();
     }
 
+    get isArcPricingButtonDisabled() {
+        return this.isArcPricingLoading || !this.arcPricingCustomerCode.trim();
+    }
+
     handleCustomerCodeChange(event) {
         this.customerCode = event.target.value;
     }
@@ -35,6 +43,10 @@ export default class SyncSapToSf extends LightningElement {
 
     handlePricingCodeChange(event) {
         this.pricingMaterialCode = event.target.value;
+    }
+
+    handleArcPricingCodeChange(event) {
+        this.arcPricingCustomerCode = event.target.value;
     }
 
     async handleGetCustomer() {
@@ -58,6 +70,14 @@ export default class SyncSapToSf extends LightningElement {
             loadingProperty: 'isPricingLoading',
             action: () => getPricingMaster({ materialCode: this.pricingMaterialCode.trim() }),
             successTitle: 'Pricing updated'
+        });
+    }
+
+    async handleUpdateArcPricing() {
+        await this.runSync({
+            loadingProperty: 'isArcPricingLoading',
+            action: () => getCustomerArcPricing({ customerCode: this.arcPricingCustomerCode.trim() }),
+            successTitle: 'Customer ARC Pricing updated'
         });
     }
 

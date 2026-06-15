@@ -168,3 +168,43 @@
     background-color: #6c35be;
     border-color: #6c35be;
 }
+
+.sync-section_arc_pricing {
+    background: #f3f3f3;
+    border-radius: 6px;
+    padding: 16px;
+    position: relative;
+    padding-left: 20px;
+    margin-bottom: 17px;
+}
+
+.sync-section_arc_pricing::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    border-radius: 6px 0 0 6px;
+    background: #e67e22;
+}
+
+.btn-arc-pricing .slds-button {
+    background-color: #e67e22;
+    border-color: #e67e22;
+}
+
+.btn-arc-pricing .slds-button:hover {
+    background-color: #d46f15;
+    border-color: #d46f15;
+}
+
+.btn-arc-pricing .slds-button:focus {
+    background-color: #d46f15;
+    border-color: #d46f15;
+}
+
+.btn-arc-pricing .slds-button:active {
+    background-color: #c8640f;
+    border-color: #c8640f;
+}

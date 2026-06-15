@@ -36,6 +36,12 @@ public with sharing class SyncSapToSf {
         return new SyncResult(true, 'Pricing sync completed.', 'success');
     }
 
+    @AuraEnabled
+    public static SyncResult getCustomerArcPricing(String customerCode) {
+        IntegrationHandler.ARCPricingMaster(customerCode);
+        return new SyncResult(true, 'Customer ARC Pricing sync completed.', 'success');
+    }
+
     public static Integer getCustomerMaster(String customerCode) {
         CustomerSyncPayload payload = fetchCustomerPayload(customerCode);
         return upsertCustomers(payload.customers, payload.dateOfExc);

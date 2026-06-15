@@ -172,6 +172,66 @@
                 </div>
 
             </div>
+
+            <!-- Divider -->
+            <div class="section-divider">
+                <div class="divider-line"></div>
+                <div class="divider-line"></div>
+            </div>
+
+            <!-- Customer ARC Pricing Section -->
+            <div class="sync-section sync-section_arc_pricing">
+                <template if:true={isArcPricingLoading}>
+                    <div class="slds-spinner_container">
+                        <lightning-spinner size="medium" alternative-text="Loading..."></lightning-spinner>
+                    </div>
+                </template>
+
+                <div class="section-header">
+                    <lightning-icon
+                        icon-name="utility:moneybag"
+                        size="x-small"
+                        class="section-icon">
+                    </lightning-icon>
+
+                    <span class="slds-text-title slds-text-color_weak section-label">
+                        Customer ARC Pricing
+                    </span>
+                </div>
+
+                <div class="slds-form-element">
+                    <label class="slds-form-element__label" for="arcPricingInput">
+                        <abbr class="slds-required" title="required">*</abbr>
+                        Customer Code
+                    </label>
+
+                    <div class="slds-form-element__control">
+                        <input
+                            id="arcPricingInput"
+                            type="text"
+                            class="slds-input"
+                            placeholder="e.g. 1001162"
+                            value={arcPricingCustomerCode}
+                            oninput={handleArcPricingCodeChange}
+                            disabled={isArcPricingLoading}
+                        />
+                    </div>
+                </div>
+
+                <div class="action-row">
+                    <div class="status-indicator">
+                    </div>
+
+                    <lightning-button
+                        label="Update ARC Pricing"
+                        variant="brand"
+                        icon-name="utility:right"
+                        icon-position="right"
+                        onclick={handleUpdateArcPricing}
+                        disabled={isArcPricingButtonDisabled}>
+                    </lightning-button>
+                </div>
+            </div>
         </div>
 
     </lightning-card>

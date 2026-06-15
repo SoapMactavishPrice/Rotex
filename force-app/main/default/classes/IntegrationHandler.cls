@@ -1525,12 +1525,6 @@ system.debug('grandchild created');
     
     @AuraEnabled
     public static string salesOrderCreation(String parentId, String bpFuncId, String shFuncId, String caFuncId) {
-        // String jsonPayload ='{"SalesQuotationType":"ZQT","SalesOrganization":"1100","DistributionChannel":"10","OrganizationDivision":"10","SoldToParty":"7000001","PurchaseOrderByCustomer":"TESTU","CustomerPurchaseOrderDate":"/Date(1716374400000)/","RequestedDeliveryDate":"/Date(1716460800000)/","BindingPeriodValidityStartDate":"/Date(1716374400000)/","BindingPeriodValidityEndDate":"/Date(1716460800000)/","to_Partner":[{"PartnerFunction":\"SH\",\"Customer\":\"1000441\"},{\"PartnerFunction\":\"BP\",\"Customer\":\"1000441\"}],\"to_Item\":[{\"SalesQuotationItem\":\"10\",\"Material\":\"22000000002\",\"RequestedQuantity\":\"5\",\"Plant\":\"1100\"},{\"SalesQuotationItem\":\"20\",\"Material\":\"22000000002\",\"RequestedQuantity\":\"3\",\"Plant\":\"1200\"}]}';
-        // String jsonPayload = '{"SalesQuotationType":"ZQT","SalesOrganization":"1100","DistributionChannel":"10","OrganizationDivision":"10","SoldToParty":"7000001","PurchaseOrderByCustomer":"Test Data 23","CustomerPurchaseOrderDate":"/Date(1716374400000)/","RequestedDeliveryDate":"/Date(1716460800000)/","BindingPeriodValidityStartDate":"/Date(1716374400000)/","BindingPeriodValidityEndDate":"/Date(1716460800000)/","to_Partner":[{"PartnerFunction":"SH","Customer":"1000441"},{"PartnerFunction":"BP","Customer":"1000441"}],"to_Item":[{"SalesQuotationItem":"10","Material":"22000000002","RequestedQuantity":"5","Plant":"1100"},{"SalesQuotationItem":"20","Material":"22000000002","RequestedQuantity":"3","Plant":"1200"}]}';
-        // String jsonPayload = '{"SalesQuotationType":"ZQT","SalesOrganization":"1200","DistributionChannel":"20","OrganizationDivision":"20","SoldToParty":"7000002","PurchaseOrderByCustomer":"Demo Order 45","CustomerPurchaseOrderDate":"/Date(1717000000000)/","RequestedDeliveryDate":"/Date(1717086400000)/","BindingPeriodValidityStartDate":"/Date(1717000000000)/","BindingPeriodValidityEndDate":"/Date(1717179200000)/","to_Partner":[{"PartnerFunction":"SH","Customer":"1000555"},{"PartnerFunction":"BP","Customer":"1000555"}],"to_Item":[{"SalesQuotationItem":"10","Material":"22000000003","RequestedQuantity":"10","Plant":"1300"},{"SalesQuotationItem":"20","Material":"22000000005","RequestedQuantity":"2","Plant":"1300"}]}';
-        // String jsonPayload = '{"SalesQuotationType":"ZQT","SalesOrganization":"1000","DistributionChannel":"30","OrganizationDivision":"10","SoldToParty":"7000003","PurchaseOrderByCustomer":"PO Ref 789","CustomerPurchaseOrderDate":"/Date(1718000000000)/","RequestedDeliveryDate":"/Date(1718086400000)/","BindingPeriodValidityStartDate":"/Date(1718000000000)/","BindingPeriodValidityEndDate":"/Date(1718265600000)/","to_Partner":[{"PartnerFunction":"SH","Customer":"1000666"},{"PartnerFunction":"BP","Customer":"1000666"}],"to_Item":[{"SalesQuotationItem":"10","Material":"22000000004","RequestedQuantity":"8","Plant":"1100"}]}';
-        // String jsonPayload = '{"SalesQuotationType":"ZQT","SalesOrganization":"1100","DistributionChannel":"10","OrganizationDivision":"30","SoldToParty":"7000004","PurchaseOrderByCustomer":"Customer Order 001","CustomerPurchaseOrderDate":"/Date(1719000000000)/","RequestedDeliveryDate":"/Date(1719172800000)/","BindingPeriodValidityStartDate":"/Date(1719000000000)/","BindingPeriodValidityEndDate":"/Date(1719345600000)/","to_Partner":[{"PartnerFunction":"SH","Customer":"1000777"},{"PartnerFunction":"BP","Customer":"1000777"}],"to_Item":[{"SalesQuotationItem":"10","Material":"22000000001","RequestedQuantity":"15","Plant":"1100"},{"SalesQuotationItem":"20","Material":"22000000006","RequestedQuantity":"4","Plant":"1200"},{"SalesQuotationItem":"30","Material":"22000000007","RequestedQuantity":"1","Plant":"1200"}]}';
-        // String jsonPayload = '{"SalesQuotationType":"ZQT","SalesOrganization":"1100","DistributionChannel":"10","OrganizationDivision":"10","SoldToParty":"7000001","PurchaseOrderByCustomer":"TESTU","CustomerPurchaseOrderDate":"/Date(1742409000000)/","RequestedDeliveryDate":"/Date(1743359400000)/","BindingPeriodValidityStartDate":"/Date(1740767400000)/","BindingPeriodValidityEndDate":"/Date(1743791400000)/","to_Partner":[{"PartnerFunction":"SH","Customer":"1000441"},{"PartnerFunction":"BP","Customer":"1000441"}],"to_Item":[{"SalesQuotationItem":"10","Material":"22000000002","RequestedQuantity":"5","Plant":"1100"},{"SalesQuotationItem":"20","Material":"22000000002","RequestedQuantity":"3","Plant":"1200"}]}';
         
         String jsonPayload = '';
         HttpResponse resp;
@@ -1539,81 +1533,88 @@ system.debug('grandchild created');
             
             jsonPayload = getQuotePayload(parentId, bpFuncId, shFuncId, caFuncId);
             System.debug('JSON Payload: ' + jsonPayload);
-            //Get SAP CSRF token using get method
             
+            // If no valid payload, return error
+            if (String.isBlank(jsonPayload)) {
+                return '{"error": "Failed to generate payload"}';
+            }
+            
+            //Get SAP CSRF token using get method
             resp = UtilityCls.doGetWithBasicAuth('Get_Session_API', 'Bulk', Null, Null, '');
-            // system.debug('x-csrf-token resp : ' + resp.getHeader('x-csrf-token'));
+            
             if (resp.getStatusCode() == 200) {
                 system.debug('Get_Session_API resp: ' + resp.getBody());
-                //  system.debug('X-CSRF-Token resp : '+resp.getHeader('X-CSRF-Token'));
                 String csrfToken = resp.getHeader('x-csrf-token');
                 String cookies = resp.getHeader('set-cookie');
                 system.debug('x-csrf-token csrfToken : ' + csrfToken);
-                system.debug('x-csrf-token resp : ' + resp.getHeader('x-csrf-token'));
                 
                 // Make the POST API call
                 Http http = new Http();
                 HttpRequest request = new HttpRequest();
-                //    request.setEndpoint('https://dev.rotexautomation.com:44300/sap/opu/odata/sap/API_SALES_ORDER_SRV/A_SalesOrder'); // Replace with your API endpoint
-                // request.setEndpoint('https://qas.rotexautomation.com:44300/sap/opu/odata/sap/API_SALES_QUOTATION_SRV/A_SalesQuotation'); // Replace with your API endpoint
                 request.setEndpoint(System.Label.Push_Quote_to_SAP);
                 request.setMethod('POST');
                 request.setHeader('Content-Type', 'application/json');
                 request.setHeader('Accept', 'application/json');
                 request.setBody(jsonPayload);
-                // Set basic authentication header
-                // String username = 'RTXCTM_SD';
-                // String password = 'Iteanz$4321';
+                
                 String username = System.Label.Push_Quote_Username;
                 String password = System.Label.Push_Quote_Password;
                 String authHeader = 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(username + ':' + password));
                 request.setHeader('Authorization', authHeader);
-                request.setHeader('x-csrf-token', csrfToken); // Use the fetched token
-                request.setHeader('Content-Type', 'application/json');
-                request.setHeader('cookie', cookies); // Use the fetched cookies
-                
+                request.setHeader('x-csrf-token', csrfToken);
+                request.setHeader('cookie', cookies);
                 request.setTimeOut(120000);
                 
                 response = http.send(request);
                 
                 // Log response
                 if (response.getStatusCode() == 200 || response.getStatusCode() == 201) {
-                    List<Object> respList = (List<Object>) JSON.deserializeUntyped(response.getBody());
+                    String responseBody = response.getBody();
+                    System.debug('Response Status Code: ' + response.getStatusCode());
+                    System.debug('Response Body: ' + responseBody);
                     
-                    if (respList != null && !respList.isEmpty()) {
-                        
-                        Map<String, Object> firstResp =
-                            (Map<String, Object>) respList[0];
-                        
-                        String quotationNumber =
-                            String.valueOf(firstResp.get('SalesQuotationNum'));
-                        
-                        if (quotationNumber != null) {
-                            
-                            Quote q = new Quote(
-                                Id = parentId,
-                                SAP_Quotation_Number__c = quotationNumber
-                            );
-                            
-                            update q;
+                    // Try to extract SAP number from response
+                    String quotationNumber = null;
+                    
+                    if (String.isNotBlank(responseBody)) {
+                        try {
+                            List<Object> respList = (List<Object>) JSON.deserializeUntyped(responseBody);
+                            if (respList != null && !respList.isEmpty()) {
+                                Map<String, Object> firstResp = (Map<String, Object>) respList[0];
+                                quotationNumber = String.valueOf(firstResp.get('SalesQuotationNum'));
+                            }
+                        } catch (Exception e) {
+                            System.debug('Parse error: ' + e.getMessage());
                         }
+                    }
+                    
+                    // Also check Location header
+                    if (String.isBlank(quotationNumber)) {
+                        String locationHeader = response.getHeader('Location');
+                        if (String.isNotBlank(locationHeader) && locationHeader.contains('SalesQuotation(')) {
+                            String temp = locationHeader.substring(locationHeader.indexOf('SalesQuotation(') + 16);
+                            quotationNumber = temp.substring(0, temp.indexOf('\''));
+                        }
+                    }
+                    
+                    if (String.isNotBlank(quotationNumber)) {
+                        Quote q = new Quote(Id = parentId, SAP_Quotation_Number__c = quotationNumber);
+                        update q;
+                        System.debug('✅ Quote updated with SAP Number: ' + quotationNumber);
                     }
                 } else {
                     System.debug('API call failed: ' + response.getStatusCode() + ' ' + response.getBody());
                 }
-                
             }
         } catch (Exception e) {
             System.debug('Exception: ' + e.getMessage());
         } finally {
-            // Log the API call
-            //  UtilityCls.logApiCall('salesOrderCreation', '', '', response.getBody, '', response.getStatusCode());
-            // UtilityCls.logApiCall('QuotationCreation', '', jsonPayload, response.getBody(), '', 0);
-            UtilityCls.logApiCall('QuotationCreation', '', jsonPayload, response.getBody(), '', response.getStatusCode());
+            if (response != null) {
+                UtilityCls.logApiCall('QuotationCreation', '', jsonPayload, response.getBody(), '', response.getStatusCode(),parentId);
+            }
         }
-        return response.getBody();
-    }
-    
+        return response != null ? response.getBody() : '';
+    }    
     public static String getSalesOrderPayload(String parentId) {
         String jsonPayload = '';
         try {
@@ -1746,7 +1747,7 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
                          Quote_Type__c, SalesOrganization__c, DistributionChannel__c, OrganizationDivision__c, CurrencyISOCode,
                          SoldToParty__c, PurchaseOrderByCustomer__c, CustomerPurchaseOrderDate__c, Account.Discount__c,
                          RequestedDeliveryDate__c, Quote_Date__c, Quote_Valid_Till__c, Account.SAP_Customer_Code__c, Customer_Reference_Date__c,Delivery_Period__c,Warranty_Terms__c,Liquidate_Terms__c,SAP_Quotation_Number__c,OwnerId,Owner.Name,Rev_No__c,Rev_Date__c,
-                         PBG_or_BG_required__c, PBG_or_BG_comments__c, LD_Clause_Applicable__c, LD_Clause_comments__c,Customer_Reference_No__c,Special_Remarks__c FROM Quote
+                         PBG_or_BG_required__c, PBG_or_BG_comments__c, LD_Clause_Applicable__c, LD_Clause_comments__c,Customer_Reference_No__c,Special_Remarks__c,Quote__c  FROM Quote
                          WHERE Id =: quoteId
                         ];
             for (Quote q: quoteList) {
@@ -1771,6 +1772,7 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
                 AND Division__c != '00'
                 AND Distribution_Channel__c = '10'
                 AND Account__c =: quoteList[0].AccountId
+                LIMIT 1
             ];
             
             Set < String > pdIdsSet = new Set < String > ();
@@ -1822,6 +1824,8 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
                 
                 DateTime startDt = DateTime.newInstance(todayDate, Time.newInstance(0,0,0,0));
                 DateTime endDt = DateTime.newInstance(endDate, Time.newInstance(0,0,0,0));
+                
+                quoteWrapper.Quote_c = q.Id;
                 
                 quoteWrapper.BindingPeriodValidityStartDate = startDt.format('dd.MM.yyyy');
                 quoteWrapper.BindingPeriodValidityEndDate = endDt.format('dd.MM.yyyy');
@@ -1887,6 +1891,66 @@ pricingElementWrapper.ConditionCurrency = qli.Quote.CurrencyISOCode;
                         ind = ind + 10;
                     }
                 }
+                
+                // Get attachment URLs (max 5 separate fields) - Use PUBLIC URLs
+                List<String> attachmentUrls = new List<String>();
+                
+                List<ContentDocumentLink> docLinks = [
+                    SELECT ContentDocumentId, ContentDocument.Title
+                    FROM ContentDocumentLink
+                    WHERE LinkedEntityId = :q.Id
+                    ORDER BY SystemModstamp DESC
+                    LIMIT 5
+                ];
+                
+                if (!docLinks.isEmpty()) {
+                    Set<Id> contentDocIds = new Set<Id>();
+                    for (ContentDocumentLink cdl : docLinks) {
+                        contentDocIds.add(cdl.ContentDocumentId);
+                    }
+                    
+                    List<ContentDistribution> distributions = [
+                        SELECT DistributionPublicUrl,
+                        ContentDownloadUrl,
+                        ContentDocumentId
+                        FROM ContentDistribution
+                        WHERE ContentDocumentId IN :contentDocIds
+                    ];
+                    
+                    Map<Id, String> docIdToPublicUrl = new Map<Id, String>();
+                    
+                    for (ContentDistribution cd : distributions) {
+                        
+                        if (String.isNotBlank(cd.ContentDownloadUrl)) {
+                            
+                            docIdToPublicUrl.put(
+                                cd.ContentDocumentId,
+                                cd.ContentDownloadUrl
+                            );
+                            
+                        } else if (String.isNotBlank(cd.DistributionPublicUrl)) {
+                            
+                            docIdToPublicUrl.put(
+                                cd.ContentDocumentId,
+                                cd.DistributionPublicUrl
+                            );
+                        }
+                    }
+                    
+                    for (ContentDocumentLink cdl : docLinks) {
+                        String publicUrl = docIdToPublicUrl.get(cdl.ContentDocumentId);
+                        if (String.isNotBlank(publicUrl)) {
+                            attachmentUrls.add(publicUrl);
+                        }
+                    }
+                }
+                
+                // Assign to 5 separate fields
+                quoteWrapper.Attachment1 = attachmentUrls.size() > 0 ? attachmentUrls[0] : '';
+                quoteWrapper.Attachment2 = attachmentUrls.size() > 1 ? attachmentUrls[1] : '';
+                quoteWrapper.Attachment3 = attachmentUrls.size() > 2 ? attachmentUrls[2] : '';
+                quoteWrapper.Attachment4 = attachmentUrls.size() > 3 ? attachmentUrls[3] : '';
+                quoteWrapper.Attachment5 = attachmentUrls.size() > 4 ? attachmentUrls[4] : '';
                 
                 quoteWrapperList.add(quoteWrapper);
             }
@@ -2077,6 +2141,13 @@ pricingElementWrapper.ConditionCurrency = qli.Quote.CurrencyISOCode;
         public String LD_Clause_Comments; // LD_Clause_Comments - LD_Clause_comments
         public String Remarks;
         public String Special_Remarks;
+        public String Quote_c;
+        
+        public String Attachment1;
+        public String Attachment2;
+        public String Attachment3;
+        public String Attachment4;
+        public String Attachment5;
     }
     
     public class PartnerWrapper {
@@ -2262,22 +2333,6 @@ UPSERT prodList;
                 return result;
             }
             
-            // Delete existing PO attachments for this Quote
-       /*     List<ContentDocumentLink> existingLinks = [
-                SELECT ContentDocumentId FROM ContentDocumentLink 
-                WHERE LinkedEntityId = :quoteId
-            ];
-            
-            if (!existingLinks.isEmpty()) {
-                List<ContentDocument> docsToDelete = new List<ContentDocument>();
-                for (ContentDocumentLink link : existingLinks) {
-                    docsToDelete.add(new ContentDocument(Id = link.ContentDocumentId));
-                }
-                if (!docsToDelete.isEmpty()) {
-                    delete docsToDelete;
-                }
-            }	*/
-            
             // Create ContentVersion
             ContentVersion cv = new ContentVersion();
             cv.Title = fileName;
@@ -2286,12 +2341,22 @@ UPSERT prodList;
             cv.FirstPublishLocationId = quoteId;
             insert cv;
             
-            // Get the ContentVersion Id for preview
-            ContentVersion insertedCV = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id];
+            // ✅ ADD THIS - Create ContentDistribution for public access
+            ContentDistribution cd = new ContentDistribution();
+            cd.Name = fileName;
+            cd.ContentVersionId = cv.Id;
+            cd.PreferencesAllowViewInBrowser = true;
+            cd.PreferencesAllowOriginalDownload = true;
+            cd.PreferencesLinkLatestVersion = true;
+            insert cd;
+            
+            // Get the public URL
+            cd = [SELECT DistributionPublicUrl FROM ContentDistribution WHERE Id = :cd.Id];
+            String publicUrl = cd.DistributionPublicUrl;
             
             result.put('success', true);
-            result.put('contentVersionId', insertedCV.Id);
-            result.put('contentDocumentId', insertedCV.ContentDocumentId);
+            result.put('contentVersionId', cv.Id);
+            result.put('fileUrl', publicUrl);
             result.put('message', 'File uploaded successfully');
             
         } catch (Exception e) {

@@ -525,9 +525,9 @@ public class IntegrationHandler {
                     pRecord.Bill_To__c = (String) parent.bill_to;
                     pRecord.Bill_To_Customer_Name__c = (String) accId.get(String.valueOf(parent.bill_to));
                     pRecord.Cust_Ref__c = (String) parent.cust_ref;
-                    pRecord.Cust_Ref_Date__c = Date.valueOf(parent.custref_date);
-                    pRecord.EffectiveDate = Date.valueOf(parent.created_on_date);
-                    pRecord.Req_Del_Date__c = Date.valueOf(parent.reqdel_date);
+                    pRecord.Cust_Ref_Date__c = parent.custref_date != null ? Date.valueOf(parent.custref_date) : null;
+                    pRecord.EffectiveDate = parent.created_on_date != null ? Date.valueOf(parent.created_on_date) : System.today();
+                    pRecord.Req_Del_Date__c = parent.reqdel_date != null ? Date.valueOf(parent.reqdel_date) : null;
                     pRecord.Sales_Org__c = (String) parent.sales_org;
                     pRecord.Distribution_Channel__c = (String) parent.distribution_channel;
                     pRecord.Division__c = (String) parent.division;
@@ -1524,14 +1524,18 @@ system.debug('grandchild created');
     }
     
     @AuraEnabled
-    public static string salesOrderCreation(String parentId, String bpFuncId, String shFuncId, String caFuncId) {
+    public static string salesOrderCreation(String parentId, String bpFuncId, String shFuncId, String caFuncId, String salesQuotationType) {
         
         String jsonPayload = '';
         HttpResponse resp;
         HttpResponse response;
         try {
             
-            jsonPayload = getQuotePayload(parentId, bpFuncId, shFuncId, caFuncId);
+            jsonPayload = getQuotePayload(parentId, bpFuncId, shFuncId, caFuncId, salesQuotationType);
+            Quote quoteToBeUpdate = new Quote();
+            quoteToBeUpdate.Id = parentId;
+            quoteToBeUpdate.Sales_Quotation_Type__c = salesQuotationType;
+            update quoteToBeUpdate;
             System.debug('JSON Payload: ' + jsonPayload);
             
             // If no valid payload, return error
@@ -1731,7 +1735,7 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
     }
     
     //New Format
-    public static String getQuotePayload(String quoteId, String bpId, String shId, String caId) {
+    public static String getQuotePayload(String quoteId, String bpId, String shId, String caId, String salesQuotationType) {
         String jsonPayload = '';
         try {
             // Initialize collections
@@ -1805,7 +1809,7 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
                 quoteWrapper.Delivery_Period = String.valueOf(q.Delivery_Period__c);
                 quoteWrapper.Warranty_Terms = q.Warranty_Terms__c;
                 quoteWrapper.Liquidity_Terms = q.Liquidate_Terms__c;
-                quoteWrapper.SalesQuotationType = 'ZQT';
+                quoteWrapper.SalesQuotationType = String.isNotBlank(salesQuotationType) ? salesQuotationType : 'ZQT';
                 // quoteWrapper.SalesOrganization = q.SalesOrganization__c;
                 quoteWrapper.SalesOrganization = saItem.Sales_Org__c;
                 // quoteWrapper.DistributionChannel = q.DistributionChannel__c;

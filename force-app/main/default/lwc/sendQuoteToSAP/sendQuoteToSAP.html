@@ -193,6 +193,32 @@
 
 						</lightning-layout-item>
 
+						<!-- Sales Quotation Type ROW -->
+
+						<lightning-layout-item size="12">
+
+							<lightning-layout multiple-rows>
+
+								<lightning-layout-item size="6" padding="around-small">
+
+									<label class="slds-form-element__label">
+										<span style="color: red;">* </span>Sales Quotation Type
+									</label>
+
+									<lightning-input-field
+										field-name="Sales_Quotation_Type__c"
+										variant="label-hidden"
+										value={salesQuotationType}
+										onchange={handleSalesQuotationTypeChange}
+										data-name="salesQuotationTypeField">
+									</lightning-input-field>
+
+								</lightning-layout-item>
+
+							</lightning-layout>
+
+						</lightning-layout-item>
+
 						<lightning-layout-item size="12" padding="around-small" style="padding: 0 0 10px 0;">
 							<div class="subheaddiv">Quotation Product Information</div>
 						</lightning-layout-item>

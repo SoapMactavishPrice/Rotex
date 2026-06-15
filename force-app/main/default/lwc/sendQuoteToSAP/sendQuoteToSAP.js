@@ -28,6 +28,7 @@ export default class SendQuoteToSAP extends LightningElement {
     @track caValue = '';
     @track showPBGComments = false;
     @track showLDComments = false;
+    @track salesQuotationType = 'ZQT';
     @track uploadedFiles = [];
     @track isViewFile = false;
     @track selectedFilesForPreview = [];
@@ -161,6 +162,10 @@ export default class SendQuoteToSAP extends LightningElement {
         return this.uploadedFiles.length === 0;
     }
 
+    handleSalesQuotationTypeChange(event) {
+        this.salesQuotationType = event.detail.value;
+    }
+
     // Send Quote as SO to SAP
     handleQuoteCheck() {
         quoteValidation({
@@ -262,7 +267,7 @@ export default class SendQuoteToSAP extends LightningElement {
             return;
         }
 
-        const mandatoryFields = ['RequestedDeliveryDate__c', 'Customer_Reference_No__c', 'Customer_Reference_Date__c'];
+        const mandatoryFields = ['RequestedDeliveryDate__c', 'Customer_Reference_No__c', 'Customer_Reference_Date__c', 'Sales_Quotation_Type__c'];
         const lwcInputFields = this.template.querySelectorAll('lightning-input-field');
         let validationFlag = false;
 
@@ -273,7 +278,7 @@ export default class SendQuoteToSAP extends LightningElement {
                 }
                 field.reportValidity();
             });
-            if (this.bpValue == '' || this.shValue == '') {
+            if (this.bpValue == '' || this.shValue == '' || (this.salesQuotationType == '' || this.salesQuotationType == null || this .salesQuotationType == undefined)) {
                 validationFlag = true;
             }
 
@@ -380,7 +385,8 @@ export default class SendQuoteToSAP extends LightningElement {
             parentId: this.recordId,
             bpFuncId: this.bpValue,
             shFuncId: this.shValue,
-            caFuncId: this.caValue
+            caFuncId: this.caValue,
+            salesQuotationType: this.salesQuotationType
         }).then((result) => {
             console.log('result ', result);
 

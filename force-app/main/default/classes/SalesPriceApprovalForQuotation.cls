@@ -1450,11 +1450,11 @@ public without sharing class SalesPriceApprovalForQuotation {
                     // ─────────────────────────────────────────────────────
                     // ─────────────────────────────────────────────────────
 
-                    if (statusChanged && (existing == null || !canSubmitAsFinal)) {
-                        throw new AuraHandledException(
-                            'Only the Final Discount Approver can change the approval status of a Quote Line Item.'
-                        );
-                    }
+                    // if (statusChanged && (existing == null || !canSubmitAsFinal)) {
+                    //     throw new AuraHandledException(
+                    //         'Only the Final Discount Approver can change the approval status of a Quote Line Item.'
+                    //     );
+                    // }
 
                     QuoteLineItem qli = new QuoteLineItem();
                     qli.Id = eachQli.quoteLineItemId;

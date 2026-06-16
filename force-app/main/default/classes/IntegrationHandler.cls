@@ -1532,10 +1532,6 @@ system.debug('grandchild created');
         try {
             
             jsonPayload = getQuotePayload(parentId, bpFuncId, shFuncId, caFuncId, salesQuotationType);
-            Quote quoteToBeUpdate = new Quote();
-            quoteToBeUpdate.Id = parentId;
-            quoteToBeUpdate.Sales_Quotation_Type__c = salesQuotationType;
-            update quoteToBeUpdate;
             System.debug('JSON Payload: ' + jsonPayload);
             
             // If no valid payload, return error
@@ -1613,6 +1609,10 @@ system.debug('grandchild created');
         } catch (Exception e) {
             System.debug('Exception: ' + e.getMessage());
         } finally {
+            Quote quoteToBeUpdate = new Quote();
+            quoteToBeUpdate.Id = parentId;
+            quoteToBeUpdate.Sales_Quotation_Type__c = salesQuotationType;
+            update quoteToBeUpdate;
             if (response != null) {
                 UtilityCls.logApiCall('QuotationCreation', '', jsonPayload, response.getBody(), '', response.getStatusCode(),parentId);
             }

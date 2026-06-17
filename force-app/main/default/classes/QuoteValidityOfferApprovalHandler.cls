@@ -318,7 +318,7 @@ public with sharing class QuoteValidityOfferApprovalHandler {
 
         // Send all emails
         if (!emails.isEmpty()) {
-            Messaging.sendEmail(emails);
+            // Messaging.sendEmail(emails);
         }
     }
 

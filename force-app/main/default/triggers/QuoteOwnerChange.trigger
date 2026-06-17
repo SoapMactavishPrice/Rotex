@@ -76,6 +76,6 @@ trigger QuoteOwnerChange on Quote (after update) {
     }
 
     if (!emails.isEmpty()) {
-        Messaging.sendEmail(emails);
+        // Messaging.sendEmail(emails);
     }
 }

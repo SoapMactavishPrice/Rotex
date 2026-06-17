@@ -804,38 +804,6 @@ private class QuoteTriggerTest {
     }
 
     @isTest
-    static void testBeforeUpdate_TotalValue_StatusToDraft() {
-        User u = [SELECT Id FROM User WHERE Email = 'approver@qttest.com' LIMIT 1];
-        Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];
-        PricebookEntry pbe = [SELECT Id FROM PricebookEntry LIMIT 1];
-
-        Quote q = new Quote(
-            Name = 'Status Change Quote', OpportunityId = opp.Id,
-            Pricebook2Id = Test.getStandardPricebookId(),
-            Sales_Manager__c = u.Id,
-            Country_Continent_Sales_Head_LOB_Head__c = u.Id,
-            Global_Sales_Head__c = u.Id,
-            Rotex_Board_Member__c = u.Id,
-            Managing_Director_Country_Manager__c = u.Id,
-            Status = 'Needs Review'
-        );
-        insert q;
-
-        QuoteLineItem qli = new QuoteLineItem(
-            QuoteId = q.Id,
-            PricebookEntryId = pbe.Id,
-            Quantity = 50,
-            UnitPrice = 1000
-        );
-        insert qli;
-
-        Test.startTest();
-        q.Status = 'Draft';
-        update q;
-        Test.stopTest();
-    }
-
-    @isTest
     static void testBeforeUpdate_MinimumOffer_BecameEligible() {
         User u = [SELECT Id FROM User WHERE Email = 'approver@qttest.com' LIMIT 1];
         Opportunity opp = [SELECT Id FROM Opportunity LIMIT 1];

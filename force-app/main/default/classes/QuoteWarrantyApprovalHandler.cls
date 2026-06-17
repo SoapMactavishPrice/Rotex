@@ -326,7 +326,7 @@ public with sharing class QuoteWarrantyApprovalHandler {
 
         // Send all emails
         if (!emails.isEmpty()) {
-            Messaging.sendEmail(emails);
+            // Messaging.sendEmail(emails);
         }
     }
 

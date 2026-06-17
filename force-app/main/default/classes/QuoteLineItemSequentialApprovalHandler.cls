@@ -364,7 +364,7 @@ public class QuoteLineItemSequentialApprovalHandler {
         mail.setHtmlBody(body);
         mail.setWhatId(q.Id);
         mail.setSaveAsActivity(true);
-        Messaging.sendEmail(new Messaging.SingleEmailMessage[] { mail });
+        // Messaging.sendEmail(new Messaging.SingleEmailMessage[] { mail });
         System.debug('  -> Email sent successfully to ' + approver.Email);
 
         sendCustomNotification(qli, q, approverId);

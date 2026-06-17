@@ -64,7 +64,7 @@ public with sharing class SubmitQuoteController {
         email.setHtmlBody(emailBody);
         
         
-        Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{email});
+        // Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{email});
     }
     
     private static void sendCustomNotification(Quote quoteRecord, Id accountOwnerId) {

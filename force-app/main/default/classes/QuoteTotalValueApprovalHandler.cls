@@ -349,7 +349,7 @@ public with sharing class QuoteTotalValueApprovalHandler {
         }
 
         if (!emails.isEmpty()) {
-            Messaging.sendEmail(emails);
+            // Messaging.sendEmail(emails);
         }
     }
 

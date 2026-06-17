@@ -182,7 +182,7 @@ public with sharing class QuoteFinalApprovalNotificationHandler {
         }
 
         if (!emails.isEmpty()) {
-            Messaging.sendEmail(emails);
+            // Messaging.sendEmail(emails);
         }
     }
 

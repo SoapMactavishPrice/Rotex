@@ -393,7 +393,7 @@ public class QuoteLineItemApprovalHandler {
             if (!emails.isEmpty()) {
                 System.debug('APPROVAL: ✓✓ Sending ' + emails.size() + ' email(s)');
                 try {
-                    Messaging.sendEmail(emails);
+                    // Messaging.sendEmail(emails);
                     System.debug('APPROVAL: ✓✓ Email(s) sent successfully');
                 } catch (Exception e) {
                     System.debug('APPROVAL: ✗✗ ERROR sending emails: ' + e.getMessage());

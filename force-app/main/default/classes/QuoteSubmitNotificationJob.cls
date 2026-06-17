@@ -39,6 +39,6 @@ global class QuoteSubmitNotificationJob implements Schedulable {
             emails.add(mail);
         }
 
-        Messaging.sendEmail(emails);
+        // Messaging.sendEmail(emails);
     }
 }

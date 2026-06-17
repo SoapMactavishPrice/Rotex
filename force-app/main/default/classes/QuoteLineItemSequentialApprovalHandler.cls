@@ -49,7 +49,7 @@ public class QuoteLineItemSequentialApprovalHandler {
                 Managing_Director_Country_Manage__c,
                 Sales_Manager_Status__c, Country_Continent_Sales_H_LOB_Status__c,
                 Global_Sales_Head_Status__c, Rotex_Board_Member_Status__c,
-                Managing_Director_Status__c, Product2.Name,
+                Managing_Director_Status__c, Product2.Name, Product2.ProductCode,
                 ListPrice, Quantity, Discount_as_per_SAP__c
             FROM QuoteLineItem
             WHERE Id IN :qliIds
@@ -258,6 +258,7 @@ public class QuoteLineItemSequentialApprovalHandler {
             String tableRows = '';
             for (QuoteLineItem qli : approverQLIs) {
                 String productName = (qli.Product2 != null) ? qli.Product2.Name : 'N/A';
+                String productCode = (qli.Product2 != null) ? qli.Product2.ProductCode : 'N/A';
                 Decimal listPrice       = qli.ListPrice != null ? qli.ListPrice : 0;
                 Decimal discountPct     = qli.Discount_to_be_offered__c != null ? qli.Discount_to_be_offered__c : 0;
                 Decimal desiredSalesPrice = (listPrice * (1 - discountPct / 100)).setScale(2);
@@ -265,6 +266,7 @@ public class QuoteLineItemSequentialApprovalHandler {
                 tableRows +=
                     '<tr>' +
                         '<td style="border:1px solid #ccc;padding:6px 10px;">' + productName + '</td>' +
+                        '<td style="border:1px solid #ccc;padding:6px 10px;">' + productCode + '</td>' +
                         '<td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">' +
                             (qli.Quantity != null ? String.valueOf(qli.Quantity.intValue()) : '0') + '</td>' +
                         '<td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">' +
@@ -281,8 +283,9 @@ public class QuoteLineItemSequentialApprovalHandler {
             String tableHtml =
                 '<table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:13px;">' +
                     '<thead>' +
-                        '<tr style="background-color:#003366;color:#ffffff;">' +
+                        '<tr style="background-color:#007764;color:#ffffff;">' +
                             '<th style="border:1px solid #ccc;padding:8px 10px;text-align:left;">Product Name</th>' +
+                            '<th style="border:1px solid #ccc;padding:8px 10px;text-align:left;">Product Code</th>' +
                             '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Qty</th>' +
                             '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Discount as per SAP %</th>' +
                             '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Requested Discount %</th>' +

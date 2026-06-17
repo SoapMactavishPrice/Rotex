@@ -114,7 +114,7 @@ public class QuoteLineItemApprovalHandler {
         if (!productIds.isEmpty()) {
             System.debug('APPROVAL: Querying Product2 records');
             productMap = new Map<Id, Product2>(
-                [SELECT Id, Name FROM Product2 WHERE Id IN :productIds]
+                [SELECT Id, Name, ProductCode FROM Product2 WHERE Id IN :productIds]
             );
             System.debug('APPROVAL: Queried ' + productMap.size() + ' Products');
             for (Product2 p : productMap.values()) {
@@ -337,6 +337,9 @@ public class QuoteLineItemApprovalHandler {
                     String productName = (qli.Product2Id != null && productMap.containsKey(qli.Product2Id))
                         ? productMap.get(qli.Product2Id).Name
                         : 'N/A';
+                    String productCode = (qli.Product2Id != null && productMap.containsKey(qli.Product2Id))
+                        ? productMap.get(qli.Product2Id).ProductCode
+                        : 'N/A';
                     Decimal listPrice       = qli.ListPrice != null ? qli.ListPrice : 0;
                     Decimal discountPct     = qli.Discount_to_be_offered__c != null ? qli.Discount_to_be_offered__c : 0;
                     Decimal desiredSalesPrice = (listPrice * (1 - discountPct / 100)).setScale(2);
@@ -344,6 +347,7 @@ public class QuoteLineItemApprovalHandler {
                     tableRows +=
                         '<tr>' +
                             '<td style="border:1px solid #ccc;padding:6px 10px;">' + productName + '</td>' +
+                            '<td style="border:1px solid #ccc;padding:6px 10px;">' + productCode + '</td>' +
                             '<td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">' +
                                 (qli.Quantity != null ? String.valueOf(qli.Quantity.intValue()) : '0') + '</td>' +
                             '<td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">' +
@@ -356,8 +360,9 @@ public class QuoteLineItemApprovalHandler {
                 String tableHtml =
                     '<table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:13px;">' +
                         '<thead>' +
-                            '<tr style="background-color:#003366;color:#ffffff;">' +
+                            '<tr style="background-color:#007764;color:#ffffff;">' +
                                 '<th style="border:1px solid #ccc;padding:8px 10px;text-align:left;">Product Name</th>' +
+                                '<th style="border:1px solid #ccc;padding:8px 10px;text-align:left;">Product Code</th>' +
                                 '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Qty</th>' +
                                 '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Discount as per SAP %</th>' +
                                 '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Requested Discount %</th>' +

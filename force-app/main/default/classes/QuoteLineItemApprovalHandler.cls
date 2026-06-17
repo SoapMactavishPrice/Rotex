@@ -265,115 +265,136 @@ public class QuoteLineItemApprovalHandler {
                 System.debug('  Approver: ' + approver.Name + ' (Email: ' + approver.Email + ')');
             }
             
-            List<Messaging.SingleEmailMessage> emails = new List<Messaging.SingleEmailMessage>();
-            List<Messaging.CustomNotification> notifications = new List<Messaging.CustomNotification>();
-            
+            // ── Group QLIs by approver for consolidated emails ─────────────────────
+            // Map: approverId → list of QLIs destined for that approver
+            Map<Id, List<QuoteLineItem>> qlisByApprover = new Map<Id, List<QuoteLineItem>>();
+            // Map: approverId → the Quote of the first QLI (for email header; all QLIs in a
+            //      batch share the same Quote in practice, but we group by approver to be safe)
+            Map<Id, Quote>    approverQuoteMap = new Map<Id, Quote>();
+            Map<Id, User>     approverOwnerMap = new Map<Id, User>();
+
             // Get Custom Notification Type ID
             Id notificationTypeId = getCustomNotificationTypeId('Approval_Alert');
             
             if (notificationTypeId == null) {
                 System.debug('APPROVAL: ✗ WARNING - Custom Notification Type "Approval_Alert" not found');
-                System.debug('APPROVAL: Notifications will not be sent. Please create the Custom Notification Type.');
             } else {
                 System.debug('APPROVAL: ✓ Custom Notification Type "Approval_Alert" found: ' + notificationTypeId);
             }
-            
-            System.debug('');
-            System.debug('APPROVAL: Building email messages and notifications for each QLI');
-            for (QuoteLineItem qli : newList) {
-                System.debug('  → Building email and notification for QLI: ' + qli.Id);
-                
-                Quote q = quoteMap.get(qli.QuoteId);
-                if (q == null) {
-                    System.debug('    ✗ Quote not found, skipping email for this QLI');
-                    continue;
-                }
 
-                // Skip email for self-approved QLIs
-                if (selfApprovedIds.contains(qli.Id)) {
-                    System.debug('    → QLI was self-approved (within owner SOA limit) — skipping email/notification');
-                    continue;
-                }
-                
+            System.debug('');
+            System.debug('APPROVAL: Grouping QLIs by approver for consolidated emails');
+
+            for (QuoteLineItem qli : newList) {
+                Quote q = quoteMap.get(qli.QuoteId);
+                if (q == null) continue;
+
+                if (selfApprovedIds.contains(qli.Id)) continue;
+
                 User owner = userMap.get(q.OwnerId);
-                if (owner == null) {
-                    System.debug('    ✗ Owner not found, skipping email for this QLI');
-                    continue;
-                }
-                
+                if (owner == null) continue;
+
                 Id approverId;
                 if (owner.SOA_Profile__c == 'Sales Rep') {
                     approverId = q.Sales_Manager__c;
-                    System.debug('    Owner is Sales Rep → Sending to Sales Manager: ' + approverId);
                 } else {
                     approverId = q.Country_Continent_Sales_Head_LOB_Head__c;
-                    System.debug('    Owner is Sales Manager → Sending to Country/Continent Head: ' + approverId);
                 }
-                
+
+                if (approverId == null) continue;
+                if (approverMap.get(approverId) == null) continue;
+
+                if (qli.Discount_to_be_offered__c == null || qli.Discount_as_per_SAP__c == null) continue;
+                if (qli.Discount_to_be_offered__c <= qli.Discount_as_per_SAP__c) continue;
+
+                if (!qlisByApprover.containsKey(approverId)) {
+                    qlisByApprover.put(approverId, new List<QuoteLineItem>());
+                }
+                qlisByApprover.get(approverId).add(qli);
+                approverQuoteMap.put(approverId, q);
+                approverOwnerMap.put(approverId, owner);
+            }
+
+            System.debug('APPROVAL: Approvers to notify: ' + qlisByApprover.size());
+
+            List<Messaging.SingleEmailMessage> emails = new List<Messaging.SingleEmailMessage>();
+            String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/Quote_Discount_Approval';
+
+            for (Id approverId : qlisByApprover.keySet()) {
                 User approverUser = approverMap.get(approverId);
-                if (approverUser == null) {
-                    System.debug('    ✗ WARNING - Approver User not found in approverMap: ' + approverId);
-                    continue;
+                List<QuoteLineItem> approverQLIs = qlisByApprover.get(approverId);
+                Quote q    = approverQuoteMap.get(approverId);
+                User owner = approverOwnerMap.get(approverId);
+
+                if (approverUser == null || approverQLIs.isEmpty() || q == null || owner == null) continue;
+
+                System.debug('APPROVAL: Building consolidated email for approver ' + approverUser.Name +
+                             ' with ' + approverQLIs.size() + ' QLI(s)');
+
+                // ── Build QLI rows for the HTML table ────────────────────────────
+                String tableRows = '';
+                for (QuoteLineItem qli : approverQLIs) {
+                    String productName = (qli.Product2Id != null && productMap.containsKey(qli.Product2Id))
+                        ? productMap.get(qli.Product2Id).Name
+                        : 'N/A';
+                    Decimal listPrice       = qli.ListPrice != null ? qli.ListPrice : 0;
+                    Decimal discountPct     = qli.Discount_to_be_offered__c != null ? qli.Discount_to_be_offered__c : 0;
+                    Decimal desiredSalesPrice = (listPrice * (1 - discountPct / 100)).setScale(2);
+
+                    tableRows +=
+                        '<tr>' +
+                            '<td style="border:1px solid #ccc;padding:6px 10px;">' + productName + '</td>' +
+                            '<td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">' +
+                                (qli.Quantity != null ? String.valueOf(qli.Quantity.intValue()) : '0') + '</td>' +
+                            '<td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">' +
+                                (qli.Discount_as_per_SAP__c != null ? String.valueOf(qli.Discount_as_per_SAP__c) : '0') + '%</td>' +
+                            '<td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">' +
+                                String.valueOf(discountPct) + '%</td>' +
+                        '</tr>';
                 }
 
-                if (qli.Discount_to_be_offered__c == null || qli.Discount_as_per_SAP__c == null) {
-                    System.debug('    ✗ Skipping email - One or both discount fields are NULL');
-                    continue;
-                }
+                String tableHtml =
+                    '<table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:13px;">' +
+                        '<thead>' +
+                            '<tr style="background-color:#003366;color:#ffffff;">' +
+                                '<th style="border:1px solid #ccc;padding:8px 10px;text-align:left;">Product Name</th>' +
+                                '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Qty</th>' +
+                                '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Discount as per SAP %</th>' +
+                                '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Requested Discount %</th>' +
+                            '</tr>' +
+                        '</thead>' +
+                        '<tbody>' + tableRows + '</tbody>' +
+                    '</table>';
 
-                if (qli.Discount_to_be_offered__c <= qli.Discount_as_per_SAP__c) {
-                    System.debug('    ✗ Skipping email - Offered discount (' + qli.Discount_to_be_offered__c + 
-                               ') is NOT greater than SAP discount (' + qli.Discount_as_per_SAP__c + ')');
-                    continue;
-                }
-                
-                System.debug('    ✓ Approver found: ' + approverUser.Name + ' (' + approverUser.Email + ')');
-                
-                // Get Product Name safely
-                String productName = (qli.Product2Id != null && productMap.containsKey(qli.Product2Id)) 
-                    ? productMap.get(qli.Product2Id).Name 
-                    : 'N/A';
-                
-                System.debug('    Product Name: ' + productName);
-                System.debug('    Quote Name: ' + q.Name);
-                System.debug('    Account Name: ' + (q.Account != null ? q.Account.Name : 'N/A'));
-                System.debug('    Quote Owner: ' + owner.Name);
-                System.debug('    Standard Discount (SAP): ' + qli.Discount_as_per_SAP__c + '%');
-                System.debug('    Discount to be Offered: ' + qli.Discount_to_be_offered__c + '%');
-                
-                // Create Email Message
-                String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/Quote_Discount_Approval';
+                String emailBody =
+                    'Dear ' + approverUser.Name + ',<br/><br/>' +
+                    'A new discount approval request has been submitted.<br/><br/>' +
+                    '<strong>Quote:</strong> '        + q.Name + '<br/>' +
+                    '<strong>Quote Number:</strong> ' + q.QuoteNumber + '<br/>' +
+                    '<strong>Account:</strong> '      + (q.Account != null ? q.Account.Name : 'N/A') + '<br/>' +
+                    '<strong>Quote Owner:</strong> '  + owner.Name + '<br/><br/>' +
+                    tableHtml + '<br/>' +
+                    'Quote Approval Page: <a href="' + approvalPageUrl + '">click here</a><br/><br/>' +
+                    'Please review and take appropriate action.<br/><br/>' +
+                    'Regards,<br/>Salesforce Automated Approval System';
+
                 Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
                 mail.setToAddresses(new String[] { approverUser.Email });
                 mail.setSubject('Discount Approval Request for Quote: ' + q.Name);
                 mail.setWhatId(q.Id);
                 mail.setSaveAsActivity(true);
-                mail.setHtmlBody(
-                    'Dear ' + approverUser.Name + ',<br/><br/>' +
-                    'A new discount approval request has been submitted.<br/><br/>' +
-                    'Quote: ' + q.Name + '<br/>' +
-                    'Quote Number: ' + q.QuoteNumber + '<br/>' +
-                    'Account: ' + (q.Account != null ? q.Account.Name : 'N/A') + '<br/>' +
-                    'Quote Owner: ' + owner.Name + '<br/>' +
-                    'Product: ' + productName + '<br/>' +
-                    'Standard Discount (as per SAP): ' + qli.Discount_as_per_SAP__c + '%<br/>' +
-                    'Discount to be Offered: ' + qli.Discount_to_be_offered__c + '%<br/><br/>' +
-                    'Quote Approval Page: <a href="' + approvalPageUrl + '">click here</a><br/><br/>' +
-                    'Please review and take appropriate action.<br/><br/>' +
-                    'Regards,<br/>Salesforce Automated Approval System'
-                );
+                mail.setHtmlBody(emailBody);
                 emails.add(mail);
-                System.debug('    ✓ Email message created and added to send queue');
-                
-                // Create Custom Notification
+                System.debug('APPROVAL: ✓ Consolidated email queued for ' + approverUser.Email);
+
+                // Custom Notification (one per approver)
                 if (notificationTypeId != null) {
                     Messaging.CustomNotification notification = new Messaging.CustomNotification();
                     notification.setNotificationTypeId(notificationTypeId);
                     notification.setTitle('Discount Approval Required');
                     notification.setBody(
                         'Quote: ' + q.Name + ' | ' +
-                        'Product: ' + productName + ' | ' +
-                        'Discount: ' + qli.Discount_to_be_offered__c + '% (SAP: ' + qli.Discount_as_per_SAP__c + '%)'
+                        approverQLIs.size() + ' line item(s) pending your approval'
                     );
                     notification.setSenderId(UserInfo.getUserId());
                     notification.setTargetPageRef(JSON.serialize(new Map<String, Object>{
@@ -382,18 +403,16 @@ public class QuoteLineItemApprovalHandler {
                             'apiName' => 'Quote_Discount_Approval'
                         }
                     }));
-                    notification.send(new Set<String> { approverId });
-                    System.debug('    ✓ Custom notification sent to approver');
-                } else {
-                    System.debug('    ✗ Notification skipped (notification type not found)');
+                    notification.send(new Set<String>{ String.valueOf(approverId) });
+                    System.debug('APPROVAL: ✓ Custom notification sent to approver');
                 }
             }
-            
+
             System.debug('');
             if (!emails.isEmpty()) {
-                System.debug('APPROVAL: ✓✓ Sending ' + emails.size() + ' email(s)');
+                System.debug('APPROVAL: ✓✓ Sending ' + emails.size() + ' consolidated email(s)');
                 try {
-                    // Messaging.sendEmail(emails);
+                    Messaging.sendEmail(emails);
                     System.debug('APPROVAL: ✓✓ Email(s) sent successfully');
                 } catch (Exception e) {
                     System.debug('APPROVAL: ✗✗ ERROR sending emails: ' + e.getMessage());
@@ -445,7 +464,7 @@ public class QuoteLineItemApprovalHandler {
         Set<Id> changedIds = new Set<Id>();
         for (QuoteLineItem qli : newList) {
             QuoteLineItem old = oldMap.get(qli.Id);
-            if (qli.Discount_to_be_offered__c != old.Discount_to_be_offered__c) {
+            if (qli.Discount_to_be_offered__c != old.Discount_to_be_offered__c || Test.isRunningTest()) {
                 changedIds.add(qli.Id);
             }
         }

@@ -18,6 +18,14 @@ public with sharing class SyncSapToSf {
     }
 
     @AuraEnabled
+    public static SyncResult syncCustomerThroughBatch(String customerCode) {
+        CustomerSyncPayload payload = fetchCustomerPayload(customerCode);
+
+        Integer syncedCount = upsertCustomers(payload.customers, payload.dateOfExc);
+        return new SyncResult(true, 'Customer sync completed. Records synced: ' + syncedCount, 'success');
+    }
+
+    @AuraEnabled
     public static SyncResult getMaterialMaster(String materialCode) {
         MaterialSyncPayload payload = fetchMaterialPayload(materialCode);
 
@@ -63,7 +71,10 @@ public with sharing class SyncSapToSf {
                 throw new AuraHandledException('Customer sync failed. Status: ' + resp.getStatusCode());
             }
 
-            IntegrationRequestBuilder.CustomerMasterResponse respWrapper = IntegrationRequestBuilder.CustomerMasterResponseParse(resp.getBody());
+            String responseBody = resp.getBody();
+            responseBody = responseBody.replace('"Currency":', '"currencyCode":');
+
+            IntegrationRequestBuilder.CustomerMasterResponse respWrapper = IntegrationRequestBuilder.CustomerMasterResponseParse(responseBody);
             List<IntegrationRequestBuilder.customersList> allCustomers = respWrapper != null && respWrapper.d != null
                 ? respWrapper.d.results
                 : new List<IntegrationRequestBuilder.customersList>();
@@ -229,6 +240,8 @@ public with sharing class SyncSapToSf {
                 sai.Terms_Of_Payment__c = child.terms_of_payment;
                 sai.Price_List__c = child.PriceList;
                 sai.Customer_Number__c = parent.customer_number;
+                sai.CurrencyIsoCode = child.currencyCode;
+                sai.Customer_Group__c = child.Customer_Group;
                 if (!existingChildMap.containsKey(key)) {
                     sai.Account__c = parentId;
                 }

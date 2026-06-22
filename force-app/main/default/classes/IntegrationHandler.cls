@@ -51,8 +51,11 @@ public class IntegrationHandler {
                 // for (IntegrationRequestBuilder.customersList c : parentWrappers) {
                 //     accCodes.add(c.customer_number);
                 // }
+
+                String responseBody = resp.getBody();
+                responseBody = responseBody.replace('"Currency":', '"currencyCode":');
                 
-                IntegrationRequestBuilder.CustomerMasterResponse respWrapper = IntegrationRequestBuilder.CustomerMasterResponseParse(resp.getBody());
+                IntegrationRequestBuilder.CustomerMasterResponse respWrapper = IntegrationRequestBuilder.CustomerMasterResponseParse(responseBody);
                 List < IntegrationRequestBuilder.customersList > allCustomers = respWrapper.d.results;
                 
                 // Use a map to store unique customers by customer_number
@@ -156,6 +159,8 @@ public class IntegrationHandler {
                             sai.Terms_Of_Payment__c = child.terms_of_payment;
                             sai.Price_List__c = child.PriceList;
                             sai.Customer_Number__c = parent.customer_number;
+                            sai.CurrencyIsoCode = child.currencyCode;
+                            sai.Customer_Group__c = child.Customer_Group;
                             if (!existingChildMap.containsKey(key)) {
                                 sai.Account__c = parentId;
                             }

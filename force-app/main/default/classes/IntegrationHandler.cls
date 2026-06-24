@@ -51,7 +51,7 @@ public class IntegrationHandler {
                 // for (IntegrationRequestBuilder.customersList c : parentWrappers) {
                 //     accCodes.add(c.customer_number);
                 // }
-
+                
                 String responseBody = resp.getBody();
                 responseBody = responseBody.replace('"Currency":', '"currencyCode":');
                 
@@ -1182,7 +1182,7 @@ system.debug('grandchild created');
             }
         }
     }
-
+    
     @future(callout=true)
     public static void PricingMaster(String pCode, Boolean overload) {
         HttpResponse resp;
@@ -1528,102 +1528,211 @@ system.debug('grandchild created');
         
     }
     
-    @AuraEnabled
-    public static string salesOrderCreation(String parentId, String bpFuncId, String shFuncId, String caFuncId, String salesQuotationType) {
+   @AuraEnabled
+public static string salesOrderCreation(String parentId, String bpFuncId, String shFuncId, String caFuncId, String salesQuotationType) {
+    
+    String jsonPayload = '';
+    HttpResponse resp;
+    HttpResponse response;
+    String errorMessage = '';
+    try {
         
-        String jsonPayload = '';
-        HttpResponse resp;
-        HttpResponse response;
-        try {
+        jsonPayload = getQuotePayload(parentId, bpFuncId, shFuncId, caFuncId, salesQuotationType);
+        System.debug('JSON Payload length: ' + (String.isNotBlank(jsonPayload) ? jsonPayload.length() : 0));
+        
+        // If no valid payload, return error
+        if (String.isBlank(jsonPayload)) {
+            return '{"error": "Failed to generate payload"}';
+        }
+        
+        //Get SAP CSRF token using get method
+        resp = UtilityCls.doGetWithBasicAuth('Get_Session_API', 'Bulk', Null, Null, '');
+        
+        if (resp != null && resp.getStatusCode() == 200) {
+            System.debug('Get_Session_API resp: ' + resp.getBody());
+            String csrfToken = resp.getHeader('x-csrf-token');
+            String cookies = resp.getHeader('set-cookie');
+            System.debug('x-csrf-token csrfToken : ' + csrfToken);
             
-            jsonPayload = getQuotePayload(parentId, bpFuncId, shFuncId, caFuncId, salesQuotationType);
-            System.debug('JSON Payload: ' + jsonPayload);
+            // Make the POST API call
+            Http http = new Http();
+            HttpRequest request = new HttpRequest();
+            request.setEndpoint(System.Label.Push_Quote_to_SAP);
+            request.setMethod('POST');
+            request.setHeader('Content-Type', 'application/json');
+            request.setHeader('Accept', 'application/json');
+            request.setBody(jsonPayload);
             
-            // If no valid payload, return error
-            if (String.isBlank(jsonPayload)) {
-                return '{"error": "Failed to generate payload"}';
-            }
+            String username = System.Label.Push_Quote_Username;
+            String password = System.Label.Push_Quote_Password;
+            String authHeader = 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(username + ':' + password));
+            request.setHeader('Authorization', authHeader);
+            request.setHeader('x-csrf-token', csrfToken);
+            request.setHeader('cookie', cookies);
+            request.setTimeOut(180000); // Increased to 3 minutes
             
-            //Get SAP CSRF token using get method
-            resp = UtilityCls.doGetWithBasicAuth('Get_Session_API', 'Bulk', Null, Null, '');
-            
-            if (resp.getStatusCode() == 200) {
-                system.debug('Get_Session_API resp: ' + resp.getBody());
-                String csrfToken = resp.getHeader('x-csrf-token');
-                String cookies = resp.getHeader('set-cookie');
-                system.debug('x-csrf-token csrfToken : ' + csrfToken);
-                
-                // Make the POST API call
-                Http http = new Http();
-                HttpRequest request = new HttpRequest();
-                request.setEndpoint(System.Label.Push_Quote_to_SAP);
-                request.setMethod('POST');
-                request.setHeader('Content-Type', 'application/json');
-                request.setHeader('Accept', 'application/json');
-                request.setBody(jsonPayload);
-                
-                String username = System.Label.Push_Quote_Username;
-                String password = System.Label.Push_Quote_Password;
-                String authHeader = 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(username + ':' + password));
-                request.setHeader('Authorization', authHeader);
-                request.setHeader('x-csrf-token', csrfToken);
-                request.setHeader('cookie', cookies);
-                request.setTimeOut(120000);
-                
+            try {
                 response = http.send(request);
-                
-                // Log response
-                if (response.getStatusCode() == 200 || response.getStatusCode() == 201) {
-                    String responseBody = response.getBody();
-                    System.debug('Response Status Code: ' + response.getStatusCode());
-                    System.debug('Response Body: ' + responseBody);
-                    
-                    // Try to extract SAP number from response
-                    String quotationNumber = null;
-                    
-                    if (String.isNotBlank(responseBody)) {
-                        try {
-                            List<Object> respList = (List<Object>) JSON.deserializeUntyped(responseBody);
-                            if (respList != null && !respList.isEmpty()) {
-                                Map<String, Object> firstResp = (Map<String, Object>) respList[0];
-                                quotationNumber = String.valueOf(firstResp.get('SalesQuotationNum'));
-                            }
-                        } catch (Exception e) {
-                            System.debug('Parse error: ' + e.getMessage());
-                        }
-                    }
-                    
-                    // Also check Location header
-                    if (String.isBlank(quotationNumber)) {
-                        String locationHeader = response.getHeader('Location');
-                        if (String.isNotBlank(locationHeader) && locationHeader.contains('SalesQuotation(')) {
-                            String temp = locationHeader.substring(locationHeader.indexOf('SalesQuotation(') + 16);
-                            quotationNumber = temp.substring(0, temp.indexOf('\''));
-                        }
-                    }
-                    
-                    if (String.isNotBlank(quotationNumber)) {
-                        Quote q = new Quote(Id = parentId, SAP_Quotation_Number__c = quotationNumber);
-                        update q;
-                        System.debug('✅ Quote updated with SAP Number: ' + quotationNumber);
-                    }
-                } else {
-                    System.debug('API call failed: ' + response.getStatusCode() + ' ' + response.getBody());
-                }
+                System.debug('✅ POST request sent successfully');
+            } catch (Exception e) {
+                errorMessage = 'HTTP Request failed: ' + e.getMessage();
+                System.debug('❌ ' + errorMessage);
+                response = null;
             }
-        } catch (Exception e) {
-            System.debug('Exception: ' + e.getMessage());
-        } finally {
+            
+            // Log response
+            if (response != null && (response.getStatusCode() == 200 || response.getStatusCode() == 201)) {
+                String responseBody = response.getBody();
+                System.debug('Response Status Code: ' + response.getStatusCode());
+                System.debug('Response Body: ' + responseBody);
+                
+                // Try to extract SAP number from response
+                String quotationNumber = null;
+                
+                if (String.isNotBlank(responseBody)) {
+                    try {
+                        List<Object> respList = (List<Object>) JSON.deserializeUntyped(responseBody);
+                        if (respList != null && !respList.isEmpty()) {
+                            Map<String, Object> firstResp = (Map<String, Object>) respList[0];
+                            quotationNumber = String.valueOf(firstResp.get('SalesQuotationNum'));
+                            
+                            // Check for SAP error messages
+                            if (firstResp.containsKey('Message')) {
+                                Object messageObj = firstResp.get('Message');
+                                if (messageObj instanceof List<Object>) {
+                                    List<Object> messages = (List<Object>) messageObj;
+                                    for (Object msg : messages) {
+                                        Map<String, Object> msgMap = (Map<String, Object>) msg;
+                                        if ('E'.equals(msgMap.get('MType'))) {
+                                            String sapError = String.valueOf(msgMap.get('Message1'));
+                                            System.debug('❌ SAP Error: ' + sapError);
+                                            errorMessage = sapError;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.debug('Parse error: ' + e.getMessage());
+                    }
+                }
+                
+                // Also check Location header
+                if (String.isBlank(quotationNumber)) {
+                    String locationHeader = response.getHeader('Location');
+                    if (String.isNotBlank(locationHeader) && locationHeader.contains('SalesQuotation(')) {
+                        String temp = locationHeader.substring(locationHeader.indexOf('SalesQuotation(') + 16);
+                        quotationNumber = temp.substring(0, temp.indexOf('\''));
+                    }
+                }
+                
+                if (String.isNotBlank(quotationNumber)) {
+                    Quote q = new Quote(Id = parentId, SAP_Quotation_Number__c = quotationNumber);
+                    update q;
+                    System.debug('✅ Quote updated with SAP Number: ' + quotationNumber);
+                }
+            } else if (response != null) {
+                errorMessage = 'SAP API Error: ' + response.getStatusCode() + ' - ' + response.getBody();
+                System.debug('❌ ' + errorMessage);
+            } else {
+                errorMessage = 'No response from SAP (connection timeout or network error)';
+                System.debug('❌ ' + errorMessage);
+            }
+        } else {
+            errorMessage = 'Failed to get CSRF token from SAP';
+            System.debug('❌ ' + errorMessage);
+        }
+    } catch (Exception e) {
+        errorMessage = 'Exception: ' + e.getMessage();
+        System.debug('❌ ' + errorMessage);
+    } finally {
+        // Update Quote with Sales Quotation Type
+        try {
             Quote quoteToBeUpdate = new Quote();
             quoteToBeUpdate.Id = parentId;
             quoteToBeUpdate.Sales_Quotation_Type__c = salesQuotationType;
             update quoteToBeUpdate;
+            System.debug('✅ Quote updated with Sales Quotation Type: ' + salesQuotationType);
+        } catch (Exception e) {
+            System.debug('❌ Failed to update Quote: ' + e.getMessage());
+        }
+        
+        // ✅ LOG API CALL WITH TRUNCATED PAYLOAD
+        try {
+            String logPayload = '';
+            String logResponse = '';
+            String logStatus = '';
+            Integer statusCode = 0;
+            
+            // ✅ CRITICAL: Truncate payload to fit within 131,072 character limit
+            Integer maxLogSize = 131072; // API_Log__c Request__c field limit
+            
+            if (String.isNotBlank(jsonPayload)) {
+                try {
+                    // First, try to remove attachments from payload
+                    Map<String, Object> payloadMap = (Map<String, Object>) JSON.deserializeUntyped(jsonPayload);
+                    payloadMap.remove('Attachment1');
+                    payloadMap.remove('Attachment2');
+                    payloadMap.remove('Attachment3');
+                    payloadMap.remove('Attachment4');
+                    payloadMap.remove('Attachment5');
+                    logPayload = JSON.serialize(payloadMap);
+                    System.debug('📝 Log Payload (without attachments): ' + logPayload.length() + ' chars');
+                } catch (Exception e) {
+                    // If parsing fails, just truncate
+                    logPayload = jsonPayload;
+                }
+                
+                // ✅ Ensure payload doesn't exceed the field limit
+                if (logPayload.length() > maxLogSize) {
+                    logPayload = logPayload.substring(0, maxLogSize) + '... (truncated)';
+                    System.debug('📝 Payload truncated to ' + maxLogSize + ' chars');
+                }
+            } else {
+                logPayload = 'No payload generated';
+            }
+            
+            // Prepare response for logging
             if (response != null) {
-                UtilityCls.logApiCall('QuotationCreation', '', jsonPayload, response.getBody(), '', response.getStatusCode(),parentId);
+                statusCode = response.getStatusCode();
+                logStatus = String.valueOf(statusCode);
+                if (String.isNotBlank(response.getBody())) {
+                    logResponse = response.getBody();
+                    if (logResponse.length() > 5000) {
+                        logResponse = logResponse.substring(0, 5000) + '... (truncated)';
+                    }
+                } else {
+                    logResponse = 'Empty response body';
+                }
+            } else {
+                logResponse = String.isNotBlank(errorMessage) ? errorMessage : 'No response from SAP';
+                logStatus = '0';
+                statusCode = 0;
+            }
+            
+            // ✅ Call the log method
+            UtilityCls.logApiCall('QuotationCreation', '', logPayload, logResponse, logStatus, statusCode, parentId);
+            System.debug('✅ API log created');
+            
+        } catch (Exception e) {
+            System.debug('❌ Failed to create API log: ' + e.getMessage());
+            // ✅ Fallback: Create a simple log
+            try {
+                UtilityCls.logApiCall('QuotationCreation', '', 'Logging failed', e.getMessage(), 'ERROR', 0, parentId);
+                System.debug('✅ Fallback API log created');
+            } catch (Exception ex) {
+                System.debug('❌ Even simple log failed: ' + ex.getMessage());
             }
         }
-        return response != null ? response.getBody() : '';
-    }    
+    }
+    
+    // Return response or error
+    if (response != null) {
+        return response.getBody();
+    } else {
+        return '{"error": "' + errorMessage + '"}';
+    }
+}   
     public static String getSalesOrderPayload(String parentId) {
         String jsonPayload = '';
         try {
@@ -1955,11 +2064,21 @@ pricingElementWrapper.ConditionCurrency = qli.Quote.CurrencyISOCode;
                 }
                 
                 // Assign to 5 separate fields
-                quoteWrapper.Attachment1 = attachmentUrls.size() > 0 ? attachmentUrls[0] : '';
-                quoteWrapper.Attachment2 = attachmentUrls.size() > 1 ? attachmentUrls[1] : '';
-                quoteWrapper.Attachment3 = attachmentUrls.size() > 2 ? attachmentUrls[2] : '';
-                quoteWrapper.Attachment4 = attachmentUrls.size() > 3 ? attachmentUrls[3] : '';
-                quoteWrapper.Attachment5 = attachmentUrls.size() > 4 ? attachmentUrls[4] : '';
+                /*   quoteWrapper.Attachment1 = attachmentUrls.size() > 0 ? attachmentUrls[0] : '';
+quoteWrapper.Attachment2 = attachmentUrls.size() > 1 ? attachmentUrls[1] : '';
+quoteWrapper.Attachment3 = attachmentUrls.size() > 2 ? attachmentUrls[2] : '';
+quoteWrapper.Attachment4 = attachmentUrls.size() > 3 ? attachmentUrls[3] : '';
+quoteWrapper.Attachment5 = attachmentUrls.size() > 4 ? attachmentUrls[4] : ''; */
+                
+                // ✅ FIXED: Get attachments as base64 only
+                List<String> attachmentBase64List = getQuoteAttachmentsAsBase64(q.Id);
+                
+                // Assign to 5 separate fields
+                quoteWrapper.Attachment1 = attachmentBase64List.size() > 0 ? attachmentBase64List[0] : '';
+                quoteWrapper.Attachment2 = attachmentBase64List.size() > 1 ? attachmentBase64List[1] : '';
+                quoteWrapper.Attachment3 = attachmentBase64List.size() > 2 ? attachmentBase64List[2] : '';
+                quoteWrapper.Attachment4 = attachmentBase64List.size() > 3 ? attachmentBase64List[3] : '';
+                quoteWrapper.Attachment5 = attachmentBase64List.size() > 4 ? attachmentBase64List[4] : '';
                 
                 quoteWrapperList.add(quoteWrapper);
             }
@@ -2342,15 +2461,18 @@ UPSERT prodList;
                 return result;
             }
             
-            // Create ContentVersion
+            // ✅ Add timestamp to title to identify files uploaded in current session
+            String timestamp = String.valueOf(System.currentTimeMillis());
+            String uniqueFileName = 'PO_ATTACHMENT_' + timestamp + '_' + fileName;
+            
             ContentVersion cv = new ContentVersion();
-            cv.Title = fileName;
+            cv.Title = uniqueFileName;
             cv.PathOnClient = fileName;
             cv.VersionData = EncodingUtil.base64Decode(base64Data);
             cv.FirstPublishLocationId = quoteId;
+            cv.Description = 'Uploaded from SendQuoteToSAP component on ' + DateTime.now();
             insert cv;
             
-            // ✅ ADD THIS - Create ContentDistribution for public access
             ContentDistribution cd = new ContentDistribution();
             cd.Name = fileName;
             cd.ContentVersionId = cv.Id;
@@ -2359,13 +2481,13 @@ UPSERT prodList;
             cd.PreferencesLinkLatestVersion = true;
             insert cd;
             
-            // Get the public URL
             cd = [SELECT DistributionPublicUrl FROM ContentDistribution WHERE Id = :cd.Id];
             String publicUrl = cd.DistributionPublicUrl;
             
             result.put('success', true);
             result.put('contentVersionId', cv.Id);
             result.put('fileUrl', publicUrl);
+            result.put('uniqueTitle', uniqueFileName);
             result.put('message', 'File uploaded successfully');
             
         } catch (Exception e) {
@@ -2435,5 +2557,141 @@ UPSERT prodList;
         }
         return result;
     }
+    
+   public static List<String> getQuoteAttachmentsAsBase64(Id quoteId) {
+    List<String> base64Attachments = new List<String>();
+    
+    try {
+        System.debug('🔍 getQuoteAttachmentsAsBase64 called for Quote ID: ' + quoteId);
+        
+        // ✅ ONLY get attachments with 'PO_ATTACHMENT_' prefix in title (LWC uploaded files)
+        List<ContentDocumentLink> docLinks = [
+            SELECT ContentDocumentId, ContentDocument.Title, Id
+            FROM ContentDocumentLink
+            WHERE LinkedEntityId = :quoteId
+            AND ContentDocument.Title LIKE 'PO_ATTACHMENT_%'
+            ORDER BY SystemModstamp DESC
+        ];
+        
+        System.debug('📎 Found ' + docLinks.size() + ' PO attachments for Quote');
+        
+        if (docLinks.isEmpty()) {
+            System.debug('⚠️ No PO attachments found for Quote');
+            return base64Attachments;
+        }
+        
+        // ✅ Deduplicate: Keep only unique ContentDocumentId
+        Map<Id, ContentDocumentLink> uniqueDocMap = new Map<Id, ContentDocumentLink>();
+        for (ContentDocumentLink cdl : docLinks) {
+            if (!uniqueDocMap.containsKey(cdl.ContentDocumentId)) {
+                uniqueDocMap.put(cdl.ContentDocumentId, cdl);
+                System.debug('📄 Unique: ' + cdl.ContentDocumentId + ', Title: ' + cdl.ContentDocument.Title);
+            } else {
+                System.debug('⏭️ Skipping duplicate: ' + cdl.ContentDocumentId);
+            }
+        }
+        
+        // Get all unique files with their sizes
+        List<AttachmentInfo> attachmentInfoList = new List<AttachmentInfo>();
+        Set<Id> uniqueContentDocIds = new Set<Id>();
+        for (ContentDocumentLink cdl : uniqueDocMap.values()) {
+            uniqueContentDocIds.add(cdl.ContentDocumentId);
+        }
+        
+        // Query ContentVersion for each unique document
+        Map<Id, ContentVersion> latestVersionMap = new Map<Id, ContentVersion>();
+        for (ContentVersion cv : [
+            SELECT Id, ContentDocumentId, VersionData, FileType, Title
+            FROM ContentVersion
+            WHERE ContentDocumentId IN :uniqueContentDocIds
+            AND IsLatest = true
+        ]) {
+            if (!latestVersionMap.containsKey(cv.ContentDocumentId)) {
+                latestVersionMap.put(cv.ContentDocumentId, cv);
+                System.debug('📦 ContentVersion: ' + cv.Title + ', Size: ' + cv.VersionData.size() + ' bytes');
+            }
+        }
+        
+        // Convert each file to base64 and store info
+        for (ContentDocumentLink cdl : uniqueDocMap.values()) {
+            ContentVersion cv = latestVersionMap.get(cdl.ContentDocumentId);
+            if (cv != null && cv.VersionData != null) {
+                String base64Data = EncodingUtil.base64Encode(cv.VersionData);
+                AttachmentInfo info = new AttachmentInfo();
+                info.title = cv.Title;
+                info.base64Data = base64Data;
+                info.base64Length = base64Data.length();
+                info.fileSize = cv.VersionData.size();
+                info.contentDocumentId = cdl.ContentDocumentId;
+                attachmentInfoList.add(info);
+                System.debug('✅ Converted: ' + cv.Title + ', Length: ' + base64Data.length() + ' chars');
+            }
+        }
+        
+        // ✅ Sort by size (smallest first) to maximize number of files kept
+        attachmentInfoList.sort();
+        
+        // ✅ Calculate which files to keep within the 131,072 char limit
+        Integer maxLogSize = 131072; // API_Log__c Request__c field limit
+        Integer baseJsonSize = 5000; // Estimated size of JSON without attachments
+        Integer availableSpace = maxLogSize - baseJsonSize;
+        
+        System.debug('📊 Available space for attachments: ' + availableSpace + ' chars');
+        
+        // ✅ Keep files starting from smallest to largest (to maximize count)
+        List<AttachmentInfo> filesToKeep = new List<AttachmentInfo>();
+        Integer totalSize = 0;
+        List<String> skippedFiles = new List<String>();
+        
+        for (AttachmentInfo info : attachmentInfoList) {
+            // Check if adding this file exceeds the limit
+            if (totalSize + info.base64Length <= availableSpace) {
+                filesToKeep.add(info);
+                totalSize += info.base64Length;
+                System.debug('✅ Keeping: ' + info.title + ' (' + info.base64Length + ' chars)');
+            } else {
+                skippedFiles.add(info.title + ' (' + info.base64Length + ' chars)');
+                System.debug('⚠️ Skipping: ' + info.title + ' (' + info.base64Length + ' chars) - would exceed limit');
+            }
+        }
+        
+        // Log summary
+        System.debug('📊 Total attachment size: ' + totalSize + ' chars');
+        System.debug('📊 Files kept: ' + filesToKeep.size() + ', Files skipped: ' + skippedFiles.size());
+        if (!skippedFiles.isEmpty()) {
+            System.debug('⚠️ Skipped files: ' + String.join(skippedFiles, ', '));
+        }
+        
+        // Build final list
+        for (AttachmentInfo info : filesToKeep) {
+            base64Attachments.add(info.base64Data);
+        }
+        
+        System.debug('✅ Final attachments count: ' + base64Attachments.size());
+        
+    } catch (Exception e) {
+        System.debug('❌ Error: ' + e.getMessage());
+        System.debug('❌ Stack trace: ' + e.getStackTraceString());
+    }
+    
+    return base64Attachments;
+}
+
+// ✅ Helper class to track attachment info with sorting
+public class AttachmentInfo implements Comparable {
+    public String title;
+    public String base64Data;
+    public Integer base64Length;
+    public Integer fileSize;
+    public Id contentDocumentId;
+    
+    // Sort by base64Length (ascending for smallest first)
+    public Integer compareTo(Object obj) {
+        AttachmentInfo other = (AttachmentInfo) obj;
+        if (this.base64Length < other.base64Length) return -1;
+        if (this.base64Length > other.base64Length) return 1;
+        return 0;
+    }
+}
     
 }

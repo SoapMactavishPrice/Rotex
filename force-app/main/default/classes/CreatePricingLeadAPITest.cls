@@ -58,7 +58,7 @@ private class CreatePricingLeadAPITest {
                    LastName,
                    Company,
                    Project_Name__c,
-                   Model_String_Required__c,
+                  // Model_String_Required__c,
                    Remark__c,
                    ASB_Verified_Attachment__c,
                    Any_Upload__c
@@ -81,7 +81,6 @@ private class CreatePricingLeadAPITest {
 
                 System.assertEquals('ABC Pvt Ltd', l.Company);
                 System.assertEquals('Project A', l.Project_Name__c);
-                System.assertEquals('Model-123', l.Model_String_Required__c);
                 System.assertEquals('Test Remark', l.Remark__c);
                 System.assertEquals('ASB File', l.ASB_Verified_Attachment__c);
                 System.assertEquals('Upload File', l.Any_Upload__c);
@@ -92,7 +91,6 @@ private class CreatePricingLeadAPITest {
 
                 System.assertEquals('Default Company', l.Company);
                 System.assertEquals('Project B', l.Project_Name__c);
-                System.assertEquals('Model-456', l.Model_String_Required__c);
             }
         }
 

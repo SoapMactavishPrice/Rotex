@@ -1,7 +1,7 @@
 global class DeleteApiLogsBatch implements Database.Batchable<SObject>, Schedulable {
     
     global Database.QueryLocator start(Database.BatchableContext BC) {
-        Date thirtyDaysAgo = Date.today().addDays(-30);
+        Date thirtyDaysAgo = Date.today().addDays(-15);
         return Database.getQueryLocator([
             SELECT Id
             FROM API_Log__c

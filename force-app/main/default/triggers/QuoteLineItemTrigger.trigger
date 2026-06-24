@@ -28,6 +28,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         
         for (QuoteLineItem qli : Trigger.new) {
             System.debug('--- Processing QLI ID: ' + qli.Id);
+            System.debug('List Price: ' + qli.ListPrice);
             
             // 1️⃣ Populate fields from parent Quote if blank (only for new QLI)
             if (Trigger.isInsert && quoteMap.containsKey(qli.QuoteId)) {

@@ -278,7 +278,7 @@ export default class SendQuoteToSAP extends LightningElement {
                 }
                 field.reportValidity();
             });
-            if (this.bpValue == '' || this.shValue == '' || (this.salesQuotationType == '' || this.salesQuotationType == null || this .salesQuotationType == undefined)) {
+            if (this.bpValue == '' || this.shValue == '' || (this.salesQuotationType == '' || this.salesQuotationType == null || this.salesQuotationType == undefined)) {
                 validationFlag = true;
             }
 

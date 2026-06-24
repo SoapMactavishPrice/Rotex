@@ -72,16 +72,30 @@ public class QuoteTriggerHandler {
             
             Quote oldQ = oldQuoteMap.get(q.Id);
             
-            if (oldQ != null &&
-                oldQ.Quote_Valid_Till__c != q.Quote_Valid_Till__c) {
-                    
-                    oppsToUpdate.add(
-                        new Opportunity(
-                            Id = q.OpportunityId,
-                            CloseDate = q.Quote_Valid_Till__c
-                        )
-                    );
+            Boolean closeDateChanged =
+                oldQ != null &&
+                oldQ.Quote_Valid_Till__c != q.Quote_Valid_Till__c;
+            
+            Boolean projectDetailsChanged =
+                oldQ != null &&
+                oldQ.Project_Details__c != q.Project_Details__c;
+            
+            if (closeDateChanged || projectDetailsChanged) {
+                
+                Opportunity opp = new Opportunity(
+                    Id = q.OpportunityId
+                );
+                
+                if (closeDateChanged) {
+                    opp.CloseDate = q.Quote_Valid_Till__c;
                 }
+                
+                if (projectDetailsChanged) {
+                    opp.Project_Name__c = q.Project_Details__c;
+                }
+                
+                oppsToUpdate.add(opp);
+            }
         }
         
         if (!oppsToUpdate.isEmpty()) {

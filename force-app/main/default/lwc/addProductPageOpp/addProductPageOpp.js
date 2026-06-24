@@ -14,8 +14,8 @@ const COLS = [
     // { label: 'HSN Master', fieldName: 'hsnMasterCode', type: 'text' },
     // { label: 'Product Category', fieldName: 'Family', type: 'text' },
     // { label: 'Pack Size', fieldName: 'PackSize', type: 'text' },
-    { label: 'List Price', fieldName: 'Price', type: 'currency', cellAttributes: { alignment: 'left' } },
-    { label: 'List Price', fieldName: 'ListPrice', type: 'currency', cellAttributes: { alignment: 'left' } },
+    { label: 'List Price', fieldName: 'Price', type: 'currency', typeAttributes: { currencyCode: { fieldName: 'CurrencyIsoCode' } }, cellAttributes: { alignment: 'left' } },
+    { label: 'List Price', fieldName: 'ListPrice', type: 'currency', typeAttributes: { currencyCode: { fieldName: 'CurrencyIsoCode' } }, cellAttributes: { alignment: 'left' } },
     { label: 'ARC', fieldName: 'IsARC', type: 'boolean', cellAttributes: { alignment: 'left' } },
     { label: 'Product Description', fieldName: 'Description', type: 'text' }
 

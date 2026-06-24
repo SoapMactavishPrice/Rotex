@@ -1,0 +1,467 @@
+<template>
+    <template if:true={isModalOpen}>
+        <section
+            role="dialog"
+            aria-labelledby="arc-modal-heading"
+            aria-modal="true"
+            aria-describedby="arc-modal-content"
+            class="slds-modal slds-fade-in-open">
+
+            <div class="slds-modal__container arc-modal-container">
+
+                <!-- ─────────────────────────────────────────────────────────────
+                     HEADER
+                ───────────────────────────────────────────────────────────────── -->
+                <header class="slds-modal__header">
+                    <button
+                        class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                        title="Close"
+                        onclick={closeModal}>
+                        <lightning-icon
+                            icon-name="utility:close"
+                            alternative-text="Close"
+                            variant="inverse"
+                            size="small">
+                        </lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+
+                    <template if:true={isFirstPage}>
+                        <h2 id="arc-modal-heading" class="slds-text-heading_medium slds-hyphenate">
+                            Add Products
+                        </h2>
+                    </template>
+
+                    <template if:false={isFirstPage}>
+                        <h2 id="arc-modal-heading-01" class="slds-text-heading_medium">
+                            Edit Selected Products – ARC
+                        </h2>
+                    </template>
+                </header>
+
+
+                <!-- ─────────────────────────────────────────────────────────────
+                     MODAL BODY
+                ───────────────────────────────────────────────────────────────── -->
+                <div class="slds-modal__content slds-p-around_medium" id="arc-modal-content">
+
+
+                    <!-- ═══════════════════════════════════════════════════════════
+                         PAGE 1 – Product Search & Selection
+                    ════════════════════════════════════════════════════════════════ -->
+                    <template if:true={isFirstPage}>
+
+                        <!-- Search bar + item type combo -->
+                        <div class="slds-grid slds-gutters slds-p-around_xxx-small">
+                            <div class="slds-col" style="width:100%">
+                                <div class="slds-form-element" onmouseleave={toggleResult}>
+                                    <div class="slds-combobox_container slds-has-selection">
+                                        <div
+                                            class="lookupInputContainer slds-combobox slds-dropdown-trigger"
+                                            aria-expanded="false"
+                                            aria-haspopup="listbox"
+                                            role="combobox">
+                                            <div
+                                                class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_left-right"
+                                                role="none">
+                                                <div class="searchBoxWrapper slds-show">
+                                                    <lightning-input
+                                                        type="search"
+                                                        data-source="searchInputField"
+                                                        onchange={showFilteredProducts}
+                                                        onclick={toggleResult}
+                                                        value={searchKey}
+                                                        variant="label-hidden"
+                                                        placeholder="Search products…"
+                                                        onkeyup={showFilteredProducts}
+                                                        class="searchBox"
+                                                        disabled={searchDisability}>
+                                                    </lightning-input>
+                                                    <lightning-combobox
+                                                        name="itemType"
+                                                        label="Item Type"
+                                                        value={itemDefault}
+                                                        placeholder="Select Item"
+                                                        options={itemsOptions}
+                                                        onchange={handleItemOptions}>
+                                                    </lightning-combobox>
+                                                    <template if:true={showErrorMsg}>
+                                                        <p class="slds-m-top_xx-small" style="color:#ba0517;font-size:12px;">
+                                                            First enter keywords for a product, then add filters and click Apply.
+                                                        </p>
+                                                    </template>
+                                                </div>
+                                            </div>
+
+                                            <!-- Search results dropdown -->
+                                            <div
+                                                style="margin-top:0;display:none"
+                                                id="listbox-id-5"
+                                                class="lookupContainer slds-dropdown slds-dropdown_length-with-icon-7 slds-dropdown_fluid"
+                                                role="listbox">
+                                                <ul class="slds-listbox slds-listbox_vertical" role="presentation">
+                                                    <template for:each={lstResult} for:item="obj">
+                                                        <li key={obj.Id} role="presentation" class="slds-listbox__item">
+                                                            <div
+                                                                data-recid={obj.Id}
+                                                                onclick={handelSelectedRecord}
+                                                                class="slds-media slds-listbox__option slds-listbox__option_entity slds-listbox__option_has-meta"
+                                                                role="option">
+                                                                <span style="pointer-events:none" class="slds-media__figure slds-listbox__option-icon">
+                                                                    <span class="slds-icon_container">
+                                                                        <lightning-icon icon-name="standard:product_item" size="small" alternative-text="Product"></lightning-icon>
+                                                                    </span>
+                                                                </span>
+                                                                <span style="pointer-events:none" class="slds-media__body">
+                                                                    <span class="slds-listbox__option-text slds-listbox__option-text_entity">{obj.Name}</span>
+                                                                    <span class="slds-listbox__option-text slds-listbox__option-text_entity">{obj.ProductCode}</span>
+                                                                </span>
+                                                            </div>
+                                                        </li>
+                                                    </template>
+                                                    <template if:false={hasRecords}>
+                                                        <li class="slds-listbox__item" style="text-align:center;font-weight:700;">
+                                                            No records found
+                                                        </li>
+                                                    </template>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Datatable -->
+                        <div class="demo-only slds-grid slds-wrap slds-scrollable_y" style="height:21rem;">
+                            <div class="slds-size_3-of-3">
+                                <div class="slds-text-align_center slds-m-top_x-small">
+                                    <div class="slds-col slds-box">
+                                        <lightning-datatable
+                                            data={ShowTableData}
+                                            key-field="Id"
+                                            columns={cols}
+                                            if:false={showSpinner}
+                                            data-id="datatable"
+                                            selected-rows={selectedProductCode}
+                                            onrowselection={SelectedProduct}>
+                                        </lightning-datatable>
+                                        <template if:true={showSpinner}>
+                                            <div class="slds-is-relative" style="min-height:40vh;">
+                                                <lightning-spinner alternative-text="Loading…" size="medium"></lightning-spinner>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <!-- /PAGE 1 -->
+
+
+                    <!-- ═══════════════════════════════════════════════════════════
+                         PAGE 2 – ARC Edit Products
+                    ════════════════════════════════════════════════════════════════ -->
+                    <template if:true={isSecondPage}>
+
+                        <!-- Loading overlay -->
+                        <template if:true={isLoadingARCData}>
+                            <div class="arc-spinner-wrapper">
+                                <lightning-spinner alternative-text="Loading ARC data…" size="medium"></lightning-spinner>
+                            </div>
+                        </template>
+
+                        <template if:false={isLoadingARCData}>
+
+                            <!-- ───────────────────────────────────────────────────
+                                 SUMMARY STAT TILES
+                            ──────────────────────────────────────────────────────── -->
+                            <div class="arc-stat-row">
+
+                                <!-- Total Anticipated Business (computed) -->
+                                <div class="arc-stat-tile">
+                                    <div class="arc-stat-label">Total Anticipated Business</div>
+                                    <div class="arc-stat-value">{totalAnticipatedBusiness}</div>
+                                </div>
+
+                                <!-- Total Qty (computed) -->
+                                <div class="arc-stat-tile">
+                                    <div class="arc-stat-label">Total Qty</div>
+                                    <div class="arc-stat-value">{totalQty}</div>
+                                </div>
+
+                                <!-- Total Business Last FY (read-only, no data yet) -->
+                                <div class="arc-stat-tile">
+                                    <div class="arc-stat-label">Total Business Last FY</div>
+                                    <div class="arc-stat-value arc-stat-value--muted">—</div>
+                                </div>
+
+                                <!-- Total Business from ARC Item Last FY (read-only) -->
+                                <div class="arc-stat-tile">
+                                    <div class="arc-stat-label">Total Business from<br/>ARC Item Last FY</div>
+                                    <div class="arc-stat-value arc-stat-value--muted">—</div>
+                                </div>
+
+                                <!-- Payment Terms (editable) -->
+                                <div class="arc-stat-tile arc-stat-tile--editable">
+                                    <div class="arc-stat-label">Payment Terms</div>
+                                    <input
+                                        class="arc-stat-input"
+                                        type="text"
+                                        value={paymentTerms}
+                                        onchange={handlePaymentTermsChange} />
+                                </div>
+
+                                <!-- Warranty (editable) -->
+                                <div class="arc-stat-tile arc-stat-tile--editable">
+                                    <div class="arc-stat-label">Warranty</div>
+                                    <input
+                                        class="arc-stat-input"
+                                        type="text"
+                                        value={warranty}
+                                        onchange={handleWarrantyChange} />
+                                </div>
+
+                                <!-- Incoterms (editable) -->
+                                <div class="arc-stat-tile arc-stat-tile--editable">
+                                    <div class="arc-stat-label">Incoterms</div>
+                                    <input
+                                        class="arc-stat-input"
+                                        type="text"
+                                        value={incotermsField}
+                                        onchange={handleIncotermsChange} />
+                                </div>
+
+                            </div>
+                            <!-- /arc-stat-row -->
+
+
+                            <!-- ───────────────────────────────────────────────────
+                                 PRODUCT DETAIL TABLE
+                            ──────────────────────────────────────────────────────── -->
+                            <div class="arc-section-label">Product Line Items</div>
+
+                            <div class="arc-table-wrapper">
+                                <div class="arc-table-scroll">
+                                    <table class="arc-bottom-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="arc-th arc-th--left" scope="col">Material Code</th>
+                                                <th class="arc-th arc-th--left" scope="col">Material Description</th>
+                                                <th class="arc-th" scope="col">List Price</th>
+                                                <th class="arc-th arc-th--editable" scope="col">Discount %</th>
+                                                <th class="arc-th" scope="col">Proposed ARC Price</th>
+                                                <th class="arc-th arc-th--editable" scope="col">Potential Value</th>
+                                                <th class="arc-th arc-th--editable" scope="col">Potential Qty</th>
+                                                <th class="arc-th arc-th--editable" scope="col">Valid From</th>
+                                                <th class="arc-th arc-th--editable" scope="col">
+                                                    Valid Till
+                                                </th>
+                                                <th class="arc-th" scope="col">Existing ARC Price</th>
+                                                <th class="arc-th" scope="col">Existing ARC Expiry</th>
+                                                <th class="arc-th" scope="col">Business Last FY</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            <template for:each={arcProductDetails} for:item="row">
+                                                <tr key={row.productCode}>
+
+                                                    <!-- Material Code – read-only -->
+                                                    <td class="arc-td arc-td--left">
+                                                        <span>{row.productCode}</span>
+                                                    </td>
+
+                                                    <!-- Material Description – read-only -->
+                                                    <td class="arc-td arc-td--left arc-td--desc" title={row.productName}>
+                                                        {row.productName}
+                                                    </td>
+
+                                                    <!-- List Price – read-only -->
+                                                    <td class="arc-td arc-td--num">{row.listPrice}</td>
+
+                                                    <!-- Discount % – editable -->
+                                                    <td class="arc-td--editable">
+                                                        <input
+                                                            class="arc-input arc-input--num"
+                                                            type="number"
+                                                            value={row.discountPct}
+                                                            data-code={row.productCode}
+                                                            onchange={handleDiscountPctChange}
+                                                            min="0"
+                                                            max="100"
+                                                            step="0.01"
+                                                            placeholder="0.00" />
+                                                    </td>
+
+                                                    <!-- Proposed ARC Price – computed/read-only -->
+                                                    <td class="arc-td arc-td--computed">{row.proposedARCPrice}</td>
+
+                                                    <!-- Potential Value – editable -->
+                                                    <td class="arc-td--editable">
+                                                        <input
+                                                            class="arc-input arc-input--num"
+                                                            type="number"
+                                                            value={row.potentialValue}
+                                                            data-code={row.productCode}
+                                                            onchange={handlePotentialValueChange}
+                                                            min="0"
+                                                            placeholder="0" />
+                                                    </td>
+
+                                                    <!-- Potential Qty – editable -->
+                                                    <td class="arc-td--editable">
+                                                        <input
+                                                            class="arc-input arc-input--num"
+                                                            type="number"
+                                                            value={row.potentialQty}
+                                                            data-code={row.productCode}
+                                                            onchange={handlePotentialQtyChange}
+                                                            min="0"
+                                                            placeholder="0" />
+                                                    </td>
+
+                                                    <!-- Valid From – editable date -->
+                                                    <td class="arc-td--editable">
+                                                        <input
+                                                            class="arc-input arc-input--date"
+                                                            type="date"
+                                                            value={row.validFrom}
+                                                            data-code={row.productCode}
+                                                            onchange={handleValidFromChange} />
+                                                    </td>
+
+                                                    <!-- Valid Till – editable date, constrained to FY end -->
+                                                    <td class="arc-td--editable">
+                                                        <input
+                                                            class="arc-input arc-input--date"
+                                                            type="date"
+                                                            value={row.validTill}
+                                                            max={fyEndDate}
+                                                            data-code={row.productCode}
+                                                            onchange={handleValidTillChange} />
+                                                    </td>
+
+                                                    <!-- Existing ARC Price – read-only -->
+                                                    <td class="arc-td arc-td--num">{row.existingARCPrice}</td>
+
+                                                    <!-- Existing ARC Expiry Date – read-only -->
+                                                    <td class="arc-td">{row.existingARCExpiryDate}</td>
+
+                                                    <!-- Business Done Last FY – read-only, blank for now -->
+                                                    <td class="arc-td arc-td--muted">—</td>
+
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </template>
+                        <!-- /if:false={isLoadingARCData} -->
+
+                    </template>
+                    <!-- /PAGE 2 -->
+
+
+                </div>
+                <!-- /slds-modal__content -->
+
+
+                <!-- ─────────────────────────────────────────────────────────────
+                     FOOTER
+                ───────────────────────────────────────────────────────────────── -->
+                <footer class="slds-modal__footer">
+                    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;flex-wrap:wrap;gap:10px;">
+
+                        <!-- PAGE 1 – Pagination + action buttons -->
+                        <template if:true={isFirstPage}>
+
+                            <!-- Pagination -->
+                            <div style="display:flex;gap:6px;align-items:center;">
+                                <lightning-button
+                                    disabled={bDisableFirst}
+                                    icon-name="utility:jump_to_left"
+                                    label="First"
+                                    onclick={firstPage}>
+                                </lightning-button>
+                                <lightning-button
+                                    disabled={bDisableFirst}
+                                    icon-name="utility:chevronleft"
+                                    label="Previous"
+                                    onclick={previousHandler}>
+                                </lightning-button>
+                                <span class="slds-badge slds-badge_lightest" style="margin:0 4px;">
+                                    Page {page} of {totalPage} &nbsp;·&nbsp; {totalRecountCount} records
+                                </span>
+                                <lightning-button
+                                    disabled={bDisableLast}
+                                    icon-name="utility:chevronright"
+                                    icon-position="right"
+                                    label="Next"
+                                    onclick={nextHandler}>
+                                </lightning-button>
+                                <lightning-button
+                                    disabled={bDisableLast}
+                                    icon-name="utility:jump_to_right"
+                                    icon-position="right"
+                                    label="Last"
+                                    onclick={lastPage}>
+                                </lightning-button>
+                            </div>
+
+                            <!-- Action buttons -->
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <lightning-button
+                                    onclick={goBackToRecord}
+                                    label="Cancel">
+                                </lightning-button>
+                                <lightning-button
+                                    onclick={addToCart}
+                                    label="Add to Cart"
+                                    variant="brand"
+                                    disabled={DisableNext}>
+                                </lightning-button>
+                                <template if:true={showViewCart}>
+                                    <lightning-button
+                                        onclick={viewCart}
+                                        label="View Cart"
+                                        variant="success">
+                                    </lightning-button>
+                                </template>
+                            </div>
+
+                        </template>
+                        <!-- /PAGE 1 footer -->
+
+
+                        <!-- PAGE 2 – Back + Save -->
+                        <template if:false={isFirstPage}>
+
+                            <lightning-button
+                                onclick={handleback}
+                                label="← Back">
+                            </lightning-button>
+
+                            <template if:false={isLoadingARCData}>
+                                <lightning-button
+                                    variant="brand"
+                                    onclick={saveARCDetails}
+                                    label="Save Details">
+                                </lightning-button>
+                            </template>
+
+                        </template>
+                        <!-- /PAGE 2 footer -->
+
+                    </div>
+                </footer>
+
+            </div>
+            <!-- /slds-modal__container -->
+
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>

@@ -1,0 +1,387 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ARC Modal – Full CSS
+   Salesforce Lightning Design System (SLDS) compliant
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+
+/* ── Modal sizing ─────────────────────────────────────────────────────────────── */
+.arc-modal-container {
+    max-width: 95rem !important;
+    width: 95% !important;
+    height: 95% !important;
+}
+
+
+/* ── Suppress number spinners inside table inputs ─────────────────────────────── */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PAGE 1 – Product Search & Selection
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+table {
+    border-collapse: collapse;
+}
+table thead tr th {
+    background-color: #f3f3f3;
+}
+th, td {
+    padding: 5px;
+    border-bottom: 1px solid #dddbda;
+}
+table tbody tr:hover {
+    background-color: #f3f2f2;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PAGE 2 – ARC Edit Products
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+
+/* ── Summary stat tiles (top row) ─────────────────────────────────────────────── */
+.arc-stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.arc-stat-tile {
+    flex: 1 1 180px;
+    background: #ffffff;
+    border: 1px solid #dddbda;
+    border-radius: 4px;
+    padding: 12px 16px;
+    min-width: 160px;
+}
+
+.arc-stat-tile--editable {
+    border-left: 3px solid #0176d3;
+}
+
+.arc-stat-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #444444;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    white-space: nowrap;
+}
+
+.arc-stat-value {
+    font-size: 18px;
+    font-weight: 400;
+    color: #080707;
+    line-height: 1.2;
+}
+
+.arc-stat-value--muted {
+    font-size: 13px;
+    color: #706e6b;
+}
+
+/* Inline editable input inside a stat tile */
+.arc-stat-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 400;
+    color: #080707;
+    padding: 0;
+    font-family: inherit;
+}
+
+.arc-stat-input:focus {
+    outline: none;
+}
+
+.arc-stat-tile--editable:focus-within {
+    box-shadow: 0 0 0 1px #0176d3;
+    border-color: #0176d3;
+}
+
+
+/* ── Section divider label ─────────────────────────────────────────────────────── */
+.arc-section-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #444444;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0 0 6px 0;
+    border-bottom: 1px solid #dddbda;
+    margin-bottom: 12px;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ARC Product Table
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.arc-table-wrapper {
+    border: 1px solid #dddbda;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.arc-table-scroll {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 340px;
+}
+
+.arc-bottom-table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 1280px;
+    table-layout: auto;
+}
+
+
+/* ── Column headers ────────────────────────────────────────────────────────────── */
+.arc-bottom-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.arc-th {
+    background-color: #f3f3f3;
+    color: #444444;
+    border: 1px solid #dddbda;
+    border-top: none;
+    padding: 8px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: center;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    vertical-align: bottom;
+}
+
+.arc-th--left {
+    text-align: left;
+}
+
+/* Editable column headers get the SLDS brand-blue accent */
+.arc-th--editable {
+    background-color: #e8f4fd;
+    color: #0176d3;
+    border-bottom: 2px solid #0176d3;
+}
+
+
+/* ── Body rows ─────────────────────────────────────────────────────────────────── */
+.arc-bottom-table tbody tr {
+    border-bottom: 1px solid #dddbda;
+    transition: background 0.1s ease;
+}
+
+.arc-bottom-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.arc-bottom-table tbody tr:hover {
+    background-color: #f3f2f2;
+}
+
+.arc-bottom-table tbody tr:hover .arc-td--editable {
+    background-color: #eaf5fe;
+}
+
+
+/* ── Read-only cells ───────────────────────────────────────────────────────────── */
+.arc-td {
+    border: 1px solid #e8e8e8;
+    border-top: none;
+    padding: 7px 10px;
+    font-size: 12px;
+    color: #080707;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    background: #ffffff;
+}
+
+.arc-td--left {
+    text-align: left;
+}
+
+.arc-td--num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-family: 'Salesforce Sans', 'SalesforceSans', Arial, sans-serif;
+    color: #3e3e3c;
+}
+
+.arc-td--desc {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.arc-td--computed {
+    background-color: #f9f9f9;
+    font-weight: 700;
+    color: #080707;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.arc-td--muted {
+    color: #706e6b;
+    text-align: center;
+}
+
+
+/* ── Editable cells ────────────────────────────────────────────────────────────── */
+.arc-td--editable {
+    background-color: #f2f9fe;
+    border: 1px solid #e8e8e8;
+    border-top: none;
+    padding: 0;
+    vertical-align: middle;
+}
+
+
+/* Material code pill */
+.arc-code-pill {
+    display: inline-block;
+    background: #f3f3f3;
+    border: 1px solid #dddbda;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 600;
+    color: #3e3e3c;
+    white-space: nowrap;
+}
+
+
+/* ── Inputs inside editable cells ─────────────────────────────────────────────── */
+.arc-input {
+    display: block;
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 7px 10px;
+    font-size: 12px;
+    color: #080707;
+    font-family: inherit;
+    text-align: center;
+    box-sizing: border-box;
+    min-width: 80px;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.arc-input:hover {
+    background: #d8edfc;
+}
+
+.arc-input:focus {
+    background: #ffffff;
+    box-shadow: inset 0 0 0 2px #0176d3;
+    z-index: 1;
+    position: relative;
+}
+
+/* Number inputs */
+.arc-input--num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Date inputs */
+.arc-input--date {
+    min-width: 136px;
+    text-align: left;
+    cursor: pointer;
+    color: #080707;
+    /* Style the calendar icon to match SLDS */
+    padding-right: 8px;
+}
+
+.arc-input--date::-webkit-calendar-picker-indicator {
+    opacity: 0.55;
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+}
+
+.arc-input--date::-webkit-datetime-edit {
+    font-size: 12px;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Legend
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.arc-legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.arc-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #706e6b;
+}
+
+.arc-legend-swatch {
+    width: 16px;
+    height: 10px;
+    border-radius: 2px;
+    border: 1px solid #dddbda;
+    flex-shrink: 0;
+}
+
+.arc-legend-swatch--readonly {
+    background: #ffffff;
+}
+
+.arc-legend-swatch--editable {
+    background: #f2f9fe;
+    border-color: #0176d3;
+}
+
+.arc-legend-swatch--computed {
+    background: #f9f9f9;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Loading / Spinner overlay
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.arc-spinner-wrapper {
+    position: relative;
+    min-height: 20vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

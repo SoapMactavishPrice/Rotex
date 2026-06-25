@@ -1982,8 +1982,13 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
                         lineItemWrapper.RequestedQuantity = String.valueOf(qli.Quantity);
                         // lineItemWrapper.Plant = qli.Plant__c;
                         lineItemWrapper.Plant = saItem.Sales_Org__c;
-                        lineItemWrapper.Cond_type = 'ZDIS';
-                        lineItemWrapper.Cond_Value = String.valueOf(qli.Discount_to_be_offered__c);
+                        if (qli.Discount_to_be_offered__c != null && qli.Discount_to_be_offered__c < 0) {
+                            lineItemWrapper.Cond_type = 'ZLPA';
+                            lineItemWrapper.Cond_Value = String.valueOf(qli.Discount_to_be_offered__c * -1);
+                        } else {
+                            lineItemWrapper.Cond_type = 'ZDIS';
+                            lineItemWrapper.Cond_Value = String.valueOf(qli.Discount_to_be_offered__c);
+                        }
                         
                         /*if (qli.Discount_to_be_offered__c > 0) {
 lineItemWrapper.to_PricingElement = new List < PricingElementWrapper > ();

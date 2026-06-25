@@ -69,8 +69,8 @@ export default class SendQuoteToSAP extends LightningElement {
         const filePromises = [];
 
         Array.from(files).forEach(file => {
-            if (file.size > 20 * 1024 * 1024) {
-                this.showToast('Error', `${file.name} exceeds 20MB limit`, 'error');
+            if (file.size > 3.5 * 1024 * 1024) {
+                this.showToast('Error', `${file.name} exceeds 3.5MB limit`, 'error');
                 return;
             }
 

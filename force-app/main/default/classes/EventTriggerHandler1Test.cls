@@ -25,6 +25,7 @@ private class EventTriggerHandler1Test {
         Test.startTest();
 
         evt.Visit_Status__c = 'Completed';
+        evt.Next_Action_Applicable__c = 'Yes';
         update evt;
 
         Test.stopTest();

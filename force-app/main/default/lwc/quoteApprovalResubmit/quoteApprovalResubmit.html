@@ -1,0 +1,40 @@
+<template>
+    <lightning-quick-action-panel header="Resubmit Approval">
+        <template if:true={isLoading}>
+            <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+        </template>
+
+        <template if:false={isLoading}>
+            <template if:true={hasOptions}>
+                <div class="content">
+                    <lightning-checkbox-group
+                        label="Approval Types"
+                        options={checkboxOptions}
+                        value={selectedApprovalTypes}
+                        onchange={handleApprovalTypeChange}>
+                    </lightning-checkbox-group>
+                </div>
+            </template>
+
+            <template if:false={hasOptions}>
+                <div class="empty-state">
+                    No rejected Quote approval is available for resubmission.
+                </div>
+            </template>
+        </template>
+
+        <div slot="footer">
+            <lightning-button
+                label="Cancel"
+                onclick={handleCancel}>
+            </lightning-button>
+            <lightning-button
+                class="submit-button"
+                variant="brand"
+                label="Submit"
+                disabled={isSubmitDisabled}
+                onclick={handleSubmit}>
+            </lightning-button>
+        </div>
+    </lightning-quick-action-panel>
+</template>

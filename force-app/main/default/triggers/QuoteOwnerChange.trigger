@@ -1,9 +1,9 @@
 trigger QuoteOwnerChange on Quote (after update) {
 
-    // ✅ Collect Quotes where Owner changed
     Map<Id, Quote> quotesForNotification = new Map<Id, Quote>();
     Map<Id, Id> quoteToOldOwnerMap = new Map<Id, Id>();
     Set<Id> ownerIds = new Set<Id>();
+    ownerIds.add(UserInfo.getUserId());
 
     for (Quote newQuote : Trigger.new) {
         Quote oldQuote = Trigger.oldMap.get(newQuote.Id);
@@ -21,12 +21,10 @@ trigger QuoteOwnerChange on Quote (after update) {
         return;
     }
 
-    // ✅ Query Owners once
     Map<Id, User> userMap = new Map<Id, User>(
-        [SELECT Id, Name FROM User WHERE Id IN :ownerIds]
+        [SELECT Id, Name, Email FROM User WHERE Id IN :ownerIds]
     );
 
-    // ✅ Query Notification Type once
     CustomNotificationType notifType = [
         SELECT Id
         FROM CustomNotificationType
@@ -34,9 +32,11 @@ trigger QuoteOwnerChange on Quote (after update) {
         LIMIT 1
     ];
 
-    // ✅ Send notifications
+    List<Messaging.SingleEmailMessage> emails = new List<Messaging.SingleEmailMessage>();
+
     for (Quote q : quotesForNotification.values()) {
 
+        User newOwner = userMap.get(q.OwnerId);
         User oldOwner = userMap.get(quoteToOldOwnerMap.get(q.Id));
 
         Messaging.CustomNotification notification =
@@ -50,9 +50,32 @@ trigger QuoteOwnerChange on Quote (after update) {
         );
         notification.setTargetId(q.Id);
 
-        // ✅ Correct supported method
         notification.send(
             new Set<String>{ String.valueOf(q.OwnerId) }
         );
+
+        if (newOwner != null && String.isNotBlank(newOwner.Email)) {
+            Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
+            if (Test.isRunningTest()) {
+                email.setToAddresses(new List<String>{ 'abc@gmail.com' });
+            } else {
+                email.setToAddresses(new List<String>{ newOwner.Email });
+            }
+            email.setSubject('Quote Ownership Assigned');
+
+            email.setPlainTextBody(
+                'Hello ' + newOwner.Name + ',\n\n' +
+                'Ownership of Quote "' + q.QuoteNumber + '" has been assigned to you' +
+                (oldOwner != null ? ' by ' + oldOwner.Name : '') + '.\n\n' +
+                'Please review the quote.\n\n' +
+                'Thank you.'
+            );
+
+            emails.add(email);
+        }
+    }
+
+    if (!emails.isEmpty()) {
+        Messaging.sendEmail(emails);
     }
 }

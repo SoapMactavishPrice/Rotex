@@ -642,7 +642,7 @@ private class IntegrationHandlerTest {
         Test.setMock(HttpCalloutMock.class, new SalesOrderCalloutMock());
 
         Test.startTest();
-        String result = IntegrationHandler.salesOrderCreation(q.Id, 'BP001', 'SH001', 'CA001');
+        String result = IntegrationHandler.salesOrderCreation(q.Id, 'BP001', 'SH001', 'CA001', 'ZQT');
         Test.stopTest();
 
        // System.assertNotEquals(null, result);
@@ -786,7 +786,7 @@ static void testGetQuotePayload() {
 
     // Step 9: Call method under test
     Test.startTest();
-    String result = IntegrationHandler.getQuotePayload(q.Id, bp.Id, sh.Id, ca.Id);
+    String result = IntegrationHandler.getQuotePayload(q.Id, bp.Id, sh.Id, ca.Id, 'ZQT');
     Test.stopTest();
 
 }

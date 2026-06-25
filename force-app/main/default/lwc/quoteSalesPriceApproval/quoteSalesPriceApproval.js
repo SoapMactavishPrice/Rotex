@@ -296,6 +296,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 // this.minimumOfferApprovalsMap  = newMinimumOfferMap;
 
                 this.quotes = result.map(q => {
+                    q.totalValueFormatted = q.totalValue ? Number(q.totalValue).toLocaleString('en-IN') : '0';
                     const processed = this.processQuote(q);
 
                     // ── Restore expanded state for quotes that were open ──

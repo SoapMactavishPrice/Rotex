@@ -33,11 +33,11 @@
                     <span class="tab-badge">{allCount}</span>
                 </button>
                 <button class={approvedTabClass} onclick={handleTabChange} data-tab="approved">
-                    Approved
+                    My Approved
                     <span class="tab-badge">{approvedCount}</span>
                 </button>
                 <button class={rejectedTabClass} onclick={handleTabChange} data-tab="rejected">
-                    Rejected
+                    My Rejected
                     <span class="tab-badge">{rejectedCount}</span>
                 </button>
             </div>
@@ -80,7 +80,7 @@
                                     </div>
                                     <div class="header-field">
                                         <span class="field-label">Total Value</span>
-                                        <span class="field-value">{quote.totalValue}</span>
+                                        <span class="field-value">{quote.totalValueFormatted}</span>
                                     </div>
                                     <div class="header-field">
                                         <span class="field-label">Avg. Discount Requested</span>

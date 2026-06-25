@@ -181,7 +181,7 @@ private class SalesPriceApprovalForQuotationTest {
                 GS_Warranty_Status__c, GS_Warranty_Date_Time__c, GS_Warranty_Comments__c,
                 BM_Warranty_Status__c, BM_Warranty_Date_Time__c, BM_Warranty_Comments__c,
                 MD_Warranty_Status__c, MD_Warranty_Date_Time__c, MD_Warranty_Comments__c,
-                Final_Warranty_Terms_Approver__c,
+                Final_Warranty_Terms_Approver__c, Quote_Valid_Till__c,
                 Final_Warranty_Terms_Approver__r.DelegatedApproverId,
                 SM_Validity_Offer_Status__c, SM_Validity_Offer_Date_Time__c, SM_Validity_Offer_Comments__c,
                 CH_Validity_Offer_Status__c, CH_Validity_Offer_Date_Time__c, CH_Validity_Offer_Comments__c,
@@ -2481,63 +2481,6 @@ private class SalesPriceApprovalForQuotationTest {
         User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'        LIMIT 1];
         User md = [SELECT Id FROM User WHERE Email = 'md@test.com'           LIMIT 1];
 
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-
-        // null finalId → false
-        q.Final_Warranty_Terms_Approver__c = null;
-        update q;
-        Quote fresh = fetchFullQuote();
-        System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh),
-                            'null finalId should return false');
-
-        // SM is final, SM Approved → true
-        q.Final_Warranty_Terms_Approver__c = sm.Id;
-        q.SM_Warranty_Status__c = 'Approved';
-        update q;
-        fresh = fetchFullQuote();
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
-
-        // SM is final, SM Rejected → true
-        q.SM_Warranty_Status__c = 'Rejected';
-        update q;
-        fresh = fetchFullQuote();
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
-
-        // SM is final, SM Submitted (neither) → false
-        q.SM_Warranty_Status__c = 'Submitted';
-        update q;
-        fresh = fetchFullQuote();
-        System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
-
-        // CH is final, CH Approved → true
-        q.Final_Warranty_Terms_Approver__c = ch.Id;
-        q.CH_Warranty_Status__c = 'Approved';
-        update q;
-        fresh = fetchFullQuote();
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
-
-        // GS is final, GS Approved → true
-        q.Final_Warranty_Terms_Approver__c = gs.Id;
-        q.GS_Warranty_Status__c = 'Approved';
-        update q;
-        fresh = fetchFullQuote();
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
-
-        // BM is final, BM Rejected → true
-        q.Final_Warranty_Terms_Approver__c = bm.Id;
-        q.BM_Warranty_Status__c = 'Rejected';
-        update q;
-        fresh = fetchFullQuote();
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
-
-        // MD is final, MD Approved → true
-        q.Final_Warranty_Terms_Approver__c = md.Id;
-        q.MD_Warranty_Status__c = 'Approved';
-        update q;
-        fresh = fetchFullQuote();
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
-
-        // finalId set but doesn't match any role field → falls through → false
         Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
         User stranger = new User(
             FirstName='X', LastName='Y', Email='stranger@test-cov.com',
@@ -2547,14 +2490,74 @@ private class SalesPriceApprovalForQuotationTest {
             ProfileId=p.Id, LanguageLocaleKey='en_US'
         );
         insert stranger;
+
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+
+        // Batch all updates into one DML + one re-query per assertion group
+        Test.startTest();
+
+        // null finalId → false
+        q.Final_Warranty_Terms_Approver__c = null;
+        q.SM_Warranty_Status__c = null;
+        update q;
+        Quote fresh = fetchFullQuote();
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh), 'null finalId should return false');
+
+        // SM Approved → true
+        q.Final_Warranty_Terms_Approver__c = sm.Id;
+        q.SM_Warranty_Status__c = 'Approved';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // SM Rejected → true
+        q.SM_Warranty_Status__c = 'Rejected';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // SM Submitted → false
+        q.SM_Warranty_Status__c = 'Submitted';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // CH Approved → true
+        q.Final_Warranty_Terms_Approver__c = ch.Id;
+        q.CH_Warranty_Status__c = 'Approved';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // GS Approved → true
+        q.Final_Warranty_Terms_Approver__c = gs.Id;
+        q.GS_Warranty_Status__c = 'Approved';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // BM Rejected → true
+        q.Final_Warranty_Terms_Approver__c = bm.Id;
+        q.BM_Warranty_Status__c = 'Rejected';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // MD Approved → true
+        q.Final_Warranty_Terms_Approver__c = md.Id;
+        q.MD_Warranty_Status__c = 'Approved';
+        update q;
+        fresh = fetchFullQuote();
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
+
+        // stranger → false
         q.Final_Warranty_Terms_Approver__c = stranger.Id;
         update q;
         fresh = fetchFullQuote();
-        System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh),
-                            'finalId not matching any approver role should return false');
-    }
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh), 'unmatched finalId should return false');
 
-    // ── isValidityOfferFinallyDecided ─────────────────────────────────────────
+        Test.stopTest();
+    }
 
     @isTest
     static void testIsValidityOfferFinallyDecided_AllApproverPositions() {
@@ -2566,50 +2569,47 @@ private class SalesPriceApprovalForQuotationTest {
 
         Quote q = [SELECT Id FROM Quote LIMIT 1];
 
-        // null finalId → false
+        Test.startTest();
+
         q.Final_Validity_Offer_Approver__c = null;
         update q;
         System.assertEquals(false, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
 
-        // SM Approved
         q.Final_Validity_Offer_Approver__c = sm.Id;
-        q.SM_Validity_Offer_Status__c      = 'Approved';
+        q.SM_Validity_Offer_Status__c = 'Approved';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
 
-        // SM Rejected
         q.SM_Validity_Offer_Status__c = 'Rejected';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
 
-        // SM neither → false
         q.SM_Validity_Offer_Status__c = 'Submitted';
         update q;
         System.assertEquals(false, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
 
-        // CH, GS, BM, MD each Approved
         q.Final_Validity_Offer_Approver__c = ch.Id;
         q.CH_Validity_Offer_Status__c = 'Approved';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
 
         q.Final_Validity_Offer_Approver__c = gs.Id;
         q.GS_Validity_Offer_Status__c = 'Approved';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
 
         q.Final_Validity_Offer_Approver__c = bm.Id;
         q.BM_Validity_Offer_Status__c = 'Approved';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
 
         q.Final_Validity_Offer_Approver__c = md.Id;
         q.MD_Validity_Offer_Status__c = 'Approved';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
-    }
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
 
-    // ── isTotalValueFinallyDecided ────────────────────────────────────────────
+        Test.stopTest();
+    }
 
     @isTest
     static void testIsTotalValueFinallyDecided_AllApproverPositions() {
@@ -2621,6 +2621,8 @@ private class SalesPriceApprovalForQuotationTest {
 
         Quote q = [SELECT Id FROM Quote LIMIT 1];
 
+        Test.startTest();
+
         q.Final_Total_Value_Approver__c = null;
         update q;
         System.assertEquals(false, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
@@ -2628,11 +2630,11 @@ private class SalesPriceApprovalForQuotationTest {
         q.Final_Total_Value_Approver__c = sm.Id;
         q.SM_Value_Status__c = 'Approved';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
 
         q.SM_Value_Status__c = 'Rejected';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
 
         q.SM_Value_Status__c = 'Submitted';
         update q;
@@ -2641,22 +2643,24 @@ private class SalesPriceApprovalForQuotationTest {
         q.Final_Total_Value_Approver__c = ch.Id;
         q.CH_Value_Status__c = 'Approved';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
 
         q.Final_Total_Value_Approver__c = gs.Id;
         q.GS_Value_Status__c = 'Approved';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
 
         q.Final_Total_Value_Approver__c = bm.Id;
         q.BM_Value_Status__c = 'Approved';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
 
         q.Final_Total_Value_Approver__c = md.Id;
         q.MD_Value_Status__c = 'Approved';
         update q;
-        System.assertEquals(true,  SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+
+        Test.stopTest();
     }
 
     // ── isMinimumOfferFinallyDecided ──────────────────────────────────────────

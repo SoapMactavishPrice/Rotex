@@ -61,12 +61,17 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
             }
             
             // 2️⃣ Determine which QLIs need approval processing
-            if (Trigger.isInsert || (Trigger.isUpdate && qli.Discount_to_be_offered__c != Trigger.oldMap.get(qli.Id).Discount_to_be_offered__c && !qli.Do_not_proceed_approval__c)) {
+            System.debug('Trigger.isInsert ==> ' + Trigger.isInsert + ', Trigger.isUpdate ==> ' + Trigger.isUpdate + ', Discount_to_be_offered__c: ' + qli.Discount_to_be_offered__c + ', Old Discount: ' + (Trigger.isUpdate ? Trigger.oldMap.get(qli.Id).Discount_to_be_offered__c : null) + ', qli.Is_Edited_Through_Edit_Discount__c: ' + qli.Is_Edited_Through_Edit_Discount__c + ', qli.Is_Discount_Only_Rejected_Static__c: ' + qli.Is_Discount_Only_Rejected_Static__c + ', Do_not_proceed_approval__c: ' + qli.Do_not_proceed_approval__c);
+            if (Trigger.isInsert || (Trigger.isUpdate && qli.Discount_to_be_offered__c != null && (qli.Discount_to_be_offered__c != Trigger.oldMap.get(qli.Id).Discount_to_be_offered__c || (qli.Is_Edited_Through_Edit_Discount__c && qli.Is_Discount_Only_Rejected_Static__c)) && !qli.Do_not_proceed_approval__c)) {
                 System.debug('APPROVAL: QLI needs approval processing');
                 System.debug('Discount_to_be_offered__c: ' + qli.Discount_to_be_offered__c);
                 if (Trigger.isUpdate) {
                     System.debug('Old Discount: ' + Trigger.oldMap.get(qli.Id).Discount_to_be_offered__c);
                 }
+                // Blank the approval status fields for re-processing 
+                qli.Is_Edited_Through_Edit_Discount__c = false;
+                qli.Is_Discount_Only_Rejected_Static__c = false;
+
                 qliToProcess.add(qli);
             } else {
                 System.debug('APPROVAL: QLI does NOT need approval processing (discount unchanged)');
@@ -321,6 +326,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
     }
 
     if (Trigger.isAfter && Trigger.isUpdate) {
+        QuoteFinalApprovalNotificationHandler.handleQuoteLineItemsAfterUpdate(Trigger.new, Trigger.oldMap);
         QuoteLineItemApprovalHandler.updateQLIUnitPrice(Trigger.new);
     }
 }

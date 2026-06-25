@@ -14,6 +14,11 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert, after
         QuoteTotalValueApprovalHandler.handleAfterInsert(Trigger.new);
         // QuoteMinimumOfferValueApprovalHandler.handleAfterInsert(Trigger.new);
         QuoteTriggerHandler.updateOpportunityCloseDateFromQuote(Trigger.new,null);
+        QuoteFileSyncHandler.copyOpportunityFilesToQuote(Trigger.new);
+    }
+    
+    if (Trigger.isAfter && Trigger.isUpdate) {
+        QuoteFinalApprovalNotificationHandler.handleQuotesAfterUpdate(Trigger.new, Trigger.oldMap);
     }
     
     // BEFORE UPDATE
@@ -52,7 +57,7 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert, after
         // Handle minimum offer value approval process for quote updates
         // QuoteMinimumOfferValueApprovalHandler.handleBeforeUpdate(Trigger.new, Trigger.oldMap);
     }
-    // AFTER UPDATE
+    
     if (Trigger.isAfter && Trigger.isUpdate) {
         
         QuoteTriggerHandler.updateOpportunityStageOnQuoteApproval(Trigger.new,Trigger.oldMap);

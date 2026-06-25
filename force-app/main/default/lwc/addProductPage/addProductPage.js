@@ -359,7 +359,7 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
     @track customerSAPdiscount = 0;
     handlerGetCustomerDiscount() {
         getCustomerDiscount({
-            oppId: this.recId
+            quoteId: this.recId
         }).then((result) => {
             console.log('getCustomerDiscount:>>> ', result);
 

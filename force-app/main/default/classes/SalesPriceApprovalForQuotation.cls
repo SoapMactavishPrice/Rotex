@@ -368,7 +368,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                    GS_Value_Status__c,  GS_Value_Date_Time__c,  GS_Value_Comments__c,
                    BM_Value_Status__c,  BM_Value_Date_Time__c,  BM_Value_Comments__c,
                    MD_Value_Status__c,  MD_Value_Date_Time__c,  MD_Value_Comments__c,
-                   Final_Total_Value_Approver__c, Is_Total_Value_Approved__c, Is_Small_Order_Handling__c, Is_all_approvals_final_approved__c
+                   Final_Total_Value_Approver__c, Is_Total_Value_Approved__c, Is_Small_Order_Handling__c, Is_all_approvals_final_approved__c, Quote_Valid_Till__c
                 //    SM_Min_Offer_Status__c,  SM_Min_Offer_Date_Time__c,  SM_Min_Offer_Comments__c,
                 //    CH_Min_Offer_Status__c,  CH_Min_Offer_Date_Time__c,  CH_Min_Offer_Comments__c,
                 //    GS_Min_Offer_Status__c,  GS_Min_Offer_Date_Time__c,  GS_Min_Offer_Comments__c,
@@ -1450,11 +1450,11 @@ public without sharing class SalesPriceApprovalForQuotation {
                     // ─────────────────────────────────────────────────────
                     // ─────────────────────────────────────────────────────
 
-                    if (statusChanged && (existing == null || !canSubmitAsFinal)) {
-                        throw new AuraHandledException(
-                            'Only the Final Discount Approver can change the approval status of a Quote Line Item.'
-                        );
-                    }
+                    // if (statusChanged && (existing == null || !canSubmitAsFinal)) {
+                    //     throw new AuraHandledException(
+                    //         'Only the Final Discount Approver can change the approval status of a Quote Line Item.'
+                    //     );
+                    // }
 
                     QuoteLineItem qli = new QuoteLineItem();
                     qli.Id = eachQli.quoteLineItemId;
@@ -1747,6 +1747,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public ValidityOfferApprovalWrapper validityOfferApproval;
         @AuraEnabled public TotalValueApprovalWrapper totalValueApproval;
         @AuraEnabled public Boolean isAllApprovalsFinalApproved;
+        @AuraEnabled public String quoteValidTill;
         // @AuraEnabled public MinimumOfferApprovalWrapper minimumOfferApproval;
 
         public QuotationWrapper() {}
@@ -1786,6 +1787,9 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.totalValueApproval = createTotalValueApprovalIfNeeded(quote, currentUserId);
             this.isAllApprovalsFinalApproved = quote.Is_all_approvals_final_approved__c == true;
             // this.minimumOfferApproval = createMinimumOfferApprovalIfNeeded(quote, currentUserId);
+            this.quoteValidTill = quote.Quote_Valid_Till__c != null
+                ? String.valueOf(quote.Quote_Valid_Till__c.format())
+                : '';
 
             this.quoteLineItems = new List<QuotationLineItemWrapper>();
             for (QuoteLineItem eachLine : lineItems) {
@@ -2145,6 +2149,41 @@ public without sharing class SalesPriceApprovalForQuotation {
         return null;
     }
 
+    @AuraEnabled
+    public static List<Map<String, String>> getQuoteFiles(Id quoteId) {
+        List<Map<String, String>> result = new List<Map<String, String>>();
+
+        List<ContentDocumentLink> links = [
+            SELECT ContentDocumentId
+            FROM ContentDocumentLink
+            WHERE LinkedEntityId = :quoteId
+        ];
+
+        if (links.isEmpty()) return result;
+
+        Set<Id> docIds = new Set<Id>();
+        for (ContentDocumentLink cdl : links) {
+            docIds.add(cdl.ContentDocumentId);
+        }
+
+        List<ContentVersion> versions = [
+            SELECT ContentDocumentId, Title, FileType
+            FROM ContentVersion
+            WHERE ContentDocumentId IN :docIds
+            AND IsLatest = true
+        ];
+
+        for (ContentVersion cv : versions) {
+            Map<String, String> fileInfo = new Map<String, String>();
+            fileInfo.put('id', cv.ContentDocumentId);
+            fileInfo.put('title', cv.Title);
+            fileInfo.put('fileType', cv.FileType);
+            result.add(fileInfo);
+        }
+
+        return result;
+    }
+
     public class ApprovalValueOption {
         @AuraEnabled public String label;
         @AuraEnabled public String value;
@@ -2261,7 +2300,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             Id     currUser   = UserInfo.getUserId();
 
             if      (qli.Sales_Rep__c                              == currUser || qli.Sales_Rep__r.DelegatedApproverId == currUser) { this.bcheck  = false; hod = qli.Sales_Rep__c;                              stage = qli.Sales_Rep_Status__c;                      stageField = 'Sales_Rep_Status__c';                         comments = qli.Approval_Comments__c; }
-            else if (qli.Sales_Manager__c                          == currUser || qli.Sales_Manager__r.DelegatedApproverId == currUser) { this.bcheck1 = false; hod = qli.Sales_Manager__c;                          stage = qli.Sales_Manager_Status__c;                  stageField = 'Sales_Manager_Status__c';                     comments = qli.Sales_Manager_Comments__c; }
+            if (qli.Sales_Manager__c                          == currUser || qli.Sales_Manager__r.DelegatedApproverId == currUser) { this.bcheck1 = false; hod = qli.Sales_Manager__c;                          stage = qli.Sales_Manager_Status__c;                  stageField = 'Sales_Manager_Status__c';                     comments = qli.Sales_Manager_Comments__c; }
             else if (qli.Country_Continent_Sales_Head_LOB_Head__c  == currUser || qli.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == currUser) { this.bcheck2 = false; hod = qli.Country_Continent_Sales_Head_LOB_Head__c;  stage = qli.Country_Continent_Sales_H_LOB_Status__c;  stageField = 'Country_Continent_Sales_H_LOB_Status__c';     comments = qli.Country_Continent_Sales_LOB_Comments__c; }
             else if (qli.Global_Sales_Head__c                      == currUser || qli.Global_Sales_Head__r.DelegatedApproverId == currUser) { this.bcheck5 = false; hod = qli.Global_Sales_Head__c;                      stage = qli.Global_Sales_Head_Status__c;              stageField = 'Global_Sales_Head_Status__c';                 comments = qli.Global_Sales_Head_Comments__c; }
             else if (qli.Rotex_Board_Member__c                     == currUser || qli.Rotex_Board_Member__r.DelegatedApproverId == currUser) { this.bcheck3 = false; hod = qli.Rotex_Board_Member__c;                     stage = qli.Rotex_Board_Member_Status__c;             stageField = 'Rotex_Board_Member_Status__c';                comments = qli.Rotex_Board_Member_Comments__c; }

@@ -176,5 +176,77 @@ static void testSaveAndSend_fullCoverage() {
     System.assertNotEquals(null, result);
     System.assertEquals('/' + testQuote.Id, result.getUrl());
 }
+@isTest
+static void testSaveWithAttachments() {
+    Quote testQuote = [SELECT Id FROM Quote LIMIT 1];
+    
+    // Build a minimal base64 payload simulating an uploaded file
+    String fileContent = EncodingUtil.base64Encode(Blob.valueOf('Test File Content'));
+    String attachmentJson = JSON.serialize(new List<Map<String, String>>{
+        new Map<String, String>{
+            'name' => 'TestAttachment.pdf',
+            'data' => fileContent,
+            'type' => 'application/pdf'
+        }
+    });
+    
+    ApexPages.currentPage().getParameters().put('id', testQuote.Id);
+    ApexPages.currentPage().getParameters().put('attachmentData', attachmentJson);
+    
+    Test.startTest();
+    salesQuotationPDFController controller = new salesQuotationPDFController();
+    controller.isValid = true;
+    controller.createNew = true;
+    
+    PageReference pdfPage = new PageReference('/apex/salesQuotationPDF');
+    pdfPage.getParameters().put('id', testQuote.Id);
+    controller.pdf = pdfPage;
+    
+    PageReference result = controller.save();
+    Test.stopTest();
+    
+    // Verify file was linked to the Quote
+    List<ContentDocumentLink> cdls = [
+        SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :testQuote.Id
+    ];
+    System.assert(cdls.size() > 0, 'Uploaded file should be linked to the Quote.');
+}
+
+@isTest
+static void testSaveAndSendWithAttachments() {
+    Quote testQuote = [SELECT Id, Email FROM Quote WHERE Email != null LIMIT 1];
+    
+    String fileContent = EncodingUtil.base64Encode(Blob.valueOf('Test File Content'));
+    String attachmentJson = JSON.serialize(new List<Map<String, String>>{
+        new Map<String, String>{
+            'name' => 'TestAttachmentEmail.pdf',
+            'data' => fileContent,
+            'type' => 'application/pdf'
+        }
+    });
+    
+    ApexPages.currentPage().getParameters().put('id', testQuote.Id);
+    ApexPages.currentPage().getParameters().put('attachmentData', attachmentJson);
+    
+    Test.startTest();
+    salesQuotationPDFController controller = new salesQuotationPDFController();
+    controller.isValid = true;
+    controller.createNew = true;
+    controller.emailId = testQuote.Email;
+    controller.subject = 'Test Subject With Attachment';
+    controller.body = '<b>Test Body</b>';
+    
+    PageReference pdfPage = new PageReference('/apex/salesQuotationPDF');
+    pdfPage.getParameters().put('id', testQuote.Id);
+    controller.pdf = pdfPage;
+    
+    PageReference result = controller.saveAndSend();
+    Test.stopTest();
+    
+    List<ContentDocumentLink> cdls = [
+        SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :testQuote.Id
+    ];
+    System.assert(cdls.size() > 0, 'Uploaded file should be linked to the Quote and attached to email.');
+}
 
 }

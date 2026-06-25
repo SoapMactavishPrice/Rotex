@@ -405,17 +405,25 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     handleSave() {
         this.showSpinner = true;
 
-        const invalidDiscountItem = this.quoteLineItemList.find(item =>
+        const invalidNewDiscountItem = this.quoteLineItemList.find(item =>
             item.Is_Discount_Approved__c &&
             item.newDiscountValue != null &&
             item.newDiscountValue !== '' &&
+            item.Discount_as_per_SAP__c > 0 &&
             parseFloat(item.newDiscountValue) < parseFloat(item.Discount_as_per_SAP__c)
         );
 
-        if (invalidDiscountItem) {
+        const invalidDiscountItem = this.quoteLineItemList.find(item =>
+            item.Discount_to_be_offered__c != null &&
+            item.Discount_to_be_offered__c !== '' &&
+            item.Discount_as_per_SAP__c > 0 &&
+            parseFloat(item.Discount_to_be_offered__c) < parseFloat(item.Discount_as_per_SAP__c)
+        );
+
+        if (invalidDiscountItem || invalidNewDiscountItem) {
             this.showToast(
                 'Error',
-                'New Discount Value cannot be less than Discount as per SAP.',
+                'Discount Value cannot be less than Discount as per SAP.',
                 'error'
             );
             this.showSpinner = false;

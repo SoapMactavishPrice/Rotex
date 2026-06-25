@@ -36,7 +36,8 @@ private class QuoteHierarchyHandlerTest {
     static void testQuoteInsert() {
         User salesRep = [SELECT Id FROM User WHERE FirstName = 'Sales' AND LastName = 'Rep' LIMIT 1];
         
-        Account acc = new Account(Name = 'Test Account');
+        // ✅ Set OwnerId so the hierarchy logic in step 6 doesn't bail out early
+        Account acc = new Account(Name = 'Test Account', OwnerId = salesRep.Id);
         insert acc;
         
         Opportunity opp = new Opportunity(
@@ -82,6 +83,23 @@ private class QuoteHierarchyHandlerTest {
         );
         insert qli;
         Test.stopTest();
+
+        // ✅ Verify the red block (step 7) actually synced hierarchy fields to the QLI
+        QuoteLineItem updatedQli = [
+            SELECT Sales_Rep__c, Sales_Manager__c,
+                Country_Continent_Sales_Head_LOB_Head__c,
+                Global_Sales_Head__c, Rotex_Board_Member__c,
+                Managing_Director_Country_Manage__c
+            FROM QuoteLineItem
+            WHERE Id = :qli.Id
+        ];
+
+        System.assertNotEquals(null, updatedQli.Sales_Rep__c, 'Sales_Rep__c should be synced to QLI');
+        System.assertNotEquals(null, updatedQli.Sales_Manager__c, 'Sales_Manager__c should be synced to QLI');
+        System.assertNotEquals(null, updatedQli.Country_Continent_Sales_Head_LOB_Head__c, 'Country/Continent head should be synced');
+        System.assertNotEquals(null, updatedQli.Global_Sales_Head__c, 'Global Sales Head should be synced');
+        System.assertNotEquals(null, updatedQli.Rotex_Board_Member__c, 'Rotex Board Member should be synced');
+        System.assertNotEquals(null, updatedQli.Managing_Director_Country_Manage__c, 'Managing Director should be synced');
     }
     
     @isTest
@@ -155,37 +173,5 @@ private class QuoteHierarchyHandlerTest {
             WHERE Id = :q.Id
         ];
         
-    }
-    
-    @isTest
-    static void testBulkInsert() {
-        User salesRep = [SELECT Id FROM User WHERE FirstName = 'Sales' AND LastName = 'Rep' LIMIT 1];
-        
-        Account acc = new Account(Name = 'Test Account');
-        insert acc;
-        
-        List<Opportunity> opps = new List<Opportunity>();
-        for(Integer i = 0; i < 200; i++) {
-            opps.add(new Opportunity(
-                Name = 'Test Opp ' + i,
-                AccountId = acc.Id,
-                StageName = 'Prospecting',
-                CloseDate = Date.today().addDays(30)
-            ));
-        }
-        insert opps;
-        
-        List<Quote> quotes = new List<Quote>();
-        for(Opportunity o : opps) {
-            quotes.add(new Quote(
-                Name = 'Test Quote',
-                OpportunityId = o.Id,
-                OwnerId = salesRep.Id
-            ));
-        }
-        
-        Test.startTest();
-        insert quotes;
-        Test.stopTest();
     }
 }

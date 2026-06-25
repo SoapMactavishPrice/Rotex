@@ -209,9 +209,14 @@ public class UtilityCls {
         apiparam.method = wbs.Method__c;
         return apiparam;
     }
+    
+
+    public static void logApiCall(String apiName, String apiUrl, String request, String response, String status, Integer statusCode) {
+        logApiCall(apiName, apiUrl, request, response, status, statusCode, null);
+    }
 
     // Method to log API call details
-    public static void logApiCall(String apiName, String apiUrl, String request, String response, String status, Integer statusCode) {
+    public static void logApiCall(String apiName, String apiUrl, String request, String response, String status, Integer statusCode,Id quoteId) {
         try {
             API_Log__c apiLog = new API_Log__c();
             apiLog.Api_Name__c = apiName;
@@ -220,6 +225,7 @@ public class UtilityCls {
             apiLog.Response__c = response;
             apiLog.Status__c = status;
             apiLog.Status_Code__c = string.valueOf(statusCode);
+            apiLog.Quote__c = quoteId;
 
             // Insert the log into the custom object
             insert apiLog;

@@ -3,13 +3,13 @@
         <apex:slds />
     </head>
     
-    <body style="width: 80%; margin: 0 auto" class="slds-scope">
+    <body style="width: 85%; margin: 0 auto" class="slds-scope">
         <apex:pagemessages />
         
         <apex:outputText rendered="{!isValid}">
             
             <!-- SAVE, SAVE AND SEND -->
-            <div style="width:80%; padding-bottom: 2%; margin: 0 auto">
+            <div style="width:85%; padding-bottom: 2%; margin: 0 auto">
                     <apex:slds />
                     <div style="padding: 5px">
                         <apex:form >
@@ -17,31 +17,137 @@
                                 <apex:inputText html-placeholder="Email ID" value="{!emailId}" styleClass="slds-input" />
                                 <apex:inputText html-placeholder="CC Addresses  (Comma Seperated)" value="{!CC_Addresses}" styleClass="slds-input" style="margin-top: 5px" />
                                 <apex:inputText html-placeholder="Subject" value="{!subject}" styleClass="slds-input" style="margin-top: 5px; margin-bottom: 10px" />
+                                <div style="margin-top: 10px; margin-bottom: 6px;">
+                                    <label style="font-size: 12px; font-weight: 600; color: #3e3e3c; display:block; margin-bottom: 4px;">
+                                        Additional Attachments
+                                    </label>
+                                    <label for="fileUploadInput" class="slds-button slds-button_neutral" style="cursor:pointer; display:inline-block;">
+                                        &#128206; Upload Files
+                                    </label>
+                                    <input type="file" id="fileUploadInput" multiple="multiple"
+                                        style="display:none;"
+                                        onchange="handleFileUpload(event)" />
+                                    <div id="fileListContainer" style="margin-top: 8px;"></div>
+                                </div>
                                 <apex:inputTextarea richText="true" value="{!body}" styleClass="slds-input" />
+
+                                 <apex:outputPanel rendered="{!NOT(ISBLANK(userSignature))}">
+                                    <div style="
+                                        margin-top: 6px;
+                                        border: 1px solid #dddbda;
+                                        border-radius: 4px;
+                                        background: #f3f3f3;
+                                        padding: 8px 12px;
+                                        color: #3e3e3c;
+                                        font-size: 13px;
+                                        width:100%;
+                                        box-sizing:border-box;
+                                        pointer-events: none;
+                                        user-select: none;
+                                    ">
+                                        <div style="font-size: 11px; color: #706e6b; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Signature (non-editable)
+                                        </div>
+                                        <apex:outputText value="{!userSignature}" escape="false" />
+                                    </div>
+                                </apex:outputPanel>
                             </div>
                             
                          
-                            <div style="margin: 10px 5px; text-align: right" >
-                               <apex:commandButton action="{!save}" value="Save PDF" styleClass="slds-button slds-button_brand"></apex:commandButton>
-                                <apex:commandButton action="{!saveAndSend}" value="Save And Send" styleClass="slds-button slds-button_brand"></apex:commandButton>
+                           <!-- <div style="margin: 10px 5px; text-align: right" > -->
+                            <div style="margin: 10px 5px 30px 5px; text-align: right; position:relative; z-index:9999;" >
+
+                               <apex:commandButton value="Save PDF" styleClass="slds-button slds-button_brand" onclick="return prepareAndSubmit('save');"></apex:commandButton>
+                                <apex:commandButton value="Save And Send" styleClass="slds-button slds-button_brand" onclick="return prepareAndSubmit('saveAndSend');"></apex:commandButton>
 
                                 <apex:commandButton action="{!cancel}" value="Cancel" styleClass="slds-button slds-button_destructive"></apex:commandButton> 
                             </div>
+
+                            <input type="hidden" name="attachmentData" id="attachmentDataField" />
+                            <apex:actionFunction name="doSave" action="{!save}" />
+                            <apex:actionFunction name="doSaveAndSend" action="{!saveAndSend}" />
                         </apex:form>
                     </div>
                 </div>
             
-            <iframe id="pdf" src="{!pdfURL}" style="width: 100%; height: 100vh"></iframe>
+           <!-- <iframe id="pdf" src="{!pdfURL}" style="width: 100%; height: 100vh"></iframe> -->
+            <iframe id="pdf" src="{!pdfURL}" style="width: 100%; height: 800px; margin-top:20px;"></iframe>
             
         </apex:outputText>
         <!-- ❗ ALWAYS SHOW CANCEL BUTTON -->
-        <div style="margin: 10px 5px; text-align: center">
+       <div style="margin: 10px 5px; text-align: center">
             <apex:form >
                 <apex:commandButton action="{!cancel}" 
                                     value="Cancel" 
                                     styleClass="slds-button slds-button_destructive"/>
             </apex:form>
         </div>
+        <script>
+            var uploadedFiles = [];
+
+            function handleFileUpload(event) {
+                var newFiles = Array.from(event.target.files);
+                newFiles.forEach(function(file) {
+                    var isDuplicate = uploadedFiles.some(function(f) { return f.name === file.name; });
+                    if (!isDuplicate) {
+                        var reader = new FileReader();
+                        reader.onload = (function(f) {
+                            return function(e) {
+                                var base64 = e.target.result.split(',')[1];
+                                uploadedFiles.push({ name: f.name, data: base64, type: f.type, size: f.size });
+                                renderFileList();
+                            };
+                        })(file);
+                        reader.readAsDataURL(file);
+                    }
+                });
+                event.target.value = '';
+            }
+
+            function removeFile(fileName) {
+                uploadedFiles = uploadedFiles.filter(function(f) { return f.name !== fileName; });
+                renderFileList();
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+
+            function renderFileList() {
+                var container = document.getElementById('fileListContainer');
+                if (!container) return;
+                if (uploadedFiles.length === 0) { container.innerHTML = ''; return; }
+                var html = '<ul style="list-style:none; padding:0; margin:0;">';
+                uploadedFiles.forEach(function(f) {
+                    html += '<li style="display:flex; align-items:center; gap:8px; padding:5px 8px; margin-bottom:4px;'
+                        + 'background:#fff; border:1px solid #dddbda; border-radius:4px; font-size:13px;">'
+                        + '<span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + f.name + '">'
+                        + '&#128206; ' + f.name + '</span>'
+                        + '<span style="color:#706e6b; font-size:11px; white-space:nowrap;">' + formatFileSize(f.size) + '</span>'
+                        + '<span onclick="removeFile(\'' + f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')" '
+                        + 'style="cursor:pointer;color:#c23934;font-weight:bold;font-size:16px;line-height:1;padding:0 4px;" '
+                        + 'title="Remove">&#x2715;</span>'
+                        + '</li>';
+                });
+                html += '</ul>';
+                container.innerHTML = html;
+            }
+
+            function prepareAndSubmit(action) {
+                var payload = uploadedFiles.map(function(f) {
+                    return { name: f.name, data: f.data, type: f.type };
+                });
+                document.getElementById('attachmentDataField').value = JSON.stringify(payload);
+                if (action === 'save') {
+                    doSave();
+                } else {
+                    doSaveAndSend();
+                }
+                return false;
+            }
+        </script>
     </body>
     
 </apex:page>

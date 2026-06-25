@@ -87,6 +87,8 @@ public class IntegrationRequestBuilder {
         public String price_list;
         public String PriceList;
         public partnerDetails to_partnerdetails;
+        public String currencyCode;
+        public String Customer_Group;
     }
     public class partnerDetails{
         public List<partnerDetailsList> results;

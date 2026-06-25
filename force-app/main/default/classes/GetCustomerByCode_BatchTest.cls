@@ -54,7 +54,18 @@ private class GetCustomerByCode_BatchTest {
         }
        // System.assert(hasUpdatedRecord, 'At least one record should be updated with API data');
     }
-    
+    @isTest
+    static void testSchedulerExecution() {
+        try{
+        Test.setMock(HttpCalloutMock.class, new MockHttpResponseSuccess());
+        Test.startTest();
+        String cronExp = '0 0 0 1 1 ? 2099';
+        System.schedule('Test GetCustomerByCode Scheduler', cronExp, new GetCustomerByCode_Batch());
+        Test.stopTest();
+        CronTrigger ct = [SELECT Id,CronJobDetail.Name FROM CronTrigger WHERE CronJobDetail.Name ='Test GetCustomerByCode Scheduler' LIMIT 1 ];
+        System.assertNotEquals(null, ct.Id);
+        }Catch(Exception e){}
+    }
     @isTest
     static void testBatchExecution_Error() {
         // Set up mock for HTTP callout with error

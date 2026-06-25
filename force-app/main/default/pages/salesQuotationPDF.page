@@ -2,15 +2,19 @@
     <head>
         <style>
             @page {
-            size: A4;
-            @top-center {
-            content: element(header);
-            }
-            @bottom-left {
-            content: element(footer);
-            }
-            margin-bottom: 100px;
-            }
+    size: A4;
+
+    margin-top: 120px;
+    margin-bottom: 100px;
+
+    @top-center {
+        content: element(header);
+    }
+
+    @bottom-left {
+        content: element(footer);
+    }
+}
             div.header {
             padding-top: 10px;
             position: running(header);
@@ -136,7 +140,7 @@ color: #008080; -->
         
         
         <div class="quotation-heading">
-            <br/><br/><h3>QUOTATION</h3>
+            <h3>QUOTATION</h3>
         </div>
         
         
@@ -150,7 +154,7 @@ color: #008080; -->
                         {!quData.Bill_To_Street__c}<br/>
                         {!quData.Bill_To_City__c} {!quData.Bill_To_District__c} {!quData.Bill_To_Postal_Code__c}
                         {!quData.Bill_To_State__c} {!quData.Bill_To_Country__c}<br/>
-                        Email: {!quData.Account.Email_Id__c}<br/>
+                        Email: {!quData.Email}<br/>
                         <strong>GST No : {!quData.Account.GSTIN_No__c}</strong>
                     </div>
                 </td>
@@ -182,7 +186,7 @@ color: #008080; -->
                             <td style="font-weight:bold; white-space:nowrap;text-align:right;">Valid Till &nbsp;&nbsp;</td>
                             <td style="padding:0 4px;">:</td>
                             <td>
-                                <apex:outputText value=" {!quData.ExpirationDate}"><apex:param value="dd/MM/yyyy" /></apex:outputText>
+                                <apex:outputText value=" {!quData.Quote_Valid_Till__c}"><apex:param value="dd/MM/yyyy" /></apex:outputText>
                             </td>
                         </tr>
                         
@@ -226,7 +230,11 @@ color: #008080; -->
             <tr>
                 <td colspan="2" style="padding-top:10px;">
                     <strong>
-                        Kind Attn:<br/><br/>
+                        Kind Attn:<br/>
+                    </strong>
+                        {!quData.Opportunity.Project_Contact__r.Name}
+                        <br/><br/>
+                    <strong>
                         We thank you for your inquiry and have the pleasure to submit our
                         techno-commercial offer in accordance with our standard terms and
                         conditions of sales.

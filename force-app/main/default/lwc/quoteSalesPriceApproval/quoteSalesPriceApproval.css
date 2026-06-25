@@ -1,0 +1,746 @@
+/* =============================================
+   Quote Discount Approval – SLDS-Refined Styles
+   ============================================= */
+
+/* ── Layout & Container ── */
+.table-container {
+    overflow-x: hidden;
+    overflow-y: visible;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+    padding-bottom: 72px;
+    margin-bottom: -72px;
+}
+
+.slds-box {
+    overflow: visible !important;
+}
+
+/* ── Quote Panel ── */
+.quote-panel {
+    padding: 0 !important;
+    border: 1px solid #dddbda !important;
+    border-radius: 0.25rem !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+    transition: box-shadow 0.15s ease;
+    overflow: visible !important;
+}
+
+.quote-panel:hover {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ── Quote Header ── */
+.quote-header {
+    padding: 14px 16px 12px;
+    background: #f8f8f8;
+    border-bottom: 2px solid #e0dedc;
+    border-radius: 0.25rem 0.25rem 0 0;
+}
+
+/* ── Inner wrapper: grid + toggle side-by-side ── */
+.quote-header-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.quote-header-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px 12px;
+}
+
+/* ── Expand / Collapse Toggle Button ── */
+.quote-expand-toggle {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.expand-chevron-btn {
+    --slds-c-button-icon-color-border: #dddbda;
+    --slds-c-button-icon-color-background: #fff;
+    --slds-c-button-icon-color-border-hover: #0070d2;
+    --slds-c-button-icon-color-background-hover: #e8f4ff;
+    border-radius: 0.25rem !important;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.2s ease;
+}
+
+.expand-chevron-btn:hover {
+    transform: scale(1.07);
+}
+
+/* ── Header Field Labels & Values ── */
+.header-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.field-label {
+    font-weight: 700;
+    font-size: 10.5px;
+    color: #706e6b;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.field-value {
+    font-size: 13px;
+    color: #181818;
+    font-weight: 500;
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+/* ── Action Links (view) ── */
+.action-link {
+    color: #0070d2;
+    text-decoration: none;
+    margin-left: 5px;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: color 0.1s ease;
+}
+
+.action-link:hover {
+    color: #005fb2;
+    text-decoration: underline;
+}
+
+/* ── Table wrapper inside expanded panel ── */
+.table-wrapper {
+    padding: 12px 12px 16px;
+}
+
+/* ══════════════════════════════════════════════
+   Discount Line Items Table
+   ══════════════════════════════════════════════ */
+.approval-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 12px;
+    color: #3e3e3c;
+    border: 1px solid #000 !important;
+}
+
+/* ── Table Header ── */
+table.approval-table thead tr,
+table.approval-table thead tr:hover {
+    background-color: #007764 !important;
+    border-bottom: 2px solid #005a4a !important;
+}
+
+table.approval-table thead tr th,
+table.approval-table thead tr th:hover {
+    background-color: #007764 !important;
+    padding: 8px 7px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    border: 1px solid #000 !important;
+    vertical-align: middle !important;
+}
+
+/* ── Table Body Rows ── */
+.approval-table tbody tr {
+    transition: background-color 0.1s ease;
+}
+
+.approval-table tbody tr:hover {
+    background-color: #f0f4ff;
+}
+
+/* ── ALL body cells: single clean black border ── */
+.approval-table tbody td {
+    padding: 7px !important;
+    vertical-align: top;
+    overflow-wrap: break-word;
+    word-break: normal;
+    overflow: visible !important;
+    line-height: 1.4;
+    border: 1px solid #000 !important;
+}
+
+/* ── Cell-specific tweaks ── */
+.product-cell,
+.number-cell {
+    vertical-align: middle !important;
+}
+
+.number-col,
+.number-cell {
+    text-align: center !important;
+}
+
+/* ── SOA span: text styling only, NO box properties ── */
+.soa-cell {
+    color: #444;
+    font-weight: 600;
+    font-size: 11.5px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.datetime-col,
+.datetime-cell {
+    text-align: center !important;
+}
+
+.datetime-cell {
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+    font-size: 11px;
+    color: #706e6b;
+}
+
+.comment-cell span {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    display: block;
+    color: #3e3e3c;
+    line-height: 1.45;
+}
+
+/* ── Status Badge ── */
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    line-height: 1.6;
+    text-transform: capitalize;
+}
+
+.status-badge--approved {
+    background-color: #ecfdf3;
+    color: #027a48;
+    border: 1px solid #a6f4c5;
+}
+
+.status-badge--rejected {
+    background-color: #fff1f0;
+    color: #c0392b;
+    border: 1px solid #fca5a5;
+}
+
+.status-badge--submitted {
+    background-color: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+}
+
+.status-badge--commented {
+    background-color: #d4e8fc;
+    color: #0a3a6b;
+    border: 1px solid #7bb9f5;
+}
+
+.status-badge--default {
+    background-color: #f3f2f2;
+    color: #3e3e3c;
+    border: 1px solid #dddbda;
+}
+
+/* ── Column Widths ── */
+.product-col            { width: 10%; }
+.list-price-col         { width: 4%; }
+.quantity-col           { width: 3%; }
+.sap-discount-col,
+.previous-discount-col,
+.discount-col           { width: 4%; }
+.soa-col                { width: 10.5%; }
+.status-col             { width: 9%; }
+.datetime-col           { width: 9.5%; }
+.previous-comments-col  { width: 20%; }
+.comments-col           { width: 20%; }
+
+.product-col,
+.product-cell {
+    width: 160px;
+    white-space: normal;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+/* ── Input Controls ── */
+.status-cell lightning-combobox,
+.comment-input {
+    width: 100%;
+}
+
+lightning-combobox {
+    position: static !important;
+}
+
+.slds-combobox-picklist {
+    overflow: visible !important;
+}
+
+.slds-dropdown {
+    overflow: visible !important;
+    position: absolute !important;
+    z-index: 9999 !important;
+}
+
+.comment-input lightning-textarea,
+lightning-textarea.comment-input {
+    --slds-c-textarea-sizing-min-height: 48px;
+}
+
+/* ── Action Buttons Row ── */
+.action-footer {
+    padding: 16px 0 8px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.quote-panel .table-container {
+    padding: 12px 12px 72px;
+    margin-bottom: -72px;
+}
+
+/* ══════════════════════════════════════════════
+   Combined Approval Table
+   ══════════════════════════════════════════════ */
+.combined-approval-container {
+    padding: 12px 12px 15px;
+    margin-bottom: 1px;
+    overflow: visible;
+}
+
+.combined-approval-table-wrap {
+    overflow-x: auto;
+    overflow-y: visible;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+.combined-approval-table {
+    width: 100%;
+    min-width: 1040px;
+    table-layout: fixed;
+    border-collapse: collapse;
+    background: #fff;
+    color: #181818;
+    font-size: 13px;
+}
+
+.combined-approval-table th {
+    background: #007764;
+    border: 1px solid #181818;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 7px 6px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.combined-approval-table td {
+    border: 1px solid #181818;
+    padding: 6px;
+    text-align: center;
+    vertical-align: middle;
+    min-height: 32px;
+}
+
+.approval-type-col   { width: 15%; }
+.approval-value-col  { width: 13%; }
+.approver-col        { width: 14%; }
+
+.approval-type-cell {
+    font-weight: 600;
+    text-align: center;
+}
+
+.approval-value-cell {
+    font-weight: 600;
+}
+
+.approval-value-cell lightning-combobox {
+    font-weight: 400;
+}
+
+.approval-status-cell {
+    min-height: 38px;
+}
+
+.approval-comment-cell {
+    min-height: 54px;
+}
+
+.approval-comment-cell span {
+    display: block;
+    min-height: 20px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.approval-status-datetime-cell {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.approval-status-datetime-cell .status-badge {
+    display: inline-block;
+    margin: 0 auto;
+}
+
+.approval-datetime-inline {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+}
+
+.approval-datetime-cell {
+    color: #444;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.approval-cell--not-applicable {
+    background-color: #f5f5f5 !important;
+    color: #999 !important;
+    position: relative;
+}
+
+.approval-cell--not-applicable::after {
+    content: "—";
+    font-size: 28px;
+    font-weight: 300;
+    color: #c23934;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    line-height: 1;
+}
+
+.approval-datetime-inline {
+    margin-top: 4px;
+    margin-bottom: 10px;
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+}
+
+.approval-comment-inline {
+    padding-top: 4px;
+    padding-bottom: 5px;
+}
+
+/* ── Submit Button ── */
+.submit-btn-wrap lightning-button {
+    --slds-c-button-brand-color-background: #007764;
+    --slds-c-button-brand-color-border: #007764;
+    --slds-c-button-brand-color-background-hover: #005a4a;
+    --slds-c-button-brand-color-border-hover: #005a4a;
+    --slds-c-button-brand-color-background-active: #004a3c;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+    .table-container {
+        overflow-x: auto !important;
+    }
+
+    .approval-table {
+        min-width: 1180px;
+    }
+
+    .quote-header-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .combined-approval-table {
+        min-width: 1040px;
+    }
+}
+
+@media (max-width: 640px) {
+    .quote-header-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.header-container {
+    position: relative;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    min-height: 52px;
+    padding: 8px 16px;
+    border-bottom: 1px solid #e0dedc;
+    box-sizing: border-box;
+}
+
+.header-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 22px;
+    font-weight: 700;
+    color: #181818;
+    letter-spacing: -0.3px;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.quote-header--final-approved {
+    background-color: #d4f5e2;
+}
+
+.header-container lightning-input {
+    margin: 0;
+}
+
+/* ══════════════════════════════════════════════
+   Tab Navigation
+   ══════════════════════════════════════════════ */
+.tab-nav-container {
+    display: flex;
+    gap: 2px;
+    padding: 10px 16px 0;
+    background: #f8f8f8;
+    border-bottom: 2px solid #e0dedc;
+}
+
+.tab-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 20px 10px;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: #706e6b;
+    cursor: pointer;
+    border-radius: 4px 4px 0 0;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+}
+
+.tab-btn:hover {
+    color: #007764;
+    background: #edf7f5;
+}
+
+.tab-btn.tab-btn--active {
+    color: #007764;
+    background: #edf7f5;
+    border-bottom: 3px solid #007764;
+}
+
+/* Pending tab accent */
+.tab-btn[data-tab="all"].tab-btn--active {
+    color: #b45309;
+    border-bottom-color: #f59e0b;
+    background: #fffbeb;
+}
+.tab-btn[data-tab="all"].tab-btn--active .tab-badge {
+    background: #f59e0b;
+    color: #1c1c00;
+}
+
+/* Pending tab accent */
+.tab-btn[data-tab="pending"].tab-btn--active {
+    color: #b45309;
+    border-bottom-color: #f59e0b;
+    background: #fffbeb;
+}
+.tab-btn[data-tab="pending"].tab-btn--active .tab-badge {
+    background: #f59e0b;
+    color: #1c1c00;
+}
+
+/* Approved tab accent */
+.tab-btn[data-tab="approved"].tab-btn--active {
+    color: #027a48;
+    border-bottom-color: #12b76a;
+    background: #ecfdf5;
+}
+.tab-btn[data-tab="approved"].tab-btn--active .tab-badge {
+    background: #12b76a;
+    color: #fff;
+}
+
+/* Rejected tab accent */
+.tab-btn[data-tab="rejected"].tab-btn--active {
+    color: #c0392b;
+    border-bottom-color: #e74c3c;
+    background: #fff5f5;
+}
+.tab-btn[data-tab="rejected"].tab-btn--active .tab-badge {
+    background: #e74c3c;
+    color: #fff;
+}
+
+/* Badge pill */
+.tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: 700;
+    background: #c9c7c5;
+    color: #3e3e3c;
+    line-height: 1;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tab-btn--active .tab-badge {
+    background: #007764;
+    color: #fff;
+}
+
+/* ── Empty State ── */
+.tab-empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #706e6b;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.tab-empty-state p {
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ── Add Task link ── */
+.add-task-link {
+    display: block;
+    margin-top: 5px;
+    font-size: 11px;
+    color: #0070d2;
+    text-decoration: none;
+    cursor: pointer;
+}
+.add-task-link:hover { color: #005fb2; text-decoration: underline; }
+
+/* ── Task Creation Modal ── */
+.task-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.task-modal-container {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+    width: 720px;
+    max-width: 96vw;
+    max-height: 92vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+.task-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid #e0dedc;
+    background: #f8f8f8;
+    border-radius: 8px 8px 0 0;
+}
+.task-modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #181818;
+}
+.task-modal-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #706e6b;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.1s;
+}
+.task-modal-close:hover { background: #e0dedc; }
+.task-modal-body { padding: 0; }
+
+/* FIND and REPLACE or ADD these rules */
+
+.quote-header {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.quote-header-inner {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.quote-header-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px 12px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.quote-panel {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.header-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    word-break: break-word;
+}
+
+.field-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #706e6b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+}
+
+.field-value {
+    font-size: 12px;
+    color: #181818;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}

@@ -1,0 +1,12 @@
+lightning-card .slds-card__header-title {
+    text-align: center !important;
+    width: 100%;
+}
+
+thead th {
+    position: sticky;
+    top: 0;
+    background: #f3f6f9;
+    z-index: 2;
+    text-align: center;
+}

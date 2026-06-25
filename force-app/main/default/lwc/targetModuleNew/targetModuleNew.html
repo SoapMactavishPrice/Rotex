@@ -1,0 +1,142 @@
+<template>
+    <lightning-card class="hide-header">
+        <div class="slds-text-heading_small slds-text-align_center" style="font-weight: bold;">
+            Target Module
+        </div>
+        <div class="">
+            <!-- <div class="slds-p-bottom_small">
+                <lightning-button label="Save All" onclick={saveRecords} variant="brand"></lightning-button>
+            </div> -->
+
+            <lightning-record-edit-form object-api-name="Employee_Wise_Account_Target__c">
+                <lightning-layout multiple-rows size="12">
+                    <lightning-layout-item size="2" class="slds-p-top_x-small slds-p-horizontal_x-small"
+                        small-device-size="2" medium-device-size="2" large-device-size="2">
+                        <lightning-input-field field-name="Fiscal_Year__c" variant="label-stacked"
+                            onchange={onFilterInputChange} value={fiscId}>
+                        </lightning-input-field>
+                    </lightning-layout-item>
+                </lightning-layout>
+            </lightning-record-edit-form>
+
+            <div style="height:400px; overflow:auto; border:1px solid #d8dde6;" onscroll={handleScroll}>
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_fixed-layout">
+                    <thead>
+                        <tr class="">
+                            <th style="white-space: normal !important;word-break: break-word !important;">Account
+                                Name
+                            </th>
+                            <th style="white-space: normal !important;word-break: break-word !important;">Sales Rep
+                            </th>
+                            <th style="white-space: normal !important;word-break: break-word !important;">Manager
+                            </th>
+                            <th style="white-space: normal !important;word-break: break-word !important;">
+                                Target
+                            </th>
+                            <th style="white-space: normal !important;word-break: break-word !important;">
+                                Actual
+                            </th>
+                            <th>Qtr 1 Target</th>
+                            <th>Qtr 1 Actual</th>
+                            <th>Qtr 2 Target</th>
+                            <th>Qtr 2 Actual</th>
+                            <th>Qtr 3 Target</th>
+                            <th>Qtr 3 Actual</th>
+                            <th>Qtr 4 Target</th>
+                            <th>Qtr 4 Actual</th>
+                            <th style="white-space: normal !important;word-break: break-word !important;">Total
+                                Visits/Year</th>
+                            <th style="white-space: normal !important;
+         word-break: break-word !important;">Actual Visits/Year </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template for:each={accounts} for:item="acc" for:index="index">
+                            <tr key={acc.Id}>
+                                <td style="white-space: normal !important;
+         word-break: break-word !important;">{acc.Name}</td>
+                                <td style="white-space: normal !important;word-break: break-word !important;">
+                                    {acc.OwnerName}</td>
+                                <td style="white-space: normal !important;word-break: break-word !important;">
+                                    {acc.Reporting_Manager}</td>
+
+                                <td>{acc.Total_Target__c}</td>
+                                <td>{acc.Total_Actual__c}</td>
+                                <td>
+                                    <lightning-input type="number" min="0" variant="label-hidden" data-index={index}
+                                        data-field="Qtr_1_Target__c" value={acc.Qtr_1_Target__c}
+                                        onchange={handleTargetChange}>
+                                    </lightning-input>
+                                </td>
+
+                                <td>
+                                    <lightning-input type="number" min="0" variant="label-hidden" data-index={index}
+                                        data-field="Qtr_1_Actual__c" value={acc.Qtr_1_Actual__c} disabled>
+                                    </lightning-input>
+                                </td>
+                                <td>
+                                    <lightning-input type="number" min="0" variant="label-hidden" data-index={index}
+                                        data-field="Qtr_2_Target__c" value={acc.Qtr_2_Target__c}
+                                        onchange={handleTargetChange}>
+                                    </lightning-input>
+                                </td>
+                                <td>
+                                    <lightning-input type="number" min="0" variant="label-hidden" data-index={index}
+                                        data-field="Qtr_2_Actual__c" value={acc.Qtr_2_Actual__c} disabled>
+                                    </lightning-input>
+                                </td>
+                                <td>
+                                    <lightning-input type="number" min="0" variant="label-hidden" data-index={index}
+                                        data-field="Qtr_3_Target__c" value={acc.Qtr_3_Target__c}
+                                        onchange={handleTargetChange}>
+                                    </lightning-input>
+                                </td>
+                                <td>
+                                    <lightning-input type="number" min="0" variant="label-hidden" data-index={index}
+                                        data-field="Qtr_3_Actual__c" value={acc.Qtr_3_Actual__c} disabled>
+                                    </lightning-input>
+                                </td>
+                                <td>
+                                    <lightning-input type="number" min="0" variant="label-hidden" data-index={index}
+                                        data-field="Qtr_4_Target__c" value={acc.Qtr_4_Target__c}
+                                        onchange={handleTargetChange}>
+                                    </lightning-input>
+                                </td>
+                                <td>
+                                    <lightning-input type="number" min="0" variant="label-hidden" data-index={index}
+                                        data-field="Qtr_4_Actual__c" value={acc.Qtr_4_Actual__c} disabled>
+                                    </lightning-input>
+                                </td>
+
+                                <td>
+                                    <lightning-input type="number" min="0" variant="label-hidden" data-index={index}
+                                        data-field="Total_Visits_Per_Year__c" value={acc.Total_Visits_Per_Year__c}
+                                        onchange={handleTargetChange}>
+                                    </lightning-input>
+                                </td>
+                                <td>
+                                    <lightning-input type="number" min="0" variant="label-hidden" data-index={index}
+                                        data-field="Actual_Visits_Per_Year__c" value={acc.Actual_Visits_Per_Year__c}
+                                        disabled>
+                                    </lightning-input>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+
+                <template if:true={isLoading}>
+                    <div class="slds-p-top_small slds-text-align_center">Loading...</div>
+                </template>
+
+                <template if:true={allDataLoaded}>
+                    <div class="slds-p-top_small slds-text-align_center">All data loaded</div>
+                </template>
+            </div>
+            <div class="slds-m-top_medium slds-text-align_center"
+                style="border-top:1px solid #d8dde6; padding-top:10px;">
+                <lightning-button label="Save All" onclick={saveRecords} variant="brand"></lightning-button>
+            </div>
+        </div>
+    </lightning-card>
+</template>

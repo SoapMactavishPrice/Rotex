@@ -1,0 +1,28 @@
+<template>
+    <div class="action-container">
+        <div class="custom-header">
+            Update Ship To &amp; Bill To
+        </div>
+
+        <!-- Two combobox in one row -->
+        <div class="form-row">
+            <div class="combo-wrapper">
+                <lightning-combobox name="shipto" label="Ship To" placeholder="Select Ship To" value={shiptoValue}
+                    options={shiptoList} onchange={handleShiptoChange}>
+                </lightning-combobox>
+            </div>
+
+            <div class="combo-wrapper">
+                <lightning-combobox name="billto" label="Bill To" placeholder="Select Bill To" value={billtoValue}
+                    options={billtoList} onchange={handleBilltoChange}>
+                </lightning-combobox>
+            </div>
+        </div>
+
+        <div class="footer-actions">
+            <lightning-button label="Cancel" variant="neutral" onclick={closeModal}></lightning-button>
+            <lightning-button label="Save" variant="brand" onclick={handleSave}
+                class="slds-m-left_small"></lightning-button>
+        </div>
+    </div>
+</template>

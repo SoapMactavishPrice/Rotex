@@ -715,18 +715,28 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
                 this.allSelectedProductIds.delete(currentPageIds[i]);
             }
         }
-
-        // Add newly selected products
+        console.log('Selected rows:', JSON.parse(JSON.stringify(selRows)));
         for (let i = 0; i < selRows.length; i++) {
-            this.allSelectedProductIds.add(selRows[i].Id);
+            const row = selRows[i];
+            if (row.Status === 'Z1' || row.Status === 'Z2') {
+                this.showToast('Error', 'This model is now obsolete and can no longer be used for sales.', 'error');
+                continue;
+            }
+            this.allSelectedProductIds.add(row.Id);
         }
 
         // Update selectedProductCode array
         this.selectedProductCode = Array.from(this.allSelectedProductIds);
         this.SelectedRecordCount = this.selectedProductCode.length;
 
-        // Update selectedRows for current page display
-        this.selectedRows = selRows;
+        this.selectedRows = selRows.filter(row => row.Status !== 'Z1' && row.Status !== 'Z2');
+
+        setTimeout(() => {
+            const datatable = this.template.querySelector('[data-id="datatable"]');
+            if (datatable) {
+                datatable.selectedRows = this.selectedRows.map(r => r.Id);
+            }
+        }, 0);
 
         // Update DisableNext button
         this.DisableNext = this.selectedProductCode.length === 0;

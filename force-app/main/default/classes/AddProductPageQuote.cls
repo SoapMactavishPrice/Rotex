@@ -5,7 +5,7 @@ public without sharing class AddProductPageQuote {
         
         try {
             System.debug('recordId ' + recordId);
-            Quote qt = [SELECT Id, AccountId, Pricebook2Id, Pricebook2.Name FROM Quote WHERE Id = :recordId];
+            Quote qt = [SELECT Id, AccountId, Pricebook2Id, Pricebook2.Name,Pricebook2.Distribution_Channel__c FROM Quote WHERE Id = :recordId];
             
             if (qt == null) {
                 return JSON.serialize(new Map<String, Object>{
@@ -14,11 +14,12 @@ public without sharing class AddProductPageQuote {
             }
             
             List<Sales_Area_Item__c> salesAreaItemList = [
-                SELECT Id, Name, Sales_Org__c, Distribution_Channel__c, Division__c, Incoterms__c
+                SELECT Id, Name, Sales_Org__c, Distribution_Channel__c, Division__c, Incoterms__c,CurrencyIsoCode
                 FROM Sales_Area_Item__c 
                 WHERE Account__c = :qt.AccountId
                 AND Sales_Org__c = '1100'
-                AND Division__c NOT IN ('50', '20', '00')
+                AND Distribution_Channel__c = :qt.Pricebook2.Distribution_Channel__c
+               // AND Division__c NOT IN ('50', '20', '00')
             ];
             
             if (salesAreaItemList.isEmpty()) {
@@ -35,13 +36,16 @@ public without sharing class AddProductPageQuote {
             wrapperClass wc = new wrapperClass();
             wc.priceBook = qt.Pricebook2.Name;
             
+            String salesAreaCurrency = salesAreaItemList[0].CurrencyIsoCode;
+            
             String query = 'SELECT Id, UnitPrice, Product2Id, ' +
                 'Product2.Name, Product2.Family, ' +
-                'Product2.ProductCode, Product2.Description, Product2.Item_Type__c ' +
+                'Product2.ProductCode, Product2.Description,CurrencyIsoCode,Product2.Item_Type__c, Product2.Status__c ' +
                 'FROM PricebookEntry ' +
                 'WHERE Distribution_Channel__c = \'' + salesAreaItemList[0].Distribution_Channel__c + '\' ' +
                 'AND Sales_Org__c = \'1100\' ' +
                 'AND Pricebook2Id = \'' + qt.Pricebook2Id + '\' ' +
+                'AND CurrencyIsoCode = \'' + salesAreaCurrency + '\' ' +
                 'AND Product2Id IN (SELECT Product__c FROM Plant_Data__c WHERE Plant__c = \'1100\') ' ;
             //    'AND Product2Id NOT IN :existingProdId ';
             
@@ -79,13 +83,14 @@ public without sharing class AddProductPageQuote {
             for (Customer_ARC_Pricing__c ca : [
                 SELECT Id, Name, Customer__c, Amount__c, Material__c, Material__r.ProductCode,
                 Scale_Qty1__c, Scale_Qty2__c, Scale_Qty3__c, Scale_Qty4__c, Scale_Qty5__c,
-                Scale_Amt1__c, Scale_Amt2__c, Scale_Amt3__c, Scale_Amt4__c, Scale_Amt5__c,Active__c
+                Scale_Amt1__c, Scale_Amt2__c, Scale_Amt3__c, Scale_Amt4__c, Scale_Amt5__c,Active__c,CurrencyIsoCode
                 FROM Customer_ARC_Pricing__c
                 WHERE Customer__c = :qt.AccountId
                 AND Material__c != null
                 AND Sales_Organization__c = '1100'
                 AND Distribution_Channel__c = :salesAreaItemList[0].Distribution_Channel__c
                 AND Active__c = true
+                AND CurrencyIsoCode = :salesAreaCurrency
                 
             ]) {
                 arcProductMap.put(ca.Material__r.ProductCode, ca);
@@ -119,6 +124,8 @@ public without sharing class AddProductPageQuote {
                 pw.Quantity = 0;
                 pw.ARCQuantity = 0;
                 pw.itemType = pbe.Product2.Item_Type__c;
+                pw.CurrencyIsoCode = pbe.CurrencyIsoCode;
+                pw.Status = pbe.Product2.Status__c;
                 if (arcProductMap.containsKey(pbe.Product2.ProductCode)) {
                     List<Map<String, Decimal>> scaleList = new List<Map<String, Decimal>>();
                     Customer_ARC_Pricing__c cap = arcProductMap.get(pbe.Product2.ProductCode);
@@ -188,7 +195,7 @@ public without sharing class AddProductPageQuote {
     
     @AuraEnabled(cacheable=true)
     public static List<String> findProductsOptimized(String recordId, String searchKey, String itemType) {
-        Quote qt = [SELECT Id, AccountId, Pricebook2Id, Pricebook2.Name 
+        Quote qt = [SELECT Id, AccountId, Pricebook2Id, Pricebook2.Name,Pricebook2.Distribution_Channel__c 
                     FROM Quote WHERE Id = :recordId];
         
         if (qt == null) {
@@ -196,11 +203,12 @@ public without sharing class AddProductPageQuote {
         }
         
         List<Sales_Area_Item__c> salesAreaItemList = [
-            SELECT Id, Name, Sales_Org__c, Distribution_Channel__c, Division__c, Incoterms__c
+            SELECT Id, Name, Sales_Org__c, Distribution_Channel__c, Division__c, Incoterms__c,CurrencyIsoCode
             FROM Sales_Area_Item__c 
             WHERE Account__c = :qt.AccountId
             AND Sales_Org__c = '1100'
-            AND Division__c NOT IN ('50', '20', '00')
+            AND Distribution_Channel__c = :qt.Pricebook2.Distribution_Channel__c
+           // AND Division__c NOT IN ('50', '20', '00')
         ];
         
         if (salesAreaItemList.isEmpty()) {  return new List<String>{JSON.serialize(new Map<String, Object>{'error' => 'No Sales Area Item Found'})};
@@ -211,13 +219,16 @@ public without sharing class AddProductPageQuote {
             existingProdId.add(qli.Product2Id);
         }  */
         
+        String salesAreaCurrency = salesAreaItemList[0].CurrencyIsoCode;
+        
         String query = 'SELECT Id, UnitPrice, Product2Id, ' +
             'Product2.Name, Product2.Family, ' +
-            'Product2.ProductCode, Product2.Description, Product2.Item_Type__c ' +
+            'Product2.ProductCode, Product2.Description,CurrencyIsoCode,Product2.Item_Type__c, Product2.Status__c ' +
             'FROM PricebookEntry ' +
             'WHERE Distribution_Channel__c = \'' + salesAreaItemList[0].Distribution_Channel__c + '\' ' +
             'AND Sales_Org__c = \'1100\' ' +
             'AND Pricebook2Id = \'' + qt.Pricebook2Id + '\' ' +
+            'AND CurrencyIsoCode = \'' + salesAreaCurrency + '\' ' +
             'AND Product2Id IN (SELECT Product__c FROM Plant_Data__c WHERE Plant__c = \'1100\') ' ;
          //   'AND Product2Id NOT IN :existingProdId ';
         
@@ -240,13 +251,14 @@ public without sharing class AddProductPageQuote {
         for (Customer_ARC_Pricing__c ca : [
             SELECT Id, Name, Customer__c, Amount__c, Material__c, Material__r.ProductCode,
             Scale_Qty1__c, Scale_Qty2__c, Scale_Qty3__c, Scale_Qty4__c, Scale_Qty5__c,
-            Scale_Amt1__c, Scale_Amt2__c, Scale_Amt3__c, Scale_Amt4__c, Scale_Amt5__c,Active__c
+            Scale_Amt1__c, Scale_Amt2__c, Scale_Amt3__c, Scale_Amt4__c, Scale_Amt5__c,Active__c,CurrencyIsoCode
             FROM Customer_ARC_Pricing__c
             WHERE Customer__c = :qt.AccountId
             AND Material__c != null
             AND Sales_Organization__c = '1100'
             AND Distribution_Channel__c = :salesAreaItemList[0].Distribution_Channel__c
             AND Active__c = true
+            AND CurrencyIsoCode = :salesAreaCurrency
         ]) { arcProductMap.put(ca.Material__r.ProductCode, ca);
         }
         
@@ -278,7 +290,8 @@ public without sharing class AddProductPageQuote {
             pw.Quantity = 0;
             pw.ARCQuantity = 0;
             pw.itemType = pbe.Product2.Item_Type__c;
-            
+            pw.CurrencyIsoCode = pbe.CurrencyIsoCode;
+            pw.Status = pbe.Product2.Status__c;
             if (arcProductMap.containsKey(pbe.Product2.ProductCode)) {
                 Customer_ARC_Pricing__c cap = arcProductMap.get(pbe.Product2.ProductCode);
                 pw.PriceOption = buildScaleList(cap);
@@ -451,6 +464,8 @@ public without sharing class AddProductPageQuote {
         public Boolean showError;
         public Decimal Discount = 0;
         public String itemType;
+        public String CurrencyIsoCode;
+        public String Status;
     }
     
     public class PicklistValue {

@@ -225,7 +225,7 @@ public without sharing class AddProductPageOpp {
 
             String query = 'SELECT Id, UnitPrice, Product2Id, ' +
                 'Product2.Name, Product2.Family, ' +
-                'Product2.ProductCode, Product2.Description,CurrencyIsoCode,Product2.Item_Type__c ' +
+                'Product2.ProductCode, Product2.Description,CurrencyIsoCode,Product2.Item_Type__c, Product2.Status__c ' +
                 'FROM PricebookEntry ' +
                 'WHERE Distribution_Channel__c = \'' + salesAreaItemList[0].Distribution_Channel__c + '\' ' +
                 'AND Sales_Org__c = \'1100\' ' +
@@ -310,6 +310,12 @@ public without sharing class AddProductPageOpp {
 
             List < ProductWrapper > lstProduct = new List < ProductWrapper > ();
             integer i = 0;
+            System.debug(
+                'lstPBE size: ' + lstPBE.size() +
+                (lstPBE.isEmpty()
+                    ? ' | No products found'
+                    : ' | First Product Status: ' + lstPBE[0].Product2.Status__c)
+            );
             for (PricebookEntry pbe: lstPBE) {
                 ProductWrapper pw = new ProductWrapper();
                 pw.Id = pbe.Id;
@@ -322,6 +328,7 @@ public without sharing class AddProductPageOpp {
                 pw.Quantity = 0;
                 pw.ARCQuantity = 0;
                 pw.itemType = pbe.Product2.Item_Type__c;
+                pw.Status = pbe.Product2.Status__c;
                 pw.CurrencyIsoCode = pbe.CurrencyIsoCode;
                 
                 System.debug('Processing Product: ' + pbe.Product2.ProductCode + ', Currency: ' + pbe.CurrencyIsoCode);
@@ -444,7 +451,7 @@ public without sharing class AddProductPageOpp {
 
         String query = 'SELECT Id, UnitPrice, Product2Id, ' +
             'Product2.Name, Product2.Family, ' +
-            'Product2.ProductCode, Product2.Description,CurrencyIsoCode,Product2.Item_Type__c ' +
+            'Product2.ProductCode, Product2.Description,CurrencyIsoCode,Product2.Item_Type__c, Product2.Status__c ' +
             'FROM PricebookEntry ' +
             'WHERE Distribution_Channel__c = \'' + salesAreaItemList[0].Distribution_Channel__c + '\' ' +
             'AND Sales_Org__c = \'1100\' ' +
@@ -474,7 +481,8 @@ public without sharing class AddProductPageOpp {
             System.debug('PBE: Id=' + pbe.Id + 
                         ', ProductCode=' + pbe.Product2.ProductCode + 
                         ', CurrencyIsoCode=' + pbe.CurrencyIsoCode +
-                        ', UnitPrice=' + pbe.UnitPrice);
+                        ', UnitPrice=' + pbe.UnitPrice +
+                        ', Status=' + pbe.Product2.Status__c);
         }
 
         Map<String, Customer_ARC_Pricing__c> arcProductMap = new Map<String, Customer_ARC_Pricing__c>();
@@ -530,9 +538,10 @@ public without sharing class AddProductPageOpp {
             pw.UnitPrice = pbe.UnitPrice;
             pw.itemType = pbe.Product2.Item_Type__c;
             pw.CurrencyIsoCode = pbe.CurrencyIsoCode;
-            
-            System.debug('Processing Product: ' + pbe.Product2.ProductCode + ', Currency: ' + pbe.CurrencyIsoCode);
-            
+            pw.Status = pbe.Product2.Status__c;
+
+            System.debug('Processing Product: ' + pbe.Product2.ProductCode + ', Currency: ' + pbe.CurrencyIsoCode + ', Status: ' + pw.Status);
+
             if (arcProductMap.containsKey(pbe.Product2.ProductCode)) {
                 Customer_ARC_Pricing__c cap = arcProductMap.get(pbe.Product2.ProductCode);
                 List<Map<String, Decimal>> scaleList = buildScaleList(cap);
@@ -810,6 +819,7 @@ public without sharing class AddProductPageOpp {
         public String itemType;
         public String CurrencyIsoCode;
         public Decimal UnitPrice;
+        public String Status;
     }
 
     public class PicklistValue {

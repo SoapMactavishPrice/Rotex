@@ -3,7 +3,7 @@ public without sharing class editDiscountQuantityController {
     public static List<QuoteLineItem> getQuoteLineItem(String qId) {
         return [
             SELECT Id, Discount_as_per_SAP__c, Discount_to_be_offered__c, Quantity, 
-            UnitPrice, ListPrice, Customer_Part_No__c, Product2.Name, Product2Id, P_F_Charges__c, 
+            UnitPrice, ListPrice, Customer_Part_No__c, Product2.Name, Product2.ProductCode, Product2Id, P_F_Charges__c, 
             Final_Discount_Approver__c, Sales_Rep__c, Sales_Manager__c, 
             Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c, Rotex_Board_Member__c, 
             Managing_Director_Country_Manage__c, Is_Discount_Approved__c, Previous_Discount__c,
@@ -25,7 +25,9 @@ public without sharing class editDiscountQuantityController {
             Managing_Director_Status__c, 
             Managing_Director_Comments__c, 
             Managing_Director_Date_Time__c,
-            New_Discount_Entered__c
+            New_Discount_Entered__c,
+
+            Quote.RecordType.Name
 
             FROM QuoteLineItem 
             WHERE QuoteId = :qId

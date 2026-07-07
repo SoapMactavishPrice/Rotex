@@ -25,7 +25,7 @@
                     <tbody>
                         <template for:each={quoteLineItemList} for:item="item">
                             <tr key={item.Id}>
-                                <td class="col-product cell-wrap">{item.Product2.Name}</td>
+                                <td class="col-product cell-wrap">{item.Product2.Name}&nbsp;<strong>({item.Product2.ProductCode})</strong></td>
                                 <td class="col-partno">
                                     <lightning-input type="text" data-id={item.Id} variant="label-hidden"
                                         value={item.Customer_Part_No__c} class="input-field"

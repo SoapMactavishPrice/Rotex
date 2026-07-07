@@ -43,7 +43,7 @@ private class OpportunityTriggerHandler_Test {
         // ✅ KEY FIX: Re-query the Opportunity to get the ACTUAL Pricebook2Id
         // after any automation in production may have changed it
         opp = [SELECT Id, Name, StageName, AccountId, Project_Contact__c, 
-                      Pricebook2Id, HasOpportunityLineItem, CreatedById
+                      Pricebook2Id, HasOpportunityLineItem, CreatedById, RecordTypeId
                FROM Opportunity 
                WHERE Id = :opp.Id];
 
@@ -90,7 +90,8 @@ private class OpportunityTriggerHandler_Test {
         Map<Id, Opportunity> oldOpportunityMap = new Map<Id, Opportunity>{
             opp.Id => new Opportunity(
                 Id = opp.Id,
-                StageName = 'Needs Analysis'
+                StageName = 'Needs Analysis',
+                Pricebook2Id = opp.Pricebook2Id
             )
         };
 

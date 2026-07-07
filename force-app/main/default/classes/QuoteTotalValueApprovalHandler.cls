@@ -302,7 +302,8 @@ public with sharing class QuoteTotalValueApprovalHandler {
                    Global_Sales_Head__c, Global_Sales_Head__r.Email,
                    Rotex_Board_Member__c, Rotex_Board_Member__r.Email,
                    Managing_Director_Country_Manager__c, Managing_Director_Country_Manager__r.Email,
-                   SM_Value_Status__c, CH_Value_Status__c, GS_Value_Status__c, BM_Value_Status__c, MD_Value_Status__c
+                   SM_Value_Status__c, CH_Value_Status__c, GS_Value_Status__c, BM_Value_Status__c, MD_Value_Status__c,
+                   RecordType.Name
             FROM Quote
             WHERE Id IN :allIds
         ]);
@@ -379,7 +380,9 @@ public with sharing class QuoteTotalValueApprovalHandler {
         email.setSaveAsActivity(true);
         email.setWhatId(q.Id);
 
-        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/Quote_Discount_Approval';
+        String recordTypeName = q.RecordType != null ? q.RecordType.Name : null;
+        String approvalTab = (recordTypeName == 'ARC') ? 'ARC_Approvals' : 'Quote_Approvals';
+        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/' + approvalTab;
         String quoteRecordUrl  = URL.getOrgDomainUrl().toExternalForm() + '/' + q.Id;
 
         if (isRejection) {
@@ -412,10 +415,12 @@ public with sharing class QuoteTotalValueApprovalHandler {
 
             notification.setNotificationTypeId(notificationTypeId);
 
+            String recordTypeName = q.RecordType != null ? q.RecordType.Name : null;
+            String approvalTab = (recordTypeName == 'ARC') ? 'ARC_Approvals' : 'Quote_Approvals';
             notification.setTargetPageRef(JSON.serialize(new Map<String, Object>{
                 'type' => 'standard__navItemPage',
                 'attributes' => new Map<String, Object>{
-                    'apiName' => 'Quote_Discount_Approval'
+                    'apiName' => approvalTab
                 }
             }));
 

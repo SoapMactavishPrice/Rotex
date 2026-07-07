@@ -4,17 +4,79 @@ import { CloseActionScreenEvent } from 'lightning/actions';
 import { RefreshEvent } from 'lightning/refresh';
 import modal from "@salesforce/resourceUrl/containerCss";
 import { loadStyle } from "lightning/platformResourceLoader";
-import getQuoteLineItem from '@salesforce/apex/editDiscountQuantityController.getQuoteLineItem';
-import updateQuoteLineItem from '@salesforce/apex/editDiscountQuantityController.updateQuoteLineItem';
+import getQuoteAndLineItems from '@salesforce/apex/editArcDiscountQuantityController.getQuoteAndLineItems';
+import updateQuoteAndLineItems from '@salesforce/apex/editArcDiscountQuantityController.updateQuoteAndLineItems';
 import { NavigationMixin } from 'lightning/navigation';
+import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
 
-export default class EditDiscountQuantity extends NavigationMixin(LightningElement) {
+import QUOTE_OBJECT from '@salesforce/schema/Quote';
+import PAYMENT_TERMS_FIELD from '@salesforce/schema/Quote.Payment_Terms__c';
+import WARRANTY_TERMS_FIELD from '@salesforce/schema/Quote.Warranty_Terms_Draft__c';
+import INCO_TERMS_FIELD from '@salesforce/schema/Quote.INCO_Terms__c';
+
+export default class EditArcDiscountQuantity extends NavigationMixin(LightningElement) {
     @api recordId;
     @api objectApiName;
     @track showSpinner = false;
     @track quoteLineItemList = [];
+    @track quoteRecord = {};
     @track currencyCode = '';
     @track recordType = '';
+
+    // Picklist options
+    @track paymentTermsOptions = [];
+    @track warrantyOptions = [];
+    @track incoTermsOptions = [];
+
+    // Wire Quote Object Info to get default record type ID
+    @wire(getObjectInfo, { objectApiName: QUOTE_OBJECT })
+    quoteObjectInfo;
+
+    // Wire Picklist Values
+    @wire(getPicklistValues, {
+        recordTypeId: '$quoteObjectInfo.data.defaultRecordTypeId',
+        fieldApiName: PAYMENT_TERMS_FIELD
+    })
+    wiredPaymentTerms({ data, error }) {
+        if (data) {
+            this.paymentTermsOptions = data.values.map(item => ({ label: item.label, value: item.value }));
+        } else if (error) {
+            console.error(error);
+        }
+    }
+
+    @wire(getPicklistValues, {
+        recordTypeId: '$quoteObjectInfo.data.defaultRecordTypeId',
+        fieldApiName: WARRANTY_TERMS_FIELD
+    })
+    wiredWarrantyTerms({ data, error }) {
+        if (data) {
+            this.warrantyOptions = data.values.map(item => ({ label: item.label, value: item.value }));
+        } else if (error) {
+            console.error(error);
+        }
+    }
+
+    @wire(getPicklistValues, {
+        recordTypeId: '$quoteObjectInfo.data.defaultRecordTypeId',
+        fieldApiName: INCO_TERMS_FIELD
+    })
+    wiredIncoTerms({ data, error }) {
+        if (data) {
+            this.incoTermsOptions = data.values.map(item => ({ label: item.label, value: item.value }));
+        } else if (error) {
+            console.error(error);
+        }
+    }
+
+    // Dynamic calculations
+    get totalAnticipatedBusiness() {
+        return this.quoteLineItemList.reduce((sum, item) => sum + (parseFloat(item.Potential_Value__c) || 0), 0);
+    }
+
+    get totalQty() {
+        return this.quoteLineItemList.reduce((sum, item) => sum + (parseFloat(item.Potential_Qty__c) || 0), 0);
+    }
 
     showToast(toastTitle, toastMsg, toastType) {
         const event = new ShowToastEvent({
@@ -48,104 +110,85 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             console.log('objectApiName ', this.objectApiName);
             if (this.recordId) {
                 this.handleGetLineItems();
-                this.showSpinner = false;
             } else {
                 this.showToast('Error', 'Invalid Record Id', 'error');
+                this.showSpinner = false;
             }
         }, 1000);
     }
 
     handleGetLineItems() {
-        getQuoteLineItem({
+        getQuoteAndLineItems({
             qId: this.recordId
         }).then((result) => {
             console.log('result:>>> ', result);
-            if (result.length > 0 && result[0].Quote && result[0].Quote.RecordType && result[0].Quote.RecordType.Name) {
-                this.recordType = result[0].Quote.RecordType.Name;
+            this.quoteRecord = result.quoteRecord || {};
+            this.currencyCode = this.quoteRecord.CurrencyIsoCode || '';
+            if (this.quoteRecord.RecordType && this.quoteRecord.RecordType.Name) {
+                this.recordType = this.quoteRecord.RecordType.Name;
             }
-            console.log('data:>>> ', result);
-            this.quoteLineItemList = result.map(item => {
+            
+            this.quoteLineItemList = result.lineItems.map(item => {
                 const baseDisabled = this.isRowLocked(item);
                 const isApproved = item.Is_Discount_Approved__c;
+                const existingArcPrice = result.existingArcPrices && result.existingArcPrices[item.Product2.ProductCode]
+                    ? result.existingArcPrices[item.Product2.ProductCode]
+                    : null;
 
                 if (isApproved) {
-                    // ── Approved row: New Discount ↔ Desired Price mutual-exclusion ──
-                    // Discount Offered is always disabled for approved rows.
-                    // Desired Price pre-fills from existing Discount_to_be_offered__c if non-zero.
-                    const newDiscountBaseLocked = this.isRowLockedForNewDiscount(item); // ARC / submitted only — NOT Is_Discount_Approved__c
-                    const discountIsZero = item.Discount_to_be_offered__c === 0;
-                    const hasExistingDiscount = this.hasDiscountOfferedValue(item.Discount_to_be_offered__c) && !discountIsZero;
+                    // Approved row: New Discount <=> Desired Price mutual exclusion
+                    const newDiscountBaseLocked = this.isRowLockedForNewDiscount(item);
                     return {
                         ...item,
+                        existingArcPrice: existingArcPrice,
                         newDiscountValue: null,
                         desiredPriceValue: null,
                         isDiscountOfferedDisabled: true,
                         isDesiredPriceDisabled: newDiscountBaseLocked,
-                        isNewDiscountDisabled: newDiscountBaseLocked,
-                        isRequestedCommentsDisabled: this.computeRequestedCommentsDisabled(item, null, isApproved),
-                        requestedCommentsPlaceholder: 'Enter comments...'
+                        isNewDiscountDisabled: newDiscountBaseLocked
                     };
                 } else {
-                    // ── Non-approved row: Discount Offered ↔ Desired Price mutual-exclusion ──
+                    // Non-approved row: Discount Offered <=> Desired Price mutual exclusion
                     const discountIsZero = item.Discount_to_be_offered__c === 0;
                     const hasExistingDiscount = this.hasDiscountOfferedValue(item.Discount_to_be_offered__c) && !discountIsZero;
                     return {
                         ...item,
+                        existingArcPrice: existingArcPrice,
                         newDiscountValue: null,
                         desiredPriceValue: hasExistingDiscount
                             ? this.computeDesiredPrice(item.ListPrice, item.Discount_to_be_offered__c)
                             : null,
                         isDesiredPriceDisabled: baseDisabled || hasExistingDiscount,
                         isDiscountOfferedDisabled: baseDisabled,
-                        isNewDiscountDisabled: true, // New Discount column shows '-' for non-approved
-                        isRequestedCommentsDisabled: this.computeRequestedCommentsDisabled(item, null, isApproved),
-                        requestedCommentsPlaceholder: 'Enter comments...'
+                        isNewDiscountDisabled: true
                     };
                 }
             });
-            if (result && result.length > 0) {
-                this.currencyCode = result[0].CurrencyIsoCode;
-            }
-            console.log('quoteLineItemList ', this.quoteLineItemList);
+            this.showSpinner = false;
+        }).catch(error => {
+            console.error(error);
+            this.showToast('Error', 'Failed to retrieve details: ' + (error?.body?.message || error?.message), 'error');
+            this.showSpinner = false;
         });
     }
 
-    // ─── Desired Price / Discount mutual-exclusion helpers ────────────────────
-
-    /**
-     * Calculates Desired Price from ListPrice and Discount%.
-     * Returns null if inputs are missing.
-     */
+    // Calculation helper functions
     computeDesiredPrice(listPrice, discountPct) {
         if (listPrice == null || discountPct == null || discountPct === '') return null;
         return parseFloat((listPrice * (1 - parseFloat(discountPct) / 100)).toFixed(4));
     }
 
-    /**
-     * Calculates Discount% from ListPrice and Desired Price.
-     * Returns null if inputs are missing or ListPrice is 0.
-     * Result is clamped to 2 decimal places.
-     */
     computeDiscountFromDesiredPrice(listPrice, desiredPrice) {
         if (listPrice == null || listPrice === 0 || desiredPrice == null || desiredPrice === '') return null;
         const raw = ((listPrice - parseFloat(desiredPrice)) / listPrice) * 100;
         return this.roundTo2Decimals(raw);
     }
 
-    /**
-     * Rounds a number to max 2 decimal places.
-     * Strips trailing zeros (e.g. 10.50 → 10.5, 10.00 → 10).
-     */
     roundTo2Decimals(value) {
         if (value == null) return null;
         return parseFloat(parseFloat(value).toFixed(2));
     }
 
-    /**
-     * Enforces max 2 decimal places on a string input value.
-     * Returns the clamped numeric value, or null if empty.
-     * Shows a toast warning if the user typed more than 2 decimals.
-     */
     enforceMax2Decimals(value) {
         if (value === '' || value == null) return null;
         const str = String(value);
@@ -157,9 +200,6 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
         return parseFloat(value);
     }
 
-    /**
-     * Checks whether a raw input string has more than 2 decimal places.
-     */
     hasMoreThan2Decimals(rawValue) {
         const str = String(rawValue);
         const dotIndex = str.indexOf('.');
@@ -170,40 +210,12 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
         return val != null && val !== '';
     }
 
-    hasDesiredPriceValue(val) {
-        return val != null && val !== '';
-    }
-
-    /**
-     * Whether the row is intrinsically locked (ARC / approved / submitted).
-     */
     isRowLocked(item) {
         return item.Item_Type__c == 'ARC' || item.Is_Discount_Approved__c || this.hasSubmittedApproverStatus(item);
     }
 
-    /**
-     * Whether the row is base-locked for the purpose of New Discount
-     * (only ARC or submitted status — NOT Is_Discount_Approved__c itself,
-     * since that flag is what enables the New Discount column).
-     */
     isRowLockedForNewDiscount(item) {
         return item.Item_Type__c == 'ARC';
-    }
-
-    // ─── Existing helpers ─────────────────────────────────────────────────────
-
-    /**
-     * Requested Comments is enabled when there is any active discount value:
-     *  - For approved rows:  newDiscountValue OR Discount_to_be_offered__c
-     *  - For non-approved:   Discount_to_be_offered__c OR newDiscountValue (legacy)
-     *
-     * Returns true = disabled, false = enabled.
-     */
-    computeRequestedCommentsDisabled(item, overrideNewDiscount, isApproved) {
-        const newDiscount = overrideNewDiscount !== undefined ? overrideNewDiscount : item.newDiscountValue;
-        const hasDiscountOffered = item.Discount_to_be_offered__c != null && item.Discount_to_be_offered__c !== '';
-        const hasNewDiscount = newDiscount != null && newDiscount !== '';
-        return !(hasDiscountOffered || hasNewDiscount);
     }
 
     hasSubmittedApproverStatus(item) {
@@ -216,33 +228,20 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
         ].some(status => status === 'Submitted');
     }
 
-    // ─── Event handlers ───────────────────────────────────────────────────────
-
-    handleCustomerPartNoChange(event) {
-        const id = event.target.dataset.id;
-        const value = event.target.value;
-        this.quoteLineItemList = this.quoteLineItemList.map(item => {
-            if (item.Id === id) {
-                return { ...item, Customer_Part_No__c: value };
-            }
-            return item;
-        });
+    // Quote field change handlers
+    handlePaymentTermsChange(event) {
+        this.quoteRecord = { ...this.quoteRecord, Payment_Terms__c: event.detail.value };
     }
 
-    /**
-     * When the user types into the Desired Price field:
-     *
-     * NON-APPROVED row (Discount Offered ↔ Desired Price):
-     *  - Compute Discount Offered dynamically
-     *  - Lock Discount Offered if Desired Price is non-null AND non-zero
-     *  - Re-enable Discount Offered if Desired Price is cleared or 0
-     *
-     * APPROVED row (New Discount ↔ Desired Price):
-     *  - Compute New Discount dynamically (max 2 decimals)
-     *  - Lock New Discount if Desired Price is non-null AND non-zero
-     *  - Re-enable New Discount if Desired Price is cleared or 0
-     *  - Discount Offered stays disabled regardless
-     */
+    handleWarrantyTermsChange(event) {
+        this.quoteRecord = { ...this.quoteRecord, Warranty_Terms_Draft__c: event.detail.value };
+    }
+
+    handleIncoTermsChange(event) {
+        this.quoteRecord = { ...this.quoteRecord, INCO_Terms__c: event.detail.value };
+    }
+
+    // Table cell change handlers
     handleDesiredPriceChange(event) {
         const id = event.target.dataset.id;
         const value = event.target.value;
@@ -255,53 +254,33 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
                 const desiredPriceIsNonZero = parsedDesiredPrice !== null && parsedDesiredPrice !== 0;
 
                 if (item.Is_Discount_Approved__c) {
-                    // ── Approved: Desired Price drives New Discount ──
-                    const updatedItem = {
+                    return {
                         ...item,
                         desiredPriceValue: parsedDesiredPrice,
                         newDiscountValue: computedDiscount,
-                        Requested_Comments__c: null,
                         isDiscountOfferedDisabled: true,
                         isDesiredPriceDisabled: baseLocked,
                         isNewDiscountDisabled: baseLocked || desiredPriceIsNonZero
                     };
-                    updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(
-                        updatedItem, updatedItem.newDiscountValue, true
-                    );
-                    return updatedItem;
                 } else {
-                    // ── Non-approved: Desired Price drives Discount Offered ──
-                    const updatedItem = {
+                    return {
                         ...item,
                         desiredPriceValue: parsedDesiredPrice,
                         Discount_to_be_offered__c: computedDiscount,
-                        Requested_Comments__c: null,
                         isDesiredPriceDisabled: false,
                         isDiscountOfferedDisabled: desiredPriceIsNonZero
                     };
-                    updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(
-                        updatedItem, item.newDiscountValue, false
-                    );
-                    return updatedItem;
                 }
             }
             return item;
         });
     }
 
-    /**
-     * When the user types into the Discount Offered field (only active on non-approved rows):
-     *  - Enforce max 2 decimal places
-     *  - Compute Desired Price dynamically
-     *  - Lock Desired Price if Discount Offered is non-null AND non-zero
-     *  - Re-enable Desired Price if Discount Offered is cleared or 0
-     */
     handleDiscountChange(event) {
         const id = event.target.dataset.id;
         const rawValue = event.target.value;
         const parsedDiscount = this.enforceMax2Decimals(rawValue);
 
-        // Push corrected value back if clamped
         if (parsedDiscount !== null && this.hasMoreThan2Decimals(rawValue)) {
             event.target.value = parsedDiscount;
         }
@@ -311,62 +290,23 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
                 const locked = this.isRowLocked(item);
                 const computedDesiredPrice = this.computeDesiredPrice(item.ListPrice, parsedDiscount);
                 const discountIsNonZero = parsedDiscount !== null && parsedDiscount !== 0;
-                const updatedItem = {
+                return {
                     ...item,
                     Discount_to_be_offered__c: parsedDiscount,
                     desiredPriceValue: computedDesiredPrice,
-                    Requested_Comments__c: null,
                     isDiscountOfferedDisabled: locked,
                     isDesiredPriceDisabled: locked || discountIsNonZero
                 };
-                updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(
-                    updatedItem, item.newDiscountValue, false
-                );
-                return updatedItem;
             }
             return item;
         });
     }
 
-    handlePFChargeChanges(event) {
-        const id = event.target.dataset.id;
-        const value = event.target.value;
-        this.quoteLineItemList = this.quoteLineItemList.map(item => {
-            if (item.Id === id) {
-                return { ...item, P_F_Charges__c: parseInt(value) };
-            }
-            return item;
-        });
-    }
-
-    handleQuantityChange(event) {
-        const id = event.target.dataset.id;
-        const value = event.target.value;
-        this.quoteLineItemList = this.quoteLineItemList.map(item => {
-            if (item.Id === id) {
-                return {
-                    ...item,
-                    Quantity: value !== '' ? parseFloat(value) : null
-                };
-            }
-            return item;
-        });
-    }
-
-    /**
-     * When the user types into the New Discount field (only active on approved rows):
-     *  - Enforce max 2 decimal places
-     *  - Compute Desired Price dynamically (same as Discount Offered logic)
-     *  - Lock Desired Price if New Discount is non-null AND non-zero
-     *  - Re-enable Desired Price if New Discount is cleared or 0
-     *  - Discount Offered stays disabled regardless
-     */
     handleNewDiscountChange(event) {
         const id = event.target.dataset.id;
         const rawValue = event.target.value;
         const parsedValue = this.enforceMax2Decimals(rawValue);
 
-        // Push corrected value back if clamped
         if (parsedValue !== null && this.hasMoreThan2Decimals(rawValue)) {
             event.target.value = parsedValue;
         }
@@ -375,40 +315,126 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             if (item.Id === id) {
                 const baseLocked = this.isRowLockedForNewDiscount(item);
                 const computedDesiredPrice = this.computeDesiredPrice(item.ListPrice, parsedValue);
-                // Desired Price locked only when New Discount is non-null AND non-zero
                 const newDiscountIsNonZero = parsedValue !== null && parsedValue !== 0;
-                const updatedItem = {
+                return {
                     ...item,
                     newDiscountValue: parsedValue,
                     desiredPriceValue: computedDesiredPrice,
-                    Requested_Comments__c: null,
                     isDiscountOfferedDisabled: true,
                     isNewDiscountDisabled: baseLocked,
                     isDesiredPriceDisabled: baseLocked || newDiscountIsNonZero
                 };
-                updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(
-                    updatedItem, parsedValue, true
-                );
-                return updatedItem;
             }
             return item;
         });
-        console.log('New Discount entered for item:', id, 'Value:', parsedValue);
     }
 
-    handleRequestedCommentsChange(event) {
+    handleNumberFieldChange(event) {
         const id = event.target.dataset.id;
+        const field = event.target.dataset.field;
         const value = event.target.value;
+        
         this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
-                return { ...item, Requested_Comments__c: value };
+                return {
+                    ...item,
+                    [field]: value !== '' ? parseFloat(value) : null
+                };
             }
             return item;
         });
     }
 
+    handleDateFieldChange(event) {
+        const id = event.target.dataset.id;
+        const field = event.target.dataset.field;
+        const value = event.target.value;
+        
+        this.quoteLineItemList = this.quoteLineItemList.map(item => {
+            if (item.Id === id) {
+                return {
+                    ...item,
+                    [field]: value !== '' ? value : null
+                };
+            }
+            return item;
+        });
+
+        if (field === 'Valid_Till__c') {
+            const inputField = event.target;
+            const selectedDate = value
+                ? new Date(new Date(value).setHours(0, 0, 0, 0))
+                : null;
+            const fyEndDate = this.getFiscalYearEndDate();
+            console.log('selected date', selectedDate, 'fyEndDate', fyEndDate);
+            if (selectedDate && selectedDate > fyEndDate) {
+                const formattedDate = this.formatDate(fyEndDate);
+                inputField.setCustomValidity(`Date cannot be beyond Financial Year end (${formattedDate})`);
+            } else {
+                inputField.setCustomValidity('');
+            }
+            inputField.reportValidity();
+        }
+    }
+
+    getFiscalYearEndDate() {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth(); // 0-indexed: 0 is Jan
+        let fyEndYear = currentYear;
+        if (currentMonth >= 3) { // April or later
+            fyEndYear = currentYear + 1;
+        }
+        console.log('new Date(fyEndYear, 2, 31)', new Date(fyEndYear, 2, 31));
+        return new Date(fyEndYear, 2, 31); // March 31st
+    }
+
+    formatDate(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}-${month}-${year}`;
+    }
+
+    // Save handling
     handleSave() {
         this.showSpinner = true;
+
+        const allValid = [...this.template.querySelectorAll('lightning-input')]
+            .reduce((validSoFar, inputFields) => {
+                inputFields.reportValidity();
+                return validSoFar && inputFields.checkValidity();
+            }, true);
+
+        if (!allValid) {
+            this.showToast('Validation Error', 'Please check and correct the errors on the page.', 'error');
+            this.showSpinner = false;
+            return;
+        }
+
+        const invalidPotentialRow = this.quoteLineItemList.find(item => {
+            const hasPotentialValue =
+                item.Potential_Value__c !== null &&
+                item.Potential_Value__c !== undefined &&
+                item.Potential_Value__c !== '';
+
+            const hasPotentialQty =
+                item.Potential_Qty__c !== null &&
+                item.Potential_Qty__c !== undefined &&
+                item.Potential_Qty__c !== '';
+
+            return !hasPotentialValue && !hasPotentialQty;
+        });
+
+        if (invalidPotentialRow) {
+            this.showToast(
+                'Validation Error',
+                'For each row, either Proposed Value or Proposed Qty is mandatory.',
+                'error'
+            );
+            this.showSpinner = false;
+            return;
+        }
 
         const invalidNewDiscountItem = this.quoteLineItemList.find(item =>
             item.Is_Discount_Approved__c &&
@@ -444,12 +470,12 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
         const itemsToUpdate = this.quoteLineItemList.map(item => {
             const updateData = {
                 Id: item.Id,
-                Quantity: item.Quantity ? parseFloat(item.Quantity) : 0,
+                Quantity: 1, // Set QLI.Quantity as 1
+                Discount_as_per_SAP__c: 0, // Discount as per SAP to 0
                 Discount_to_be_offered__c: item.Discount_to_be_offered__c ? parseFloat(item.Discount_to_be_offered__c) : 0,
                 Requested_Discount__c: item.Discount_to_be_offered__c ? parseFloat(item.Discount_to_be_offered__c) : 0,
                 Customer_Part_No__c: item.Customer_Part_No__c,
                 P_F_Charges__c: item.P_F_Charges__c ? parseFloat(item.P_F_Charges__c) : 0,
-                Discount_as_per_SAP__c: parseFloat(item.Discount_as_per_SAP__c),
                 Requested_Comments__c: item.Requested_Comments__c || null,
                 Is_Discount_Only_Rejected__c: item.Is_Discount_Only_Rejected__c,
 
@@ -461,7 +487,12 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
                 Rotex_Board_Member__c: item.Rotex_Board_Member__c,
                 Managing_Director_Country_Manage__c: item.Managing_Director_Country_Manage__c,
                 Is_Discount_Approved__c: item.Is_Discount_Approved__c,
-                Is_QLI_Approved_going_for_Approval__c: item.Is_QLI_Approved_going_for_Approval__c
+                Is_QLI_Approved_going_for_Approval__c: item.Is_QLI_Approved_going_for_Approval__c,
+
+                Potential_Value__c: item.Potential_Value__c ? parseFloat(item.Potential_Value__c) : null,
+                Potential_Qty__c: item.Potential_Qty__c ? parseFloat(item.Potential_Qty__c) : null,
+                Valid_from__c: item.Valid_from__c || null,
+                Valid_Till__c: item.Valid_Till__c || null
             };
 
             if (item.Is_Discount_Approved__c && item.newDiscountValue != null && item.newDiscountValue !== '') {
@@ -473,16 +504,12 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
 
                 updateData.Sales_Manager_Comments__c = item.Sales_Manager_Comments__c;
                 updateData.Sales_Manager_Date_Time__c = item.Sales_Manager_Date_Time__c;
-
                 updateData.Country_Continent_Sales_LOB_Comments__c = item.Country_Continent_Sales_LOB_Comments__c;
                 updateData.Country_Head_Date_Time__c = item.Country_Head_Date_Time__c;
-
                 updateData.Global_Sales_Head_Comments__c = item.Global_Sales_Head_Comments__c;
                 updateData.Global_Sales_Head_Date_Time__c = item.Global_Sales_Head_Date_Time__c;
-
                 updateData.Rotex_Board_Member_Comments__c = item.Rotex_Board_Member_Comments__c;
                 updateData.Rotex_Board_Member_Date_time__c = item.Rotex_Board_Member_Date_time__c;
-
                 updateData.Managing_Director_Comments__c = item.Managing_Director_Comments__c;
                 updateData.Managing_Director_Date_Time__c = item.Managing_Director_Date_Time__c;
             } else if (item.Previous_Discount__c) {
@@ -492,17 +519,19 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
             return updateData;
         });
 
-        updateQuoteLineItem({
+        updateQuoteAndLineItems({
             quoteId: this.recordId,
             quoteLineItems: itemsToUpdate,
-            shouldUpdateQuoteStatus: hasNewDiscountEntered
+            shouldUpdateQuoteStatus: hasNewDiscountEntered,
+            paymentTerms: this.quoteRecord.Payment_Terms__c,
+            warrantyTerms: this.quoteRecord.Warranty_Terms_Draft__c,
+            incoTerms: this.quoteRecord.INCO_Terms__c
         }).then(() => {
-            this.showToast('Quote Line Items Updated', '', 'success');
+            this.showToast('Quote and ARC Line Items Updated', '', 'success');
             this.closeModal();
         }).catch((error) => {
-            console.error(error?.body);
-            this.showToast('Error', error?.body?.message, 'error');
-            this.errorResponseMessage = error;
+            console.error(error);
+            this.showToast('Error', 'Failed to save changes: ' + (error?.body?.message || error?.message), 'error');
             this.showSpinner = false;
         });
     }

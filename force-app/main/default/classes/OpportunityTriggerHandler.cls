@@ -106,6 +106,19 @@ public class OpportunityTriggerHandler {
                     Quote newQuote = new Quote();
                     newQuote.OpportunityId = opp.Id;
                     newQuote.Name = opp.Name;
+                    if (opp.RecordTypeId != null) {
+                        Map<Id, Schema.RecordTypeInfo> oppRTMap =
+                            Schema.SObjectType.Opportunity.getRecordTypeInfosById();
+    
+                        String oppRTName = oppRTMap.get(opp.RecordTypeId).getDeveloperName();
+    
+                        Id quoteRTId = Schema.SObjectType.Quote
+                            .getRecordTypeInfosByDeveloperName()
+                            .get(oppRTName)
+                            .getRecordTypeId();
+    
+                        newQuote.RecordTypeId = quoteRTId;
+                    }
                     newQuote.Status = 'Draft';
                     newQuote.ExpirationDate = System.today() + 14;
                     newQuote.Quote_Valid_Till__c = System.today() + 30;

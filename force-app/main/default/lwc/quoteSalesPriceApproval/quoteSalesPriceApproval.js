@@ -1,4 +1,4 @@
-import { LightningElement, track, wire } from 'lwc';
+import { api, LightningElement, track, wire } from 'lwc';
 import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getAllQuotations from '@salesforce/apex/SalesPriceApprovalForQuotation.getAllQuotations';
@@ -18,6 +18,7 @@ import WARRANTY_TERMS_FIELD from '@salesforce/schema/Quote.Warranty_Terms__c';
 import VALIDITY_OF_OFFER_FIELD from '@salesforce/schema/Quote.Validity_of_Offer__c';
 
 export default class QuoteSalesPriceApproval extends NavigationMixin(LightningElement) {
+    @api recordType;
     @track quotes;
     @track updatedLineItems = new Map();
     @track isSaveDisabled = false;
@@ -42,10 +43,14 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     userId = USER_ID;
 
+    get isARCRecordType() {
+        return this.recordType === 'ARC';
+    }
+
     @track statusOptions = [
         { label: 'Submitted', value: 'Submitted' },
-        { label: 'Approved',  value: 'Approved'  },
-        { label: 'Rejected',  value: 'Rejected'  }
+        { label: 'Approved', value: 'Approved' },
+        { label: 'Rejected', value: 'Rejected' }
     ];
 
     @wire(getObjectInfo, { objectApiName: QUOTE_OBJECT })
@@ -107,14 +112,14 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     // ── Tab class getters ──
-    get allTabClass()      { return this.activeTab === 'all'      ? 'tab-btn tab-btn--active' : 'tab-btn'; }
-    get pendingTabClass()  { return this.activeTab === 'pending'  ? 'tab-btn tab-btn--active' : 'tab-btn'; }
+    get allTabClass() { return this.activeTab === 'all' ? 'tab-btn tab-btn--active' : 'tab-btn'; }
+    get pendingTabClass() { return this.activeTab === 'pending' ? 'tab-btn tab-btn--active' : 'tab-btn'; }
     get approvedTabClass() { return this.activeTab === 'approved' ? 'tab-btn tab-btn--active' : 'tab-btn'; }
     get rejectedTabClass() { return this.activeTab === 'rejected' ? 'tab-btn tab-btn--active' : 'tab-btn'; }
 
     // ── Tab badge counts ──
-    get allCount()      { return this.quotes ? this.quotes.filter(quote => !quote._isFullyDecided).length : 0; }
-    get pendingCount()  { return this._getTabCount('pending');  }
+    get allCount() { return this.quotes ? this.quotes.filter(quote => !quote._isFullyDecided).length : 0; }
+    get pendingCount() { return this._getTabCount('pending'); }
     get approvedCount() { return this._getTabCount('approved'); }
     get rejectedCount() { return this._getTabCount('rejected'); }
 
@@ -141,7 +146,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         } else {
             result = this.quotes.filter(quote => {
                 const statuses = this._getCurrentUserStatusesForQuote(quote);
-                if (this.activeTab === 'pending')  return this._isQuotePendingForCurrentUser(quote);
+                if (this.activeTab === 'pending') return this._isQuotePendingForCurrentUser(quote);
                 if (this.activeTab === 'approved') return statuses.some(s => s === 'Approved');
                 if (this.activeTab === 'rejected') return statuses.some(s => s === 'Rejected');
                 return true;
@@ -176,19 +181,19 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         // bcheckN === false means the current user IS that approver level
         for (const item of (quote.quoteLineItems || [])) {
             let status = null;
-            if      (item.bcheck1 === false) status = item.origSalesManagerStatus          || item.salesManagerStatus;
-            else if (item.bcheck2 === false) status = item.origCountryContinentSalesStatus  || item.countryContinentSalesStatus;
-            else if (item.bcheck5 === false) status = item.origGlobalSalesHeadStatus        || item.globalSalesHeadStatus;
-            else if (item.bcheck3 === false) status = item.origRotexBoardMemberStatus       || item.rotexBoardMemberStatus;
-            else if (item.bcheck4 === false) status = item.origManagingDirectorStatus       || item.managingDirectorStatus;
+            if (item.bcheck1 === false) status = item.origSalesManagerStatus || item.salesManagerStatus;
+            else if (item.bcheck2 === false) status = item.origCountryContinentSalesStatus || item.countryContinentSalesStatus;
+            else if (item.bcheck5 === false) status = item.origGlobalSalesHeadStatus || item.globalSalesHeadStatus;
+            else if (item.bcheck3 === false) status = item.origRotexBoardMemberStatus || item.rotexBoardMemberStatus;
+            else if (item.bcheck4 === false) status = item.origManagingDirectorStatus || item.managingDirectorStatus;
             if (status) statuses.push(status);
         }
 
         // ── Combined approval statuses (warranty / validityOffer / totalValue) ──
         const combCfgs = [
-            { map: this.warrantyApprovalsMap,      statusSuffix: 'WarrantyStatus'      },
+            { map: this.warrantyApprovalsMap, statusSuffix: 'WarrantyStatus' },
             { map: this.validityOfferApprovalsMap, statusSuffix: 'ValidityOfferStatus' },
-            { map: this.totalValueApprovalsMap,    statusSuffix: 'ValueStatus'         }
+            { map: this.totalValueApprovalsMap, statusSuffix: 'ValueStatus' }
         ];
         for (const cfg of combCfgs) {
             const approval = cfg.map.get(quote.quoteId);
@@ -196,7 +201,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             for (const level of ['sm', 'ch', 'gs', 'bm', 'md']) {
                 if (approval[`is${this.capitalize(level)}CurrentUser`]) {
                     const origKey = `original${this.capitalize(level)}${cfg.statusSuffix}`;
-                    const status  = approval[origKey] || approval[`${level}${cfg.statusSuffix}`];
+                    const status = approval[origKey] || approval[`${level}${cfg.statusSuffix}`];
                     if (status) statuses.push(status);
                 }
             }
@@ -226,14 +231,14 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         // ── Table 2: Discount QLIs ──
         for (const item of (quote.quoteLineItems || [])) {
             let status = null;
-            if      (item.bcheck1 === false) status = item.origSalesManagerStatus          || item.salesManagerStatus;
-            else if (item.bcheck2 === false) status = item.origCountryContinentSalesStatus  || item.countryContinentSalesStatus;
-            else if (item.bcheck5 === false) status = item.origGlobalSalesHeadStatus        || item.globalSalesHeadStatus;
-            else if (item.bcheck3 === false) status = item.origRotexBoardMemberStatus       || item.rotexBoardMemberStatus;
-            else if (item.bcheck4 === false) status = item.origManagingDirectorStatus       || item.managingDirectorStatus;
+            if (item.bcheck1 === false) status = item.origSalesManagerStatus || item.salesManagerStatus;
+            else if (item.bcheck2 === false) status = item.origCountryContinentSalesStatus || item.countryContinentSalesStatus;
+            else if (item.bcheck5 === false) status = item.origGlobalSalesHeadStatus || item.globalSalesHeadStatus;
+            else if (item.bcheck3 === false) status = item.origRotexBoardMemberStatus || item.rotexBoardMemberStatus;
+            else if (item.bcheck4 === false) status = item.origManagingDirectorStatus || item.managingDirectorStatus;
 
             if (status === 'Submitted') {
-                const soaLevels  = this.getSoaLevels(item);
+                const soaLevels = this.getSoaLevels(item);
                 const finalLevel = soaLevels.find(soa => soa.approverId === item.finalDiscountApproverId);
                 if (finalLevel) {
                     const finalOrigStatus = finalLevel.originalStatus || '';
@@ -245,9 +250,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         // ── Table 1: Combined approvals ──
         const levelByPos = { 1: 'sm', 2: 'ch', 3: 'gs', 4: 'bm', 5: 'md' };
         const combCfgs = [
-            { map: this.warrantyApprovalsMap,      statusSuffix: 'WarrantyStatus'      },
+            { map: this.warrantyApprovalsMap, statusSuffix: 'WarrantyStatus' },
             { map: this.validityOfferApprovalsMap, statusSuffix: 'ValidityOfferStatus' },
-            { map: this.totalValueApprovalsMap,    statusSuffix: 'ValueStatus'         }
+            { map: this.totalValueApprovalsMap, statusSuffix: 'ValueStatus' }
         ];
         for (const cfg of combCfgs) {
             const approval = cfg.map.get(quote.quoteId);
@@ -255,13 +260,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             for (const level of ['sm', 'ch', 'gs', 'bm', 'md']) {
                 if (!approval[`is${this.capitalize(level)}CurrentUser`]) continue;
                 const origKey = `original${this.capitalize(level)}${cfg.statusSuffix}`;
-                const status  = approval[origKey] || approval[`${level}${cfg.statusSuffix}`];
+                const status = approval[origKey] || approval[`${level}${cfg.statusSuffix}`];
                 if (status !== 'Submitted') continue;
 
                 // Check final approver hasn't decided yet
                 const finalLevel = levelByPos[approval.finalApproverHierarchyPosition];
                 if (finalLevel) {
-                    const finalOrigKey    = `original${this.capitalize(finalLevel)}${cfg.statusSuffix}`;
+                    const finalOrigKey = `original${this.capitalize(finalLevel)}${cfg.statusSuffix}`;
                     const finalOrigStatus = approval[finalOrigKey] || '';
                     if (finalOrigStatus !== 'Approved' && finalOrigStatus !== 'Rejected') return true;
                 }
@@ -275,22 +280,22 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     fetchQuotes(preserveExpandedQuoteIds = []) {
-        getAllQuotations()
+        getAllQuotations({ recordType: this.recordType })
             .then(result => {
                 console.log('Raw result from server', result);
-                const newWarrantyMap      = new Map();
-                const newValidityMap      = new Map();
-                const newTotalValueMap    = new Map();
+                const newWarrantyMap = new Map();
+                const newValidityMap = new Map();
+                const newTotalValueMap = new Map();
                 // const newMinimumOfferMap  = new Map();
                 result.forEach(q => {
-                    if (q.warrantyApproval)     newWarrantyMap.set(q.quoteId,     { ...q.warrantyApproval });
-                    if (q.validityOfferApproval) newValidityMap.set(q.quoteId,    { ...q.validityOfferApproval });
-                    if (q.totalValueApproval)   newTotalValueMap.set(q.quoteId,   { ...q.totalValueApproval });
+                    if (q.warrantyApproval) newWarrantyMap.set(q.quoteId, { ...q.warrantyApproval });
+                    if (q.validityOfferApproval) newValidityMap.set(q.quoteId, { ...q.validityOfferApproval });
+                    if (q.totalValueApproval) newTotalValueMap.set(q.quoteId, { ...q.totalValueApproval });
                     // if (q.minimumOfferApproval) newMinimumOfferMap.set(q.quoteId, { ...q.minimumOfferApproval });
                 });
-                this.warrantyApprovalsMap      = newWarrantyMap;
+                this.warrantyApprovalsMap = newWarrantyMap;
                 this.validityOfferApprovalsMap = newValidityMap;
-                this.totalValueApprovalsMap    = newTotalValueMap;
+                this.totalValueApprovalsMap = newTotalValueMap;
 
                 console.log('Fetched totalValueApprovalsMap', JSON.parse(JSON.stringify(this.totalValueApprovalsMap)));
                 // this.minimumOfferApprovalsMap  = newMinimumOfferMap;
@@ -301,33 +306,33 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
                     // ── Restore expanded state for quotes that were open ──
                     if (preserveExpandedQuoteIds.includes(q.quoteId)) {
-                        const warrantyApproval      = this.warrantyApprovalsMap.get(q.quoteId)      || null;
+                        const warrantyApproval = this.warrantyApprovalsMap.get(q.quoteId) || null;
                         const validityOfferApproval = this.validityOfferApprovalsMap.get(q.quoteId) || null;
-                        const totalValueApproval    = this.totalValueApprovalsMap.get(q.quoteId)    || null;
+                        const totalValueApproval = this.totalValueApprovalsMap.get(q.quoteId) || null;
                         // const minimumOfferApproval  = this.minimumOfferApprovalsMap.get(q.quoteId)  || null;
-                        const approvalDashboard     = this.buildApprovalDashboard({
+                        const approvalDashboard = this.buildApprovalDashboard({
                             warrantyApproval, validityOfferApproval, totalValueApproval
                         });
                         return {
                             ...processed,
-                            isExpanded:                        true,
+                            isExpanded: true,
                             warrantyApproval,
                             validityOfferApproval,
                             totalValueApproval,
                             // minimumOfferApproval,
-                            showApprovalDashboard:             approvalDashboard.rows.length > 0,
-                            approvalColumns:                   approvalDashboard.columns,
-                            approvalDashboardRows:             approvalDashboard.rows,
-                            isCombinedApprovalSubmitDisabled:  true   // fresh data, nothing changed yet
+                            showApprovalDashboard: approvalDashboard.rows.length > 0,
+                            approvalColumns: approvalDashboard.columns,
+                            approvalDashboardRows: approvalDashboard.rows,
+                            isCombinedApprovalSubmitDisabled: true   // fresh data, nothing changed yet
                         };
                     }
 
                     return processed;
                 }).filter(quote => {
                     quote._isFullyDecided = false;
-                    const warrantyApproval      = this.warrantyApprovalsMap.get(quote.quoteId)      || null;
+                    const warrantyApproval = this.warrantyApprovalsMap.get(quote.quoteId) || null;
                     const validityOfferApproval = this.validityOfferApprovalsMap.get(quote.quoteId) || null;
-                    const totalValueApproval    = this.totalValueApprovalsMap.get(quote.quoteId)    || null;
+                    const totalValueApproval = this.totalValueApprovalsMap.get(quote.quoteId) || null;
                     // const minimumOfferApproval  = this.minimumOfferApprovalsMap.get(quote.quoteId)  || null;
 
                     const dashboardRows = this.buildApprovalDashboard({
@@ -340,7 +345,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     const isTable1FinalApproved = (approvalData, statusSuffix) => {
                         if (!approvalData) return true; // this approval type not applicable → don't block
                         const levelByPos = { 1: 'sm', 2: 'ch', 3: 'gs', 4: 'bm', 5: 'md' };
-                        const finalPos   = approvalData.finalApproverHierarchyPosition;
+                        const finalPos = approvalData.finalApproverHierarchyPosition;
                         if (!finalPos) return true;
                         const finalLevel = levelByPos[finalPos];
                         if (!finalLevel) return false;
@@ -349,10 +354,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     };
 
                     const allTable1Approved =
-                        isTable1FinalApproved(warrantyApproval,      'WarrantyStatus')      &&
+                        isTable1FinalApproved(warrantyApproval, 'WarrantyStatus') &&
                         isTable1FinalApproved(validityOfferApproval, 'ValidityOfferStatus') &&
-                        isTable1FinalApproved(totalValueApproval,    'ValueStatus')
-                        // isTable1FinalApproved(minimumOfferApproval,  'MinOfferStatus');
+                        isTable1FinalApproved(totalValueApproval, 'ValueStatus')
+                    // isTable1FinalApproved(minimumOfferApproval,  'MinOfferStatus');
 
                     console.log('WarrantyStatus final approved? ', isTable1FinalApproved(warrantyApproval, 'WarrantyStatus'));
                     console.log('ValidityOfferStatus final approved? ', isTable1FinalApproved(validityOfferApproval, 'ValidityOfferStatus'));
@@ -360,7 +365,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
                     // Table 2 (discount QLIs): every QLI's final approver original status is 'Approved'
                     const allTable2Approved = (quote.quoteLineItems || []).every(item => {
-                        const soaLevels  = this.getSoaLevels(item);
+                        const soaLevels = this.getSoaLevels(item);
                         const finalLevel = soaLevels.find(soa => soa.approverId === item.finalDiscountApproverId);
                         if (!finalLevel) return true; // final approver not mapped → don't block
                         return (finalLevel.originalStatus || '') === 'Approved' || (finalLevel.originalStatus || '') === 'Rejected';
@@ -406,9 +411,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         this.quotes = this.quotes.map(quote => {
             const quoteLineItems = (quote.quoteLineItems || []).map(item => ({
                 ...item,
-                skipSoaRestrictions:       true,
+                skipSoaRestrictions: true,
                 skipEditableCommentFields: this.getSkipEditableCommentFields(item),
-                skipEditableStatusFields:  this.getSkipEditableStatusFields(item)
+                skipEditableStatusFields: this.getSkipEditableStatusFields(item)
             }));
             return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems) };
         });
@@ -427,11 +432,11 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             skipEditableStatusFields: item.skipEditableStatusFields || {},
             // Snapshot the backend statuses at load time so that Skip SOA "already decided"
             // checks always compare against the persisted value, not the live UI state.
-            origSalesManagerStatus:         item.salesManagerStatus,
+            origSalesManagerStatus: item.salesManagerStatus,
             origCountryContinentSalesStatus: item.countryContinentSalesStatus,
-            origGlobalSalesHeadStatus:       item.globalSalesHeadStatus,
-            origRotexBoardMemberStatus:      item.rotexBoardMemberStatus,
-            origManagingDirectorStatus:      item.managingDirectorStatus
+            origGlobalSalesHeadStatus: item.globalSalesHeadStatus,
+            origRotexBoardMemberStatus: item.rotexBoardMemberStatus,
+            origManagingDirectorStatus: item.managingDirectorStatus
         }));
 
         return {
@@ -692,7 +697,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             const isCurrentUser = !!data[`is${this.capitalize(level)}CurrentUser`];
             const originalStatus = data[`original${this.capitalize(level)}${config.statusSuffix}`];
             return isCurrentUser &&
-                this.isFinalApproverLevel(data, level) 
+                this.isFinalApproverLevel(data, level)
                 && originalStatus === 'Submitted';
         });
         if (isFinalApproverEditing) return true;
@@ -723,7 +728,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const isCurrentUser = !!data[`is${this.capitalize(level)}CurrentUser`];
 
         // Server grants edit permission only when the original DB status was 'Submitted'.
-        const serverCanEditStatus   = !!data[`can${this.capitalize(level)}EditStatus`];
+        const serverCanEditStatus = !!data[`can${this.capitalize(level)}EditStatus`];
         const serverCanEditComments = !!data[`can${this.capitalize(level)}EditComments`];
 
         // ── Skip SOA (New Behavior) ───────────────────────────────────────
@@ -731,7 +736,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         // Case 2: current user LOWER than final  → own comments only
         // Case 3: current user HIGHER than final → only final approver's level (status + comments)
         const levelIndex = this.getApprovalLevelIndex(level);
-        const finalPos   = data.finalApproverHierarchyPosition;
+        const finalPos = data.finalApproverHierarchyPosition;
         const currentUserPos = data.currentUserHierarchyPosition;
 
         // Higher hierarchy: current user is ABOVE the final approver (higher index = higher seniority)
@@ -754,7 +759,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const skipSoaHigherHierarchyFinalLevel = isHigherHierarchyWithSkip &&
             !isCurrentUser && isFinalApproverForThisLevel && !isAlreadyDecidedByBackend;
 
-        const skipSoaShowCommentInput  = skipSoaHigherHierarchyFinalLevel;
+        const skipSoaShowCommentInput = skipSoaHigherHierarchyFinalLevel;
         const skipSoaShowStatusCombobox = skipSoaHigherHierarchyFinalLevel;
         // ─────────────────────────────────────────────────────────────────
 
@@ -804,7 +809,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         // fallback: check if the level's id matches the finalWarrantyApprover / finalValidityOfferApprover / etc.
         const levelId = data[`${level}Id`];
         const finalId = data.finalWarrantyApprover || data.finalValidityOfferApprover ||
-                        data.finalTotalValueApprover || data.finalMinimumOfferValueApprover;
+            data.finalTotalValueApprover || data.finalMinimumOfferValueApprover;
         return !!levelId && !!finalId && levelId === finalId;
     }
 
@@ -853,7 +858,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     formatSalesPrice(listPrice, discount) {
         if (listPrice === undefined || listPrice === null) return '';
         const lp = Number(listPrice);
-        const d  = Number(discount);
+        const d = Number(discount);
         if (isNaN(lp)) return '';
         const disc = isNaN(d) ? 0 : d;
         const sp = lp * (1 - disc / 100);
@@ -952,9 +957,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         this.quotes = this.quotes.map(quote => {
             if (quote.quoteId !== quoteId) return quote;
 
-            const warrantyApproval      = this.warrantyApprovalsMap.get(quoteId)      || null;
+            const warrantyApproval = this.warrantyApprovalsMap.get(quoteId) || null;
             const validityOfferApproval = this.validityOfferApprovalsMap.get(quoteId) || null;
-            const totalValueApproval    = this.totalValueApprovalsMap.get(quoteId)    || null;
+            const totalValueApproval = this.totalValueApprovalsMap.get(quoteId) || null;
             // const minimumOfferApproval  = this.minimumOfferApprovalsMap.get(quoteId)  || null;
 
             const approvalData = { warrantyApproval, validityOfferApproval, totalValueApproval /*, minimumOfferApproval*/ };
@@ -962,20 +967,20 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
             // Derive hasChanges directly from the maps — no parameter needed
             const hasChanges =
-                !!(warrantyApproval?.updated)      ||
+                !!(warrantyApproval?.updated) ||
                 !!(validityOfferApproval?.updated) ||
                 !!(totalValueApproval?.updated)
-                // !!(minimumOfferApproval?.updated);
+            // !!(minimumOfferApproval?.updated);
 
             const hasDiscountChanges = this.hasDiscountChanges(quote);
             return {
                 ...quote,
                 ...approvalData,
-                showApprovalDashboard:            quote.isExpanded && approvalDashboard.rows.length > 0,
-                approvalColumns:                  approvalDashboard.columns,
-                approvalDashboardRows:            approvalDashboard.rows,
+                showApprovalDashboard: quote.isExpanded && approvalDashboard.rows.length > 0,
+                approvalColumns: approvalDashboard.columns,
+                approvalDashboardRows: approvalDashboard.rows,
                 isCombinedApprovalSubmitDisabled: !hasChanges,
-                isUnifiedSubmitDisabled:          !hasChanges && !hasDiscountChanges
+                isUnifiedSubmitDisabled: !hasChanges && !hasDiscountChanges
             };
         });
     }
@@ -1183,10 +1188,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
      */
     validateCombinedApprovalSequential(quoteId) {
         const approvalConfigs = [
-            { approval: this.warrantyApprovalsMap.get(quoteId),      statusSuffix: 'WarrantyStatus',      commentsSuffix: 'WarrantyComments',      label: 'Warranty Terms'   },
-            { approval: this.totalValueApprovalsMap.get(quoteId),    statusSuffix: 'ValueStatus',          commentsSuffix: 'ValueComments',          label: 'Total Value'      },
+            { approval: this.warrantyApprovalsMap.get(quoteId), statusSuffix: 'WarrantyStatus', commentsSuffix: 'WarrantyComments', label: 'Warranty Terms' },
+            { approval: this.totalValueApprovalsMap.get(quoteId), statusSuffix: 'ValueStatus', commentsSuffix: 'ValueComments', label: 'Total Value' },
             // { approval: this.minimumOfferApprovalsMap.get(quoteId),  statusSuffix: 'MinOfferStatus',       commentsSuffix: 'MinOfferComments',       label: 'Min Offer Value'  },
-            { approval: this.validityOfferApprovalsMap.get(quoteId), statusSuffix: 'ValidityOfferStatus',  commentsSuffix: 'ValidityOfferComments',  label: 'Validity Offer'   }
+            { approval: this.validityOfferApprovalsMap.get(quoteId), statusSuffix: 'ValidityOfferStatus', commentsSuffix: 'ValidityOfferComments', label: 'Validity Offer' }
         ];
         const levels = ['sm', 'ch', 'gs', 'bm', 'md'];
 
@@ -1194,7 +1199,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             const data = cfg.approval;
             if (!data || !data.updated) continue;
 
-            const finalPos       = data.finalApproverHierarchyPosition;
+            const finalPos = data.finalApproverHierarchyPosition;
             const currentUserPos = data.currentUserHierarchyPosition;
             const isHigherHierarchyWithSkip = !!data.isHigherHierarchy;
             // Skip SOA applies when we can determine the user's position, or when higher hierarchy flag is set
@@ -1210,11 +1215,11 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 const levelIndex = this.getApprovalLevelIndex(level);
                 if (!levelIndex) continue;
 
-                const originalStatusKey  = `original${this.capitalize(level)}${cfg.statusSuffix}`;
-                const originalStatus     = data[originalStatusKey] || '';
-                const isAlreadyDecided   = originalStatus === 'Approved' || originalStatus === 'Rejected';
+                const originalStatusKey = `original${this.capitalize(level)}${cfg.statusSuffix}`;
+                const originalStatus = data[originalStatusKey] || '';
+                const isAlreadyDecided = originalStatus === 'Approved' || originalStatus === 'Rejected';
                 const isCurrentUserLevel = !!data[`is${this.capitalize(level)}CurrentUser`];
-                const isFinalLevel       = this.isFinalApproverLevel(data, level);
+                const isFinalLevel = this.isFinalApproverLevel(data, level);
 
                 // Case 3: Higher hierarchy → only the final approver's level is editable
                 const isHigherFinalEditable = isHigherHierarchyWithSkip &&
@@ -1228,13 +1233,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 if (!isHigherFinalEditable && !isOwnEditable) continue;
 
                 const comments = data[`${level}${cfg.commentsSuffix}`] || '';
-                const status   = data[`${level}${cfg.statusSuffix}`]   || '';
+                const status = data[`${level}${cfg.statusSuffix}`] || '';
 
                 chain.push({
                     levelIndex,
-                    label:       level.toUpperCase(),
+                    label: level.toUpperCase(),
                     hasComments: this.hasValue(comments),
-                    hasStatus:   status === 'Approved' || status === 'Rejected',
+                    hasStatus: status === 'Approved' || status === 'Rejected',
                     comments,
                     status
                 });
@@ -1282,10 +1287,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         for (const item of quote.quoteLineItems || []) {
             if (!item.skipSoaRestrictions) continue;
 
-            const soaLevels      = this.getSoaLevels(item);
+            const soaLevels = this.getSoaLevels(item);
             const currentUserIdx = this.getCurrentUserHierarchyIndex(item);
-            const finalLevel_    = soaLevels.find(s => s.approverId === item.finalDiscountApproverId);
-            const finalIdx_      = finalLevel_ ? finalLevel_.hierarchyIndex : null;
+            const finalLevel_ = soaLevels.find(s => s.approverId === item.finalDiscountApproverId);
+            const finalIdx_ = finalLevel_ ? finalLevel_.hierarchyIndex : null;
             const isHigherThanFinal_ = currentUserIdx != null && finalIdx_ != null &&
                 currentUserIdx > finalIdx_;
             const chain = [];
@@ -1310,13 +1315,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 if (!isOwnFinalRow && !isOwnSkipRow && !isHigherFinalRow) continue;
 
                 const comments = soa.commentsValue || '';
-                const status   = soa.status        || '';
+                const status = soa.status || '';
 
                 chain.push({
                     hierarchyIndex: soa.hierarchyIndex,
-                    label:          soa.label,
-                    hasComments:    this.hasValue(comments),
-                    hasStatus:      status === 'Approved' || status === 'Rejected',
+                    label: soa.label,
+                    hasComments: this.hasValue(comments),
+                    hasStatus: status === 'Approved' || status === 'Rejected',
                     comments,
                     status
                 });
@@ -1625,11 +1630,11 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const base = 'status-badge';
         if (!status) return `${base} status-badge--default`;
         const n = status.toLowerCase();
-        if (n === 'approved')   return `${base} status-badge--approved`;
-        if (n === 'rejected')   return `${base} status-badge--rejected`;
-        if (n === 'submitted')  return `${base} status-badge--submitted`;
-        if (n === 'pending')    return `${base} status-badge--submitted`;
-        if (n === 'commented')  return `${base} status-badge--commented`;  // ← add this
+        if (n === 'approved') return `${base} status-badge--approved`;
+        if (n === 'rejected') return `${base} status-badge--rejected`;
+        if (n === 'submitted') return `${base} status-badge--submitted`;
+        if (n === 'pending') return `${base} status-badge--submitted`;
+        if (n === 'commented') return `${base} status-badge--commented`;  // ← add this
         return `${base} status-badge--default`;
     }
 
@@ -1654,7 +1659,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     ? new Date(soa.dateTime).toLocaleString('en-GB', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
                         hour: '2-digit', minute: '2-digit'
-                      })
+                    })
                     : '';
                 // Use the persisted (original) status for all "already decided" guards so that
                 // the final approver can still change their status/comment in-session via Skip SOA
@@ -1665,7 +1670,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 // Case 1: current user = final approver  → own row only (status + comments)
                 // Case 2: current user LOWER than final  → own comments only
                 // Case 3: current user HIGHER than final → only final approver's row (status + comments)
-                const currentUserIdx_    = this.getCurrentUserHierarchyIndex(item);
+                const currentUserIdx_ = this.getCurrentUserHierarchyIndex(item);
                 const isFinalApproverRow = soa.approverId === item.finalDiscountApproverId;
                 const isHigherThanFinal_ = currentUserIdx_ != null && maxHierarchyIndex != null &&
                     currentUserIdx_ > maxHierarchyIndex;
@@ -1707,28 +1712,28 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 );
 
                 displayRows.push({
-                    key:              `${item.quoteLineItemId}_${idx}`,
-                    isFirstRow:       idx === 0,
-                    soaCount:         soaLevels.length,
-                    productName:      item.productName,
-                    productCode:      item.productCode,
-                    listPrice:        item.listPrice,
-                    quantity:         item.quantity,
-                    d1:               item.d1,
+                    key: `${item.quoteLineItemId}_${idx}`,
+                    isFirstRow: idx === 0,
+                    soaCount: soaLevels.length,
+                    productName: item.productName,
+                    productCode: item.productCode,
+                    listPrice: item.listPrice,
+                    quantity: this.isARCRecordType ? item.potentialQty : item.quantity,
+                    d1: item.d1,
                     previousDiscount: item.previousDiscount,
-                    d2:               item.d2,
-                    quoteLineItemId:  item.quoteLineItemId,
-                    parentId:         item.parentId,
+                    d2: item.d2,
+                    quoteLineItemId: item.quoteLineItemId,
+                    parentId: item.parentId,
                     approvalStatus: isFinalApproverOwnRowWithSkip ? soa.status : item.approvalStatus,
-                    soaStatusField:   soa.statusField,
-                    soaDisplay:       soa.name ? `${soa.label} - ${soa.name}` : '',
-                    soaApproverId:    soa.approverId,
-                    soaApproverName:  soa.name || '',
+                    soaStatusField: soa.statusField,
+                    soaDisplay: soa.name ? `${soa.label} - ${soa.name}` : '',
+                    soaApproverId: soa.approverId,
+                    soaApproverName: soa.name || '',
                     soaStatus,
                     statusBadgeClass: this.getStatusBadgeClass(soaStatus),
-                    soaDateTime:      formattedDateTime,
-                    prevSoaComments:  soa.previousCommentsValue || '',
-                    soaComments:      soa.commentsValue || '',
+                    soaDateTime: formattedDateTime,
+                    prevSoaComments: soa.previousCommentsValue || '',
+                    soaComments: soa.commentsValue || '',
                     soaCommentsField: soa.commentsField,
                     requestedComments: item.requestedComments || '',
                     showDiscountInput: idx === 0 && !isFinalApproverDecided && (
@@ -1740,19 +1745,19 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                             finalLevel != null &&
                             (finalLevel.originalStatus || finalLevel.status || '') !== 'Approved' &&
                             (finalLevel.originalStatus || finalLevel.status || '') !== 'Rejected') ||
-                            ((this.skipSoaRestrictions && item.isFinalDiscountApprover)
+                        ((this.skipSoaRestrictions && item.isFinalDiscountApprover)
                             && finalLevel != null &&
                             (finalLevel.originalStatus || finalLevel.status || '') !== 'Approved' &&
                             (finalLevel.originalStatus || finalLevel.status || '') !== 'Rejected')
 
                     ),
                     showStatusCombobox,
-                    showStatusText:   !showStatusCombobox,
+                    showStatusText: !showStatusCombobox,
                     showCommentInput,
                     soaCommentsDisabled: !(soa.isCurrentUserRow && item.isEditable) && !isFinalApproverOwnRowWithSkip && !isOwnRowWithSkipSoa && !skipSoaHigherHierarchyFinalRow,
                     rowStyle: '',
                     listPriceFormatted: this.formatCurrency(item.listPrice),
-                    salesPrice:        this.formatSalesPrice(item.listPrice, item.d2)
+                    salesPrice: this.formatSalesPrice(item.listPrice, item.d2)
                 });
             });
         });
@@ -1821,13 +1826,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     isFinalPreviousHierarchyRow(item, soa) {
         return this.isPreviousHierarchyRow(item, soa.hierarchyIndex) &&
-               soa.approverId === item.finalDiscountApproverId;
+            soa.approverId === item.finalDiscountApproverId;
     }
 
     isSkipCommentEnabled(item, soa) {
         return this.skipSoaRestrictions &&
-               item.skipEditableCommentFields &&
-               item.skipEditableCommentFields[soa.commentsField] === true;
+            item.skipEditableCommentFields &&
+            item.skipEditableCommentFields[soa.commentsField] === true;
     }
 
     getCurrentUserHierarchyIndex(item) {
@@ -1861,8 +1866,8 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         } else {
             this.quotes = (this.quotes || []).map(quote => {
                 const quoteLineItems = (quote.quoteLineItems || []).map(item => {
-                    const clearedItem  = { ...item };
-                    const skipFields   = item.skipEditableCommentFields || {};
+                    const clearedItem = { ...item };
+                    const skipFields = item.skipEditableCommentFields || {};
                     Object.keys(skipFields).forEach(f => { if (skipFields[f] === true) clearedItem[f] = null; });
                     const skipStatusFields = item.skipEditableStatusFields || {};
                     Object.keys(skipStatusFields).forEach(f => { if (skipStatusFields[f] === true) delete clearedItem[f]; });
@@ -1880,10 +1885,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     getSkipEditableCommentFields(item) {
         const editable = {};
-        const allSoaLevels   = this.getSoaLevels(item);
+        const allSoaLevels = this.getSoaLevels(item);
         const currentUserIdx = this.getCurrentUserHierarchyIndex(item);
-        const finalLevel     = allSoaLevels.find(soa => soa.approverId === item.finalDiscountApproverId);
-        const finalIdx       = finalLevel ? finalLevel.hierarchyIndex : null;
+        const finalLevel = allSoaLevels.find(soa => soa.approverId === item.finalDiscountApproverId);
+        const finalIdx = finalLevel ? finalLevel.hierarchyIndex : null;
 
         if (!currentUserIdx || !finalIdx) return editable;
 
@@ -1913,13 +1918,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     handleLineItemChanges(event) {
-        const field      = event.target.dataset.field;
+        const field = event.target.dataset.field;
         const lineItemId = event.target.dataset.id;
-        const parentId   = event.target.dataset.parent;
-        const value      = event.target.value;
+        const parentId = event.target.dataset.parent;
+        const value = event.target.value;
         const stageField = event.target.dataset.stageField;
 
-        const specificQuote        = this.quotes.find(q => q.quoteId == parentId);
+        const specificQuote = this.quotes.find(q => q.quoteId == parentId);
         const specificQuoteLineItem = specificQuote.quoteLineItems.find(qli => qli.quoteLineItemId == lineItemId);
 
         specificQuoteLineItem[field] = value;
@@ -1929,18 +1934,18 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         }
         specificQuoteLineItem.skipSoaRestrictions = this.skipSoaRestrictions;
         specificQuoteLineItem['updated'] = true;
-        specificQuote['updated']         = true;
-        specificQuote.displayRows        = this.buildDisplayRows(specificQuote.quoteLineItems);
+        specificQuote['updated'] = true;
+        specificQuote.displayRows = this.buildDisplayRows(specificQuote.quoteLineItems);
         specificQuote.isUnifiedSubmitDisabled = !this.hasDiscountChanges(specificQuote) && !this.hasCombinedApprovalChanges(specificQuote);
         this.quotes = [...this.quotes];
     }
 
     setStageStatusValue(lineItem, stageField, value) {
-        if (stageField === 'Sales_Manager_Status__c')                   lineItem.salesManagerStatus = value;
+        if (stageField === 'Sales_Manager_Status__c') lineItem.salesManagerStatus = value;
         else if (stageField === 'Country_Continent_Sales_H_LOB_Status__c') lineItem.countryContinentSalesStatus = value;
-        else if (stageField === 'Global_Sales_Head_Status__c')           lineItem.globalSalesHeadStatus = value;
-        else if (stageField === 'Rotex_Board_Member_Status__c')          lineItem.rotexBoardMemberStatus = value;
-        else if (stageField === 'Managing_Director_Status__c')           lineItem.managingDirectorStatus = value;
+        else if (stageField === 'Global_Sales_Head_Status__c') lineItem.globalSalesHeadStatus = value;
+        else if (stageField === 'Rotex_Board_Member_Status__c') lineItem.rotexBoardMemberStatus = value;
+        else if (stageField === 'Managing_Director_Status__c') lineItem.managingDirectorStatus = value;
     }
 
     validateQuoteData() {
@@ -1951,7 +1956,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     requiresNonFinalApproverComment() {
         if (!this.quotes) return false;
-        let hasCommentOnlyLine    = false;
+        let hasCommentOnlyLine = false;
         let hasCurrentUserComment = false;
 
         for (const quote of this.quotes) {
@@ -1971,7 +1976,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     getRequiredCommentFields(item) {
-        const required          = [];
+        const required = [];
         const currentUserComment = this.getCurrentUserComment(item);
         if (currentUserComment && !item.isFinalDiscountApprover && item.isEditable) {
             required.push(currentUserComment.fieldName);
@@ -2008,9 +2013,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         // const minimumOfferApproval = this.minimumOfferApprovalsMap.get(quote.quoteId);
 
         return !!(warrantyApproval?.updated) ||
-               !!(validityOfferApproval?.updated) ||
-               !!(totalValueApproval?.updated)
-            //    !!(minimumOfferApproval?.updated);
+            !!(validityOfferApproval?.updated) ||
+            !!(totalValueApproval?.updated)
+        //    !!(minimumOfferApproval?.updated);
     }
 
     getCurrentUserCommentValue(item) {
@@ -2145,9 +2150,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const skipSoa = this.skipSoaRestrictions;
         submitUnifiedQuoteApprovals({
             quotationListStringObject: hasDiscountChanges ? JSON.stringify([quote]) : null,
-            warrantyApprovalJson:      warrantyApproval?.updated      ? JSON.stringify({ ...warrantyApproval,      skipSoaRestrictions: skipSoa }) : null,
+            warrantyApprovalJson: warrantyApproval?.updated ? JSON.stringify({ ...warrantyApproval, skipSoaRestrictions: skipSoa }) : null,
             validityOfferApprovalJson: validityOfferApproval?.updated ? JSON.stringify({ ...validityOfferApproval, skipSoaRestrictions: skipSoa }) : null,
-            totalValueApprovalJson:    totalValueApproval?.updated    ? JSON.stringify({ ...totalValueApproval,    skipSoaRestrictions: skipSoa }) : null
+            totalValueApprovalJson: totalValueApproval?.updated ? JSON.stringify({ ...totalValueApproval, skipSoaRestrictions: skipSoa }) : null
             // minimumOfferApprovalJson:  minimumOfferApproval?.updated  ? JSON.stringify({ ...minimumOfferApproval,  skipSoaRestrictions: skipSoa }) : null
         })
             .then(result => {
@@ -2253,17 +2258,17 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     handleAddTaskClick(event) {
         event.preventDefault();
-        this.taskModalApproverId   = event.currentTarget.dataset.approverId;
+        this.taskModalApproverId = event.currentTarget.dataset.approverId;
         this.taskModalApproverName = event.currentTarget.dataset.approverName;
-        this.taskModalQuoteId      = event.currentTarget.dataset.quoteId;
+        this.taskModalQuoteId = event.currentTarget.dataset.quoteId;
         this.showTaskModal = true;
     }
 
     handleTaskModalClose() {
-        this.showTaskModal         = false;
-        this.taskModalApproverId   = null;
+        this.showTaskModal = false;
+        this.taskModalApproverId = null;
         this.taskModalApproverName = null;
-        this.taskModalQuoteId      = null;
+        this.taskModalQuoteId = null;
     }
 
     handleTaskCreated() {

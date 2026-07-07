@@ -3,7 +3,12 @@
         <!-- ── Card Header ── -->
         <div class="header-container">
             <h4 class="header-title">
-                Quote Approvals
+                <template if:true={isARCRecordType}>
+                    ARC Approvals
+                </template>
+                <template if:false={isARCRecordType}>
+                    Quote Approvals
+                </template>
             </h4>
 
             <lightning-input
@@ -244,7 +249,12 @@
                                             <tr style="background-color:#007764;">
                                                 <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left; white-space:normal; word-break:break-word;">Product Name</th>
                                                 <th scope="col" style="width:5.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">List Price</th>
-                                                <th scope="col" style="width:3%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Qty</th>
+                                                <template if:true={isARCRecordType}>
+                                                    <th scope="col" style="width:5.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Pot. Qty</th>
+                                                </template>
+                                                <template if:false={isARCRecordType}>
+                                                    <th scope="col" style="width:3%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Qty</th>
+                                                </template>
                                                 <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc. SAP%</th>
                                                 <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Pr. Disc.%</th>
                                                 <th scope="col" style="width:7%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc.%</th>

@@ -97,7 +97,8 @@ private class SalesPriceApprovalForQuotationTest {
             Country_Continent_Sales_Head_LOB_Head__c = countryHead.Id,
             Global_Sales_Head__c = globalHead.Id,
             Managing_Director_Country_Manager__c = managingDirector.Id,
-            Rotex_Board_Member__c = boardMember.Id
+            Rotex_Board_Member__c = boardMember.Id,
+            RecordTypeId = Schema.SObjectType.Quote.getRecordTypeInfosByName().get('Normal').getRecordTypeId()
         );
         insert testQuote;
         
@@ -253,7 +254,7 @@ private class SalesPriceApprovalForQuotationTest {
         User salesManager = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
         System.runAs(salesManager) {
             Test.startTest();
-            try { SalesPriceApprovalForQuotation.getAllQuotations(); } catch (Exception e) {}
+            try { SalesPriceApprovalForQuotation.getAllQuotations('Normal'); } catch (Exception e) {}
             Test.stopTest();
         }
     }
@@ -265,7 +266,7 @@ private class SalesPriceApprovalForQuotationTest {
         update qli;
         System.runAs(sm) {
             Test.startTest();
-            SalesPriceApprovalForQuotation.getAllQuotations();
+            SalesPriceApprovalForQuotation.getAllQuotations('Normal');
             Test.stopTest();
         }
     }
@@ -279,7 +280,7 @@ private class SalesPriceApprovalForQuotationTest {
         update q;
         System.runAs(sm) {
             Test.startTest();
-            SalesPriceApprovalForQuotation.getAllQuotations();
+            SalesPriceApprovalForQuotation.getAllQuotations('Normal');
             Test.stopTest();
         }
     }
@@ -293,7 +294,7 @@ private class SalesPriceApprovalForQuotationTest {
         update q;
         System.runAs(sm) {
             Test.startTest();
-            SalesPriceApprovalForQuotation.getAllQuotations();
+            SalesPriceApprovalForQuotation.getAllQuotations('Normal');
             Test.stopTest();
         }
     }
@@ -314,7 +315,7 @@ private class SalesPriceApprovalForQuotationTest {
 
         System.runAs(sm) {
             Test.startTest();
-            SalesPriceApprovalForQuotation.getAllQuotations();
+            SalesPriceApprovalForQuotation.getAllQuotations('Normal');
             Test.stopTest();
         }
     }
@@ -354,7 +355,7 @@ private class SalesPriceApprovalForQuotationTest {
         insert u;
         System.runAs(u) {
             Test.startTest();
-            try { SalesPriceApprovalForQuotation.getAllQuotations(); } catch (AuraHandledException e) {}
+            try { SalesPriceApprovalForQuotation.getAllQuotations('Normal'); } catch (AuraHandledException e) {}
             Test.stopTest();
         }
     }
@@ -370,7 +371,7 @@ private class SalesPriceApprovalForQuotationTest {
         update qli;
         System.runAs(sm) {
             Test.startTest();
-            SalesPriceApprovalForQuotation.getAllQuotations();
+            SalesPriceApprovalForQuotation.getAllQuotations('Normal');
             Test.stopTest();
         }
     }
@@ -395,7 +396,7 @@ private class SalesPriceApprovalForQuotationTest {
 
         System.runAs(gs) {
             Test.startTest();
-            SalesPriceApprovalForQuotation.getAllQuotations();
+            SalesPriceApprovalForQuotation.getAllQuotations('Normal');
             Test.stopTest();
         }
     }

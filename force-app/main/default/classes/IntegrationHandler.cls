@@ -568,8 +568,41 @@ public class IntegrationHandler {
                 
                 System.debug(parentNameToIdMap);
                 System.debug(parentCurrency);
+
+                Set<Id> neededPricebookIds = new Set<Id>();
+                Set<Id> neededProductIds = new Set<Id>();
+                Set<String> neededCurrencies = new Set<String>();
+
+                for (IntegrationRequestBuilder.salesordersList pw : parentWrappers) {
+                    if (pw.to_item_details != null && pw.to_item_details.results != null) {
+                        Id pbId = (Id) pbMap.get(pw.distribution_channel);
+                        String curr = parentCurrency.get(pw.so_num);
+                        if (pbId != null) neededPricebookIds.add(pbId);
+                        if (String.isNotBlank(curr)) neededCurrencies.add(curr);
+                        for (IntegrationRequestBuilder.itemDetailsList cw : pw.to_item_details.results) {
+                            if (productIdMap.containsKey(cw.item_code)) {
+                                neededProductIds.add((Id) productIdMap.get(cw.item_code));
+                            }
+                        }
+                    }
+                }
+
+                Map<String, Id> pbeMap = new Map<String, Id>();
+                if (!neededPricebookIds.isEmpty() && !neededProductIds.isEmpty()) {
+                    for (PricebookEntry pbeRow : [
+                        SELECT Id, Pricebook2Id, Product2Id, CurrencyIsoCode
+                        FROM PricebookEntry
+                        WHERE Pricebook2Id IN :neededPricebookIds
+                        AND Product2Id IN :neededProductIds
+                        AND CurrencyIsoCode IN :neededCurrencies
+                        AND IsActive = true
+                    ]) {
+                        pbeMap.put(pbeRow.Pricebook2Id + '_' + pbeRow.Product2Id + '_' + pbeRow.CurrencyIsoCode, pbeRow.Id);
+                    }
+                }
+
+                Set<String> missingPricingCodes = new Set<String>();
                 
-                // Process Children
                 for (IntegrationRequestBuilder.salesordersList parentWrapper: parentWrappers) {
                     String parentId = parentNameToIdMap.get(parentWrapper.so_num);
                     String curr = parentCurrency.get(parentWrapper.so_num);
@@ -577,41 +610,56 @@ public class IntegrationHandler {
                         if (parentWrapper.to_item_details.results != null && parentId != null) {
                             for (IntegrationRequestBuilder.itemDetailsList childWrapper: parentWrapper.to_item_details.results) {
                                 if (productIdMap.containsKey(childWrapper.item_code)) {
-                                    System.debug(parentWrapper.distribution_channel);
-                                    System.debug(String.valueOf(pbMap.get(parentWrapper.distribution_channel)));
-                                    System.debug(childWrapper.item_code);
-                                    System.debug(String.valueOf(productIdMap.get(childWrapper.item_code)));
-                                    PricebookEntry pbe = [
-                                        SELECT Id, CurrencyIsoCode
-                                        FROM PricebookEntry
-                                        WHERE Pricebook2Id =: String.valueOf(pbMap.get(parentWrapper.distribution_channel))
-                                        AND Product2Id =: String.valueOf(productIdMap.get(childWrapper.item_code))
-                                        AND CurrencyIsoCode =: curr
-                                        AND IsActive = true
-                                        LIMIT 1
-                                    ];
-                                    OrderItem cRecord = new OrderItem();
-                                    cRecord.Item_No__c = childWrapper.item_no;
-                                    cRecord.Item_Code__c = childWrapper.item_code;
-                                    cRecord.Description = childWrapper.item_desc;
-                                    cRecord.Quantity = Decimal.valueOf(childWrapper.item_qty);
-                                    cRecord.UOM__c = childWrapper.uom;
-                                    cRecord.Plant__c = childWrapper.plant;
-                                    cRecord.Pdd_Dat__c = childWrapper.pdd_dat;
-                                    cRecord.It_Status__c = childWrapper.it_status;
-                                    cRecord.Product2Id = String.valueOf(productIdMap.get(childWrapper.item_code));
-                                    cRecord.PricebookEntryId = pbe.Id;
-                                    cRecord.UnitPrice = Decimal.valueOf(childWrapper.net_price);
-                                    cRecord.Tax_Amount__c = Decimal.valueOf(childWrapper.tax_amount);
-                                    cRecord.OrderId = parentId; // lookup ID
-                                    System.debug(cRecord);
-                                    childList.add(cRecord);
+                                    try {
+                                        String pbId = String.valueOf(pbMap.get(parentWrapper.distribution_channel));
+                                        String prodId = String.valueOf(productIdMap.get(childWrapper.item_code));
+                                        String key = pbId + '_' + prodId + '_' + curr;
+                                        Id pbeId = pbeMap.get(key);
+
+                                        if (pbeId == null) {
+                                            System.debug('No active PricebookEntry for item_code=' + childWrapper.item_code
+                                                + ', pricebook=' + pbId + ', currency=' + curr + '. Queuing pricing sync.');
+                                            missingPricingCodes.add(childWrapper.item_code);
+                                            continue;
+                                        }
+
+                                        OrderItem cRecord = new OrderItem();
+                                        cRecord.Item_No__c = childWrapper.item_no;
+                                        cRecord.Item_Code__c = childWrapper.item_code;
+                                        cRecord.Description = childWrapper.item_desc;
+                                        cRecord.Quantity = Decimal.valueOf(childWrapper.item_qty);
+                                        cRecord.UOM__c = childWrapper.uom;
+                                        cRecord.Plant__c = childWrapper.plant;
+                                        cRecord.Pdd_Dat__c = childWrapper.pdd_dat;
+                                        cRecord.It_Status__c = childWrapper.it_status;
+                                        cRecord.Product2Id = prodId;
+                                        cRecord.PricebookEntryId = pbeId;
+                                        cRecord.UnitPrice = Decimal.valueOf(childWrapper.net_price);
+                                        cRecord.Tax_Amount__c = Decimal.valueOf(childWrapper.tax_amount);
+                                        cRecord.OrderId = parentId;
+                                        childList.add(cRecord);
+                                    } catch (Exception itemEx) {
+                                        System.debug('Skipping item_code=' + childWrapper.item_code + ': ' + itemEx.getMessage());
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                // Insert Children and update mapping
+
+                if (!missingPricingCodes.isEmpty()) {
+                    Integer futureCallCount = 0;
+                    for (String missingCode : missingPricingCodes) {
+                        if (futureCallCount >= 45) {
+                            System.debug('Future call limit reached; remaining missing codes not queued: ' + missingPricingCodes);
+                            break;
+                        }
+                        IntegrationHandler.PricingMaster(missingCode, true);
+                        futureCallCount++;
+                    }
+                    System.debug('Queued pricing sync for: ' + missingPricingCodes);
+                }
+                
                 if (!childList.isEmpty()) {
                     insert childList;
                     system.debug('child created');

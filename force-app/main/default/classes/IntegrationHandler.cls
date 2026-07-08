@@ -565,8 +565,12 @@ public class IntegrationHandler {
                         parentCurrency.put(parent.SO_No__c, parent.CurrencyIsoCode);
                     }
                 }
+                
+                System.debug(parentNameToIdMap);
+                System.debug(parentCurrency);
 
-                Map<String, Id> existingChildMap = new Map<String, Id>();
+                // ---- Bulk fetch existing OrderItems to avoid duplicate inserts on re-run ----
+                Map<String, Id> existingChildMap = new Map<String, Id>(); // key: OrderId/Item_No__c
                 if (!parentNameToIdMap.isEmpty()) {
                     for (OrderItem existingOi : [
                         SELECT Id, OrderId, Item_No__c
@@ -576,9 +580,6 @@ public class IntegrationHandler {
                         existingChildMap.put(existingOi.OrderId + '/' + existingOi.Item_No__c, existingOi.Id);
                     }
                 }
-                
-                System.debug(parentNameToIdMap);
-                System.debug(parentCurrency);
 
                 Set<Id> neededPricebookIds = new Set<Id>();
                 Set<Id> neededProductIds = new Set<Id>();
@@ -614,6 +615,7 @@ public class IntegrationHandler {
 
                 Set<String> missingPricingCodes = new Set<String>();
                 
+                // Process Children
                 for (IntegrationRequestBuilder.salesordersList parentWrapper: parentWrappers) {
                     String parentId = parentNameToIdMap.get(parentWrapper.so_num);
                     String curr = parentCurrency.get(parentWrapper.so_num);
@@ -624,17 +626,20 @@ public class IntegrationHandler {
                                     try {
                                         String pbId = String.valueOf(pbMap.get(parentWrapper.distribution_channel));
                                         String prodId = String.valueOf(productIdMap.get(childWrapper.item_code));
-                                        String key = pbId + '_' + prodId + '_' + curr;
-                                        Id pbeId = pbeMap.get(key);
+                                        String pbeKey = pbId + '_' + prodId + '_' + curr;
+                                        Id pbeId = pbeMap.get(pbeKey);
 
                                         if (pbeId == null) {
-                                            System.debug('No active PricebookEntry for item_code=' + childWrapper.item_code
-                                                + ', pricebook=' + pbId + ', currency=' + curr + '. Queuing pricing sync.');
                                             missingPricingCodes.add(childWrapper.item_code);
                                             continue;
                                         }
 
+                                        String childKey = parentId + '/' + childWrapper.item_no;
+
                                         OrderItem cRecord = new OrderItem();
+                                        if (existingChildMap.containsKey(childKey)) {
+                                            cRecord.Id = existingChildMap.get(childKey); // reuse -> update via upsert
+                                        }
                                         cRecord.Item_No__c = childWrapper.item_no;
                                         cRecord.Item_Code__c = childWrapper.item_code;
                                         cRecord.Description = childWrapper.item_desc;
@@ -650,7 +655,7 @@ public class IntegrationHandler {
                                         cRecord.OrderId = parentId;
                                         childList.add(cRecord);
                                     } catch (Exception itemEx) {
-                                        System.debug('Skipping item_code=' + childWrapper.item_code + ': ' + itemEx.getMessage());
+                                        System.debug('❌ Skipping item_code=' + childWrapper.item_code + ': ' + itemEx.getMessage());
                                     }
                                 }
                             }
@@ -672,10 +677,10 @@ public class IntegrationHandler {
                 }
                 
                 if (!childList.isEmpty()) {
-                    insert childList;
-                    system.debug('child created');
+                    upsert childList;
+                    system.debug('child upserted');
                     for (OrderItem child: childList) {
-                        childNameToIdMap.put(child.Item_No__c, child.Id);
+                        childNameToIdMap.put(child.OrderId + '/' + child.Item_No__c, child.Id);
                     }
                 }
                 
@@ -2741,21 +2746,21 @@ UPSERT prodList;
     return base64Attachments;
 }
 
-// ✅ Helper class to track attachment info with sorting
-public class AttachmentInfo implements Comparable {
-    public String title;
-    public String base64Data;
-    public Integer base64Length;
-    public Integer fileSize;
-    public Id contentDocumentId;
-    
-    // Sort by base64Length (ascending for smallest first)
-    public Integer compareTo(Object obj) {
-        AttachmentInfo other = (AttachmentInfo) obj;
-        if (this.base64Length < other.base64Length) return -1;
-        if (this.base64Length > other.base64Length) return 1;
-        return 0;
-    }
-}
+	// ✅ Helper class to track attachment info with sorting
+	public class AttachmentInfo implements Comparable {
+		public String title;
+		public String base64Data;
+		public Integer base64Length;
+		public Integer fileSize;
+		public Id contentDocumentId;
+		
+		// Sort by base64Length (ascending for smallest first)
+		public Integer compareTo(Object obj) {
+			AttachmentInfo other = (AttachmentInfo) obj;
+			if (this.base64Length < other.base64Length) return -1;
+			if (this.base64Length > other.base64Length) return 1;
+			return 0;
+		}
+	}
     
 }

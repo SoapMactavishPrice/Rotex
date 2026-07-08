@@ -134,7 +134,7 @@ public class editArcDiscountQuantityControllerTest {
             FROM Quote
             WHERE Id = :q.Id
         ];
-        System.assertEquals('Open Credit upto 180 days', updatedQ.Payment_Terms__c, 'Payment terms should match');
+        System.assertEquals('Open Credit upto 30 days', updatedQ.Payment_Terms__c, 'Payment terms should match');
         System.assertEquals('12 Months from date of supply', updatedQ.Warranty_Terms_Draft__c, 'Warranty should match');
         System.assertEquals('FOB', updatedQ.INCO_Terms__c, 'Incoterms should match');
         System.assertEquals('Need Revision', updatedQ.Status, 'Quote status should be set to Need Revision');

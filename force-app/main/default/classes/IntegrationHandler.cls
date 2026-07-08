@@ -565,6 +565,17 @@ public class IntegrationHandler {
                         parentCurrency.put(parent.SO_No__c, parent.CurrencyIsoCode);
                     }
                 }
+
+                Map<String, Id> existingChildMap = new Map<String, Id>();
+                if (!parentNameToIdMap.isEmpty()) {
+                    for (OrderItem existingOi : [
+                        SELECT Id, OrderId, Item_No__c
+                        FROM OrderItem
+                        WHERE OrderId IN :parentNameToIdMap.values()
+                    ]) {
+                        existingChildMap.put(existingOi.OrderId + '/' + existingOi.Item_No__c, existingOi.Id);
+                    }
+                }
                 
                 System.debug(parentNameToIdMap);
                 System.debug(parentCurrency);
@@ -1911,7 +1922,7 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
             quoteList = [SELECT Id, Name, QuoteNumber, OpportunityId, AccountId, BillingCity, BillingState, BillingCountry, BillingPostalCode,
                          ShippingCity, ShippingState, ShippingCountry, ShippingPostalCode, Status, TotalPrice, Subtotal, Discount,
                          Quote_Type__c, SalesOrganization__c, DistributionChannel__c, OrganizationDivision__c, CurrencyISOCode,
-                         SoldToParty__c, PurchaseOrderByCustomer__c, CustomerPurchaseOrderDate__c, Account.Discount__c,
+                         SoldToParty__c, PurchaseOrderByCustomer__c, CustomerPurchaseOrderDate__c, Account.Discount__c, Opportunity.Pricebook2.Distribution_Channel__c,
                          RequestedDeliveryDate__c, Quote_Date__c, Quote_Valid_Till__c, Account.SAP_Customer_Code__c, Customer_Reference_Date__c,Delivery_Period__c,Warranty_Terms__c,Liquidate_Terms__c,SAP_Quotation_Number__c,OwnerId,Owner.Name,Rev_No__c,Rev_Date__c,
                          PBG_or_BG_required__c, PBG_or_BG_comments__c, LD_Clause_Applicable__c, LD_Clause_comments__c,Customer_Reference_No__c,Special_Remarks__c,Quote__c  FROM Quote
                          WHERE Id =: quoteId
@@ -1936,7 +1947,7 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
                 AND Division__c != '50'
                 AND Division__c != '20'
                 AND Division__c != '00'
-                AND Distribution_Channel__c = '10'
+                AND Distribution_Channel__c = :quoteList[0].Opportunity.Pricebook2.Distribution_Channel__c
                 AND Account__c =: quoteList[0].AccountId
                 LIMIT 1
             ];

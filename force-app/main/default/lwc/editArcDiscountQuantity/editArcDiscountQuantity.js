@@ -129,38 +129,39 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
             }
             
             this.quoteLineItemList = result.lineItems.map(item => {
-                const baseDisabled = this.isRowLocked(item);
                 const isApproved = item.Is_Discount_Approved__c;
                 const existingArcPrice = result.existingArcPrices && result.existingArcPrices[item.Product2.ProductCode]
                     ? result.existingArcPrices[item.Product2.ProductCode]
                     : null;
 
                 if (isApproved) {
-                    // Approved row: New Discount <=> Desired Price mutual exclusion
-                    const newDiscountBaseLocked = this.isRowLockedForNewDiscount(item);
+                    // Approved row: Proposed ARC Price shows the PREVIOUS approved price (read-only reference).
+                    // Only "New Proposed ARC Price" is editable; Disc % is calculated & read-only.
+                    const newProposedPriceLocked = this.isRowLockedForNewDiscount(item);
                     return {
                         ...item,
                         existingArcPrice: existingArcPrice,
+                        desiredPriceValue: this.computeDesiredPrice(item.ListPrice, item.Discount_to_be_offered__c),
+                        newDesiredPriceValue: null,
                         newDiscountValue: null,
-                        desiredPriceValue: null,
-                        isDiscountOfferedDisabled: true,
-                        isDesiredPriceDisabled: newDiscountBaseLocked,
-                        isNewDiscountDisabled: newDiscountBaseLocked
+                        isProposedPriceDisabled: true,
+                        isNewProposedPriceDisabled: newProposedPriceLocked
                     };
                 } else {
-                    // Non-approved row: Discount Offered <=> Desired Price mutual exclusion
+                    // Non-approved row: only "Proposed ARC Price" is editable; Disc % is calculated & read-only
+                    const baseDisabled = this.isRowLocked(item);
                     const discountIsZero = item.Discount_to_be_offered__c === 0;
                     const hasExistingDiscount = this.hasDiscountOfferedValue(item.Discount_to_be_offered__c) && !discountIsZero;
                     return {
                         ...item,
                         existingArcPrice: existingArcPrice,
+                        newDesiredPriceValue: null,
                         newDiscountValue: null,
                         desiredPriceValue: hasExistingDiscount
                             ? this.computeDesiredPrice(item.ListPrice, item.Discount_to_be_offered__c)
                             : null,
-                        isDesiredPriceDisabled: baseDisabled || hasExistingDiscount,
-                        isDiscountOfferedDisabled: baseDisabled,
-                        isNewDiscountDisabled: true
+                        isProposedPriceDisabled: baseDisabled,
+                        isNewProposedPriceDisabled: true
                     };
                 }
             });
@@ -241,7 +242,6 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
         this.quoteRecord = { ...this.quoteRecord, INCO_Terms__c: event.detail.value };
     }
 
-    // Table cell change handlers
     handleDesiredPriceChange(event) {
         const id = event.target.dataset.id;
         const value = event.target.value;
@@ -249,80 +249,30 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
 
         this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
-                const baseLocked = this.isRowLockedForNewDiscount(item);
                 const computedDiscount = this.computeDiscountFromDesiredPrice(item.ListPrice, parsedDesiredPrice);
-                const desiredPriceIsNonZero = parsedDesiredPrice !== null && parsedDesiredPrice !== 0;
-
-                if (item.Is_Discount_Approved__c) {
-                    return {
-                        ...item,
-                        desiredPriceValue: parsedDesiredPrice,
-                        newDiscountValue: computedDiscount,
-                        isDiscountOfferedDisabled: true,
-                        isDesiredPriceDisabled: baseLocked,
-                        isNewDiscountDisabled: baseLocked || desiredPriceIsNonZero
-                    };
-                } else {
-                    return {
-                        ...item,
-                        desiredPriceValue: parsedDesiredPrice,
-                        Discount_to_be_offered__c: computedDiscount,
-                        isDesiredPriceDisabled: false,
-                        isDiscountOfferedDisabled: desiredPriceIsNonZero
-                    };
-                }
-            }
-            return item;
-        });
-    }
-
-    handleDiscountChange(event) {
-        const id = event.target.dataset.id;
-        const rawValue = event.target.value;
-        const parsedDiscount = this.enforceMax2Decimals(rawValue);
-
-        if (parsedDiscount !== null && this.hasMoreThan2Decimals(rawValue)) {
-            event.target.value = parsedDiscount;
-        }
-
-        this.quoteLineItemList = this.quoteLineItemList.map(item => {
-            if (item.Id === id) {
-                const locked = this.isRowLocked(item);
-                const computedDesiredPrice = this.computeDesiredPrice(item.ListPrice, parsedDiscount);
-                const discountIsNonZero = parsedDiscount !== null && parsedDiscount !== 0;
                 return {
                     ...item,
-                    Discount_to_be_offered__c: parsedDiscount,
-                    desiredPriceValue: computedDesiredPrice,
-                    isDiscountOfferedDisabled: locked,
-                    isDesiredPriceDisabled: locked || discountIsNonZero
+                    desiredPriceValue: parsedDesiredPrice,
+                    Discount_to_be_offered__c: computedDiscount
                 };
             }
             return item;
         });
     }
 
-    handleNewDiscountChange(event) {
+    // New Proposed ARC Price change (approved rows) -> recalculates New Disc %
+    handleNewDesiredPriceChange(event) {
         const id = event.target.dataset.id;
-        const rawValue = event.target.value;
-        const parsedValue = this.enforceMax2Decimals(rawValue);
-
-        if (parsedValue !== null && this.hasMoreThan2Decimals(rawValue)) {
-            event.target.value = parsedValue;
-        }
+        const value = event.target.value;
+        const parsedPrice = value !== '' ? parseFloat(value) : null;
 
         this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
-                const baseLocked = this.isRowLockedForNewDiscount(item);
-                const computedDesiredPrice = this.computeDesiredPrice(item.ListPrice, parsedValue);
-                const newDiscountIsNonZero = parsedValue !== null && parsedValue !== 0;
+                const computedDiscount = this.computeDiscountFromDesiredPrice(item.ListPrice, parsedPrice);
                 return {
                     ...item,
-                    newDiscountValue: parsedValue,
-                    desiredPriceValue: computedDesiredPrice,
-                    isDiscountOfferedDisabled: true,
-                    isNewDiscountDisabled: baseLocked,
-                    isDesiredPriceDisabled: baseLocked || newDiscountIsNonZero
+                    newDesiredPriceValue: parsedPrice,
+                    newDiscountValue: computedDiscount
                 };
             }
             return item;
@@ -360,6 +310,24 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
             return item;
         });
 
+        if (field === 'Valid_from__c') {
+            const inputField = event.target;
+            const selectedDate = value
+                ? new Date(new Date(value).setHours(0, 0, 0, 0))
+                : null;
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (selectedDate && selectedDate < today) {
+                inputField.setCustomValidity('Valid From date cannot be before today.');
+            } else {
+                inputField.setCustomValidity('');
+            }
+
+            inputField.reportValidity();
+        }
+        
         if (field === 'Valid_Till__c') {
             const inputField = event.target;
             const selectedDate = value
@@ -413,23 +381,19 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
         }
 
         const invalidPotentialRow = this.quoteLineItemList.find(item => {
-            const hasPotentialValue =
-                item.Potential_Value__c !== null &&
-                item.Potential_Value__c !== undefined &&
-                item.Potential_Value__c !== '';
 
             const hasPotentialQty =
                 item.Potential_Qty__c !== null &&
                 item.Potential_Qty__c !== undefined &&
                 item.Potential_Qty__c !== '';
 
-            return !hasPotentialValue && !hasPotentialQty;
+            return !hasPotentialQty;
         });
 
         if (invalidPotentialRow) {
             this.showToast(
                 'Validation Error',
-                'For each row, either Proposed Value or Proposed Qty is mandatory.',
+                'For each row, Proposed Qty is mandatory.',
                 'error'
             );
             this.showSpinner = false;

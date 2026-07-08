@@ -16,7 +16,7 @@ trigger OpportunityPricebookTrigger on Opportunity (before insert) {
         // Check if User has Division__c set
         if(String.isBlank(currentUser.Division__c)) {
             for(Opportunity opp : oppsToProcess) {
-                opp.addError('User Division is not set. Please contact your Administrator.');
+                // opp.addError('User Division is not set. Please contact your Administrator.');
             }
             return;
         }

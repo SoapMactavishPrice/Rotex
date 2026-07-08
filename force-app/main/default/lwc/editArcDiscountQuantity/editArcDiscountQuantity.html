@@ -13,12 +13,6 @@
                     <table class="summary-table">
                         <tbody>
                             <tr>
-                                <td class="summary-label">Total Anticipated Business</td>
-                                <td class="summary-value">
-                                    <lightning-formatted-number value={totalAnticipatedBusiness} format-style="decimal" minimum-fraction-digits="2" maximum-fraction-digits="2"></lightning-formatted-number>
-                                </td>
-                            </tr>
-                            <tr>
                                 <td class="summary-label">Total Qty</td>
                                 <td class="summary-value">
                                     <lightning-formatted-number value={totalQty} format-style="decimal" minimum-fraction-digits="0" maximum-fraction-digits="4"></lightning-formatted-number>
@@ -92,11 +86,12 @@
                             <th class="col-matcode">Material Code</th>
                             <th class="col-matdesc">Material Description</th>
                             <th class="col-listprice" style="text-align: right;">List Price ({currencyCode})</th>
-                            <th class="col-disc">Disc. %</th>
-                            <th class="col-newdisc">New Disc. %</th>
                             <th class="col-arcprice">Proposed ARC Price ({currencyCode})</th>
-                            <th class="col-potval">Potential Value</th>
-                            <th class="col-potqty">Potential Qty</th>
+                            <th class="col-newdisc">New Proposed ARC Price ({currencyCode})</th>
+                            <th class="col-disc">Disc. %</th>
+                            <th class="col-potval">Min Value</th>
+                            <th class="col-potval">Max Value</th>
+                            <th class="col-potqty">MOQ</th>
                             <th class="col-validfrom">Valid From</th>
                             <th class="col-validtill">Valid Till</th>
                             <th class="col-existarc" style="text-align: right;">Existing ARC Price</th>
@@ -117,22 +112,22 @@
                                 <td class="col-listprice amount">
                                     {item.ListPrice}
                                 </td>
-                                <!-- Disc. % -->
-                                <td class="col-disc">
+                                <!-- Proposed ARC Price -->
+                                <td class="col-arcprice">
                                     <lightning-input type="number" data-id={item.Id} variant="label-hidden"
-                                        value={item.Discount_to_be_offered__c} class="input-field"
-                                        disabled={item.isDiscountOfferedDisabled}
-                                        onchange={handleDiscountChange}
+                                        value={item.desiredPriceValue} class="input-field"
+                                        disabled={item.isProposedPriceDisabled}
+                                        onchange={handleDesiredPriceChange}
                                         step="0.01">
                                     </lightning-input>
                                 </td>
-                                <!-- New Disc. % -->
+                                <!-- New Proposed ARC Price -->
                                 <td class="col-newdisc">
                                     <template if:true={item.Is_Discount_Approved__c}>
                                         <lightning-input type="number" data-id={item.Id} variant="label-hidden"
-                                            value={item.newDiscountValue} class="input-field"
-                                            disabled={item.isNewDiscountDisabled}
-                                            onchange={handleNewDiscountChange}
+                                            value={item.newDesiredPriceValue} class="input-field"
+                                            disabled={item.isNewProposedPriceDisabled}
+                                            onchange={handleNewDesiredPriceChange}
                                             step="0.01">
                                         </lightning-input>
                                     </template>
@@ -140,23 +135,20 @@
                                         <span class="slds-text-color_weak">-</span>
                                     </template>
                                 </td>
-                                <!-- Proposed ARC Price -->
-                                <td class="col-arcprice">
-                                    <lightning-input type="number" data-id={item.Id} variant="label-hidden"
-                                        value={item.desiredPriceValue} class="input-field"
-                                        disabled="true"
-                                        onchange={handleDesiredPriceChange}
-                                        step="0.01">
-                                    </lightning-input>
+                                <!-- Disc. % (read-only, always calculated) -->
+                                <td class="col-disc amount" style="text-align: left;">
+                                    <template if:true={item.Is_Discount_Approved__c}>
+                                        <lightning-formatted-number value={item.newDiscountValue} format-style="decimal" maximum-fraction-digits="2"></lightning-formatted-number>
+                                    </template>
+                                    <template if:false={item.Is_Discount_Approved__c}>
+                                        <lightning-formatted-number value={item.Discount_to_be_offered__c} format-style="decimal" maximum-fraction-digits="2"></lightning-formatted-number>
+                                    </template>
                                 </td>
-                                <!-- Potential Value -->
-                                <td class="col-potval">
-                                    <lightning-input type="number" data-id={item.Id} data-field="Potential_Value__c"
-                                        variant="label-hidden" value={item.Potential_Value__c} class="input-field"
-                                        onchange={handleNumberFieldChange}
-                                        step="0.01">
-                                    </lightning-input>
-                                </td>
+
+                                <!-- Min and Max Value -->
+                                <td class="col-potval"></td>
+                                <td class="col-potval"></td>
+
                                 <!-- Potential Qty -->
                                 <td class="col-potqty">
                                     <lightning-input type="number" data-id={item.Id} data-field="Potential_Qty__c"

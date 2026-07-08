@@ -166,11 +166,11 @@
 
 /* Column widths matching 11 columns */
 .col-matcode    { width: 9%; }
-.col-matdesc    { width: 12%; }
-.col-listprice  { width: 7%; text-align: right; }
+.col-matdesc    { width: 11%; }
+.col-listprice  { width: 6%; text-align: right; }
 .col-arcprice   { width: 8%; }
-.col-disc       { width: 6%; }
-.col-newdisc    { width: 6%; }
+.col-newdisc    { width: 8%; }
+.col-disc       { width: 5%; }
 .col-potval     { width: 9%; }
 .col-potqty     { width: 8%; }
 .col-validfrom  { width: 10%; }

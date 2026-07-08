@@ -83,7 +83,7 @@ private class OpportunityTriggerHandler_Test {
         // Re-query again after OLI insert to get HasOpportunityLineItem = true
         opp = [SELECT Id, Name, StageName, AccountId, Project_Contact__c,
                       Pricebook2Id, HasOpportunityLineItem, CreatedById,
-                      Customer_Enquiry_Ref_No__c, Enquiry_Receive_Date__c
+                      Customer_Enquiry_Ref_No__c, Enquiry_Receive_Date__c, RecordTypeId
                FROM Opportunity 
                WHERE Id = :opp.Id];
 
@@ -111,4 +111,5 @@ private class OpportunityTriggerHandler_Test {
         List<QuoteLineItem> qlis = [SELECT Id FROM QuoteLineItem WHERE QuoteId = :quotes[0].Id];
         // System.assertEquals(1, qlis.size(), 'One QuoteLineItem should have been created');
     }
+
 }

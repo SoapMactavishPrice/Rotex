@@ -196,7 +196,7 @@ private class SalesPriceApprovalForQuotationTest {
                 GS_Value_Status__c, GS_Value_Date_Time__c, GS_Value_Comments__c,
                 BM_Value_Status__c, BM_Value_Date_Time__c, BM_Value_Comments__c,
                 MD_Value_Status__c, MD_Value_Date_Time__c, MD_Value_Comments__c,
-                Final_Total_Value_Approver__c,
+                Final_Total_Value_Approver__c, RecordTypeId, RecordType.Name,
                 Final_Total_Value_Approver__r.DelegatedApproverId,
                 GS_Min_Offer_Status__c, GS_Min_Offer_Date_Time__c, GS_Min_Offer_Comments__c,
                 BM_Min_Offer_Status__c, BM_Min_Offer_Date_Time__c, BM_Min_Offer_Comments__c,
@@ -238,7 +238,7 @@ private class SalesPriceApprovalForQuotationTest {
                 Prev_Sales_Manager_Comments__c, Prev_Country_Continent_Sales_Comments__c,
                 Prev_Global_Sales_Head_Comments__c, Prev_Rotex_Board_Member_Comments__c,
                 Prev_Managing_Director_Comments__c, Previous_Discount__c,
-                Is_Discount_Approved__c, Requested_Comments__c
+                Is_Discount_Approved__c, Requested_Comments__c, Potential_Qty__c
             FROM QuoteLineItem WHERE QuoteId = :quoteId
         ];
     }

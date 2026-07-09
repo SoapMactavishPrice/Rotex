@@ -1940,7 +1940,7 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
             // Query Quote Line Items related to Parent Quote
             quoteLineItemList = [
                 SELECT Id, QuoteId, Quantity, UnitPrice, TotalPrice, Discount, Product2Id, Product2.Name, Plant__c, LineNumber,
-                Product2.ProductCode, Discount_to_be_offered__c, Quote.CurrencyISOCode
+                    Product2.ProductCode, Discount_to_be_offered__c, Quote.CurrencyISOCode,Round_Off__c
                 FROM QuoteLineItem
                 WHERE QuoteId IN: quoteIds
             ];

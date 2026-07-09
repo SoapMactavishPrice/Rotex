@@ -307,6 +307,8 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Managing_Director_Country_Manage__c, Managing_Director_Status__c,
                        Rotex_Board_Member__c, Rotex_Board_Member_Status__c,
                        Final_Discount_Approver__c, Final_Discount_Approver__r.DelegatedApproverId,
+                       Effective_Final_Discount_Approver__c,
+                       Effective_Final_Discount_Approver__r.DelegatedApproverId,
                        Sales_Rep__r.DelegatedApproverId, Sales_Manager__r.DelegatedApproverId,
                        Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId, Global_Sales_Head__r.DelegatedApproverId,
                        Rotex_Board_Member__r.DelegatedApproverId, Managing_Director_Country_Manage__r.DelegatedApproverId,
@@ -355,20 +357,21 @@ public without sharing class SalesPriceApprovalForQuotation {
                    GS_Warranty_Status__c,  GS_Warranty_Date_Time__c,  GS_Warranty_Comments__c,
                    BM_Warranty_Status__c,  BM_Warranty_Date_Time__c,  BM_Warranty_Comments__c,
                    MD_Warranty_Status__c,  MD_Warranty_Date_Time__c,  MD_Warranty_Comments__c,
-                   Final_Warranty_Terms_Approver__c,
+                   Final_Warranty_Terms_Approver__c, Effective_Final_Warranty_Approver__c,
                    Requested_Validity_Of_Offer__c,
                    SM_Validity_Offer_Status__c,  SM_Validity_Offer_Date_Time__c,  SM_Validity_Offer_Comments__c,
                    CH_Validity_Offer_Status__c,  CH_Validity_Offer_Date_Time__c,  CH_Validity_Offer_Comments__c,
                    GS_Validity_Offer_Status__c,  GS_Validity_Offer_Date_Time__c,  GS_Validity_Offer_Comments__c,
                    BM_Validity_Offer_Status__c,  BM_Validity_Offer_Date_Time__c,  BM_Validity_Offer_Comments__c,
                    MD_Validity_Offer_Status__c,  MD_Validity_Offer_Date_Time__c,  MD_Validity_Offer_Comments__c,
-                   Final_Validity_Offer_Approver__c,
+                   Final_Validity_Offer_Approver__c, Effective_Final_Validity_Approver__c,
                    SM_Value_Status__c,  SM_Value_Date_Time__c,  SM_Value_Comments__c,
                    CH_Value_Status__c,  CH_Value_Date_Time__c,  CH_Value_Comments__c,
                    GS_Value_Status__c,  GS_Value_Date_Time__c,  GS_Value_Comments__c,
                    BM_Value_Status__c,  BM_Value_Date_Time__c,  BM_Value_Comments__c,
                    MD_Value_Status__c,  MD_Value_Date_Time__c,  MD_Value_Comments__c,
-                   Final_Total_Value_Approver__c, Is_Total_Value_Approved__c, Is_Small_Order_Handling__c, Is_all_approvals_final_approved__c, Quote_Valid_Till__c,
+                   Final_Total_Value_Approver__c, Effective_Final_Total_Value_Approver__c,
+                   Highest_Final_Approver__c, Is_Total_Value_Approved__c, Is_Small_Order_Handling__c, Is_all_approvals_final_approved__c, Quote_Valid_Till__c,
                    RecordType.Name
                 //    SM_Min_Offer_Status__c,  SM_Min_Offer_Date_Time__c,  SM_Min_Offer_Comments__c,
                 //    CH_Min_Offer_Status__c,  CH_Min_Offer_Date_Time__c,  CH_Min_Offer_Comments__c,
@@ -676,7 +679,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                    GS_Warranty_Status__c, GS_Warranty_Date_Time__c, GS_Warranty_Comments__c,
                    BM_Warranty_Status__c, BM_Warranty_Date_Time__c, BM_Warranty_Comments__c,
                    MD_Warranty_Status__c, MD_Warranty_Date_Time__c, MD_Warranty_Comments__c,
-                   Final_Warranty_Terms_Approver__c
+                   Final_Warranty_Terms_Approver__c, Effective_Final_Warranty_Approver__c
             FROM   Quote
             WHERE  (
                        Sales_Manager__c                         = :currentUserId OR
@@ -736,7 +739,9 @@ public without sharing class SalesPriceApprovalForQuotation {
 
         Boolean hasChanges = false;
         Id currentUserId   = UserInfo.getUserId();
-        Id finalApproverId = existingQuote.Final_Warranty_Terms_Approver__c;
+        Id finalApproverId = existingQuote.Effective_Final_Warranty_Approver__c == null
+            ? existingQuote.Final_Warranty_Terms_Approver__c
+            : existingQuote.Effective_Final_Warranty_Approver__c;
         System.debug('submitWarrantyApprovalSingle finalApproverId ==> '+ finalApproverId);
         Integer finalApproverPosition = getHierarchyPos(existingQuote, finalApproverId);
         System.debug('submitWarrantyApprovalSingle finalApproverPosition ==> '+ finalApproverPosition);
@@ -873,7 +878,9 @@ public without sharing class SalesPriceApprovalForQuotation {
         Quote q = new Quote(Id = wrapper.quoteId);
         Boolean hasChanges = false;
         Id currentUserId = UserInfo.getUserId();
-        Id finalApproverId = existingQuote.Final_Validity_Offer_Approver__c;
+        Id finalApproverId = existingQuote.Effective_Final_Validity_Approver__c == null
+            ? existingQuote.Final_Validity_Offer_Approver__c
+            : existingQuote.Effective_Final_Validity_Approver__c;
         Integer finalApproverPosition = getValidityOfferHierarchyPos(existingQuote, finalApproverId);
         validateValidityOfferForApprover(wrapper.requestedValidityOfOffer, finalApproverPosition);
         if (wrapper.requestedValidityOfOffer != wrapper.originalRequestedValidityOfOffer) {
@@ -1308,10 +1315,16 @@ public without sharing class SalesPriceApprovalForQuotation {
                    Managing_Director_Country_Manager__r.DelegatedApproverId,
                    Final_Warranty_Terms_Approver__c,
                    Final_Warranty_Terms_Approver__r.DelegatedApproverId,
+                   Effective_Final_Warranty_Approver__c,
+                   Effective_Final_Warranty_Approver__r.DelegatedApproverId,
                    Final_Validity_Offer_Approver__c,
                    Final_Validity_Offer_Approver__r.DelegatedApproverId,
+                   Effective_Final_Validity_Approver__c,
+                   Effective_Final_Validity_Approver__r.DelegatedApproverId,
                    Final_Total_Value_Approver__c,
-                   Final_Total_Value_Approver__r.DelegatedApproverId
+                   Final_Total_Value_Approver__r.DelegatedApproverId,
+                   Effective_Final_Total_Value_Approver__c,
+                   Effective_Final_Total_Value_Approver__r.DelegatedApproverId
             FROM Quote
             WHERE Id = :quoteId
             LIMIT 1
@@ -1382,13 +1395,17 @@ public without sharing class SalesPriceApprovalForQuotation {
         Map<Id, QuoteLineItem> existingQliMap = new Map<Id, QuoteLineItem>();
         if (!updatedQuoteLineItemIds.isEmpty()) {
             existingQliMap = new Map<Id, QuoteLineItem>([
-                SELECT Id, Final_Discount_Approver__c, Sales_Rep_Status__c, Sales_Manager_Status__c,
+                SELECT Id, Final_Discount_Approver__c, Effective_Final_Discount_Approver__c,
+                       Sales_Rep_Status__c, Sales_Manager_Status__c,
                        Country_Continent_Sales_H_LOB_Status__c, Global_Sales_Head_Status__c,
                        Rotex_Board_Member_Status__c, Managing_Director_Status__c,
                        Sales_Manager__c, Sales_Manager__r.DelegatedApproverId,
                        Country_Continent_Sales_Head_LOB_Head__c, Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId,
                        Global_Sales_Head__c, Global_Sales_Head__r.DelegatedApproverId, Rotex_Board_Member__c, Rotex_Board_Member__r.DelegatedApproverId,
-                       Managing_Director_Country_Manage__c, Managing_Director_Country_Manage__r.DelegatedApproverId, Final_Discount_Approver__r.DelegatedApproverId, Sales_Rep__r.DelegatedApproverId,
+                       Managing_Director_Country_Manage__c, Managing_Director_Country_Manage__r.DelegatedApproverId,
+                       Final_Discount_Approver__r.DelegatedApproverId,
+                       Effective_Final_Discount_Approver__r.DelegatedApproverId,
+                       Sales_Rep__r.DelegatedApproverId,
                        Sales_Manager_Comments__c, Country_Continent_Sales_LOB_Comments__c,
                        Global_Sales_Head_Comments__c, Rotex_Board_Member_Comments__c,
                        Managing_Director_Comments__c, Discount_to_be_offered__c, Discount_as_per_SAP__c, Requested_Comments__c
@@ -1664,14 +1681,34 @@ public without sharing class SalesPriceApprovalForQuotation {
         return value == null ? '' : value.trim();
     }
 
+    private static Id effectiveDiscountApprover(QuoteLineItem qli) {
+        return qli.Effective_Final_Discount_Approver__c == null
+            ? qli.Final_Discount_Approver__c : qli.Effective_Final_Discount_Approver__c;
+    }
+
+    private static Id effectiveWarrantyApprover(Quote q) {
+        return q.Effective_Final_Warranty_Approver__c == null
+            ? q.Final_Warranty_Terms_Approver__c : q.Effective_Final_Warranty_Approver__c;
+    }
+
+    private static Id effectiveValidityApprover(Quote q) {
+        return q.Effective_Final_Validity_Approver__c == null
+            ? q.Final_Validity_Offer_Approver__c : q.Effective_Final_Validity_Approver__c;
+    }
+
+    private static Id effectiveTotalValueApprover(Quote q) {
+        return q.Effective_Final_Total_Value_Approver__c == null
+            ? q.Final_Total_Value_Approver__c : q.Effective_Final_Total_Value_Approver__c;
+    }
+
     private static Boolean canSkipToPreviousFinalApprover(QuoteLineItem qli, QuotationLineItemWrapper li) {
         if (qli == null || li == null || li.skipSoaRestrictions != true) return false;
         Integer currentIdx      = getApproverIndex(qli, UserInfo.getUserId());
-        Integer finalIdx        = getApproverIndex(qli, qli.Final_Discount_Approver__c);
+        Integer finalIdx        = getApproverIndex(qli, effectiveDiscountApprover(qli));
         Id      stageApproverId = getApproverIdForStage(qli, li.currentStageField);
         return currentIdx != null && finalIdx != null &&
                finalIdx < currentIdx &&
-               stageApproverId == qli.Final_Discount_Approver__c;
+               stageApproverId == effectiveDiscountApprover(qli);
     }
 
     private static Integer getApproverIndex(QuoteLineItem qli, Id approverId) {
@@ -1699,31 +1736,31 @@ public without sharing class SalesPriceApprovalForQuotation {
         Integer currentIdx = getApproverIndex(existing, UserInfo.getUserId());
         if (currentIdx == null) return;
 
-        if (1 < currentIdx && existing.Sales_Manager__c != existing.Final_Discount_Approver__c &&
+        if (1 < currentIdx && existing.Sales_Manager__c != effectiveDiscountApprover(existing) &&
             String.isBlank(existing.Sales_Manager_Comments__c) && String.isNotBlank(li.Sales_Manager_Comments)) {
             qli.Sales_Manager_Comments__c  = li.Sales_Manager_Comments;
             qli.Sales_Manager_Status__c    = 'Approved';
             qli.Sales_Manager_Date_Time__c = DateTime.now();
         }
-        if (2 < currentIdx && existing.Country_Continent_Sales_Head_LOB_Head__c != existing.Final_Discount_Approver__c &&
+        if (2 < currentIdx && existing.Country_Continent_Sales_Head_LOB_Head__c != effectiveDiscountApprover(existing) &&
             String.isBlank(existing.Country_Continent_Sales_LOB_Comments__c) && String.isNotBlank(li.Country_Continent_Sales_LOB_Comments)) {
             qli.Country_Continent_Sales_LOB_Comments__c  = li.Country_Continent_Sales_LOB_Comments;
             qli.Country_Continent_Sales_H_LOB_Status__c  = 'Approved';
             qli.Country_Head_Date_Time__c                 = DateTime.now();
         }
-        if (3 < currentIdx && existing.Global_Sales_Head__c != existing.Final_Discount_Approver__c &&
+        if (3 < currentIdx && existing.Global_Sales_Head__c != effectiveDiscountApprover(existing) &&
             String.isBlank(existing.Global_Sales_Head_Comments__c) && String.isNotBlank(li.Global_Sales_Head_Comments)) {
             qli.Global_Sales_Head_Comments__c  = li.Global_Sales_Head_Comments;
             qli.Global_Sales_Head_Status__c    = 'Approved';
             qli.Global_Sales_Head_Date_Time__c = DateTime.now();
         }
-        if (4 < currentIdx && existing.Rotex_Board_Member__c != existing.Final_Discount_Approver__c &&
+        if (4 < currentIdx && existing.Rotex_Board_Member__c != effectiveDiscountApprover(existing) &&
             String.isBlank(existing.Rotex_Board_Member_Comments__c) && String.isNotBlank(li.Rotex_Board_Member_Comments)) {
             qli.Rotex_Board_Member_Comments__c  = li.Rotex_Board_Member_Comments;
             qli.Rotex_Board_Member_Status__c    = 'Approved';
             qli.Rotex_Board_Member_Date_Time__c = DateTime.now();
         }
-        if (5 < currentIdx && existing.Managing_Director_Country_Manage__c != existing.Final_Discount_Approver__c &&
+        if (5 < currentIdx && existing.Managing_Director_Country_Manage__c != effectiveDiscountApprover(existing) &&
             String.isBlank(existing.Managing_Director_Comments__c) && String.isNotBlank(li.Managing_Director_Comments)) {
             qli.Managing_Director_Comments__c  = li.Managing_Director_Comments;
             qli.Managing_Director_Status__c    = 'Approved';
@@ -1918,7 +1955,7 @@ public without sharing class SalesPriceApprovalForQuotation {
 
     @TestVisible
     private static Boolean isWarrantyFinallyDecided(Quote q) {
-        Id finalId = q.Final_Warranty_Terms_Approver__c;
+        Id finalId = effectiveWarrantyApprover(q);
         if (finalId == null) return false;
         if (q.Sales_Manager__c                         == finalId) return q.SM_Warranty_Status__c == 'Approved' || q.SM_Warranty_Status__c == 'Rejected';
         if (q.Country_Continent_Sales_Head_LOB_Head__c == finalId) return q.CH_Warranty_Status__c == 'Approved' || q.CH_Warranty_Status__c == 'Rejected';
@@ -1930,7 +1967,7 @@ public without sharing class SalesPriceApprovalForQuotation {
 
     @TestVisible
     private static Boolean isValidityOfferFinallyDecided(Quote q) {
-        Id finalId = q.Final_Validity_Offer_Approver__c;
+        Id finalId = effectiveValidityApprover(q);
         if (finalId == null) return false;
         if (q.Sales_Manager__c                         == finalId) return q.SM_Validity_Offer_Status__c == 'Approved' || q.SM_Validity_Offer_Status__c == 'Rejected';
         if (q.Country_Continent_Sales_Head_LOB_Head__c == finalId) return q.CH_Validity_Offer_Status__c == 'Approved' || q.CH_Validity_Offer_Status__c == 'Rejected';
@@ -1942,7 +1979,7 @@ public without sharing class SalesPriceApprovalForQuotation {
 
     @TestVisible
     private static Boolean isTotalValueFinallyDecided(Quote q) {
-        Id finalId = q.Final_Total_Value_Approver__c;
+        Id finalId = effectiveTotalValueApprover(q);
         if (finalId == null) return false;
         if (q.Sales_Manager__c                         == finalId) return q.SM_Value_Status__c == 'Approved' || q.SM_Value_Status__c == 'Rejected';
         if (q.Country_Continent_Sales_Head_LOB_Head__c == finalId) return q.CH_Value_Status__c == 'Approved' || q.CH_Value_Status__c == 'Rejected';
@@ -2282,8 +2319,12 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.salesPrice       = qli.UnitPrice;
             this.bcheck  = true; this.bcheck1 = true; this.bcheck2 = true;
             this.bcheck3 = true; this.bcheck4 = true; this.bcheck5 = true;
-            this.finalDiscountApproverId = qli.Final_Discount_Approver__c;
-            this.finalDiscountApproverDelegatedId = qli.Final_Discount_Approver__r != null ? String.valueOf(qli.Final_Discount_Approver__r.DelegatedApproverId) : null;
+            this.finalDiscountApproverId = effectiveDiscountApprover(qli);
+            this.finalDiscountApproverDelegatedId =
+                qli.Effective_Final_Discount_Approver__r != null
+                ? String.valueOf(qli.Effective_Final_Discount_Approver__r.DelegatedApproverId)
+                : (qli.Final_Discount_Approver__r != null
+                    ? String.valueOf(qli.Final_Discount_Approver__r.DelegatedApproverId) : null);
 
             this.Country_Continent_Sales_LOB_Comments = qli.Country_Continent_Sales_LOB_Comments__c;
             this.Global_Sales_Head_Comments           = qli.Global_Sales_Head_Comments__c;
@@ -2403,7 +2444,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.warrantyTermsDraft  = q.Warranty_Terms_Draft__c;
             this.originalWarrantyTermsDraft = q.Warranty_Terms_Draft__c;
             this.warrantyTerms       = q.Warranty_Terms__c;
-            this.finalWarrantyApprover = getStringFieldSafely(q, 'Final_Warranty_Terms_Approver__c');
+            this.finalWarrantyApprover = String.valueOf(effectiveWarrantyApprover(q));
             this.updated             = false;
 
             this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r != null ? q.Sales_Manager__r.Name : null;
@@ -2439,7 +2480,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         private void setHierarchyPositions(Quote q, Id currentUserId) {
             this.currentUserHierarchyPosition   = getWarrantyHierarchyIndex(q, currentUserId);
             System.debug('setHierarchyPositions currentUserHierarchyPosition ==> ' + this.currentUserHierarchyPosition);
-            Id finalId = q.Final_Warranty_Terms_Approver__c;
+            Id finalId = effectiveWarrantyApprover(q);
             System.debug('setHierarchyPositions finalId ==> '+finalId);
             this.finalApproverHierarchyPosition = getWarrantyHierarchyIndex(q, finalId);
             System.debug('setHierarchyPositions finalApproverHierarchyPosition ==> ' + this.finalApproverHierarchyPosition);
@@ -2477,7 +2518,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
 
         private void setEditPermissions(Quote q, Id currentUserId) {
-            Id finalId = q.Final_Warranty_Terms_Approver__c;
+            Id finalId = effectiveWarrantyApprover(q);
             if (this.isSmCurrentUser && this.smWarrantyStatus == 'Submitted') { this.canSmEditComments = true; this.canSmEditStatus = (q.Sales_Manager__c == finalId); }
             if (this.isChCurrentUser && this.chWarrantyStatus == 'Submitted') { this.canChEditComments = true; this.canChEditStatus = (q.Country_Continent_Sales_Head_LOB_Head__c == finalId); }
             if (this.isGsCurrentUser && this.gsWarrantyStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }
@@ -2544,7 +2585,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.requestedValidityOfOffer   = q.Requested_Validity_Of_Offer__c;
             this.originalRequestedValidityOfOffer = q.Requested_Validity_Of_Offer__c;
             this.validityOfOffer            = q.Validity_of_Offer__c;
-            this.finalValidityOfferApprover = getStringFieldSafely(q, 'Final_Validity_Offer_Approver__c');
+            this.finalValidityOfferApprover = String.valueOf(effectiveValidityApprover(q));
             this.updated                    = false;
 
             this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r != null ? q.Sales_Manager__r.Name : null;
@@ -2579,7 +2620,7 @@ public without sharing class SalesPriceApprovalForQuotation {
 
         private void setValidityOfferHierarchyPositions(Quote q, Id currentUserId) {
             this.currentUserHierarchyPosition   = getValidityOfferHierarchyIdx(q, currentUserId);
-            Id finalId = q.Final_Validity_Offer_Approver__c;
+            Id finalId = effectiveValidityApprover(q);
             this.finalApproverHierarchyPosition = getValidityOfferHierarchyIdx(q, finalId);
             this.isHigherHierarchy = this.currentUserHierarchyPosition != null &&
                                     this.finalApproverHierarchyPosition != null &&
@@ -2612,7 +2653,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
 
         private void setValidityOfferEditPermissions(Quote q, Id currentUserId) {
-            Id finalId = q.Final_Validity_Offer_Approver__c;
+            Id finalId = effectiveValidityApprover(q);
             if (this.isSmCurrentUser && this.smValidityOfferStatus == 'Submitted') { this.canSmEditComments = true; this.canSmEditStatus = (q.Sales_Manager__c == finalId); }
             if (this.isChCurrentUser && this.chValidityOfferStatus == 'Submitted') { this.canChEditComments = true; this.canChEditStatus = (q.Country_Continent_Sales_Head_LOB_Head__c == finalId); }
             if (this.isGsCurrentUser && this.gsValidityOfferStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }
@@ -2674,7 +2715,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.quoteName                = q.Name;
             this.quoteNumber              = q.QuoteNumber;
             this.totalValue               = q.Total_Value__c;
-            this.finalTotalValueApprover  = getStringFieldSafely(q, 'Final_Total_Value_Approver__c');
+            this.finalTotalValueApprover  = String.valueOf(effectiveTotalValueApprover(q));
             this.updated                  = false;
 
             this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r != null ? q.Sales_Manager__r.Name : null;
@@ -2708,7 +2749,7 @@ public without sharing class SalesPriceApprovalForQuotation {
 
         private void setTotalValueHierarchyPositions(Quote q, Id currentUserId) {
             this.currentUserHierarchyPosition   = getTotalValueHierarchyPos(q, currentUserId);
-            Id finalId = q.Final_Total_Value_Approver__c;
+            Id finalId = effectiveTotalValueApprover(q);
             this.finalApproverHierarchyPosition = getTotalValueHierarchyPos(q, finalId);
             this.isHigherHierarchy = this.currentUserHierarchyPosition != null &&
                                     this.finalApproverHierarchyPosition != null &&
@@ -2731,7 +2772,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
 
         private void setTotalValueEditPermissions(Quote q) {
-            Id finalId = q.Final_Total_Value_Approver__c;
+            Id finalId = effectiveTotalValueApprover(q);
             if (this.isSmCurrentUser && this.smValueStatus == 'Submitted') { this.canSmEditComments = true; this.canSmEditStatus = (q.Sales_Manager__c == finalId); }
             if (this.isChCurrentUser && this.chValueStatus == 'Submitted') { this.canChEditComments = true; this.canChEditStatus = (q.Country_Continent_Sales_Head_LOB_Head__c == finalId); }
             if (this.isGsCurrentUser && this.gsValueStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }

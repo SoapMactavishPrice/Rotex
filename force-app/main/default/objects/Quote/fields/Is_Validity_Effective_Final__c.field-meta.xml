@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Is_Validity_Effective_Final__c</fullName>
+    <formula>IF(OR(ISBLANK(TEXT(Requested_Validity_Of_Offer__c)),ISPICKVAL(Requested_Validity_Of_Offer__c,"30 Days")),TRUE,IF(ISBLANK(Final_Validity_Offer_Approver__c),TRUE,IF(BLANKVALUE(Effective_Final_Validity_Approver__c,Final_Validity_Offer_Approver__c)=Sales_Manager__c,OR(ISPICKVAL(SM_Validity_Offer_Status__c,"Approved"),ISPICKVAL(SM_Validity_Offer_Status__c,"Rejected")),IF(BLANKVALUE(Effective_Final_Validity_Approver__c,Final_Validity_Offer_Approver__c)=Country_Continent_Sales_Head_LOB_Head__c,OR(ISPICKVAL(CH_Validity_Offer_Status__c,"Approved"),ISPICKVAL(CH_Validity_Offer_Status__c,"Rejected")),IF(BLANKVALUE(Effective_Final_Validity_Approver__c,Final_Validity_Offer_Approver__c)=Global_Sales_Head__c,OR(ISPICKVAL(GS_Validity_Offer_Status__c,"Approved"),ISPICKVAL(GS_Validity_Offer_Status__c,"Rejected")),IF(BLANKVALUE(Effective_Final_Validity_Approver__c,Final_Validity_Offer_Approver__c)=Rotex_Board_Member__c,OR(ISPICKVAL(BM_Validity_Offer_Status__c,"Approved"),ISPICKVAL(BM_Validity_Offer_Status__c,"Rejected")),IF(BLANKVALUE(Effective_Final_Validity_Approver__c,Final_Validity_Offer_Approver__c)=Managing_Director_Country_Manager__c,OR(ISPICKVAL(MD_Validity_Offer_Status__c,"Approved"),ISPICKVAL(MD_Validity_Offer_Status__c,"Rejected")),FALSE)))))))</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Is Validity Effective Final</label>
+    <type>Checkbox</type>
+</CustomField>

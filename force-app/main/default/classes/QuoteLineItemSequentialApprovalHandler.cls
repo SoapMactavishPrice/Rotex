@@ -36,6 +36,7 @@ public class QuoteLineItemSequentialApprovalHandler {
                 SELECT Id, Name, Account.Name, Sales_Rep__c, Sales_Manager__c, OwnerId, QuoteNumber,
                     Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c,
                     Rotex_Board_Member__c, Managing_Director_Country_Manager__c,
+                    Highest_Final_Approver__c,
                     RecordType.Name
                 FROM Quote
                 WHERE Id IN :quoteIds
@@ -45,6 +46,7 @@ public class QuoteLineItemSequentialApprovalHandler {
 
         Map<Id, QuoteLineItem> dbMap = new Map<Id, QuoteLineItem>([
             SELECT Id, QuoteId, Discount_to_be_offered__c, Final_Discount_Approver__c,
+                Effective_Final_Discount_Approver__c,
                 Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
                 Global_Sales_Head__c, Rotex_Board_Member__c,
                 Managing_Director_Country_Manage__c,
@@ -167,7 +169,7 @@ public class QuoteLineItemSequentialApprovalHandler {
             return true;
         }
 
-        Integer nextIndex = findNextApproverIndex(qli, currentIndex + 1);
+        Integer nextIndex = findNextApprovalIndex(qli, currentIndex);
         if (nextIndex == null) {
             System.debug('SEQUENTIAL: No next approver found. Stopping chain.');
             return true;
@@ -350,7 +352,7 @@ public class QuoteLineItemSequentialApprovalHandler {
             return;
         }
 
-        Integer nextIndex = findNextApproverIndex(qli, currentIndex + 1);
+        Integer nextIndex = findNextApprovalIndex(qli, currentIndex);
         if (nextIndex == null) {
             System.debug('  -> No next approver assigned');
             return;
@@ -391,7 +393,10 @@ public class QuoteLineItemSequentialApprovalHandler {
             return false;
         }
 
-        Id finalApproverId = getIdFieldSafely(qli, 'Final_Discount_Approver__c');
+        Id finalApproverId = getIdFieldSafely(qli, 'Effective_Final_Discount_Approver__c');
+        if (finalApproverId == null) {
+            finalApproverId = getIdFieldSafely(qli, 'Final_Discount_Approver__c');
+        }
         Id currentApproverId = getIdFieldSafely(qli, approverFields[approverIndex]);
 
         if (finalApproverId == null || currentApproverId == null) {
@@ -413,6 +418,33 @@ public class QuoteLineItemSequentialApprovalHandler {
             if (approverId != null) {
                 return i;
             }
+        }
+        return null;
+    }
+
+    private static Integer findNextApprovalIndex(QuoteLineItem qli, Integer currentIndex) {
+        Integer intrinsicIndex = findApproverIndex(
+            qli, getIdFieldSafely(qli, 'Final_Discount_Approver__c')
+        );
+        Integer effectiveIndex = findApproverIndex(
+            qli, getIdFieldSafely(qli, 'Effective_Final_Discount_Approver__c')
+        );
+        if (effectiveIndex == null) effectiveIndex = intrinsicIndex;
+
+        // Once the SOA-derived final approver has acted, bypass every
+        // intermediate level and submit directly to the quote-wide highest.
+        if (intrinsicIndex != null && effectiveIndex != null &&
+            currentIndex >= intrinsicIndex && effectiveIndex > currentIndex) {
+            return effectiveIndex;
+        }
+        return findNextApproverIndex(qli, currentIndex + 1);
+    }
+
+    private static Integer findApproverIndex(QuoteLineItem qli, Id approverId) {
+        if (approverId == null) return null;
+        List<String> approverFields = getApproverFields();
+        for (Integer i = 0; i < approverFields.size(); i++) {
+            if (getIdFieldSafely(qli, approverFields[i]) == approverId) return i;
         }
         return null;
     }

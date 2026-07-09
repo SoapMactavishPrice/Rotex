@@ -5,6 +5,7 @@ import quoteValidation from '@salesforce/apex/IntegrationHandler.quoteValidation
 import salesOrderCreation from '@salesforce/apex/IntegrationHandler.salesOrderCreation';
 import updateQuotation from '@salesforce/apex/IntegrationHandler.updateQuotation';
 import uploadPOAttachment from '@salesforce/apex/IntegrationHandler.uploadPOAttachment';
+import updateRoundOffValues from '@salesforce/apex/IntegrationHandler.updateRoundOffValues';
 import { CloseActionScreenEvent } from 'lightning/actions';
 import { RefreshEvent } from 'lightning/refresh';
 
@@ -62,6 +63,122 @@ export default class SendQuoteToSAP extends LightningElement {
         this.template.querySelector('.hiddenFileInput').click();
     }
 
+    handleRoundOffChange(event) {
+        const index = event.target.dataset.index;
+        let value = event.target.value;
+
+        if (value === '' || value === null || value === undefined) {
+            this.orderLineItemList[index].Round_Off__c = null;
+            return;
+        }
+
+        // Allow temporary values like "0.", "-0."
+        if (value === '0.' || value === '-0.' || value === '-' || value === '-0') {
+            this.orderLineItemList[index].Round_Off__c = value;
+            return;
+        }
+
+        // Clean the value - only allow digits, decimal, and negative sign
+        let cleanValue = value.replace(/[^0-9.-]/g, '');
+
+        // Handle multiple negative signs
+        if (cleanValue.split('-').length > 2) {
+            cleanValue = cleanValue.replace(/-/g, '');
+            if (cleanValue.length > 0 && cleanValue[0] !== '-') {
+                cleanValue = '-' + cleanValue;
+            }
+        }
+
+        const parts = cleanValue.split('.');
+
+        // Limit to 2 decimal places
+        if (parts.length > 1) {
+            parts[1] = parts[1].substring(0, 2);
+            cleanValue = parts.join('.');
+        }
+
+        let numericValue = parseFloat(cleanValue);
+
+        if (!isNaN(numericValue)) {
+            numericValue = Math.round(numericValue * 100) / 100;
+            this.orderLineItemList[index].Round_Off__c = numericValue;
+        } else {
+            this.orderLineItemList[index].Round_Off__c = null;
+        }
+    }
+
+    handleRoundOffBlur(event) {
+        const index = event.target.dataset.index;
+        let value = this.orderLineItemList[index].Round_Off__c;
+
+        if (value === null || value === undefined || value === '') {
+            this.orderLineItemList[index].Round_Off__c = null;
+            return;
+        }
+
+        // If value is a string (like "0." or "-0."), convert to proper number
+        if (typeof value === 'string') {
+            let numericValue = parseFloat(value);
+            if (!isNaN(numericValue)) {
+                numericValue = Math.round(numericValue * 100) / 100;
+                this.orderLineItemList[index].Round_Off__c = numericValue;
+            } else {
+                this.orderLineItemList[index].Round_Off__c = null;
+            }
+        }
+    }
+
+    handleKeyDown(event) {
+        const allowedKeys = [
+            'Backspace',
+            'Delete',
+            'Tab',
+            'ArrowLeft',
+            'ArrowRight',
+            'Home',
+            'End'
+        ];
+
+        if (allowedKeys.includes(event.key)) {
+            return;
+        }
+
+        // Block scientific notation
+        if (event.key === 'e' || event.key === 'E') {
+            event.preventDefault();
+            return;
+        }
+
+        // Allow only one decimal point
+        if (event.key === '.') {
+            if (event.target.value.includes('.')) {
+                event.preventDefault();
+            }
+            return;
+        }
+
+        // Allow minus only at first position
+        if (event.key === '-') {
+            if (event.target.selectionStart !== 0 || event.target.value.includes('-')) {
+                event.preventDefault();
+            }
+            return;
+        }
+
+        // Allow plus only at first position (remove this block if + is not required)
+        if (event.key === '+') {
+            if (event.target.selectionStart !== 0 || event.target.value.includes('+')) {
+                event.preventDefault();
+            }
+            return;
+        }
+
+        // Allow digits only
+        if (!/^[0-9]$/.test(event.key)) {
+            event.preventDefault();
+        }
+    }
+
     handleFileChange(event) {
         const files = event.target.files;
         if (!files || files.length === 0) return;
@@ -85,7 +202,7 @@ export default class SendQuoteToSAP extends LightningElement {
                         }
                         resolve({
                             id: Date.now() + Math.random(),
-                            filename: file.name,
+                            filename: file.name, // ✅ Original filename
                             base64: base64,
                             url: reader.result,
                             type: file.type,
@@ -250,6 +367,43 @@ export default class SendQuoteToSAP extends LightningElement {
         }
     }
 
+
+    async saveRoundOffValues() {
+        this.showSpinner = true;
+
+        try {
+            // Prepare the Round Off updates - ONLY include if value is not empty
+            const lineItemsToUpdate = this.orderLineItemList
+                .filter(item => {
+                    // Only include if Round_Off__c has a value (not null, not undefined, not empty string)
+                    return item.Round_Off__c !== undefined &&
+                        item.Round_Off__c !== null &&
+                        item.Round_Off__c !== '';
+                })
+                .map(item => ({
+                    Id: item.Id,
+                    Round_Off__c: item.Round_Off__c
+                }));
+
+            // If there are Round Off values to update, call Apex
+            if (lineItemsToUpdate.length > 0) {
+                await updateRoundOffValues({ lineItems: lineItemsToUpdate });
+                console.log('Round Off values updated successfully');
+            } else {
+                console.log('No Round Off values to update');
+            }
+
+            this.showSpinner = false;
+            return true; // Return success
+
+        } catch (error) {
+            console.error('Error saving Round Off values:', error);
+            this.showToast('Error', 'Failed to save Round Off values: ' + error.message, 'error');
+            this.showSpinner = false;
+            return false; // Return failure
+        }
+    }
+
     // ------------ Main Order Submit --------------------
     handleMainSubmit(event) {
         event.preventDefault();
@@ -285,8 +439,11 @@ export default class SendQuoteToSAP extends LightningElement {
             if (validationFlag) {
                 this.showToast('Please fill/select all the mandatory fields', '', 'error');
             } else {
-                // First upload all files to Salesforce
-                this.uploadAllFiles();
+
+                this.saveRoundOffValues().then(success => {
+                    this.uploadAllFiles();
+                });
+                // this.uploadAllFiles();
             }
         }
     }

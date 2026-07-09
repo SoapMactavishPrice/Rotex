@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Is_Warranty_Effective_Final__c</fullName>
+    <formula>IF(OR(ISBLANK(TEXT(Warranty_Terms_Draft__c)),ISPICKVAL(Warranty_Terms_Draft__c,"12 Months from date of supply")),TRUE,IF(ISBLANK(Final_Warranty_Terms_Approver__c),TRUE,IF(BLANKVALUE(Effective_Final_Warranty_Approver__c,Final_Warranty_Terms_Approver__c)=Sales_Manager__c,OR(ISPICKVAL(SM_Warranty_Status__c,"Approved"),ISPICKVAL(SM_Warranty_Status__c,"Rejected")),IF(BLANKVALUE(Effective_Final_Warranty_Approver__c,Final_Warranty_Terms_Approver__c)=Country_Continent_Sales_Head_LOB_Head__c,OR(ISPICKVAL(CH_Warranty_Status__c,"Approved"),ISPICKVAL(CH_Warranty_Status__c,"Rejected")),IF(BLANKVALUE(Effective_Final_Warranty_Approver__c,Final_Warranty_Terms_Approver__c)=Global_Sales_Head__c,OR(ISPICKVAL(GS_Warranty_Status__c,"Approved"),ISPICKVAL(GS_Warranty_Status__c,"Rejected")),IF(BLANKVALUE(Effective_Final_Warranty_Approver__c,Final_Warranty_Terms_Approver__c)=Rotex_Board_Member__c,OR(ISPICKVAL(BM_Warranty_Status__c,"Approved"),ISPICKVAL(BM_Warranty_Status__c,"Rejected")),IF(BLANKVALUE(Effective_Final_Warranty_Approver__c,Final_Warranty_Terms_Approver__c)=Managing_Director_Country_Manager__c,OR(ISPICKVAL(MD_Warranty_Status__c,"Approved"),ISPICKVAL(MD_Warranty_Status__c,"Rejected")),FALSE)))))))</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Is Warranty Effective Final</label>
+    <type>Checkbox</type>
+</CustomField>

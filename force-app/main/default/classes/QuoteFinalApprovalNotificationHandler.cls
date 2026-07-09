@@ -49,21 +49,27 @@ public with sharing class QuoteFinalApprovalNotificationHandler {
     private static List<String> getApprovedQuoteLabels(Quote q, Quote oldQ) {
         List<String> labels = new List<String>();
 
-        collectFinalQuoteApprovalLabels(q, oldQ, q.Final_Warranty_Terms_Approver__c,
+        collectFinalQuoteApprovalLabels(q, oldQ,
+            q.Effective_Final_Warranty_Approver__c == null
+                ? q.Final_Warranty_Terms_Approver__c : q.Effective_Final_Warranty_Approver__c,
             new List<String>{ 'SM_Warranty_Status__c', 'CH_Warranty_Status__c', 'GS_Warranty_Status__c', 'BM_Warranty_Status__c', 'MD_Warranty_Status__c' },
             new List<String>{ 'Sales_Manager__c', 'Country_Continent_Sales_Head_LOB_Head__c', 'Global_Sales_Head__c', 'Rotex_Board_Member__c', 'Managing_Director_Country_Manager__c' },
             'Warranty Terms Approval',
             labels
         );
 
-        collectFinalQuoteApprovalLabels(q, oldQ, q.Final_Validity_Offer_Approver__c,
+        collectFinalQuoteApprovalLabels(q, oldQ,
+            q.Effective_Final_Validity_Approver__c == null
+                ? q.Final_Validity_Offer_Approver__c : q.Effective_Final_Validity_Approver__c,
             new List<String>{ 'SM_Validity_Offer_Status__c', 'CH_Validity_Offer_Status__c', 'GS_Validity_Offer_Status__c', 'BM_Validity_Offer_Status__c', 'MD_Validity_Offer_Status__c' },
             new List<String>{ 'Sales_Manager__c', 'Country_Continent_Sales_Head_LOB_Head__c', 'Global_Sales_Head__c', 'Rotex_Board_Member__c', 'Managing_Director_Country_Manager__c' },
             'Validity Of Offer Approval',
             labels
         );
 
-        collectFinalQuoteApprovalLabels(q, oldQ, q.Final_Total_Value_Approver__c,
+        collectFinalQuoteApprovalLabels(q, oldQ,
+            q.Effective_Final_Total_Value_Approver__c == null
+                ? q.Final_Total_Value_Approver__c : q.Effective_Final_Total_Value_Approver__c,
             new List<String>{ 'SM_Value_Status__c', 'CH_Value_Status__c', 'GS_Value_Status__c', 'BM_Value_Status__c', 'MD_Value_Status__c' },
             new List<String>{ 'Sales_Manager__c', 'Country_Continent_Sales_Head_LOB_Head__c', 'Global_Sales_Head__c', 'Rotex_Board_Member__c', 'Managing_Director_Country_Manager__c' },
             'Total Value Approval',
@@ -120,7 +126,8 @@ public with sharing class QuoteFinalApprovalNotificationHandler {
     private static List<String> getApprovedQliLabels(QuoteLineItem qli, QuoteLineItem oldQli) {
         List<String> labels = new List<String>();
 
-        Id finalApproverId = qli.Final_Discount_Approver__c;
+        Id finalApproverId = qli.Effective_Final_Discount_Approver__c == null
+            ? qli.Final_Discount_Approver__c : qli.Effective_Final_Discount_Approver__c;
         if (finalApproverId != null) {
             collectFinalQliLabel(qli, oldQli, finalApproverId, 'Sales_Rep__c',                         'Sales_Rep_Status__c',                       'Discount Approval (Sales Rep)',            labels);
             collectFinalQliLabel(qli, oldQli, finalApproverId, 'Sales_Manager__c',                     'Sales_Manager_Status__c',                   'Discount Approval (Sales Manager)',        labels);

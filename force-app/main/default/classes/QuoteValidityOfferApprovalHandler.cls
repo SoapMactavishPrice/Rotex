@@ -46,6 +46,9 @@ public with sharing class QuoteValidityOfferApprovalHandler {
     private static void initiateApprovalProcess(Quote q) {
         String finalApproverProfile              = determineFinalApproverProfile(q.Requested_Validity_Of_Offer__c);
         q.Final_Validity_Offer_Approver__c       = resolveApproverUserId(q, finalApproverProfile);
+        q.Effective_Final_Validity_Approver__c   = QuoteHighestApprovalCoordinator.effectiveQuoteApprover(
+            q, q.Final_Validity_Offer_Approver__c
+        );
         q.SM_Validity_Offer_Status__c            = STATUS_SUBMITTED;
     }
 
@@ -84,6 +87,68 @@ public with sharing class QuoteValidityOfferApprovalHandler {
     }
 
     private static void handleApprovalProgression(List<Quote> newQuotes, Map<Id, Quote> oldQuoteMap) {
+        progressUsingEffectiveFinal(
+            newQuotes,
+            oldQuoteMap,
+            new List<String>{ 'SM_Validity_Offer_Status__c', 'CH_Validity_Offer_Status__c',
+                'GS_Validity_Offer_Status__c', 'BM_Validity_Offer_Status__c',
+                'MD_Validity_Offer_Status__c' },
+            new List<String>{ 'SM_Validity_Offer_Date_Time__c', 'CH_Validity_Offer_Date_Time__c',
+                'GS_Validity_Offer_Date_Time__c', 'BM_Validity_Offer_Date_Time__c',
+                'MD_Validity_Offer_Date_Time__c' }
+        );
+    }
+
+    private static void progressUsingEffectiveFinal(
+        List<Quote> newQuotes,
+        Map<Id, Quote> oldQuoteMap,
+        List<String> statusFields,
+        List<String> dateFields
+    ) {
+        Set<Id> quoteIdsForApprover = new Set<Id>();
+        Set<Id> quoteIdsForOwner = new Set<Id>();
+        for (Quote q : newQuotes) {
+            Quote oldQ = oldQuoteMap.get(q.Id);
+            Integer intrinsicRank = QuoteHighestApprovalCoordinator.quoteRank(
+                q, q.Final_Validity_Offer_Approver__c
+            );
+            Id effectiveId = q.Effective_Final_Validity_Approver__c == null
+                ? q.Final_Validity_Offer_Approver__c : q.Effective_Final_Validity_Approver__c;
+            Integer effectiveRank = Math.max(
+                intrinsicRank, QuoteHighestApprovalCoordinator.quoteRank(q, effectiveId)
+            );
+            for (Integer i = 0; i < statusFields.size(); i++) {
+                String status = (String)q.get(statusFields[i]);
+                if (status == (String)oldQ.get(statusFields[i])) continue;
+                if (status == STATUS_SUBMITTED) {
+                    quoteIdsForApprover.add(q.Id);
+                } else if (status == STATUS_REJECTED) {
+                    quoteIdsForOwner.add(q.Id);
+                } else if (status == STATUS_APPROVED) {
+                    q.put(dateFields[i], System.now());
+                    Integer currentRank = i + 1;
+                    if (currentRank >= effectiveRank) {
+                        finalizeApproval(q);
+                    } else {
+                        Integer nextRank = currentRank < intrinsicRank
+                            ? currentRank + 1 : effectiveRank;
+                        String nextStatus = (String)q.get(statusFields[nextRank - 1]);
+                        if (nextStatus != STATUS_APPROVED && nextStatus != STATUS_REJECTED) {
+                            q.put(statusFields[nextRank - 1], STATUS_SUBMITTED);
+                            quoteIdsForApprover.add(q.Id);
+                        }
+                    }
+                }
+            }
+        }
+        if (!quoteIdsForApprover.isEmpty() || !quoteIdsForOwner.isEmpty()) {
+            sendApprovalNotifications(
+                new List<Id>(quoteIdsForApprover), new List<Id>(quoteIdsForOwner)
+            );
+        }
+    }
+
+    private static void handleLegacyApprovalProgression(List<Quote> newQuotes, Map<Id, Quote> oldQuoteMap) {
 
         Set<Id> quoteIdsForApprover = new Set<Id>();
         Set<Id> quoteIdsForOwner    = new Set<Id>();
@@ -218,6 +283,7 @@ public with sharing class QuoteValidityOfferApprovalHandler {
 
     private static void resetApprovalFields(Quote q) {
         q.Final_Validity_Offer_Approver__c = null;
+        q.Effective_Final_Validity_Approver__c = null;
 
         q.SM_Validity_Offer_Status__c      = null;
         q.SM_Validity_Offer_Date_Time__c   = null;

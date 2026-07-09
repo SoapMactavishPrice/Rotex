@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Effective_Final_Discount_Approver__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Approval-cycle snapshot of the quote-wide highest approver for this discount request.</description>
+    <label>Effective Final Discount Approver</label>
+    <referenceTo>User</referenceTo>
+    <relationshipName>Quote_Lines_Effective_Approver</relationshipName>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <type>Lookup</type>
+</CustomField>

@@ -4,7 +4,8 @@ public without sharing class editDiscountQuantityController {
         return [
             SELECT Id, Discount_as_per_SAP__c, Discount_to_be_offered__c, Quantity, 
             UnitPrice, ListPrice, Customer_Part_No__c, Product2.Name, Product2.ProductCode, Product2Id, P_F_Charges__c, 
-            Final_Discount_Approver__c, Sales_Rep__c, Sales_Manager__c, 
+            Final_Discount_Approver__c, Effective_Final_Discount_Approver__c,
+            Sales_Rep__c, Sales_Manager__c,
             Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c, Rotex_Board_Member__c, 
             Managing_Director_Country_Manage__c, Is_Discount_Approved__c, Previous_Discount__c,
             CurrencyIsoCode, Requested_Comments__c, Item_Type__c, Is_Discount_Only_Rejected__c,

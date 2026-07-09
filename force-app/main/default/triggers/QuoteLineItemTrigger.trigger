@@ -95,6 +95,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         System.debug('=== APPROVAL PROCESS: AFTER UPDATE TRIGGER START ===');
         System.debug('Calling Sequential Approval Handler');
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(Trigger.new, Trigger.oldMap);
+        QuoteHighestApprovalCoordinator.afterQliChange(Trigger.new, Trigger.oldMap);
         System.debug('=== APPROVAL PROCESS: AFTER UPDATE TRIGGER END ===');
         if (!QuoteLineItemApprovalHandler.directDiscountUpdateInProgress) {
             QuoteLineItemApprovalHandler.applyDirectDiscountIfNoApprovalNeeded(Trigger.new, Trigger.oldMap);
@@ -103,6 +104,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
 
     // ── AFTER INSERT: Apply Discount_to_be_offered__c to UnitPrice on creation ──────
     if (Trigger.isAfter && Trigger.isInsert) {
+        QuoteHighestApprovalCoordinator.afterQliChange(Trigger.new, null);
         Set<Id> insertedIds = new Set<Id>();
         for (QuoteLineItem qli : Trigger.new) {
             if (qli.Id != null) insertedIds.add(qli.Id);
@@ -305,13 +307,8 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
             QuoteLineItem oldQLI = Trigger.oldMap.get(qli.Id);
             
             // Check if any approval status just changed to 'Approved'
-            Boolean approvalJustGranted = (
-                (qli.Sales_Manager_Status__c == 'Approved' && oldQLI.Sales_Manager_Status__c != 'Approved') ||
-                (qli.Country_Continent_Sales_H_LOB_Status__c == 'Approved' && oldQLI.Country_Continent_Sales_H_LOB_Status__c != 'Approved') ||
-                (qli.Global_Sales_Head_Status__c == 'Approved' && oldQLI.Global_Sales_Head_Status__c != 'Approved') ||
-                (qli.Rotex_Board_Member_Status__c == 'Approved' && oldQLI.Rotex_Board_Member_Status__c != 'Approved') ||
-                (qli.Managing_Director_Status__c == 'Approved' && oldQLI.Managing_Director_Status__c != 'Approved')
-            );
+            Boolean approvalJustGranted =
+                QuoteHighestApprovalCoordinator.isEffectiveQliApprovalJustGranted(qli, oldQLI);
             
             if (approvalJustGranted && qli.Discount_to_be_offered__c != null) {
                 qlisToUpdatePrice.add(qli);

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Is_Discount_Approved__c</fullName>
+    <formula>OR(
+    AND(
+        BLANKVALUE(Effective_Final_Discount_Approver__c, Final_Discount_Approver__c) = Sales_Manager__c,
+        ISPICKVAL(Sales_Manager_Status__c, &quot;Approved&quot;) || ISPICKVAL(Sales_Manager_Status__c, &quot;Rejected&quot;)
+    ),
+    AND(
+        BLANKVALUE(Effective_Final_Discount_Approver__c, Final_Discount_Approver__c) = Country_Continent_Sales_Head_LOB_Head__c,
+        ISPICKVAL(Country_Continent_Sales_H_LOB_Status__c, &quot;Approved&quot;) || ISPICKVAL(Country_Continent_Sales_H_LOB_Status__c, &quot;Rejected&quot;)
+    ),
+    AND(
+        BLANKVALUE(Effective_Final_Discount_Approver__c, Final_Discount_Approver__c) = Global_Sales_Head__c,
+        ISPICKVAL(Global_Sales_Head_Status__c, &quot;Approved&quot;) || ISPICKVAL(Global_Sales_Head_Status__c, &quot;Rejected&quot;)
+    ),
+    AND(
+        BLANKVALUE(Effective_Final_Discount_Approver__c, Final_Discount_Approver__c) = Rotex_Board_Member__c,
+        ISPICKVAL(Rotex_Board_Member_Status__c, &quot;Approved&quot;) || ISPICKVAL(Rotex_Board_Member_Status__c, &quot;Rejected&quot;)
+    ),
+    AND(
+        BLANKVALUE(Effective_Final_Discount_Approver__c, Final_Discount_Approver__c) = Managing_Director_Country_Manage__c,
+        ISPICKVAL(Managing_Director_Status__c, &quot;Approved&quot;) || ISPICKVAL(Managing_Director_Status__c, &quot;Rejected&quot;)
+    )
+)</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <inlineHelpText>Is Discount gone for approval and got approved.</inlineHelpText>
+    <label>Is Discount Approved</label>
+    <trackHistory>false</trackHistory>
+    <type>Checkbox</type>
+</CustomField>

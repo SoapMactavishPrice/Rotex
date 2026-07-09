@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Effective_Final_Warranty_Approver__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Approval-cycle snapshot of the quote-wide highest approver for warranty terms.</description>
+    <label>Effective Final Warranty Approver</label>
+    <referenceTo>User</referenceTo>
+    <relationshipName>Quotes_Effective_Warranty_Approver</relationshipName>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <type>Lookup</type>
+</CustomField>

@@ -12,6 +12,7 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert, after
     
     if (Trigger.isAfter && Trigger.isInsert) {
         QuoteTotalValueApprovalHandler.handleAfterInsert(Trigger.new);
+        QuoteHighestApprovalCoordinator.afterQuoteChange(Trigger.new);
         // QuoteMinimumOfferValueApprovalHandler.handleAfterInsert(Trigger.new);
         QuoteTriggerHandler.updateOpportunityCloseDateFromQuote(Trigger.new,null);
         QuoteFileSyncHandler.copyOpportunityFilesToQuote(Trigger.new);
@@ -19,6 +20,7 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert, after
     
     if (Trigger.isAfter && Trigger.isUpdate) {
         QuoteFinalApprovalNotificationHandler.handleQuotesAfterUpdate(Trigger.new, Trigger.oldMap);
+        QuoteHighestApprovalCoordinator.afterQuoteChange(Trigger.new);
     }
     
     // BEFORE UPDATE

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Is_all_approvals_final_approved__c</fullName>
+    <formula>AND(Is_Warranty_Effective_Final__c, Is_Validity_Effective_Final__c, Is_Total_Value_Effective_Final__c, Unapproved_Discount_Count__c = 0)</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Is all approvals final approved?</label>
+    <trackHistory>false</trackHistory>
+    <type>Checkbox</type>
+</CustomField>

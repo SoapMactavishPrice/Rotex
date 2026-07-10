@@ -347,7 +347,15 @@ no2words = totalValueINRWords + ' Rupees Only.';*/
         
         ContentVersion contentVersion = new ContentVersion();
         contentVersion.ContentLocation = 'S';
-        Integer newVersion = Integer.valueOf(version) + 1;
+       // Integer newVersion = Integer.valueOf(version) + 1;
+        Integer newVersion = 1;
+        
+        try {
+            newVersion = Integer.valueOf(version) + 1;
+        } catch (Exception e) {
+            System.debug('Invalid version found in file title: ' + version);
+            newVersion = 1;
+        }
         contentVersion.PathOnClient = quData.Name + '_' + newVersion + '.pdf';
         contentVersion.Title = quData.Name + '_' + newVersion + '.pdf';
         contentVersion.isMajorVersion = false;
@@ -442,7 +450,15 @@ no2words = totalValueINRWords + ' Rupees Only.';*/
         
         ContentVersion contentVersion = new ContentVersion();
         contentVersion.ContentLocation = 'S';
-        Integer newVersion = Integer.valueOf(version) + 1;
+       // Integer newVersion = Integer.valueOf(version) + 1;
+        Integer newVersion = 1;
+        
+        try {
+            newVersion = Integer.valueOf(version) + 1;
+        } catch (Exception e) {
+            System.debug('Invalid version found in file title: ' + version);
+            newVersion = 1;
+        }
         contentVersion.PathOnClient = quData.Name + '_' + newVersion + '.pdf';
         contentVersion.Title = quData.Name + '_' + newVersion + '.pdf';
         contentVersion.isMajorVersion = false;

@@ -1,0 +1,74 @@
+<template>
+    <div class="split-container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <div class="left-header">
+                <div class="logo-container">
+                    <img src={logoUrl} alt="ROTEX Engineering for the future" class="logo" />
+                </div>
+            </div>
+
+            <div class="left-content">
+                <div class="subtitle-line">
+                    <span class="line"></span> AUTHORISED CHANNEL PARTNERS
+                </div>
+                <h1 class="main-heading">
+    Welcome to <span class="highlight">Partner Portal</span>
+</h1>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <div class="right-content">
+                <div class="sign-in-label">
+                    <span class="square"></span> SIGN IN
+                </div>
+                <h2 class="welcome-back">Welcome back</h2>
+                <p class="instruction">Sign in with the credentials issued to your dealership account.</p>
+
+                <div class="form-container">
+                    <div class="input-group">
+                        <label>DEALER ID / USERNAME</label>
+                        <div class="input-wrapper">
+                            <lightning-icon icon-name="utility:user" size="xx-small"
+                                class="input-icon"></lightning-icon>
+                            <input type="text" placeholder="e.g. RX-DLR-2041 or jane.dealer" value={username}
+                                oninput={handleUsername} />
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="label-row">
+                            <label>PASSWORD</label>
+                            <a href="#" class="forgot-pwd" onclick={handleForgotPassword}>Forgot password?</a>
+                        </div>
+                        <div class="input-wrapper">
+                            <lightning-icon icon-name="utility:lock" size="xx-small"
+                                class="input-icon"></lightning-icon>
+                            <input type={passwordFieldType} placeholder="••••••••••••" value={password}
+                                oninput={handlePassword} />
+                            <lightning-icon icon-name={passwordIcon} size="xx-small" class="input-icon-right"
+                                onclick={togglePasswordVisibility} style="cursor: pointer;"></lightning-icon>
+                        </div>
+                    </div>
+
+                    <label class="custom-checkbox">
+                        <input type="checkbox" id="keep-signed-in" checked />
+                        <span class="checkmark"></span>
+                        <span class="label-text">Keep me signed in on this device</span>
+                    </label>
+
+                    <template if:true={errorMessage}>
+                        <div class="error-message">{errorMessage}</div>
+                    </template>
+
+                    <button class="submit-btn" onclick={handleLogin} disabled={isLoading}>
+                        <template if:false={isLoading}>Sign in to portal &rarr;</template>
+                        <template if:true={isLoading}>Signing in...</template>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

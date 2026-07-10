@@ -269,7 +269,8 @@ public with sharing class QuoteWarrantyApprovalHandler {
                    CH_Warranty_Status__c,
                    GS_Warranty_Status__c,
                    BM_Warranty_Status__c,
-                   MD_Warranty_Status__c
+                   MD_Warranty_Status__c,
+                   RecordType.Name
             FROM   Quote
             WHERE  Id IN :allIds
         ]);
@@ -368,7 +369,9 @@ public with sharing class QuoteWarrantyApprovalHandler {
         email.setSaveAsActivity(true);
         email.setWhatId(q.Id);
 
-        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/Quote_Discount_Approval';
+        String recordTypeName = q.RecordType != null ? q.RecordType.Name : null;
+        String approvalTab = (recordTypeName == 'ARC') ? 'ARC_Approvals' : 'Quote_Approvals';
+        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/' + approvalTab;
         String quoteRecordUrl  = URL.getOrgDomainUrl().toExternalForm() + '/' + q.Id;
 
         if (isRejection) {
@@ -398,10 +401,12 @@ public with sharing class QuoteWarrantyApprovalHandler {
         try {
             Messaging.CustomNotification notification = new Messaging.CustomNotification();
             notification.setNotificationTypeId(notificationTypeId);
+            String recordTypeName = q.RecordType != null ? q.RecordType.Name : null;
+            String approvalTab = (recordTypeName == 'ARC') ? 'ARC_Approvals' : 'Quote_Approvals';
             notification.setTargetPageRef(JSON.serialize(new Map<String, Object>{
                 'type' => 'standard__navItemPage',
                 'attributes' => new Map<String, Object>{
-                    'apiName' => 'Quote_Discount_Approval'
+                    'apiName' => approvalTab
                 }
             }));
             if (isRejection) {

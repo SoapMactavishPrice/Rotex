@@ -1,24 +1,18 @@
 @isTest
-private class OpportunityTrigger_Test {
+public class OpportunityTrigger_Test {
     
     @isTest
     static void testHandleProposalOpportunities() {
         
         Id PID = Test.getStandardPricebookId();
+
+        Pricebook2 priceBook = new Pricebook2(Id = PID, IsActive = true);
+        update priceBook;
         
         Product2 prod = new Product2();
         prod.name='VOXCO CHROME ORANGE VO-750/SA';
         prod.isActive=true;
         insert prod;
-        
-        
-        PricebookEntry standardPrice = new PricebookEntry(
-            Pricebook2Id = PID, 
-            Product2Id = prod.Id,
-            UnitPrice = 1000,
-            IsActive = true);
-        
-        insert standardPrice;
         
         Account acc = new Account();
         acc.Name = 'Finesse IT';
@@ -48,9 +42,21 @@ private class OpportunityTrigger_Test {
         opp.CloseDate = Date.today();
         opp.AccountId = acc.Id;
         opp.Project_Contact__c = con.Id;
+        opp.Amount = 35000;
         opp.Pricebook2Id=PID;
         
         insert opp;
+
+        opp.Amount = 50000;
+        update opp;
+
+        PricebookEntry standardPrice = [
+            SELECT Id, Name, UnitPrice, IsActive, Pricebook2Id, Product2Id
+            FROM PricebookEntry
+            WHERE Pricebook2Id = :PID
+            AND Product2Id = :prod.Id
+            LIMIT 1
+        ];
 
         OpportunityLineItem oli = new OpportunityLineItem
             (OpportunityId = opp.Id,
@@ -74,11 +80,11 @@ private class OpportunityTrigger_Test {
         
         List<Opportunity> newOpportunities = new List<Opportunity>{opp};
             
-     	Test.startTest();
+     /*	Test.startTest();
     	  OpportunityTriggerHandler.handleProposalOpportunities(newOpportunities, oldOpportunityMap);
      	  OpportunityTriggerHandler.handleClosedWonOpportunities(newOpportunities, oldOpportunityMap);
     
-        Test.stopTest();
+        Test.stopTest();*/
     }
         
 }

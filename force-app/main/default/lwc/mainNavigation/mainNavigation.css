@@ -1,0 +1,101 @@
+.menu-item {
+    width: 100%;
+    height: 46px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;   /* ← changed from flex-start so expand icon sits on the right */
+    padding: 0 14px;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        transform 0.15s ease;
+}
+
+.menu-item:hover {
+
+    background:
+        rgba(255,255,255,0.08);
+
+    transform: translateX(2px);
+}
+
+.menu-item.active {
+
+    background:
+        rgba(255,255,255,0.12);
+
+    border-left:
+        4px solid #ffc107;
+
+    padding-left: 10px;
+}
+
+.menu-left {
+    display: flex;
+    align-items: center;
+}
+
+.menu-icon {
+
+    transform: scale(0.9);
+
+    --slds-c-icon-color-foreground-default:
+        white;
+}
+
+.menu-label {
+
+    color: white;
+
+    margin-left: 12px;
+
+    font-size: 14px;
+
+    font-weight: 600;
+}
+
+/* ── Submenu (status sub-tabs) ─────────────────────── */
+
+.menu-item-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.menu-expand-icon {
+    margin-left: auto;
+    --slds-c-icon-color-foreground-default: rgba(255,255,255,0.7);
+}
+
+.submenu-list {
+    list-style: none;
+    margin: 2px 0 6px;
+    padding-left: 34px;
+}
+
+.submenu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 7px 12px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.submenu-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.submenu-item--active {
+    background: rgba(255, 193, 7, 0.15);
+    color: #ffc107;
+    font-weight: 600;
+}

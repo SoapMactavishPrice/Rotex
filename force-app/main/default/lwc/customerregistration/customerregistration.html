@@ -1,0 +1,1061 @@
+<template>
+    <template if:true={showToast}>
+        <div class="cm-toast">
+            <svg viewBox="0 0 20 20" fill="none" class="cm-toast__icon">
+                <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M6 10l3 3 5-5" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {toastMessage}
+        </div>
+    </template>
+    <div class="cm-wrapper">
+
+        <!-- ══════════════════════════════════════
+             LIST VIEW
+        ══════════════════════════════════════ -->
+        <template if:false={selectedCustomer}>
+
+            <!-- Page Header -->
+            <div class="cm-page-header">
+                <div class="cm-page-header__meta">CUSTOMERS · ASSIGNED TO YOU</div>
+                <h1 class="cm-page-header__title">Customers</h1>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="cm-toolbar">
+                <div class="cm-search-wrap cm-search-wrap--sm">
+                    <svg class="cm-search-icon" viewBox="0 0 20 20" fill="none">
+                        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+                        <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                    <input class="cm-search-input" type="text"
+                        placeholder="Search by name, location..."
+                        value={searchTerm} oninput={handleSearch}/>
+                </div>
+            
+                <!-- Status Filter -->
+            
+                <button class="cm-btn-create" onclick={openModal}>
+                    <svg viewBox="0 0 16 16" fill="none" class="cm-btn-icon">
+                        <path d="M8 3v10M3 8h10" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round"/>
+                    </svg>
+                    Create Customer
+                </button>
+            </div>
+
+
+            <!-- Table -->
+            <div class="cm-card">
+                <table class="cm-table">
+                    <thead>
+                        <tr>
+                            <th>Sr. No.</th>
+                            <th>Customer Name</th>
+                            <th>Customer Location</th>
+                            <th>Business Type</th> 
+                            <th>Target (OI)</th>
+                            <th>Actual (OI)</th>
+                            <th>Sales/Invoice</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template if:true={hasRecords}>
+                            <template for:each={filteredCustomers} for:item="c">
+                    
+                                <!-- ── Customer Row ── -->
+                                <tr key={c.id} class="cm-row cm-row-customer" data-id={c.id}>
+                                    <td class="cm-cell-center">{c.srNo}</td>
+                                    <td>
+                                        <div class="cm-tree-cell">
+                                            <template if:true={c.expandIcon}>
+                                                <span
+                                                class="cm-expand-icon"
+                                                data-id={c.id}
+                                                onclick={handleCustomerExpand}>
+                                                {c.expandIcon}
+                                            </span>
+                                            </template>
+                                            <span
+                                            class="cm-cell-name"
+                                            data-id={c.id}
+                                            onclick={handleRowClick}>
+                                            {c.customerName}
+                                        </span>
+                                        </div>
+                                    </td>
+                                    <td>{c.district}</td>
+                                    <td>{c.businessType}</td>
+                                    <td>{c.target}</td>
+                                    <td>{c.actualOI}</td>
+                                    <td>{c.salesInvoice}</td>
+                                </tr>
+                    
+                                <!-- ── Expanded SO Tree ── -->
+                                <template if:true={c.isExpanded}>
+                    
+                                    <!-- SO Table Header -->
+                                    <tr key={c.id} class="cm-so-thead-row">
+                                        <td colspan="7" style="padding:0">
+                                            <table class="cm-so-table">
+                                                <thead>
+                                                    <tr class="cm-so-header">
+                                                        <th style="width:32px"></th>
+                                                        <th>SO # ↕</th>
+                                                        <th>FIRST INV ↕</th>
+                                                        <th>LAST INV ↕</th>
+                                                        <th>QTR ↕</th>
+                                                        <th>LINES ↕</th>
+                                                        <th class="cm-num">SALES (₹L) ↕</th>
+                                                    </tr>
+                                                    <tr class="cm-so-filter-row">
+                                                        <td></td>
+                                                        <td><input class="cm-so-filter-input" placeholder="filter so #"/></td>
+                                                        <td><input class="cm-so-filter-input" placeholder="filter first inv"/></td>
+                                                        <td><input class="cm-so-filter-input" placeholder="filter last inv"/></td>
+                                                        <td><input class="cm-so-filter-input" placeholder="filter qtr"/></td>
+                                                        <td><input class="cm-so-filter-input" placeholder="filter lines"/></td>
+                                                        <td><input class="cm-so-filter-input" placeholder="filter sales (₹l)"/></td>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <template for:each={c.soRows} for:item="so">
+                    
+                                                        <!-- SO Row -->
+                                                        <tr key={so.soKey} class={so.soRowClass}>
+                                                            <td style="text-align:center;vertical-align:middle;" data-so-key={so.soKey} data-has-items={so.hasItems} onclick={handleSOExpand}>
+                                                                <span class={so.expandIconClass}>{so.expandIcon}</span>
+                                                            </td>
+                                                            <td class={so.soNameClass}>{so.so}</td>
+                                                            <td class={so.soNameClass}>{so.fi}</td>
+                                                            <td class={so.soNameClass}>{so.li}</td>
+                                                            <td class={so.soNameClass}>{so.q}</td>
+                                                            <td class={so.soNameClass}>{so.lines}</td>
+                                                            <td class="cm-num cm-so-bold">{so.sales}</td>
+                                                        </tr>
+                    
+                                                        <!-- Line Items -->
+                                                        <template if:true={so.isExpanded}>
+                                                            <tr key={so.soKey} class="cm-line-header-row">
+                                                                <td colspan="7" style="padding:0">
+                                                                    <table class="cm-line-table">
+                                                                        <thead>
+                                                                            <tr class="cm-line-header">
+                                                                                <th>LINE #</th>                                               
+                                                                                <th>MATERIAL CODE</th>
+                                                                                <th>ROTEX MATERIAL CODE</th>
+                                                                                <th>DESCRIPTION</th>
+                                                                                <th>PRODUCT CAT</th>
+                                                                                <th>INVOICE DATE</th>
+                                                                                <th class="cm-num">QTY</th>
+                                                                                <th class="cm-num">UNIT PRICE</th>
+                                                                                <th class="cm-num">FINAL PRICE</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            <template for:each={so.items} for:item="line">
+                                                                                <tr key={line.lineKey} class="cm-line-row">
+                                                                                    <td>{line.line}</td>                                                                                   
+                                                                                    <td>{line.mat}</td>
+                                                                                    <td>{line.custCode}</td>
+                                                                                    <td>{line.desc}</td>
+                                                                                    <td>{line.cat}</td>
+                                                                                    <td>{line.inv}</td>
+                                                                                    <td class="cm-num">{line.qty}</td>
+                                                                                    <td class="cm-num">{line.pu}</td>
+                                                                                    <td class="cm-num">{line.finalPrice}</td>
+                                                                                </tr>
+                                                                            </template>
+                                                                            <template if:false={so.hasItemsbol}>
+                                                                                <tr>
+                                                                                    <td colspan="9" style="text-align:center;padding:14px;color:#999;font-size:12px;font-style:italic;">
+                                                                                        No line items available
+                                                                                    </td>
+                                                                                </tr>
+                                                                            </template>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </td>
+                                                            </tr>
+                                                        </template>
+                    
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                    
+                                </template>
+                    
+                            </template>
+                        </template>
+                        <template if:false={hasRecords}>
+                            <tr>
+                                <td colspan="7" class="cm-empty">
+                                    <svg viewBox="0 0 64 64" fill="none" class="cm-empty-icon">
+                                        <circle cx="32" cy="32" r="28" stroke="#C8D5E3" stroke-width="2"/>
+                                        <path d="M22 32h20M32 22v20" stroke="#C8D5E3" stroke-width="2.2" stroke-linecap="round"/>
+                                    </svg>
+                                    <p class="cm-empty-title">No customers yet</p>
+                                    <p class="cm-empty-sub">Click <strong>Create Customer</strong> to add your first record.</p>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+        </template>
+
+        <!-- ══════════════════════════════════════
+             DETAIL VIEW (full page)
+        ══════════════════════════════════════ -->
+        <template if:true={selectedCustomer}>
+            <div class="cm-detail">
+
+                <!-- Top bar -->
+                <div class="cm-detail__topbar">
+                    <button class="cm-back-btn" onclick={handleBack}>
+                        <svg viewBox="0 0 16 16" fill="none">
+                            <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8"
+                                stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Back to Customers
+                    </button>
+                </div>
+
+                <!-- Hero -->
+                <div class="cm-detail__hero">
+                    <div class="cm-detail__avatar">{selectedCustomerInitials}</div>
+                    <div class="cm-detail__hero-info">
+                        <div class="cm-detail__eyebrow">Customer · {selectedCustomer.customerProfile}</div>
+                        <h1 class="cm-detail__name">{selectedCustomer.customerName}</h1>
+                        <div class="cm-detail__meta-row">
+                            <span class="cm-dealer-tag">
+                                <svg viewBox="0 0 14 14" fill="none" class="cm-dealer-tag__icon">
+                                    <circle cx="7" cy="5" r="2.5" stroke="currentColor" stroke-width="1.2"/>
+                                    <path d="M2 13c0-2.76 2.24-5 5-5s5 2.24 5 5"
+                                        stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                                </svg>
+                                {selectedCustomer.channelPartnerName}
+                            </span>
+                            <span class="cm-divider">|</span>
+                            <span class="cm-created-label">Created {selectedCustomer.createdDate}</span>
+                        </div>
+                        
+                    </div>
+                    <div class="cm-detail__hero-right">
+
+                        <button
+                            class="cm-btn cm-btn--primary"
+                            onclick={handleEdit}>
+                            Edit Customer
+                        </button>
+                
+                    </div>
+                </div>
+
+                <!-- Detail body grid -->
+                <div class="cm-detail__body">
+
+                    <!-- Card: Customer Information -->
+                    <div class="cm-detail-card">
+                        <div class="cm-detail-card__title">
+                            <svg viewBox="0 0 16 16" fill="none" class="cm-card-icon">
+                                <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/>
+                                <path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                            </svg>
+                            Customer Information
+                        </div>
+                        <div class="cm-detail-rows">
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">Customer Name</span>
+                                <span class="cm-detail-row__val">{selectedCustomer.customerName}</span>
+                            </div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">GST No.</span>
+                                <span class="cm-detail-row__val">{selectedCustomer.gstNoDisplay}</span>
+                            </div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">Customer Website</span>
+                                <span class="cm-detail-row__val">
+                                    {selectedCustomer.customerWebsiteDisplay}
+                                </span>
+                            </div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">Customer Profile</span>
+                                <span class="cm-detail-row__val">
+                                    <span class="cm-profile-badge">{selectedCustomer.customerProfile}</span>
+                                </span>
+                            </div>
+                            <template if:true={selectedCustomer.oemDetails}>
+                                <div class="cm-detail-row cm-detail-row--block">
+                                    <span class="cm-detail-row__lbl">OEM Details</span>
+                                    <span class="cm-detail-row__val">{selectedCustomer.oemDetails}</span>
+                                </div>
+                            </template>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">Business Type</span>
+                                <span class="cm-detail-row__val">
+                                    {selectedCustomer.businessTypeDisplay}
+                                </span>
+                            </div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">Timestamp</span>
+                            
+                                <span class="cm-detail-row__val">
+                                    {selectedCustomer.timestampDisplay}
+                                </span>
+                            </div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">
+                                    Channel Partner
+                                </span>
+                            
+                                <span class="cm-detail-row__val">
+                                    {selectedCustomer.channelPartnerName}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card: Location -->
+                    <div class="cm-detail-card">
+                        <div class="cm-detail-card__title">
+                            <svg viewBox="0 0 16 16" fill="none" class="cm-card-icon">
+                                <path d="M8 1.5C5.51 1.5 3.5 3.51 3.5 6c0 3.75 4.5 8.5 4.5 8.5S12.5 9.75 12.5 6c0-2.49-2.01-4.5-4.5-4.5z"
+                                    stroke="currentColor" stroke-width="1.3"/>
+                                <circle cx="8" cy="6" r="1.5" stroke="currentColor" stroke-width="1.1"/>
+                            </svg>
+                            Location
+                        </div>
+                        <div class="cm-detail-rows">
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">
+                                    Address
+                                </span>
+                                <span class="cm-detail-row__val">
+                                    {selectedCustomer.addressDisplay}
+                                </span>
+                            </div>
+                            <div class="cm-detail-row">
+    <span class="cm-detail-row__lbl">
+        Country
+    </span>
+
+    <span class="cm-detail-row__val">
+        {selectedCustomer.countryDisplay}
+    </span>
+</div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">District</span>
+                                <span class="cm-detail-row__val">{selectedCustomer.districtDisplay}</span>
+                            </div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">Pin Code</span>
+                                <span class="cm-detail-row__val">{selectedCustomer.pinCodeDisplay}</span>
+                            </div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">State</span>
+                                <span class="cm-detail-row__val">{selectedCustomer.stateDisplay}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card: Business Details -->
+                    <div class="cm-detail-card">
+                        <div class="cm-detail-card__title">
+                            <svg viewBox="0 0 16 16" fill="none" class="cm-card-icon">
+                                <path d="M2 12V6l6-4 6 4v6" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                                <rect x="6" y="9" width="4" height="5" rx="0.5" stroke="currentColor" stroke-width="1.2"/>
+                            </svg>
+                            Business Details
+                        </div>
+                        <div class="cm-detail-rows">
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">Annual Business Potential</span>
+                                <span class="cm-detail-row__val cm-currency">{selectedCustomer.annualPotentialFormatted}</span>
+                            </div>
+                            
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">
+                                    Target
+                                </span>
+                                <span class="cm-detail-row__val">
+                                    {selectedCustomer.targetDisplay}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Card: Contact Information -->
+                    <div class="cm-detail-card">
+                        <div class="cm-detail-card__title">
+                            <svg viewBox="0 0 16 16" fill="none" class="cm-card-icon">
+                                <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/>
+                                <path d="M2.5 14c0-3.04 2.46-5.5 5.5-5.5s5.5 2.46 5.5 5.5"
+                                    stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                            </svg>
+                            Contact Information
+                        </div>
+                        <div class="cm-detail-rows">
+                            <div class="cm-detail-row">
+    <span class="cm-detail-row__lbl">
+        Contact Person First Name
+    </span>
+
+    <span class="cm-detail-row__val">
+        {selectedCustomer.contactFirstNameDisplay}
+    </span>
+</div>
+
+<div class="cm-detail-row">
+    <span class="cm-detail-row__lbl">
+        Contact Person Last Name
+    </span>
+
+    <span class="cm-detail-row__val">
+        {selectedCustomer.contactLastNameDisplay}
+    </span>
+</div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">Designation</span>
+                                <span class="cm-detail-row__val">{selectedCustomer.contactDesignationDisplay}</span>
+                            </div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">Telephone</span>
+                                <span class="cm-detail-row__val">{selectedCustomer.contactPhoneDisplay}</span>
+                            </div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">Email</span>
+                                <span class="cm-detail-row__val">{selectedCustomer.contactEmailDisplay}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card: Attachments (full width) -->
+                    <div class="cm-detail-card cm-detail-card--full">
+                        <div class="cm-detail-card__title">
+                            <svg viewBox="0 0 16 16" fill="none" class="cm-card-icon">
+                                <path d="M13 8.5v4a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 013 12.5v-9A1.5 1.5 0 014.5 2H9"
+                                    stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                                <path d="M11 2l3 3-5 5H6V7l5-5z" stroke="currentColor" stroke-width="1.2"
+                                    stroke-linejoin="round"/>
+                            </svg>
+                            Attachments
+                        </div>
+                        <div class="cm-attach-view-grid">
+
+                            <div class="cm-attach-view-slot">
+                                <div class="cm-attach-view-slot__label">Latest Purchase Order</div>
+                                <template if:true={selectedCustomer.attach.purchaseOrder}>
+                                    <template if:true={selectedCustomer.attach.purchaseOrderIsImage}>
+                                        <img
+                                        src={selectedCustomer.attach.purchaseOrderPreview}
+                                        alt="Purchase Order"
+                                        class="cm-attach-view-img"
+                                        data-url={selectedCustomer.attach.purchaseOrderPreview}
+                                        data-title={selectedCustomer.attach.purchaseOrderName}
+                                        data-type={selectedCustomer.attach.purchaseOrderType}
+                                        onclick={handlePreview}/>
+                                    </template>
+                                    <template if:false={selectedCustomer.attach.purchaseOrderIsImage}>
+                                        <div
+                                        class="cm-attach-view-file"
+                                        data-url={selectedCustomer.attach.purchaseOrderPreview}
+                                        data-title={selectedCustomer.attach.purchaseOrderName}
+                                        data-type={selectedCustomer.attach.purchaseOrderType}
+                                        onclick={handlePreview}>
+                                            <svg viewBox="0 0 32 32" fill="none">
+                                                <rect x="6" y="2" width="20" height="28" rx="3" fill="#E8F0FB"/>
+                                                <path d="M11 10h10M11 15h10M11 20h6" stroke="#4A7FC1"
+                                                    stroke-width="1.5" stroke-linecap="round"/>
+                                            </svg>
+                                            <span>{selectedCustomer.attach.purchaseOrderName}</span>
+                                        </div>
+                                    </template>
+                                </template>
+                                <template if:false={selectedCustomer.attach.purchaseOrder}>
+                                    <div class="cm-attach-view-empty">No file uploaded</div>
+                                </template>
+                            </div>
+
+                            <div class="cm-attach-view-slot">
+                                <div class="cm-attach-view-slot__label">Latest Enquiry</div>
+                                <template if:true={selectedCustomer.attach.latestEnquiry}>
+                                    <template if:true={selectedCustomer.attach.latestEnquiryIsImage}>
+                                        <img
+                                        src={selectedCustomer.attach.latestEnquiryPreview}
+                                        class="cm-attach-view-img"
+                                        data-url={selectedCustomer.attach.latestEnquiryPreview}
+                                        data-title={selectedCustomer.attach.latestEnquiryName}
+                                        data-type={selectedCustomer.attach.latestEnquiryType}
+                                        onclick={handlePreview}>
+                                    </template>
+                                    <template if:false={selectedCustomer.attach.latestEnquiryIsImage}>
+                                        <div
+    class="cm-attach-view-file"
+    data-url={selectedCustomer.attach.latestEnquiryPreview}
+    data-title={selectedCustomer.attach.latestEnquiryName}
+    data-type={selectedCustomer.attach.latestEnquiryType}
+    onclick={handlePreview}>
+                                            <svg viewBox="0 0 32 32" fill="none">
+                                                <rect x="6" y="2" width="20" height="28" rx="3" fill="#E8F0FB"/>
+                                                <path d="M11 10h10M11 15h10M11 20h6" stroke="#4A7FC1"
+                                                    stroke-width="1.5" stroke-linecap="round"/>
+                                            </svg>
+                                            <span>{selectedCustomer.attach.latestEnquiryName}</span>
+                                        </div>
+                                    </template>
+                                </template>
+                                <template if:false={selectedCustomer.attach.latestEnquiry}>
+                                    <div class="cm-attach-view-empty">No file uploaded</div>
+                                </template>
+                            </div>
+
+                            <div class="cm-attach-view-slot">
+                                <div class="cm-attach-view-slot__label">Business Development Plan</div>
+                                <template if:true={selectedCustomer.attach.bdPlan}>
+                                    <template if:true={selectedCustomer.attach.bdPlanIsImage}>
+                                        <img
+    src={selectedCustomer.attach.bdPlanPreview}
+    alt="BD Plan"
+    class="cm-attach-view-img"
+    data-url={selectedCustomer.attach.bdPlanPreview}
+    data-title={selectedCustomer.attach.bdPlanName}
+    data-type={selectedCustomer.attach.bdPlanType}
+    onclick={handlePreview}/>
+                                    </template>
+                                    <template if:false={selectedCustomer.attach.bdPlanIsImage}>
+                                        <div
+                                        class="cm-attach-view-file"
+                                        data-url={selectedCustomer.attach.bdPlanPreview}
+                                        data-title={selectedCustomer.attach.bdPlanName}
+                                        data-type={selectedCustomer.attach.bdPlanType}
+                                        onclick={handlePreview}>
+                                            <svg viewBox="0 0 32 32" fill="none">
+                                                <rect x="6" y="2" width="20" height="28" rx="3" fill="#E8F0FB"/>
+                                                <path d="M11 10h10M11 15h10M11 20h6" stroke="#4A7FC1"
+                                                    stroke-width="1.5" stroke-linecap="round"/>
+                                            </svg>
+                                            <span>{selectedCustomer.attach.bdPlanName}</span>
+                                        </div>
+                                    </template>
+                                </template>
+                                <template if:false={selectedCustomer.attach.bdPlan}>
+                                    <div class="cm-attach-view-empty">No file uploaded</div>
+                                </template>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </template>
+
+        <!-- ══════════════════════════════════════
+             CREATE CUSTOMER MODAL
+        ══════════════════════════════════════ -->
+        <template if:true={isModalOpen}>
+            <div class="cm-backdrop" onclick={handleBackdropClick}>
+                <div class="cm-modal" onclick={stopPropagation}>
+
+                    <div class="cm-modal__header">
+                        <div>
+                            <h2 class="cm-modal__title">New Customer</h2>
+                        </div>
+                        <button class="cm-modal__close" onclick={closeModal}>
+                            <svg viewBox="0 0 16 16" fill="none">
+                                <path d="M3 3l10 10M13 3L3 13" stroke="currentColor"
+                                    stroke-width="1.8" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="cm-modal__body">
+
+                        <!-- Parent Account (read-only) -->
+
+                        <!-- Customer Information -->
+                        <div class="cm-form-section">
+                            <div class="cm-form-section__label">Customer Information</div>
+                            <div class="cm-form-grid">
+                                <div class="cm-field">
+                                    <label class="cm-label">Customer Name <span class="cm-req">*</span></label>
+                                    <input class="cm-input" type="text" data-field="customerName"
+                                        value={form.customerName} oninput={handleInput}
+                                        placeholder="Enter customer name"/>
+                                    <template if:true={errors.customerName}>
+                                        <span class="cm-error">{errors.customerName}</span>
+                                    </template>
+                                </div>
+                                <div class="cm-field">
+                                    <label class="cm-label">GST No. <span class="cm-req">*</span></label>
+                                    <input class="cm-input" type="text" data-field="gstNo"
+                                        value={form.gstNo} oninput={handleInput}
+                                        placeholder="e.g. 27AAPFU0939F1ZV" maxlength="15"/>
+                                        <template if:true={gstMessage}>
+                                            <div class={gstClass}>
+                                                {gstMessage}
+                                            </div>
+                                        </template>
+                                        <template if:true={errors.gstNo}>
+                                            <span class="cm-error">{errors.gstNo}</span>
+                                        </template>
+                                </div>
+                                <div class="cm-field">
+
+                                    <label class="cm-label">Customer Website <span class="cm-req">*</span></label>
+                                
+                                    <input
+                                        class="cm-input"
+                                        type="url"
+                                        data-field="customerWebsite"
+                                        value={form.customerWebsite}
+                                        oninput={handleInput}
+                                        placeholder="https://">
+                                    <template if:true={errors.customerWebsite}>
+                                        <span class="cm-error">{errors.customerWebsite}</span>
+                                    </template>
+                                
+                                </div>
+                                
+                                <div class="cm-field">
+                                    <label class="cm-label">Business Line <span class="cm-req">*</span></label>
+                                
+                                    <div class="cm-select-wrap">
+                                
+                                        <select
+                                            class="cm-select"
+                                            data-field="businessType"
+                                             value={form.businessType}
+                                            onchange={handleInput}>
+                                
+                                            <option value="">-- Select Business Type --</option>
+                                            <option value="ROTEX">ROTEX</option>
+                                            <option value="Non ROTEX">Non ROTEX</option>
+                                            <option value="BOTH">BOTH</option>
+                                
+                                        </select>
+                                
+                                        <svg class="cm-select-arrow" viewBox="0 0 12 8" fill="none">
+                                            <path d="M1 1l5 5 5-5"
+                                                stroke="currentColor"
+                                                stroke-width="1.6"
+                                                stroke-linecap="round"/>
+                                        </svg>
+                                
+                                    </div>
+                                    <template if:true={errors.businessType}>
+                                        <span class="cm-error">{errors.businessType}</span>
+                                    </template>
+                                </div>
+                                
+                                
+                                <div class="cm-field">
+                                    <label class="cm-label">Customer Profile <span class="cm-req">*</span></label>
+                                    <div class="cm-select-wrap">
+                                        <select class="cm-select" data-field="customerProfile"  value={form.customerProfile} onchange={handleInput}>
+                                            <option value="">-- Select Profile --</option>
+                                            <option value="OEM">Project OEM</option>
+                                            <option value="VAC">VAC</option>
+                                            <option value="Trader">Trader</option>
+                                            <option value="Machine OEM">Machine OEM</option>
+                                            <option value="User">End User</option>
+                                            <option value="User">User</option>
+                                            <option value="User">System Integrator / EPC</option>
+                                        </select>
+                                        <svg class="cm-select-arrow" viewBox="0 0 12 8" fill="none">
+                                            <path d="M1 1l5 5 5-5" stroke="currentColor"
+                                                stroke-width="1.6" stroke-linecap="round"/>
+                                        </svg>
+                                    </div>
+                                    <template if:true={errors.customerProfile}>
+                                        <span class="cm-error">{errors.customerProfile}</span>
+                                    </template>
+                                </div>
+                                <template if:true={showOemDetails}>
+                                    <div class="cm-field cm-field--full">
+                                        <label class="cm-label">Additional Details (OEM)</label>
+                                        <textarea class="cm-textarea" data-field="oemDetails"
+                                            oninput={handleInput} rows="3"
+                                            placeholder="Provide additional OEM details...">{form.oemDetails}</textarea>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Location -->
+<div class="cm-form-section">
+    <div class="cm-form-section__label">Location</div>
+
+    <div class="cm-form-grid">
+
+        <!-- Address -->
+        <div class="cm-field cm-field--address">
+            <label class="cm-label">
+                Address <span class="cm-req">*</span>
+            </label>
+
+            <textarea
+                class="cm-textarea cm-textarea--small"
+                data-field="address"
+                oninput={handleInput}>{form.address}</textarea>
+
+            <template if:true={errors.address}>
+                <span class="cm-error">{errors.address}</span>
+            </template>
+        </div>
+
+        <!-- Pin Code -->
+        <div class="cm-field">
+            <label class="cm-label">
+                Pin Code <span class="cm-req">*</span>
+            </label>
+
+            <input
+                class="cm-input"
+                type="text"
+                data-field="pinCode"
+                value={form.pinCode}
+                oninput={handleInput}
+                maxlength="6"
+                placeholder="6-digit pin"/>
+
+            <template if:true={errors.pinCode}>
+                <span class="cm-error">{errors.pinCode}</span>
+            </template>
+        </div>
+
+        <!-- District -->
+        <div class="cm-field">
+            <label class="cm-label">District</label>
+
+            <input
+                class="cm-input cm-input-readonly"
+                type="text"
+                value={form.district}
+                readonly/>
+        </div>
+
+        <!-- State -->
+        <div class="cm-field">
+            <label class="cm-label">State</label>
+
+            <input
+                class="cm-input cm-input-readonly"
+                type="text"
+                value={form.state}
+                readonly/>
+        </div>
+
+        <!-- Country -->
+        <div class="cm-field">
+            <label class="cm-label">
+                Country <span class="cm-req">*</span>
+            </label>
+
+            <input
+                class="cm-input"
+                type="text"
+                data-field="country"
+                value={form.country}
+                oninput={handleInput}/>
+
+            <template if:true={errors.country}>
+                <span class="cm-error">{errors.country}</span>
+            </template>
+        </div>
+
+    </div>
+</div>
+                        <!-- Business Details -->
+                        <div class="cm-form-section">
+                            <div class="cm-form-section__label">Business Details</div>
+                            <div class="cm-form-grid">
+                                <div class="cm-field">
+                                    <label class="cm-label">Annual Business Potential (₹) <span class="cm-req">*</span></label>
+                                    <input class="cm-input" type="number" data-field="annualPotential"
+                                        value={form.annualPotential} oninput={handleInput} placeholder="0.00"/>
+                                        <template if:true={errors.annualPotential}>
+                                            <span class="cm-error">{errors.annualPotential}</span>
+                                        </template>
+                                </div>
+                                <div class="cm-field">
+
+                                    <label class="cm-label">Target <span class="cm-req">*</span></label>
+                                
+                                    <input
+                                        class="cm-input"
+                                        type="number"
+                                        data-field="target"
+                                        value={form.target}
+                                        oninput={handleInput}>
+                                        <template if:true={errors.target}>
+                                            <span class="cm-error">{errors.target}</span>
+                                        </template>
+                                
+                                </div>
+
+                            </div>
+                        </div>
+                    
+                        <!-- Contact -->
+                        <div class="cm-form-section">
+                            <div class="cm-form-section__label">Contact Information</div>
+                            <div class="cm-form-grid">
+                                <div class="cm-field">
+                                    <label class="cm-label">Contact Person First Name <span class="cm-req">*</span></label>
+                                    <input class="cm-input" type="text" data-field="contactFirstName"
+
+value={form.contactFirstName} oninput={handleInput} placeholder="First name"/>
+                                   <template if:true={errors.contactFirstName}>
+    <span class="cm-error">{errors.contactFirstName}</span>
+</template>
+                                </div>
+                                <div class="cm-field">
+    <label class="cm-label">
+    Contact Person Last Name <span class="cm-req">*</span>
+</label>
+
+    <input
+        class="cm-input"
+        type="text"
+        data-field="contactLastName"
+        placeholder="Last name"
+        value={form.contactLastName}
+        oninput={handleInput}/>
+</div>
+<template if:true={errors.contactLastName}>
+    <span class="cm-error">{errors.contactLastName}</span>
+</template>
+                                <div class="cm-field">
+                                    <label class="cm-label">Designation</label>
+                                    <input class="cm-input" type="text" data-field="contactDesignation"
+                                        value={form.contactDesignation} oninput={handleInput} placeholder="e.g. Manager"/>
+                                </div>
+                                <div class="cm-field">
+                                    <label class="cm-label">Telephone No. <span class="cm-req">*</span></label>
+                                    <input class="cm-input" type="tel" data-field="contactPhone"
+                                        value={form.contactPhone} oninput={handleInput} placeholder="+91 XXXXX XXXXX" maxlength="10"/>
+                                        <template if:true={errors.contactPhone}>
+                                            <span class="cm-error">{errors.contactPhone}</span>
+                                        </template>
+                                </div>
+                                <div class="cm-field">
+                                    <label class="cm-label">Email ID <span class="cm-req">*</span></label>
+                                    <input class="cm-input" type="email" data-field="contactEmail"
+                                        value={form.contactEmail} oninput={handleInput} placeholder="email@example.com"/>
+                                        <template if:true={errors.contactEmail}>
+                                            <span class="cm-error">{errors.contactEmail}</span>
+                                        </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Attachments -->
+                        <div class="cm-form-section cm-form-section--attach">
+                            <div class="cm-attach-header">
+                                <div class="cm-form-section__label cm-form-section__label--white">Attachments</div>
+                                <span class="cm-attach-note">
+                                    <svg viewBox="0 0 14 14" fill="none" class="cm-attach-note__icon">
+                                        <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/>
+                                        <path d="M7 4v4M7 9.5v.5" stroke="currentColor"
+                                            stroke-width="1.3" stroke-linecap="round"/>
+                                    </svg>
+                                    Business Development Plan is mandatory
+                                </span>
+                            </div>
+                            <template if:true={errors.bdPlan}>
+                                <div class="cm-error cm-error--block">{errors.bdPlan}</div>
+                            </template>
+                            <div class="cm-attachment-grid">
+
+                                <!-- Purchase Order -->
+                                <div class="cm-attach-slot">
+                                    <div class="cm-attach-slot__title">Copy of Latest Purchase Order</div>
+                                    <div class="cm-attach-slot__sub">Received by Channel Partner</div>
+                                    <template if:false={attach.purchaseOrder}>
+                                        <label class="cm-dropzone" for="file-po">
+                                            <svg viewBox="0 0 32 32" fill="none" class="cm-dropzone__icon">
+                                                <path d="M16 22V10M10 16l6-6 6 6" stroke="currentColor"
+                                                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <rect x="4" y="25" width="24" height="3" rx="1.5"
+                                                    fill="currentColor" opacity=".12"/>
+                                            </svg>
+                                            <span>Click or drag to upload</span>
+                                            <span class="cm-dropzone__hint">PDF, DOC, XLS, or image</span>
+                                            <input id="file-po" type="file" class="cm-file-input"
+                                                data-slot="purchaseOrder" onchange={handleFileChange}
+                                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"/>
+                                        </label>
+                                    </template>
+                                    <template if:true={attach.purchaseOrder}>
+                                        <div class="cm-attach-preview">
+                                            <template if:true={attach.purchaseOrderIsImage}>
+                                                <img src={attach.purchaseOrderPreview} alt="PO" class="cm-attach-img"/>
+                                            </template>
+                                            <template if:false={attach.purchaseOrderIsImage}>
+                                                <div class="cm-attach-file-icon">
+                                                    <svg viewBox="0 0 32 32" fill="none">
+                                                        <rect x="6" y="2" width="20" height="28" rx="3" fill="#E8F0FB"/>
+                                                        <path d="M11 10h10M11 15h10M11 20h6" stroke="#4A7FC1"
+                                                            stroke-width="1.5" stroke-linecap="round"/>
+                                                    </svg>
+                                                </div>
+                                            </template>
+                                            <span class="cm-attach-name">{attach.purchaseOrderName}</span>
+                                            <button class="cm-attach-remove" data-slot="purchaseOrder"
+                                                onclick={handleFileRemove}>&#x2715;</button>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Latest Enquiry -->
+                                <div class="cm-attach-slot">
+                                    <div class="cm-attach-slot__title">Copy of Latest Enquiry</div>
+                                    <div class="cm-attach-slot__sub">Received by Channel Partner</div>
+                                    <template if:false={attach.latestEnquiry}>
+                                        <label class="cm-dropzone" for="file-le">
+                                            <svg viewBox="0 0 32 32" fill="none" class="cm-dropzone__icon">
+                                                <path d="M16 22V10M10 16l6-6 6 6" stroke="currentColor"
+                                                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <rect x="4" y="25" width="24" height="3" rx="1.5"
+                                                    fill="currentColor" opacity=".12"/>
+                                            </svg>
+                                            <span>Click or drag to upload</span>
+                                            <span class="cm-dropzone__hint">PDF, DOC, XLS, or image</span>
+                                            <input id="file-le" type="file" class="cm-file-input"
+                                                data-slot="latestEnquiry" onchange={handleFileChange}
+                                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"/>
+                                        </label>
+                                    </template>
+                                    <template if:true={attach.latestEnquiry}>
+                                        <div class="cm-attach-preview">
+                                            <template if:true={attach.latestEnquiryIsImage}>
+                                                <img src={attach.latestEnquiryPreview} alt="Enquiry" class="cm-attach-img"/>
+                                            </template>
+                                            <template if:false={attach.latestEnquiryIsImage}>
+                                                <div class="cm-attach-file-icon">
+                                                    <svg viewBox="0 0 32 32" fill="none">
+                                                        <rect x="6" y="2" width="20" height="28" rx="3" fill="#E8F0FB"/>
+                                                        <path d="M11 10h10M11 15h10M11 20h6" stroke="#4A7FC1"
+                                                            stroke-width="1.5" stroke-linecap="round"/>
+                                                    </svg>
+                                                </div>
+                                            </template>
+                                            <span class="cm-attach-name">{attach.latestEnquiryName}</span>
+                                            <button class="cm-attach-remove" data-slot="latestEnquiry"
+                                                onclick={handleFileRemove}>&#x2715;</button>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- BD Plan -->
+                                <div class="cm-attach-slot">
+                                    <div class="cm-attach-slot__title">Business Development Plan <span class="cm-req">*</span></div>
+                                    <div class="cm-attach-slot__sub">&nbsp;</div>
+                                    <template if:false={attach.bdPlan}>
+                                        <label class="cm-dropzone" for="file-bd">
+                                            <svg viewBox="0 0 32 32" fill="none" class="cm-dropzone__icon">
+                                                <path d="M16 22V10M10 16l6-6 6 6" stroke="currentColor"
+                                                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <rect x="4" y="25" width="24" height="3" rx="1.5"
+                                                    fill="currentColor" opacity=".12"/>
+                                            </svg>
+                                            <span>Click or drag to upload</span>
+                                            <span class="cm-dropzone__hint">PDF, DOC, XLS, or image</span>
+                                            <input id="file-bd" type="file" class="cm-file-input"
+                                                data-slot="bdPlan" onchange={handleFileChange}
+                                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"/>
+                                        </label>
+                                    </template>
+                                    <template if:true={attach.bdPlan}>
+                                        <div class="cm-attach-preview">
+                                            <template if:true={attach.bdPlanIsImage}>
+                                                <img src={attach.bdPlanPreview} alt="BD Plan" class="cm-attach-img"/>
+                                            </template>
+                                            <template if:false={attach.bdPlanIsImage}>
+                                                <div class="cm-attach-file-icon">
+                                                    <svg viewBox="0 0 32 32" fill="none">
+                                                        <rect x="6" y="2" width="20" height="28" rx="3" fill="#E8F0FB"/>
+                                                        <path d="M11 10h10M11 15h10M11 20h6" stroke="#4A7FC1"
+                                                            stroke-width="1.5" stroke-linecap="round"/>
+                                                    </svg>
+                                                </div>
+                                            </template>
+                                            <span class="cm-attach-name">{attach.bdPlanName}</span>
+                                            <button class="cm-attach-remove" data-slot="bdPlan"
+                                                onclick={handleFileRemove}>&#x2715;</button>
+                                        </div>
+                                    </template>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div><!-- /modal body -->
+
+                    <div class="cm-modal__footer">
+                        <button class="cm-btn-secondary" onclick={closeModal}>Cancel</button>
+                        <button class="cm-btn-primary" onclick={handleSave}>
+                            <template if:false={isSaving}>Save Customer</template>
+                            <template if:true={isSaving}>
+                                <span class="cm-spinner"></span> Saving...
+                            </template>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </template>
+
+        <template if:true={showPreview}>
+
+            <section class="cm-preview-backdrop">
+        
+                <div class="cm-preview-modal">
+        
+                    <div class="cm-preview-header">
+        
+                        <span>{previewTitle}</span>
+        
+                        <lightning-button-icon
+                            icon-name="utility:close"
+                            onclick={closePreview}>
+                        </lightning-button-icon>
+        
+                    </div>
+        
+                    <div class="cm-preview-body">
+        
+                        <template if:true={previewIsImage}>
+        
+                            <img
+                                src={previewUrl}
+                                class="cm-preview-image">
+        
+                        </template>
+        
+                        <template if:true={previewIsPdf}>
+        
+                            <iframe
+                                src={previewUrl}
+                                class="cm-preview-pdf">
+                            </iframe>
+        
+                        </template>
+        
+                    </div>
+        
+                </div>
+        
+            </section>
+        
+        </template>
+        
+
+    </div>
+</template>

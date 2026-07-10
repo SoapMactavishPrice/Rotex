@@ -60,7 +60,8 @@ public class QuoteLineItemApprovalHandler {
         Map<Id, Quote> quoteMap = new Map<Id, Quote>([
             SELECT Id, Name, OwnerId, Account.Name, QuoteNumber,
             Sales_Manager__c,
-            Country_Continent_Sales_Head_LOB_Head__c
+            Country_Continent_Sales_Head_LOB_Head__c,
+            RecordType.Name
             FROM Quote WHERE Id IN :quoteIds
         ]);
         
@@ -318,7 +319,6 @@ public class QuoteLineItemApprovalHandler {
             System.debug('APPROVAL: Approvers to notify: ' + qlisByApprover.size());
 
             List<Messaging.SingleEmailMessage> emails = new List<Messaging.SingleEmailMessage>();
-            String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/Quote_Discount_Approval';
 
             for (Id approverId : qlisByApprover.keySet()) {
                 User approverUser = approverMap.get(approverId);
@@ -327,6 +327,10 @@ public class QuoteLineItemApprovalHandler {
                 User owner = approverOwnerMap.get(approverId);
 
                 if (approverUser == null || approverQLIs.isEmpty() || q == null || owner == null) continue;
+
+                String recordTypeName = q.RecordType != null ? q.RecordType.Name : null;
+                String approvalTab = (recordTypeName == 'ARC') ? 'ARC_Approvals' : 'Quote_Approvals';
+                String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/' + approvalTab;
 
                 System.debug('APPROVAL: Building consolidated email for approver ' + approverUser.Name +
                              ' with ' + approverQLIs.size() + ' QLI(s)');
@@ -405,7 +409,7 @@ public class QuoteLineItemApprovalHandler {
                     notification.setTargetPageRef(JSON.serialize(new Map<String, Object>{
                         'type' => 'standard__navItemPage',
                         'attributes' => new Map<String, Object>{
-                            'apiName' => 'Quote_Discount_Approval'
+                            'apiName' => approvalTab
                         }
                     }));
                     notification.send(new Set<String>{ String.valueOf(approverId) });

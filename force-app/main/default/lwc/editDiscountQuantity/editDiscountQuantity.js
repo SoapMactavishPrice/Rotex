@@ -14,6 +14,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     @track showSpinner = false;
     @track quoteLineItemList = [];
     @track currencyCode = '';
+    @track recordType = '';
 
     showToast(toastTitle, toastMsg, toastType) {
         const event = new ShowToastEvent({
@@ -58,6 +59,10 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
         getQuoteLineItem({
             qId: this.recordId
         }).then((result) => {
+            console.log('result:>>> ', result);
+            if (result.length > 0 && result[0].Quote && result[0].Quote.RecordType && result[0].Quote.RecordType.Name) {
+                this.recordType = result[0].Quote.RecordType.Name;
+            }
             console.log('data:>>> ', result);
             this.quoteLineItemList = result.map(item => {
                 const baseDisabled = this.isRowLocked(item);
@@ -124,41 +129,41 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     computeDiscountFromDesiredPrice(listPrice, desiredPrice) {
         if (listPrice == null || listPrice === 0 || desiredPrice == null || desiredPrice === '') return null;
         const raw = ((listPrice - parseFloat(desiredPrice)) / listPrice) * 100;
-        return this.roundTo2Decimals(raw);
+        return this.roundTo3Decimals(raw);
     }
 
     /**
      * Rounds a number to max 2 decimal places.
      * Strips trailing zeros (e.g. 10.50 → 10.5, 10.00 → 10).
      */
-    roundTo2Decimals(value) {
+    roundTo3Decimals(value) {
         if (value == null) return null;
-        return parseFloat(parseFloat(value).toFixed(2));
+        return parseFloat(parseFloat(value).toFixed(3));
     }
 
     /**
-     * Enforces max 2 decimal places on a string input value.
+     * Enforces max 3 decimal places on a string input value.
      * Returns the clamped numeric value, or null if empty.
-     * Shows a toast warning if the user typed more than 2 decimals.
+     * Shows a toast warning if the user typed more than 3 decimals.
      */
-    enforceMax2Decimals(value) {
+    enforceMax3Decimals(value) {
         if (value === '' || value == null) return null;
         const str = String(value);
         const dotIndex = str.indexOf('.');
-        if (dotIndex !== -1 && str.length - dotIndex - 1 > 2) {
-            this.showToast('Invalid Input', 'Discount can have a maximum of 2 decimal places.', 'warning');
-            return this.roundTo2Decimals(parseFloat(value));
+        if (dotIndex !== -1 && str.length - dotIndex - 1 > 3) {
+            this.showToast('Invalid Input', 'Discount can have a maximum of 3 decimal places.', 'warning');
+            return this.roundTo3Decimals(parseFloat(value));
         }
         return parseFloat(value);
     }
 
     /**
-     * Checks whether a raw input string has more than 2 decimal places.
+     * Checks whether a raw input string has more than 3 decimal places.
      */
-    hasMoreThan2Decimals(rawValue) {
+    hasMoreThan3Decimals(rawValue) {
         const str = String(rawValue);
         const dotIndex = str.indexOf('.');
-        return dotIndex !== -1 && str.length - dotIndex - 1 > 2;
+        return dotIndex !== -1 && str.length - dotIndex - 1 > 3;
     }
 
     hasDiscountOfferedValue(val) {
@@ -294,10 +299,10 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     handleDiscountChange(event) {
         const id = event.target.dataset.id;
         const rawValue = event.target.value;
-        const parsedDiscount = this.enforceMax2Decimals(rawValue);
+        const parsedDiscount = this.enforceMax3Decimals(rawValue);
 
         // Push corrected value back if clamped
-        if (parsedDiscount !== null && this.hasMoreThan2Decimals(rawValue)) {
+        if (parsedDiscount !== null && this.hasMoreThan3Decimals(rawValue)) {
             event.target.value = parsedDiscount;
         }
 
@@ -359,10 +364,10 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     handleNewDiscountChange(event) {
         const id = event.target.dataset.id;
         const rawValue = event.target.value;
-        const parsedValue = this.enforceMax2Decimals(rawValue);
+        const parsedValue = this.enforceMax3Decimals(rawValue);
 
         // Push corrected value back if clamped
-        if (parsedValue !== null && this.hasMoreThan2Decimals(rawValue)) {
+        if (parsedValue !== null && this.hasMoreThan3Decimals(rawValue)) {
             event.target.value = parsedValue;
         }
 

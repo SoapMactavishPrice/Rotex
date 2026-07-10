@@ -35,7 +35,8 @@ public class QuoteLineItemSequentialApprovalHandler {
             quoteMap = new Map<Id, Quote>([
                 SELECT Id, Name, Account.Name, Sales_Rep__c, Sales_Manager__c, OwnerId, QuoteNumber,
                     Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c,
-                    Rotex_Board_Member__c, Managing_Director_Country_Manager__c
+                    Rotex_Board_Member__c, Managing_Director_Country_Manager__c,
+                    RecordType.Name
                 FROM Quote
                 WHERE Id IN :quoteIds
             ]);
@@ -234,7 +235,6 @@ public class QuoteLineItemSequentialApprovalHandler {
             SELECT Id, Name, Email FROM User WHERE Id IN :approverIds
         ]);
 
-        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/Quote_Discount_Approval';
         List<Messaging.SingleEmailMessage> emails = new List<Messaging.SingleEmailMessage>();
 
         for (Id approverId : emailQlisByApprover.keySet()) {
@@ -247,6 +247,10 @@ public class QuoteLineItemSequentialApprovalHandler {
             List<QuoteLineItem> approverQLIs = emailQlisByApprover.get(approverId);
             Quote q = emailQuoteByApprover.get(approverId);
             if (approverQLIs == null || approverQLIs.isEmpty() || q == null) continue;
+
+            String recordTypeName = q.RecordType != null ? q.RecordType.Name : null;
+            String approvalTab = (recordTypeName == 'ARC') ? 'ARC_Approvals' : 'Quote_Approvals';
+            String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/' + approvalTab;
 
             // Retrieve the Quote owner name for the email header
             String ownerName = getQuoteOwnerName(q);
@@ -502,10 +506,13 @@ public class QuoteLineItemSequentialApprovalHandler {
 
             notification.setNotificationTypeId(notificationType.Id);
 
+            String recordTypeName = q.RecordType != null ? q.RecordType.Name : null;
+            String approvalTab = (recordTypeName == 'ARC') ? 'ARC_Approvals' : 'Quote_Approvals';
+
             notification.setTargetPageRef(JSON.serialize(new Map<String, Object>{
                 'type' => 'standard__navItemPage',
                 'attributes' => new Map<String, Object>{
-                    'apiName' => 'Quote_Discount_Approval'
+                    'apiName' => approvalTab
                 }
             }));
 

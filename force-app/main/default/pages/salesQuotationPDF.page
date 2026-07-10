@@ -261,8 +261,8 @@ color: #008080; -->
         <th style="width: 15%; font-size: 12px; text-align: left;">HSN Code</th>
         <th style="width: 15%; font-size: 12px; text-align: left;">Quantity</th>
         <th style="width: 15%; font-size: 12px; text-align: left;">UoM</th>
-        <th style="width: 15%; font-size: 12px; text-align: left;">Unit Price (INR)</th>
-        <th style="width: 15%; font-size: 12px; text-align: left;">Total (INR)</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">Unit Price ({!quData.CurrencyIsoCode})</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">Total ({!quData.CurrencyIsoCode})</th>
     </tr>
 
     <apex:variable var="rows" value="{!0}"/>
@@ -292,7 +292,7 @@ color: #008080; -->
     <!-- TOTALS -->
     <tr>
         <td></td><td></td><td></td><td></td><td></td><td></td>
-        <td style="text-align: left;" class="label-right"><strong>Gross Price (INR)</strong></td>
+        <td style="text-align: left;" class="label-right"><strong>Gross Price ({!quData.CurrencyIsoCode})</strong></td>
         <td style="text-align: left;" class="num"><strong>{!totalValueINR}</strong></td>
     </tr>
 
@@ -318,7 +318,7 @@ color: #008080; -->
 
     <tr>
         <td></td><td></td><td></td><td></td><td></td><td></td>
-        <td style="text-align: left;" class="label-right"><strong>Total Amount (INR)</strong></td>
+        <td style="text-align: left;" class="label-right"><strong>Total Amount ({!quData.CurrencyIsoCode})</strong></td>
         <td style="text-align: left;" class="num"><strong>{!quData.Grand_Total__c}</strong></td>
     </tr>
 

@@ -1,0 +1,582 @@
+<template>
+
+    <!-- =========================
+        LIST VIEW
+    ========================== -->
+
+    <template if:false={selectedLead}>
+
+        <div class="page-header">
+
+            <div>
+
+                <div class="breadcrumb">
+                    LEADS · ASSIGNED TO YOU
+                </div>
+
+                <div class="page-title">
+                    Leads
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- FILTER -->
+
+        <div class="filter-bar">
+
+            <div class="search-box">
+
+                <lightning-icon
+                    icon-name="utility:search"
+                    size="x-small">
+                </lightning-icon>
+
+                <input
+                    type="text"
+                    class="search-input"
+                    placeholder="Search by name, company, location, product..."
+                    onkeyup={handleSearch}/>
+
+            </div>
+
+            <div class="status-tabs">
+
+    <button
+        class={allTabClass}
+        data-status="All"
+        onclick={handleStatusFilter}>
+
+        All <span>{totalCount}</span>
+
+    </button>
+
+    <button
+        class={newTabClass}
+        data-status="New"
+        onclick={handleStatusFilter}>
+
+        New <span>{newCount}</span>
+
+    </button>
+
+    <button
+        class={progressTabClass}
+        data-status="Work In Progress"
+        onclick={handleStatusFilter}>
+
+        In Progress <span>{progressCount}</span>
+
+    </button>
+
+    <button
+        class={qualifiedTabClass}
+        data-status="Qualified"
+        onclick={handleStatusFilter}>
+
+        Qualified <span>{qualifiedCount}</span>
+
+    </button>
+
+    <button
+        class={disqualifiedTabClass}
+        data-status="Regret"
+        onclick={handleStatusFilter}>
+
+        Regret <span>{disqualifiedCount}</span>
+
+    </button>
+
+</div>
+
+        </div>
+
+        <!-- TABLE -->
+
+        <div class="lead-table">
+
+            <div class="table-header">
+
+                <div>CUSTOMER</div>
+                <div>CONTACT</div>
+                <div>SOURCE</div>
+                <div>PRODUCT INTEREST</div>
+                <div>LOCATION</div>
+                <div>STATUS</div>
+                <div>CREATED</div>
+
+            </div>
+
+            <template
+                for:each={filteredLeads}
+                for:item="lead">
+
+                <div
+                    key={lead.Id}
+                    class="table-row"
+                    data-id={lead.Id}
+                    onclick={openLeadDetail}>
+
+
+                    <div>
+
+                        <div class="customer-name">
+                            {lead.Name}
+                        </div>
+
+                        <div class="sub-text">
+                            {lead.Company}
+                        </div>
+
+                    </div>
+
+                    <div class="contact-text">
+
+                        <div>
+                            {lead.Phone}
+                        </div>
+
+                        <div class="sub-text">
+                            {lead.Email}
+                        </div>
+
+                    </div>
+
+                    <div class="contact-text">
+
+                        <div>
+                            {lead.LeadSource}
+                        </div>
+
+                        <div class="sub-text">
+                            {lead.Industry}
+                        </div>
+
+                    </div>
+
+                    <div class="contact-text">
+
+                        <div>
+                            {lead.Product_Interested__c}
+                        </div>
+
+                        <div class="sub-text">
+                            {lead.Product_Category__c}
+                        </div>
+
+                    </div>
+
+                    <div class="contact-text">
+
+                        <div>
+                            {lead.City}
+                        </div>
+
+                        <div class="sub-text">
+                            {lead.State}
+                        </div>
+
+                    </div>
+
+                    <div>
+
+                        <span class={lead.statusClass}>
+                            {lead.Status}
+                        </span>
+
+                    </div>
+
+                    <div class="contact-text">
+                        {lead.createdDate}
+                    </div>
+
+                </div>
+
+            </template>
+
+        </div>
+
+    </template>
+
+    <!-- =========================
+        DETAIL VIEW
+    ========================== -->
+
+    <template if:true={selectedLead}>
+
+        <div class="detail-header">
+
+            <button
+                class="back-btn"
+                onclick={backToList}>
+
+                ← Back to leads
+
+            </button>
+
+            <div class="detail-meta">
+
+                CREATED {selectedLead.createdDate}
+
+            </div>
+
+            <div class="detail-top">
+
+                <div>
+
+                    <div class="detail-name">
+                        {selectedLead.Name}
+                    </div>
+
+                    <div class="detail-company">
+
+                        {selectedLead.Company}
+                        ·
+                        {selectedLead.City},
+                        {selectedLead.State}
+
+                    </div>
+
+                </div>
+
+              <div class="detail-actions">
+
+    <div class={selectedLead.statusClass}>
+        {selectedLead.Status}
+    </div>
+
+    <div class="status-dropdown-wrapper">
+
+        <button
+            class="status-update-btn"
+            onclick={toggleDropdown}>
+
+            Update status
+
+            <lightning-icon
+                icon-name="utility:chevrondown"
+                size="xx-small"
+                class="dropdown-icon">
+            </lightning-icon>
+
+        </button>
+
+        <template if:true={showDropdown}>
+
+          <div class="status-dropdown">
+
+    <div
+        class="dropdown-item"
+        data-status="New"
+        onclick={updateStatus}>
+
+        <span class="status-badge new">
+            New
+        </span>
+
+    </div>
+
+    <div
+        class="dropdown-item"
+        data-status="Contacted"
+        onclick={updateStatus}>
+
+        <span class="status-badge progress">
+            Contacted
+        </span>
+
+    </div>
+
+    <div
+        class="dropdown-item"
+        data-status="Work In Progress"
+        onclick={updateStatus}>
+
+        <span class="status-badge progress">
+            Work In Progress
+        </span>
+
+    </div>
+
+    <div
+        class="dropdown-item"
+        data-status="Forward to Dealer"
+        onclick={updateStatus}>
+
+        <span class="status-badge progress">
+            Forward to Dealer
+        </span>
+
+    </div>
+
+    <div
+        class="dropdown-item"
+        data-status="Future Prospect"
+        onclick={updateStatus}>
+
+        <span class="status-badge progress">
+            Future Prospect
+        </span>
+
+    </div>
+
+    <div
+        class="dropdown-item"
+        data-status="Qualified"
+        onclick={updateStatus}>
+
+        <span class="status-badge qualified">
+            Qualified
+        </span>
+
+    </div>
+
+    <div
+        class="dropdown-item"
+        data-status="Regret"
+        onclick={updateStatus}>
+
+        <span class="status-badge disqualified">
+            Regret
+        </span>
+
+    </div>
+
+</div>
+
+        </template>
+
+    </div>
+
+</div>
+
+            </div>
+
+        </div>
+
+        <!-- DETAIL LAYOUT -->
+
+        <div class="detail-layout">
+
+            <!-- LEFT CARD -->
+
+            <div class="detail-card">
+
+                <div class="section-title">
+                    CUSTOMER
+                </div>
+
+                <div class="detail-grid">
+
+                    <div>
+
+                        <div class="label">
+                            NAME
+                        </div>
+
+                        <div class="value">
+                            {selectedLead.Name}
+                        </div>
+
+                    </div>
+
+                    <div>
+
+                        <div class="label">
+                            COMPANY
+                        </div>
+
+                        <div class="value">
+                            {selectedLead.Company}
+                        </div>
+
+                    </div>
+
+                    <div>
+
+                        <div class="label">
+                            PHONE
+                        </div>
+
+                        <div class="value">
+                            {selectedLead.Phone}
+                        </div>
+
+                    </div>
+
+                    <div>
+
+                        <div class="label">
+                            EMAIL
+                        </div>
+
+                        <div class="value">
+                            {selectedLead.Email}
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- LEAD INFO -->
+
+                <div class="section-title">
+                    LEAD INFORMATION
+                </div>
+
+                <div class="detail-grid">
+
+                    <div>
+                        <div class="label">LEAD SOURCE</div>
+                        <div class="value">{selectedLead.LeadSource}</div>
+                    </div>
+                
+                    <div>
+                        <div class="label">ESTIMATED VALUE</div>
+                        <div class="value">₹ {selectedLead.Sales_Turnover__c}</div>
+                    </div>
+                
+                    <div>
+                        <div class="label">PRODUCT INTEREST</div>
+                        <div class="value">{selectedLead.Product_Interested__c}</div>
+                    </div>
+                
+                    <div>
+                        <div class="label">LOCATION</div>
+                        <div class="value">
+                            {selectedLead.Street}<br/>
+                            {selectedLead.City},
+                            {selectedLead.State}
+                            {selectedLead.PostalCode}<br/>
+                            {selectedLead.Country}
+                        </div>
+                    </div>
+                
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- NOTES -->
+
+                <div class="section-title">
+                    NOTES
+                </div>
+
+                <div class="notes-box">
+
+                    <template if:true={selectedLead.Requirement__c}>
+                        {selectedLead.Requirement__c}
+                    </template>
+
+                    <template if:false={selectedLead.Requirement__c}>
+                        No notes available
+                    </template>
+
+                </div>
+
+                <div class="note-input-wrap">
+
+                    <input
+                        type="text"
+                        class="note-input"
+                        placeholder="Add a note or activity update..."
+                        value={noteText}
+                        onchange={handleNoteChange}/>
+
+                    <button
+                        class="add-note-btn"
+                        onclick={handleAddNote}>
+
+                        Add note
+
+                    </button>
+
+                </div>
+
+            </div>
+            <!-- RIGHT SIDE -->
+
+            <div class="side-card">
+
+                <!-- ACTIVITY -->
+
+             <div class="activity-card">
+
+    <div class="section-title">
+        ACTIVITY
+    </div>
+
+    <template
+        for:each={activityList}
+        for:item="activity"
+        for:index="index">
+
+        <div
+            key={activity.id}
+            class="activity-row">
+
+            <div class="timeline">
+
+                <div class="timeline-dot"></div>
+
+                <template if:false={activity.isLast}>
+                    <div class="timeline-line"></div>
+                </template>
+
+            </div>
+
+            <div class="activity-content">
+
+                <div class="activity-text">
+                    {activity.message}
+                </div>
+
+                <div class="activity-date">
+                    {activity.date}
+                </div>
+
+            </div>
+
+        </div>
+
+    </template>
+
+</div>
+                <div class="section-divider"></div>
+
+                <!-- ASSIGNED -->
+
+                <div class="section-title">
+                    ASSIGNED TO
+                </div>
+
+                <div class="assignee-box">
+
+                    <div class="avatar">
+                        {ownerInitials}
+                    </div>
+
+                    <div>
+
+                        <div class="assignee-name">
+                            {selectedLead.Owner.Name}
+                        </div>
+
+                        <div class="sub-text">
+                            {selectedLead.Dealer_Name__c}
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </template>
+
+</template>

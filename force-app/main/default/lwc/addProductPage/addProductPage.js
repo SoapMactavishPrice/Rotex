@@ -14,8 +14,8 @@ const COLS = [
     // { label: 'HSN Master', fieldName: 'hsnMasterCode', type: 'text' },
     // { label: 'Product Category', fieldName: 'Family', type: 'text' },
     // { label: 'Pack Size', fieldName: 'PackSize', type: 'text' },
-    { label: 'List Price', fieldName: 'Price', type: 'currency', cellAttributes: { alignment: 'left' } },
-    { label: 'List Price', fieldName: 'ListPrice', type: 'currency', cellAttributes: { alignment: 'left' } },
+    { label: 'List Price', fieldName: 'Price', type: 'currency', typeAttributes: { currencyCode: { fieldName: 'CurrencyIsoCode' } }, cellAttributes: { alignment: 'left' } },
+    { label: 'List Price', fieldName: 'ListPrice', type: 'currency', typeAttributes: { currencyCode: { fieldName: 'CurrencyIsoCode' } }, cellAttributes: { alignment: 'left' } },
     { label: 'ARC', fieldName: 'IsARC', type: 'boolean', cellAttributes: { alignment: 'left' } },
     { label: 'Product Description', fieldName: 'Description', type: 'text' }
 
@@ -438,23 +438,32 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         const selRows = event.detail.selectedRows;
         const currentPageIds = this.ShowTableData.map(item => item.Id);
 
+        // Check for obsolete products in current selection
+        const obsoleteSelected = selRows.filter(row => row.Status === 'Z1' || row.Status === 'Z2');
+        if (obsoleteSelected.length > 0) {
+            this.showToast('Error', 'This model is now obsolete and can no longer be used for sales.', 'error');
+        }
+
+        // Filter out obsolete products from selection
+        const validSelRows = selRows.filter(row => row.Status !== 'Z1' && row.Status !== 'Z2');
+
         // Remove selections that are no longer selected on current page
         for (let i = 0; i < currentPageIds.length; i++) {
-            const isSelected = selRows.some(row => row.Id === currentPageIds[i]);
+            const isSelected = validSelRows.some(row => row.Id === currentPageIds[i]);
             if (!isSelected && this.allSelectedProductIds.has(currentPageIds[i])) {
                 this.allSelectedProductIds.delete(currentPageIds[i]);
             }
         }
 
-        // Add newly selected products
-        for (let i = 0; i < selRows.length; i++) {
-            this.allSelectedProductIds.add(selRows[i].Id);
+        // Add newly selected valid products
+        for (let i = 0; i < validSelRows.length; i++) {
+            this.allSelectedProductIds.add(validSelRows[i].Id);
         }
 
         // Update selectedProductCode array
         this.selectedProductCode = Array.from(this.allSelectedProductIds);
         this.SelectedRecordCount = this.selectedProductCode.length;
-        this.selectedRows = selRows;
+        this.selectedRows = validSelRows;
         this.DisableNext = this.selectedProductCode.length === 0;
 
         // Build SelectedProductData from all selected products across all pages
@@ -478,6 +487,17 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
             }
         }
         this.SelectedProductData = [...new Set(this.SelectedProductData)];
+
+        // Force datatable to reflect only valid selections
+        setTimeout(() => {
+            const datatable = this.template.querySelector('[data-id="datatable"]');
+            if (datatable) {
+                datatable.selectedRows = this.selectedProductCode.filter(id => {
+                    const product = this.AllProductData.find(p => p.Id === id);
+                    return product && product.Status !== 'Z1' && product.Status !== 'Z2';
+                });
+            }
+        }, 0);
     }
 
 

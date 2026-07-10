@@ -15,7 +15,7 @@ public without sharing class SalesPriceApprovalForQuotation {
      *               the LWC only needs a single server call.
      */
     @AuraEnabled
-    public static List<QuotationWrapper> getAllQuotations() {
+    public static List<QuotationWrapper> getAllQuotations(String recordType) {
         Id currentUserId = UserInfo.getUserId();
 
         List<QuoteLineItem> submittedQlis = [
@@ -299,7 +299,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             quoteLineItems = [
                 SELECT Approval_Comments__c, Approval_Status__c, Approver__c, CreatedById, ServiceDate,
                        Discount, LastModifiedById, Description, LineNumber, ListPrice,
-                       Product2Id, Product2.Name, Quantity, QuoteId, Discount_as_per_SAP__c, Product2.ProductCode,
+                       Product2Id, Product2.Name, Quantity, Potential_Qty__c, QuoteId, Discount_as_per_SAP__c, Product2.ProductCode,
                        Global_Sales_Head__c, Global_Sales_Head_Status__c, Reject_Reason__c,
                        UnitPrice, SortOrder, Subtotal, TotalPrice, Discount_to_be_offered__c,
                        Sales_Rep__c, Sales_Rep_Status__c, Sales_Manager__c, Sales_Manager_Status__c,
@@ -368,7 +368,8 @@ public without sharing class SalesPriceApprovalForQuotation {
                    GS_Value_Status__c,  GS_Value_Date_Time__c,  GS_Value_Comments__c,
                    BM_Value_Status__c,  BM_Value_Date_Time__c,  BM_Value_Comments__c,
                    MD_Value_Status__c,  MD_Value_Date_Time__c,  MD_Value_Comments__c,
-                   Final_Total_Value_Approver__c, Is_Total_Value_Approved__c, Is_Small_Order_Handling__c, Is_all_approvals_final_approved__c, Quote_Valid_Till__c
+                   Final_Total_Value_Approver__c, Is_Total_Value_Approved__c, Is_Small_Order_Handling__c, Is_all_approvals_final_approved__c, Quote_Valid_Till__c,
+                   RecordType.Name
                 //    SM_Min_Offer_Status__c,  SM_Min_Offer_Date_Time__c,  SM_Min_Offer_Comments__c,
                 //    CH_Min_Offer_Status__c,  CH_Min_Offer_Date_Time__c,  CH_Min_Offer_Comments__c,
                 //    GS_Min_Offer_Status__c,  GS_Min_Offer_Date_Time__c,  GS_Min_Offer_Comments__c,
@@ -391,6 +392,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         for (Id eachQuoteId : allRelevantQuoteIds) {
             Quote q = quoteMap.get(eachQuoteId);
             if (q == null) continue;
+            if (!matchesRequestedRecordType(q.RecordType?.Name, recordType)) continue;
 
             List<QuoteLineItem> lineItems = quoteToQliMap.containsKey(eachQuoteId)
                 ? quoteToQliMap.get(eachQuoteId)
@@ -530,6 +532,13 @@ public without sharing class SalesPriceApprovalForQuotation {
         else if (finalPos == 3) { q.GS_Validity_Offer_Status__c = wrapper.gsValidityOfferStatus; q.GS_Validity_Offer_Comments__c = wrapper.gsValidityOfferComments; q.GS_Validity_Offer_Date_Time__c = DateTime.now(); }
         else if (finalPos == 4) { q.BM_Validity_Offer_Status__c = wrapper.bmValidityOfferStatus; q.BM_Validity_Offer_Comments__c = wrapper.bmValidityOfferComments; q.BM_Validity_Offer_Date_Time__c = DateTime.now(); }
         else if (finalPos == 5) { q.MD_Validity_Offer_Status__c = wrapper.mdValidityOfferStatus; q.MD_Validity_Offer_Comments__c = wrapper.mdValidityOfferComments; q.MD_Validity_Offer_Date_Time__c = DateTime.now(); }
+    }
+
+    private static Boolean matchesRequestedRecordType(String actualRecordTypeName, String requestedRecordType) {
+        if (requestedRecordType == 'ARC') {
+            return actualRecordTypeName == 'ARC';
+        }
+        return actualRecordTypeName == 'Normal' || actualRecordTypeName == null;
     }
 
     // private static void applySkippedMinimumOfferComments(Quote q, MinimumOfferApprovalWrapper wrapper) {
@@ -1542,7 +1551,9 @@ public without sharing class SalesPriceApprovalForQuotation {
         email.setWhatId(quotation.quoteId);
         email.setSaveAsActivity(true);
 
-        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm()+ '/lightning/n/Quote_Discount_Approval';
+        String recordTypeName = quotation.recordTypeName;
+        String approvalTab = (recordTypeName == 'ARC') ? 'ARC_Approvals' : 'Quote_Approvals';
+        String approvalPageUrl = URL.getOrgDomainUrl().toExternalForm() + '/lightning/n/' + approvalTab;
         String body = 'Dear ' + quotation.quoteOwnerName + ',<br/><br/>';
         body += 'The Sales Price has been ' + status.toLowerCase() + ' for the following Quote:<br/><br/>';
         body += 'Quote Name: ' + quotation.quoteName + '<br/>';
@@ -1743,6 +1754,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public Decimal avgDiscountApproved;
         @AuraEnabled public List<QuotationLineItemWrapper> quoteLineItems;
         @AuraEnabled public Boolean updated;
+        @AuraEnabled public String recordTypeName;
         @AuraEnabled public WarrantyApprovalWrapper warrantyApproval;
         @AuraEnabled public ValidityOfferApprovalWrapper validityOfferApproval;
         @AuraEnabled public TotalValueApprovalWrapper totalValueApproval;
@@ -1770,6 +1782,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.warrantyTerms   = getStringFieldSafely(quote, 'Warranty_Terms__c');
             this.deliveryPeriod  = getStringFieldSafely(quote, 'Delivery_Period__c');
             this.updated         = false;
+            this.recordTypeName  = quote.RecordType != null ? quote.RecordType.Name : null;
 
             Id hod;
             if      (quote.Sales_Rep__c                              == currentUserId) hod = quote.Sales_Rep__c;
@@ -2231,6 +2244,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public DateTime globalSalesHeadDateTime;
         @AuraEnabled public DateTime rotexBoardMemberDateTime;
         @AuraEnabled public Decimal  quantity;
+        @AuraEnabled public Decimal  potentialQty;
         @AuraEnabled public Decimal  listPrice;
         @AuraEnabled public Decimal  salesPrice;
         @AuraEnabled public Decimal  d1;
@@ -2263,6 +2277,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.productName      = qli.Product2.Name;
             this.productCode      = qli.Product2.ProductCode;
             this.quantity         = qli.Quantity;
+            this.potentialQty     = qli.Potential_Qty__c;
             this.listPrice        = qli.ListPrice;
             this.salesPrice       = qli.UnitPrice;
             this.bcheck  = true; this.bcheck1 = true; this.bcheck2 = true;

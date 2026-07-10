@@ -1,0 +1,193 @@
+<template>
+    <div class="container">
+        <lightning-card>
+            <template if:true={showSpinner}>
+                <lightning-spinner alternative-text="Loading" size="large"></lightning-spinner>
+            </template>
+            <div class="custom-header">Edit ARC Pricing &amp; Details</div>
+            
+            <!-- Top Section: Totals and Quote Fields -->
+            <div class="top-section">
+                <!-- Left: Summary Totals -->
+                <div class="summary-box">
+                    <table class="summary-table">
+                        <tbody>
+                            <tr>
+                                <td class="summary-label">Total Qty</td>
+                                <td class="summary-value">
+                                    <lightning-formatted-number value={totalQty} format-style="decimal" minimum-fraction-digits="0" maximum-fraction-digits="4"></lightning-formatted-number>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="summary-label">Total Business Last FY</td>
+                                <td class="summary-value"></td>
+                            </tr>
+                            <tr>
+                                <td class="summary-label">Total Business from ARC Item last FY</td>
+                                <td class="summary-value"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Right: Quote Fields -->
+                <div class="quote-fields-box">
+                    <table class="quote-fields-table">
+                        <tbody>
+                            <tr>
+                                <td class="field-label">Payment Terms</td>
+                                <td class="field-input">
+                                    <lightning-combobox
+                                        name="paymentTerms"
+                                        value={quoteRecord.Payment_Terms__c}
+                                        placeholder="Select Payment Terms"
+                                        options={paymentTermsOptions}
+                                        onchange={handlePaymentTermsChange}
+                                        variant="label-hidden">
+                                    </lightning-combobox>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="field-label">Warranty</td>
+                                <td class="field-input">
+                                    <lightning-combobox
+                                        name="warrantyTerms"
+                                        value={quoteRecord.Warranty_Terms_Draft__c}
+                                        placeholder="Select Warranty"
+                                        options={warrantyOptions}
+                                        onchange={handleWarrantyTermsChange}
+                                        variant="label-hidden">
+                                    </lightning-combobox>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="field-label">Incoterms</td>
+                                <td class="field-input">
+                                    <lightning-combobox
+                                        name="incoTerms"
+                                        value={quoteRecord.INCO_Terms__c}
+                                        placeholder="Select Incoterms"
+                                        options={incoTermsOptions}
+                                        onchange={handleIncoTermsChange}
+                                        variant="label-hidden">
+                                    </lightning-combobox>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Main Table Wrapper -->
+            <div class="table-wrapper">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th class="col-matcode">Material Code</th>
+                            <th class="col-matdesc">Material Description</th>
+                            <th class="col-listprice" style="text-align: right;">List Price ({currencyCode})</th>
+                            <th class="col-arcprice">Proposed ARC Price ({currencyCode})</th>
+                            <th class="col-newdisc">New Proposed ARC Price ({currencyCode})</th>
+                            <th class="col-disc">Disc. %</th>
+                            <th class="col-potval">Min Value</th>
+                            <th class="col-potval">Max Value</th>
+                            <th class="col-potqty">MOQ</th>
+                            <th class="col-validfrom">Valid From</th>
+                            <th class="col-validtill">Valid Till</th>
+                            <th class="col-existarc" style="text-align: right;">Existing ARC Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template for:each={quoteLineItemList} for:item="item">
+                            <tr key={item.Id}>
+                                <!-- Material Code -->
+                                <td class="col-matcode cell-wrap">
+                                    <strong>{item.Product2.ProductCode}</strong>
+                                </td>
+                                <!-- Material Description -->
+                                <td class="col-matdesc cell-wrap">
+                                    {item.Product2.Name}
+                                </td>
+                                <!-- List Price -->
+                                <td class="col-listprice amount">
+                                    {item.ListPrice}
+                                </td>
+                                <!-- Proposed ARC Price -->
+                                <td class="col-arcprice">
+                                    <lightning-input type="number" data-id={item.Id} variant="label-hidden"
+                                        value={item.desiredPriceValue} class="input-field"
+                                        disabled={item.isProposedPriceDisabled}
+                                        onchange={handleDesiredPriceChange}
+                                        step="0.01">
+                                    </lightning-input>
+                                </td>
+                                <!-- New Proposed ARC Price -->
+                                <td class="col-newdisc">
+                                    <template if:true={item.Is_Discount_Approved__c}>
+                                        <lightning-input type="number" data-id={item.Id} variant="label-hidden"
+                                            value={item.newDesiredPriceValue} class="input-field"
+                                            disabled={item.isNewProposedPriceDisabled}
+                                            onchange={handleNewDesiredPriceChange}
+                                            step="0.01">
+                                        </lightning-input>
+                                    </template>
+                                    <template if:false={item.Is_Discount_Approved__c}>
+                                        <span class="slds-text-color_weak">-</span>
+                                    </template>
+                                </td>
+                                <!-- Disc. % (read-only, always calculated) -->
+                                <td class="col-disc amount" style="text-align: left;">
+                                    <template if:true={item.Is_Discount_Approved__c}>
+                                        <lightning-formatted-number value={item.newDiscountValue} format-style="decimal" maximum-fraction-digits="2"></lightning-formatted-number>
+                                    </template>
+                                    <template if:false={item.Is_Discount_Approved__c}>
+                                        <lightning-formatted-number value={item.Discount_to_be_offered__c} format-style="decimal" maximum-fraction-digits="2"></lightning-formatted-number>
+                                    </template>
+                                </td>
+
+                                <!-- Min and Max Value -->
+                                <td class="col-potval"></td>
+                                <td class="col-potval"></td>
+
+                                <!-- Potential Qty -->
+                                <td class="col-potqty">
+                                    <lightning-input type="number" data-id={item.Id} data-field="Potential_Qty__c"
+                                        variant="label-hidden" value={item.Potential_Qty__c} class="input-field"
+                                        onchange={handleNumberFieldChange}
+                                        step="any">
+                                    </lightning-input>
+                                </td>
+                                <!-- Valid From -->
+                                <td class="col-validfrom">
+                                    <lightning-input type="date" data-id={item.Id} data-field="Valid_from__c"
+                                        variant="label-hidden" value={item.Valid_from__c} class="input-field"
+                                        onchange={handleDateFieldChange}>
+                                    </lightning-input>
+                                </td>
+                                <!-- Valid Till -->
+                                <td class="col-validtill">
+                                    <lightning-input type="date" data-id={item.Id} data-field="Valid_Till__c"
+                                        variant="label-hidden" value={item.Valid_Till__c} class="input-field"
+                                        onchange={handleDateFieldChange}>
+                                    </lightning-input>
+                                </td>
+                                <!-- Existing ARC Price -->
+                                <td class="col-existarc amount">
+                                    {item.existingArcPrice}
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="footer-actions">
+                <lightning-button label="Cancel" variant="neutral" onclick={closeModal}>
+                </lightning-button>
+                <lightning-button label="Save" variant="brand" onclick={handleSave} class="slds-m-left_small">
+                </lightning-button>
+            </div>
+        </lightning-card>
+    </div>
+</template>

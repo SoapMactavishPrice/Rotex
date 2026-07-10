@@ -89,7 +89,7 @@ public class BatchPendingEventEmailer implements Database.Batchable<SObject>, Da
                 mail.setOrgWideEmailAddressId(oweId);   // From: enquiry@rotexautomation.com
             }
             mail.setReplyTo('bhumi.sheth@rotexautomation.com');
-            mail.setBccAddresses(new List<String>{ 'bhumi.sheth@rotexautomation.com' });
+            //mail.setBccAddresses(new List<String>{ 'bhumi.sheth@rotexautomation.com' });
             mail.setSubject('Pending Scheduled Events — Action Required (' + owner.Name + ')');
             mail.setHtmlBody(buildHtmlEmail(owner.Name, ownerEvents));
             mail.setSaveAsActivity(false);

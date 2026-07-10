@@ -1,0 +1,41 @@
+<template>
+    <div class="menu-item-wrapper">
+
+        <button class={computedClass} onclick={handleClick}>
+            <div class="menu-left">
+                <lightning-icon
+                    icon-name={menuIcon}
+                    size="x-small"
+                    class="menu-icon">
+                </lightning-icon>
+                <span class="menu-label">
+                    {item.publicLabel}
+                </span>
+            </div>
+
+            <template if:true={hasChildren}>
+                <lightning-icon
+                    icon-name={expandIcon}
+                    size="xx-small"
+                    class="menu-expand-icon">
+                </lightning-icon>
+            </template>
+        </button>
+
+        <template if:true={showChildren}>
+            <ul class="submenu-list">
+                <template for:each={childrenList} for:item="child">
+                    <li key={child.id}>
+                        <button
+                            class={child.cssClass}
+                            data-child-id={child.id}
+                            onclick={handleChildClick}>
+                            <span class="submenu-label">{child.publicLabel}</span>
+                        </button>
+                    </li>
+                </template>
+            </ul>
+        </template>
+
+    </div>
+</template>

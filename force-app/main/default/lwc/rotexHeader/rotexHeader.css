@@ -1,0 +1,42 @@
+:host {
+    display: block;
+}
+
+/* HEADER */
+.header {
+    width: 100%;
+    height: 90px; /* slightly bigger */
+
+    background: linear-gradient(135deg, #0b5c5a, #0f7a78);
+    position: relative;
+    overflow: visible; /* allow overlap */
+}
+
+
+/* LOGO WRAPPER (KEY PART) */
+.logo-wrapper {
+    position: absolute;
+    border-radius: 6px;
+    padding: 12px 10px;
+    display: flex;
+    height: 60px;
+    justify-content: center;
+    align-items: center;
+    top: 40%;
+    left: 50px;
+   background: #fff;
+    transform: translateY(-30%); /* moves it between header & body */
+
+    z-index: 10; /* above everything */
+}
+
+/* LOGO */
+.logo {
+    height: 50px;  /* 🔥 BIG LOGO */
+    width: auto;
+
+    object-fit: contain;
+
+    filter: brightness(1.2) contrast(1.1);
+
+}

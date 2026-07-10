@@ -44,7 +44,8 @@ public class QuoteLineItemApprovalHandlerTest {
             EmailEncodingKey = 'UTF-8',
             ProfileId = p.Id,
             LanguageLocaleKey = 'en_US',
-            SOA_Profile__c = 'Sales Rep'
+            SOA_Profile__c = 'Sales Rep',
+            Division = 'Rotex'
         );
         insert salesRep;
 
@@ -59,7 +60,8 @@ public class QuoteLineItemApprovalHandlerTest {
             EmailEncodingKey = 'UTF-8',
             ProfileId = p.Id,
             LanguageLocaleKey = 'en_US',
-            SOA_Profile__c = 'Sales Manager'
+            SOA_Profile__c = 'Sales Manager',
+            Division = 'Rotex'
         );
         insert salesManager;
 
@@ -74,7 +76,8 @@ public class QuoteLineItemApprovalHandlerTest {
             EmailEncodingKey = 'UTF-8',
             ProfileId = p.Id,
             LanguageLocaleKey = 'en_US',
-            SOA_Profile__c = 'Country / Continent Sales Head / LOB Head'
+            SOA_Profile__c = 'Country / Continent Sales Head / LOB Head',
+            Division = 'Rotex'
         );
         insert countryHead;
 

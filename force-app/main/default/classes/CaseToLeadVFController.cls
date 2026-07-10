@@ -158,7 +158,12 @@ public with sharing class CaseToLeadVFController {
                     StateCode   = stateCode,
                     City        = city
                 );
-                insert l;
+            // Invoke Active Lead Assignment Rule
+            Database.DMLOptions dml = new Database.DMLOptions();
+            dml.assignmentRuleHeader.useDefaultRule = true;
+            l.setOptions(dml);
+            
+            insert l;
 
                 Case currentCase = new Case();
                 currentCase.Id = caseId;

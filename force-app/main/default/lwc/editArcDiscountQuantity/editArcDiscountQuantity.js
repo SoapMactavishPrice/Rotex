@@ -182,29 +182,29 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
     computeDiscountFromDesiredPrice(listPrice, desiredPrice) {
         if (listPrice == null || listPrice === 0 || desiredPrice == null || desiredPrice === '') return null;
         const raw = ((listPrice - parseFloat(desiredPrice)) / listPrice) * 100;
-        return this.roundTo2Decimals(raw);
+        return this.roundTo3Decimals(raw);
     }
 
-    roundTo2Decimals(value) {
+    roundTo3Decimals(value) {
         if (value == null) return null;
-        return parseFloat(parseFloat(value).toFixed(2));
+        return parseFloat(parseFloat(value).toFixed(3));
     }
 
-    enforceMax2Decimals(value) {
+    enforceMax3Decimals(value) {
         if (value === '' || value == null) return null;
         const str = String(value);
         const dotIndex = str.indexOf('.');
-        if (dotIndex !== -1 && str.length - dotIndex - 1 > 2) {
-            this.showToast('Invalid Input', 'Discount can have a maximum of 2 decimal places.', 'warning');
-            return this.roundTo2Decimals(parseFloat(value));
+        if (dotIndex !== -1 && str.length - dotIndex - 1 > 3) {
+            this.showToast('Invalid Input', 'Discount can have a maximum of 3 decimal places.', 'warning');
+            return this.roundTo3Decimals(parseFloat(value));
         }
         return parseFloat(value);
     }
 
-    hasMoreThan2Decimals(rawValue) {
+    hasMoreThan3Decimals(rawValue) {
         const str = String(rawValue);
         const dotIndex = str.indexOf('.');
-        return dotIndex !== -1 && str.length - dotIndex - 1 > 2;
+        return dotIndex !== -1 && str.length - dotIndex - 1 > 3;
     }
 
     hasDiscountOfferedValue(val) {

@@ -48,7 +48,7 @@
                                         value={item.Discount_to_be_offered__c} class="input-field"
                                         disabled={item.isDiscountOfferedDisabled}
                                         onchange={handleDiscountChange}
-                                        step="0.01">
+                                        step="0.001">
                                     </lightning-input>
                                 </td>
                                 <td class="col-input">
@@ -57,7 +57,7 @@
                                             value={item.newDiscountValue} class="input-field"
                                             disabled={item.isNewDiscountDisabled}
                                             onchange={handleNewDiscountChange}
-                                            step="0.01">
+                                            step="0.001">
                                         </lightning-input>
                                     </template>
                                     <template if:false={item.Is_Discount_Approved__c}>

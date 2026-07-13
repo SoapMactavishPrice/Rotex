@@ -138,10 +138,10 @@
                                 <!-- Disc. % (read-only, always calculated) -->
                                 <td class="col-disc amount" style="text-align: left;">
                                     <template if:true={item.Is_Discount_Approved__c}>
-                                        <lightning-formatted-number value={item.newDiscountValue} format-style="decimal" maximum-fraction-digits="2"></lightning-formatted-number>
+                                        <lightning-formatted-number value={item.newDiscountValue} format-style="decimal" maximum-fraction-digits="3"></lightning-formatted-number>
                                     </template>
                                     <template if:false={item.Is_Discount_Approved__c}>
-                                        <lightning-formatted-number value={item.Discount_to_be_offered__c} format-style="decimal" maximum-fraction-digits="2"></lightning-formatted-number>
+                                        <lightning-formatted-number value={item.Discount_to_be_offered__c} format-style="decimal" maximum-fraction-digits="3"></lightning-formatted-number>
                                     </template>
                                 </td>
 

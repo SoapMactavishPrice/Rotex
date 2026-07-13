@@ -213,115 +213,115 @@ public with sharing class QuoteTotalValueApprovalHandler {
         }
     }
 
-    private static void handleLegacyApprovalProgression(List<Quote> newQuotes, Map<Id, Quote> oldQuoteMap) {
-        Set<Id> quoteIdsForApprover = new Set<Id>();
-        Set<Id> quoteIdsForOwner    = new Set<Id>();
+    // private static void handleLegacyApprovalProgression(List<Quote> newQuotes, Map<Id, Quote> oldQuoteMap) {
+    //     Set<Id> quoteIdsForApprover = new Set<Id>();
+    //     Set<Id> quoteIdsForOwner    = new Set<Id>();
 
-        for (Quote q : newQuotes) {
-            Quote oldQ = oldQuoteMap.get(q.Id);
-            if (oldQ == null) continue;
+    //     for (Quote q : newQuotes) {
+    //         Quote oldQ = oldQuoteMap.get(q.Id);
+    //         if (oldQ == null) continue;
 
-            Integer finalHierarchy = getApproverHierarchyIndex(q, q.Final_Total_Value_Approver__c);
-            if (finalHierarchy == null) finalHierarchy = 1;
+    //         Integer finalHierarchy = getApproverHierarchyIndex(q, q.Final_Total_Value_Approver__c);
+    //         if (finalHierarchy == null) finalHierarchy = 1;
 
-            if (q.SM_Value_Status__c != oldQ.SM_Value_Status__c) {
-                if (q.SM_Value_Status__c == STATUS_SUBMITTED) {
-                    quoteIdsForApprover.add(q.Id);
-                } else if (q.SM_Value_Status__c == STATUS_APPROVED) {
-                    q.SM_Value_Date_Time__c = System.now();
-                    if (finalHierarchy > 1) {
-                        if (q.CH_Value_Status__c != STATUS_APPROVED && q.CH_Value_Status__c != STATUS_REJECTED) {
-                            q.CH_Value_Status__c = STATUS_SUBMITTED;
-                            quoteIdsForApprover.add(q.Id);
-                        }
-                    } else {
-                        finalizeApproval(q);
-                    }
-                } else if (q.SM_Value_Status__c == STATUS_REJECTED) {
-                    quoteIdsForOwner.add(q.Id);
-                }
-            }
+    //         if (q.SM_Value_Status__c != oldQ.SM_Value_Status__c) {
+    //             if (q.SM_Value_Status__c == STATUS_SUBMITTED) {
+    //                 quoteIdsForApprover.add(q.Id);
+    //             } else if (q.SM_Value_Status__c == STATUS_APPROVED) {
+    //                 q.SM_Value_Date_Time__c = System.now();
+    //                 if (finalHierarchy > 1) {
+    //                     if (q.CH_Value_Status__c != STATUS_APPROVED && q.CH_Value_Status__c != STATUS_REJECTED) {
+    //                         q.CH_Value_Status__c = STATUS_SUBMITTED;
+    //                         quoteIdsForApprover.add(q.Id);
+    //                     }
+    //                 } else {
+    //                     finalizeApproval(q);
+    //                 }
+    //             } else if (q.SM_Value_Status__c == STATUS_REJECTED) {
+    //                 quoteIdsForOwner.add(q.Id);
+    //             }
+    //         }
 
-            if (q.CH_Value_Status__c != oldQ.CH_Value_Status__c) {
-                if (q.CH_Value_Status__c == STATUS_SUBMITTED) {
-                    quoteIdsForApprover.add(q.Id);
-                } else if (q.CH_Value_Status__c == STATUS_APPROVED) {
-                    q.CH_Value_Date_Time__c = System.now();
-                    if (finalHierarchy > 2) {
-                        if (q.GS_Value_Status__c != STATUS_APPROVED && q.GS_Value_Status__c != STATUS_REJECTED) {
-                            q.GS_Value_Status__c = STATUS_SUBMITTED;
-                            quoteIdsForApprover.add(q.Id);
-                        }
-                    } else {
-                        finalizeApproval(q);
-                    }
-                } else if (q.CH_Value_Status__c == STATUS_REJECTED) {
-                    quoteIdsForOwner.add(q.Id);
-                }
-            }
+    //         if (q.CH_Value_Status__c != oldQ.CH_Value_Status__c) {
+    //             if (q.CH_Value_Status__c == STATUS_SUBMITTED) {
+    //                 quoteIdsForApprover.add(q.Id);
+    //             } else if (q.CH_Value_Status__c == STATUS_APPROVED) {
+    //                 q.CH_Value_Date_Time__c = System.now();
+    //                 if (finalHierarchy > 2) {
+    //                     if (q.GS_Value_Status__c != STATUS_APPROVED && q.GS_Value_Status__c != STATUS_REJECTED) {
+    //                         q.GS_Value_Status__c = STATUS_SUBMITTED;
+    //                         quoteIdsForApprover.add(q.Id);
+    //                     }
+    //                 } else {
+    //                     finalizeApproval(q);
+    //                 }
+    //             } else if (q.CH_Value_Status__c == STATUS_REJECTED) {
+    //                 quoteIdsForOwner.add(q.Id);
+    //             }
+    //         }
 
-            if (q.GS_Value_Status__c != oldQ.GS_Value_Status__c) {
-                if (q.GS_Value_Status__c == STATUS_SUBMITTED) {
-                    quoteIdsForApprover.add(q.Id);
-                } else if (q.GS_Value_Status__c == STATUS_APPROVED) {
-                    q.GS_Value_Date_Time__c = System.now();
-                    if (finalHierarchy > 3) {
-                        if (q.BM_Value_Status__c != STATUS_APPROVED && q.BM_Value_Status__c != STATUS_REJECTED) {
-                            q.BM_Value_Status__c = STATUS_SUBMITTED;
-                            quoteIdsForApprover.add(q.Id);
-                        }
-                    } else {
-                        finalizeApproval(q);
-                    }
-                } else if (q.GS_Value_Status__c == STATUS_REJECTED) {
-                    quoteIdsForOwner.add(q.Id);
-                }
-            }
+    //         if (q.GS_Value_Status__c != oldQ.GS_Value_Status__c) {
+    //             if (q.GS_Value_Status__c == STATUS_SUBMITTED) {
+    //                 quoteIdsForApprover.add(q.Id);
+    //             } else if (q.GS_Value_Status__c == STATUS_APPROVED) {
+    //                 q.GS_Value_Date_Time__c = System.now();
+    //                 if (finalHierarchy > 3) {
+    //                     if (q.BM_Value_Status__c != STATUS_APPROVED && q.BM_Value_Status__c != STATUS_REJECTED) {
+    //                         q.BM_Value_Status__c = STATUS_SUBMITTED;
+    //                         quoteIdsForApprover.add(q.Id);
+    //                     }
+    //                 } else {
+    //                     finalizeApproval(q);
+    //                 }
+    //             } else if (q.GS_Value_Status__c == STATUS_REJECTED) {
+    //                 quoteIdsForOwner.add(q.Id);
+    //             }
+    //         }
 
-            if (q.BM_Value_Status__c != oldQ.BM_Value_Status__c) {
-                if (q.BM_Value_Status__c == STATUS_SUBMITTED) {
-                    quoteIdsForApprover.add(q.Id);
-                } else if (q.BM_Value_Status__c == STATUS_APPROVED) {
-                    q.BM_Value_Date_Time__c = System.now();
-                    if (finalHierarchy > 4) {
-                        if (q.MD_Value_Status__c != STATUS_APPROVED && q.MD_Value_Status__c != STATUS_REJECTED) {
-                            q.MD_Value_Status__c = STATUS_SUBMITTED;
-                            quoteIdsForApprover.add(q.Id);
-                        }
-                    } else {
-                        finalizeApproval(q);
-                    }
-                } else if (q.BM_Value_Status__c == STATUS_REJECTED) {
-                    quoteIdsForOwner.add(q.Id);
-                }
-            }
+    //         if (q.BM_Value_Status__c != oldQ.BM_Value_Status__c) {
+    //             if (q.BM_Value_Status__c == STATUS_SUBMITTED) {
+    //                 quoteIdsForApprover.add(q.Id);
+    //             } else if (q.BM_Value_Status__c == STATUS_APPROVED) {
+    //                 q.BM_Value_Date_Time__c = System.now();
+    //                 if (finalHierarchy > 4) {
+    //                     if (q.MD_Value_Status__c != STATUS_APPROVED && q.MD_Value_Status__c != STATUS_REJECTED) {
+    //                         q.MD_Value_Status__c = STATUS_SUBMITTED;
+    //                         quoteIdsForApprover.add(q.Id);
+    //                     }
+    //                 } else {
+    //                     finalizeApproval(q);
+    //                 }
+    //             } else if (q.BM_Value_Status__c == STATUS_REJECTED) {
+    //                 quoteIdsForOwner.add(q.Id);
+    //             }
+    //         }
 
-            if (q.MD_Value_Status__c != oldQ.MD_Value_Status__c) {
-                if (q.MD_Value_Status__c == STATUS_SUBMITTED) {
-                    quoteIdsForApprover.add(q.Id);
-                } else if (q.MD_Value_Status__c == STATUS_APPROVED) {
-                    q.MD_Value_Date_Time__c = System.now();
-                    finalizeApproval(q);
-                } else if (q.MD_Value_Status__c == STATUS_REJECTED) {
-                    quoteIdsForOwner.add(q.Id);
-                }
-            }
-        }
+    //         if (q.MD_Value_Status__c != oldQ.MD_Value_Status__c) {
+    //             if (q.MD_Value_Status__c == STATUS_SUBMITTED) {
+    //                 quoteIdsForApprover.add(q.Id);
+    //             } else if (q.MD_Value_Status__c == STATUS_APPROVED) {
+    //                 q.MD_Value_Date_Time__c = System.now();
+    //                 finalizeApproval(q);
+    //             } else if (q.MD_Value_Status__c == STATUS_REJECTED) {
+    //                 quoteIdsForOwner.add(q.Id);
+    //             }
+    //         }
+    //     }
 
-        if (!quoteIdsForApprover.isEmpty() || !quoteIdsForOwner.isEmpty()) {
-            sendApprovalNotifications(new List<Id>(quoteIdsForApprover), new List<Id>(quoteIdsForOwner));
-        }
-    }
+    //     if (!quoteIdsForApprover.isEmpty() || !quoteIdsForOwner.isEmpty()) {
+    //         sendApprovalNotifications(new List<Id>(quoteIdsForApprover), new List<Id>(quoteIdsForOwner));
+    //     }
+    // }
 
-    private static Integer getApproverHierarchyIndex(Quote q, Id approverId) {
-        if (approverId == null) return null;
-        if (q.Sales_Manager__c == approverId) return 1;
-        if (q.Country_Continent_Sales_Head_LOB_Head__c == approverId) return 2;
-        if (q.Global_Sales_Head__c == approverId) return 3;
-        if (q.Rotex_Board_Member__c == approverId) return 4;
-        if (q.Managing_Director_Country_Manager__c == approverId) return 5;
-        return null;
-    }
+    // private static Integer getApproverHierarchyIndex(Quote q, Id approverId) {
+    //     if (approverId == null) return null;
+    //     if (q.Sales_Manager__c == approverId) return 1;
+    //     if (q.Country_Continent_Sales_Head_LOB_Head__c == approverId) return 2;
+    //     if (q.Global_Sales_Head__c == approverId) return 3;
+    //     if (q.Rotex_Board_Member__c == approverId) return 4;
+    //     if (q.Managing_Director_Country_Manager__c == approverId) return 5;
+    //     return null;
+    // }
 
     private static void finalizeApproval(Quote q) {
         q.Is_Total_Value_Approved__c = true;

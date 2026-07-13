@@ -52,11 +52,13 @@ public class QuoteLineItemSequentialApprovalTest {
                 LocaleSidKey = 'en_US',
                 EmailEncodingKey = 'UTF-8',
                 LanguageLocaleKey = 'en_US',
-                ProfileId = p.Id
+                ProfileId = p.Id,
+                Division__c = 'Domestic'
             ));
         }
         insert users;
         
+        System.runAs(users[0]) {
         Id salesRepId = users[0].Id;
         Id salesMgrId = users[1].Id;
         Id countryHeadId = users[2].Id;
@@ -144,6 +146,7 @@ public class QuoteLineItemSequentialApprovalTest {
             Managing_Director_Country_Manage__c = managingDirectorId
         );
         insert qli;
+        }
     }
 
     @isTest
@@ -159,7 +162,6 @@ public class QuoteLineItemSequentialApprovalTest {
         
         qli.Sales_Manager_Status__c = 'Approved';
         qli.Discount_to_be_offered__c = 12; // In Country/Continent range
-        update qli;
         
         Test.startTest();
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(new List<QuoteLineItem>{ qli });
@@ -186,7 +188,6 @@ public class QuoteLineItemSequentialApprovalTest {
         qli.Discount_to_be_offered__c = 18; // In Global Head range
         qli.Sales_Manager_Status__c = 'Approved';
         qli.Country_Continent_Sales_H_LOB_Status__c = 'Approved';
-        update qli;
         
         Test.startTest();
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(new List<QuoteLineItem>{ qli });
@@ -214,7 +215,6 @@ public class QuoteLineItemSequentialApprovalTest {
         qli.Sales_Manager_Status__c = 'Approved';
         qli.Country_Continent_Sales_H_LOB_Status__c = 'Approved';
         qli.Global_Sales_Head_Status__c = 'Approved';
-        update qli;
         
         Test.startTest();
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(new List<QuoteLineItem>{ qli });
@@ -243,7 +243,6 @@ public class QuoteLineItemSequentialApprovalTest {
         qli.Country_Continent_Sales_H_LOB_Status__c = 'Approved';
         qli.Global_Sales_Head_Status__c = 'Approved';
         qli.Rotex_Board_Member_Status__c = 'Approved';
-        update qli;
         
         Test.startTest();
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(new List<QuoteLineItem>{ qli });
@@ -386,43 +385,10 @@ public class QuoteLineItemSequentialApprovalTest {
 
     @isTest
     static void testNoApproverScenario() {
-        // Create separate Quote without approvers
-        Account acc = new Account(Name = 'No Approver Account');
-        insert acc;
-        
-        Id standardPbId = Test.getStandardPricebookId();
-        
-        Opportunity opp = new Opportunity(
-            Name = 'No Approver Opp',
-            AccountId = acc.Id,
-            StageName = 'Prospecting',
-            CloseDate = System.today().addDays(30),
-            Pricebook2Id = standardPbId
-        );
-        insert opp;
-        
-        Quote q = new Quote(
-            Name = 'No Approver Quote',
-            OpportunityId = opp.Id,
-            Pricebook2Id = standardPbId
-        );
-        insert q;
-        
-        Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
-        PricebookEntry pbe = [SELECT Id FROM PricebookEntry 
-                              WHERE Pricebook2Id = :standardPbId 
-                              AND Product2Id = :prod.Id LIMIT 1];
-        
         QuoteLineItem noApproverQli = new QuoteLineItem(
-            QuoteId = q.Id,
-            PricebookEntryId = pbe.Id,
-            Product2Id = prod.Id,
-            Quantity = 1,
-            UnitPrice = 100,
             Discount_to_be_offered__c = 15,
             Sales_Manager_Status__c = 'Approved'
         );
-        insert noApproverQli;
         
         Test.startTest();
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(
@@ -447,7 +413,6 @@ public class QuoteLineItemSequentialApprovalTest {
         
         qli.Discount_to_be_offered__c = null;
         qli.Sales_Manager_Status__c = 'Approved';
-        update qli;
         
         Test.startTest();
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(
@@ -486,7 +451,6 @@ public class QuoteLineItemSequentialApprovalTest {
         
         qli.Discount_to_be_offered__c = 50; // Outside all ranges
         qli.Sales_Manager_Status__c = 'Approved';
-        update qli;
         
         Test.startTest();
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(
@@ -517,7 +481,6 @@ public class QuoteLineItemSequentialApprovalTest {
         qli.Discount_to_be_offered__c = 12;
         qli.Sales_Manager_Status__c = 'Approved';
         qli.Country_Continent_Sales_H_LOB_Status__c = 'Rejected'; // Already has a status
-        update qli;
         
         Test.startTest();
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(
@@ -581,7 +544,6 @@ public class QuoteLineItemSequentialApprovalTest {
             qli.Sales_Manager_Status__c = 'Approved';
             qli.Discount_to_be_offered__c = 12;
         }
-        update qliList;
         
         Test.startTest();
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(qliList);

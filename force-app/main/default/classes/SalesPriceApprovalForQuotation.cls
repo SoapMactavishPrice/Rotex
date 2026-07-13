@@ -2299,6 +2299,8 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String   hodUserId;
         @AuraEnabled public String   currentStage;
         @AuraEnabled public String   currentStageField;
+        @AuraEnabled public String   originalFinalDiscountApproverId;
+        @AuraEnabled public String   originalFinalDiscountApproverDelegatedId;
         @AuraEnabled public String   finalDiscountApproverId;
         @AuraEnabled public String   finalDiscountApproverDelegatedId;
         @AuraEnabled public Boolean  isFinalDiscountApprover;
@@ -2319,6 +2321,11 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.salesPrice       = qli.UnitPrice;
             this.bcheck  = true; this.bcheck1 = true; this.bcheck2 = true;
             this.bcheck3 = true; this.bcheck4 = true; this.bcheck5 = true;
+            this.originalFinalDiscountApproverId = qli.Final_Discount_Approver__c == null
+                ? null : String.valueOf(qli.Final_Discount_Approver__c);
+            this.originalFinalDiscountApproverDelegatedId =
+                qli.Final_Discount_Approver__r != null
+                ? String.valueOf(qli.Final_Discount_Approver__r.DelegatedApproverId) : null;
             this.finalDiscountApproverId = effectiveDiscountApprover(qli);
             this.finalDiscountApproverDelegatedId =
                 qli.Effective_Final_Discount_Approver__r != null
@@ -2393,6 +2400,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String   warrantyTermsDraft;
         @AuraEnabled public String   originalWarrantyTermsDraft;
         @AuraEnabled public String   warrantyTerms;
+        @AuraEnabled public String   originalFinalWarrantyApprover;
         @AuraEnabled public String   finalWarrantyApprover;
         @AuraEnabled public List<ApprovalValueOption> allowedWarrantyTerms;
         @AuraEnabled public Boolean  updated;
@@ -2428,6 +2436,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String   originalMdWarrantyStatus; @AuraEnabled public String originalMdWarrantyComments;
 
         @AuraEnabled public Integer  currentUserHierarchyPosition;
+        @AuraEnabled public Integer  originalFinalApproverHierarchyPosition;
         @AuraEnabled public Integer  finalApproverHierarchyPosition;
         @AuraEnabled public Boolean  isHigherHierarchy;
         @AuraEnabled public Boolean  canViewReadOnly;
@@ -2444,6 +2453,8 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.warrantyTermsDraft  = q.Warranty_Terms_Draft__c;
             this.originalWarrantyTermsDraft = q.Warranty_Terms_Draft__c;
             this.warrantyTerms       = q.Warranty_Terms__c;
+            this.originalFinalWarrantyApprover = q.Final_Warranty_Terms_Approver__c == null
+                ? null : String.valueOf(q.Final_Warranty_Terms_Approver__c);
             this.finalWarrantyApprover = String.valueOf(effectiveWarrantyApprover(q));
             this.updated             = false;
 
@@ -2473,13 +2484,14 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.originalMdWarrantyStatus = q.MD_Warranty_Status__c; this.originalMdWarrantyComments = q.MD_Warranty_Comments__c;
 
             setHierarchyPositions(q, currentUserId);
-            this.allowedWarrantyTerms = getAllowedWarrantyTermOptions(this.finalApproverHierarchyPosition);
+            this.allowedWarrantyTerms = getAllowedWarrantyTermOptions(this.originalFinalApproverHierarchyPosition);
             setEditPermissions(q, currentUserId);
         }
 
         private void setHierarchyPositions(Quote q, Id currentUserId) {
             this.currentUserHierarchyPosition   = getWarrantyHierarchyIndex(q, currentUserId);
             System.debug('setHierarchyPositions currentUserHierarchyPosition ==> ' + this.currentUserHierarchyPosition);
+            this.originalFinalApproverHierarchyPosition = getWarrantyHierarchyIndex(q, q.Final_Warranty_Terms_Approver__c);
             Id finalId = effectiveWarrantyApprover(q);
             System.debug('setHierarchyPositions finalId ==> '+finalId);
             this.finalApproverHierarchyPosition = getWarrantyHierarchyIndex(q, finalId);
@@ -2519,11 +2531,17 @@ public without sharing class SalesPriceApprovalForQuotation {
 
         private void setEditPermissions(Quote q, Id currentUserId) {
             Id finalId = effectiveWarrantyApprover(q);
+            Id originalFinalId = q.Final_Warranty_Terms_Approver__c;
             if (this.isSmCurrentUser && this.smWarrantyStatus == 'Submitted') { this.canSmEditComments = true; this.canSmEditStatus = (q.Sales_Manager__c == finalId); }
             if (this.isChCurrentUser && this.chWarrantyStatus == 'Submitted') { this.canChEditComments = true; this.canChEditStatus = (q.Country_Continent_Sales_Head_LOB_Head__c == finalId); }
             if (this.isGsCurrentUser && this.gsWarrantyStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }
             if (this.isBmCurrentUser && this.bmWarrantyStatus == 'Submitted') { this.canBmEditComments = true; this.canBmEditStatus = (q.Rotex_Board_Member__c == finalId); }
             if (this.isMdCurrentUser && this.mdWarrantyStatus == 'Submitted') { this.canMdEditComments = true; this.canMdEditStatus = (q.Managing_Director_Country_Manager__c == finalId); }
+            if (this.isSmCurrentUser && this.smWarrantyStatus == 'Submitted' && q.Sales_Manager__c == originalFinalId) this.canSmEditStatus = true;
+            if (this.isChCurrentUser && this.chWarrantyStatus == 'Submitted' && q.Country_Continent_Sales_Head_LOB_Head__c == originalFinalId) this.canChEditStatus = true;
+            if (this.isGsCurrentUser && this.gsWarrantyStatus == 'Submitted' && q.Global_Sales_Head__c == originalFinalId) this.canGsEditStatus = true;
+            if (this.isBmCurrentUser && this.bmWarrantyStatus == 'Submitted' && q.Rotex_Board_Member__c == originalFinalId) this.canBmEditStatus = true;
+            if (this.isMdCurrentUser && this.mdWarrantyStatus == 'Submitted' && q.Managing_Director_Country_Manager__c == originalFinalId) this.canMdEditStatus = true;
         }
     }
 
@@ -2534,6 +2552,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String   requestedValidityOfOffer;
         @AuraEnabled public String   originalRequestedValidityOfOffer;
         @AuraEnabled public String   validityOfOffer;
+        @AuraEnabled public String   originalFinalValidityOfferApprover;
         @AuraEnabled public String   finalValidityOfferApprover;
         @AuraEnabled public List<ApprovalValueOption> allowedValidityOfferValues;
         @AuraEnabled public Boolean  updated;
@@ -2569,6 +2588,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String   originalMdValidityOfferStatus; @AuraEnabled public String originalMdValidityOfferComments;
 
         @AuraEnabled public Integer  currentUserHierarchyPosition;
+        @AuraEnabled public Integer  originalFinalApproverHierarchyPosition;
         @AuraEnabled public Integer  finalApproverHierarchyPosition;
         @AuraEnabled public Boolean  isHigherHierarchy;
         @AuraEnabled public Boolean  canViewReadOnly;
@@ -2585,6 +2605,8 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.requestedValidityOfOffer   = q.Requested_Validity_Of_Offer__c;
             this.originalRequestedValidityOfOffer = q.Requested_Validity_Of_Offer__c;
             this.validityOfOffer            = q.Validity_of_Offer__c;
+            this.originalFinalValidityOfferApprover = q.Final_Validity_Offer_Approver__c == null
+                ? null : String.valueOf(q.Final_Validity_Offer_Approver__c);
             this.finalValidityOfferApprover = String.valueOf(effectiveValidityApprover(q));
             this.updated                    = false;
 
@@ -2614,12 +2636,13 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.originalMdValidityOfferStatus = q.MD_Validity_Offer_Status__c; this.originalMdValidityOfferComments = q.MD_Validity_Offer_Comments__c;
 
             setValidityOfferHierarchyPositions(q, currentUserId);
-            this.allowedValidityOfferValues = getAllowedValidityOfferOptions(this.finalApproverHierarchyPosition);
+            this.allowedValidityOfferValues = getAllowedValidityOfferOptions(this.originalFinalApproverHierarchyPosition);
             setValidityOfferEditPermissions(q, currentUserId);
         }
 
         private void setValidityOfferHierarchyPositions(Quote q, Id currentUserId) {
             this.currentUserHierarchyPosition   = getValidityOfferHierarchyIdx(q, currentUserId);
+            this.originalFinalApproverHierarchyPosition = getValidityOfferHierarchyIdx(q, q.Final_Validity_Offer_Approver__c);
             Id finalId = effectiveValidityApprover(q);
             this.finalApproverHierarchyPosition = getValidityOfferHierarchyIdx(q, finalId);
             this.isHigherHierarchy = this.currentUserHierarchyPosition != null &&
@@ -2654,11 +2677,17 @@ public without sharing class SalesPriceApprovalForQuotation {
 
         private void setValidityOfferEditPermissions(Quote q, Id currentUserId) {
             Id finalId = effectiveValidityApprover(q);
+            Id originalFinalId = q.Final_Validity_Offer_Approver__c;
             if (this.isSmCurrentUser && this.smValidityOfferStatus == 'Submitted') { this.canSmEditComments = true; this.canSmEditStatus = (q.Sales_Manager__c == finalId); }
             if (this.isChCurrentUser && this.chValidityOfferStatus == 'Submitted') { this.canChEditComments = true; this.canChEditStatus = (q.Country_Continent_Sales_Head_LOB_Head__c == finalId); }
             if (this.isGsCurrentUser && this.gsValidityOfferStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }
             if (this.isBmCurrentUser && this.bmValidityOfferStatus == 'Submitted') { this.canBmEditComments = true; this.canBmEditStatus = (q.Rotex_Board_Member__c == finalId); }
             if (this.isMdCurrentUser && this.mdValidityOfferStatus == 'Submitted') { this.canMdEditComments = true; this.canMdEditStatus = (q.Managing_Director_Country_Manager__c == finalId); }
+            if (this.isSmCurrentUser && this.smValidityOfferStatus == 'Submitted' && q.Sales_Manager__c == originalFinalId) this.canSmEditStatus = true;
+            if (this.isChCurrentUser && this.chValidityOfferStatus == 'Submitted' && q.Country_Continent_Sales_Head_LOB_Head__c == originalFinalId) this.canChEditStatus = true;
+            if (this.isGsCurrentUser && this.gsValidityOfferStatus == 'Submitted' && q.Global_Sales_Head__c == originalFinalId) this.canGsEditStatus = true;
+            if (this.isBmCurrentUser && this.bmValidityOfferStatus == 'Submitted' && q.Rotex_Board_Member__c == originalFinalId) this.canBmEditStatus = true;
+            if (this.isMdCurrentUser && this.mdValidityOfferStatus == 'Submitted' && q.Managing_Director_Country_Manager__c == originalFinalId) this.canMdEditStatus = true;
         }
     }
 
@@ -2667,6 +2696,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String   quoteName;
         @AuraEnabled public String   quoteNumber;
         @AuraEnabled public Decimal  totalValue;
+        @AuraEnabled public String   originalFinalTotalValueApprover;
         @AuraEnabled public String   finalTotalValueApprover;
         @AuraEnabled public Boolean  updated;
 
@@ -2701,6 +2731,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String   originalMdValueStatus; @AuraEnabled public String originalMdValueComments;
 
         @AuraEnabled public Integer  currentUserHierarchyPosition;
+        @AuraEnabled public Integer  originalFinalApproverHierarchyPosition;
         @AuraEnabled public Integer  finalApproverHierarchyPosition;
         @AuraEnabled public Boolean  isHigherHierarchy;
         @AuraEnabled public Boolean  canViewReadOnly;
@@ -2715,6 +2746,8 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.quoteName                = q.Name;
             this.quoteNumber              = q.QuoteNumber;
             this.totalValue               = q.Total_Value__c;
+            this.originalFinalTotalValueApprover = q.Final_Total_Value_Approver__c == null
+                ? null : String.valueOf(q.Final_Total_Value_Approver__c);
             this.finalTotalValueApprover  = String.valueOf(effectiveTotalValueApprover(q));
             this.updated                  = false;
 
@@ -2749,6 +2782,7 @@ public without sharing class SalesPriceApprovalForQuotation {
 
         private void setTotalValueHierarchyPositions(Quote q, Id currentUserId) {
             this.currentUserHierarchyPosition   = getTotalValueHierarchyPos(q, currentUserId);
+            this.originalFinalApproverHierarchyPosition = getTotalValueHierarchyPos(q, q.Final_Total_Value_Approver__c);
             Id finalId = effectiveTotalValueApprover(q);
             this.finalApproverHierarchyPosition = getTotalValueHierarchyPos(q, finalId);
             this.isHigherHierarchy = this.currentUserHierarchyPosition != null &&
@@ -2773,11 +2807,17 @@ public without sharing class SalesPriceApprovalForQuotation {
 
         private void setTotalValueEditPermissions(Quote q) {
             Id finalId = effectiveTotalValueApprover(q);
+            Id originalFinalId = q.Final_Total_Value_Approver__c;
             if (this.isSmCurrentUser && this.smValueStatus == 'Submitted') { this.canSmEditComments = true; this.canSmEditStatus = (q.Sales_Manager__c == finalId); }
             if (this.isChCurrentUser && this.chValueStatus == 'Submitted') { this.canChEditComments = true; this.canChEditStatus = (q.Country_Continent_Sales_Head_LOB_Head__c == finalId); }
             if (this.isGsCurrentUser && this.gsValueStatus == 'Submitted') { this.canGsEditComments = true; this.canGsEditStatus = (q.Global_Sales_Head__c == finalId); }
             if (this.isBmCurrentUser && this.bmValueStatus == 'Submitted') { this.canBmEditComments = true; this.canBmEditStatus = (q.Rotex_Board_Member__c == finalId); }
             if (this.isMdCurrentUser && this.mdValueStatus == 'Submitted') { this.canMdEditComments = true; this.canMdEditStatus = (q.Managing_Director_Country_Manager__c == finalId); }
+            if (this.isSmCurrentUser && this.smValueStatus == 'Submitted' && q.Sales_Manager__c == originalFinalId) this.canSmEditStatus = true;
+            if (this.isChCurrentUser && this.chValueStatus == 'Submitted' && q.Country_Continent_Sales_Head_LOB_Head__c == originalFinalId) this.canChEditStatus = true;
+            if (this.isGsCurrentUser && this.gsValueStatus == 'Submitted' && q.Global_Sales_Head__c == originalFinalId) this.canGsEditStatus = true;
+            if (this.isBmCurrentUser && this.bmValueStatus == 'Submitted' && q.Rotex_Board_Member__c == originalFinalId) this.canBmEditStatus = true;
+            if (this.isMdCurrentUser && this.mdValueStatus == 'Submitted' && q.Managing_Director_Country_Manager__c == originalFinalId) this.canMdEditStatus = true;
         }
     }
 

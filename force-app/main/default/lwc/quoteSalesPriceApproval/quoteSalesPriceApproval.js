@@ -424,7 +424,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const quoteRecordUrl = `/lightning/r/Quote/${q.quoteId}/view`;
         const processedLineItems = (q.quoteLineItems || []).map(item => ({
             ...item,
-            isFinalDiscountApprover: item.finalDiscountApproverId === this.userId || item.finalDiscountApproverDelegatedId === this.userId,
+            isOriginalFinalDiscountApprover: item.originalFinalDiscountApproverId === this.userId || item.originalFinalDiscountApproverDelegatedId === this.userId,
+            isEffectiveFinalDiscountApprover: item.finalDiscountApproverId === this.userId || item.finalDiscountApproverDelegatedId === this.userId,
+            isFinalDiscountApprover:
+                item.originalFinalDiscountApproverId === this.userId ||
+                item.originalFinalDiscountApproverDelegatedId === this.userId ||
+                item.finalDiscountApproverId === this.userId ||
+                item.finalDiscountApproverDelegatedId === this.userId,
             origApprovalStatus: item.approvalStatus,
             isEditable: item.approvalStatus === 'Submitted' || item.updated === true,
             skipSoaRestrictions: this.skipSoaRestrictions,
@@ -549,12 +555,31 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             // quote.minimumOfferApproval
         ].filter(approval => approval != null);
 
-        return levels.map(level => {
+        const visibleLevelKeys = new Set();
+        approvals.forEach(approval => {
+            this.getVisibleApprovalLevelKeys(approval).forEach(level => visibleLevelKeys.add(level));
+        });
+
+        return levels.filter(level => visibleLevelKeys.size === 0 || visibleLevelKeys.has(level.key)).map(level => {
             const name = approvals.map(approval => approval[`${level.key}Name`]).find(value => this.hasValue(value));
             return {
                 key: level.key,
                 label: name ? `${level.label} - ${name}` : level.label
             };
+        });
+    }
+
+    getVisibleApprovalLevelKeys(data) {
+        const levels = ['sm', 'ch', 'gs', 'bm', 'md'];
+        if (!data) return levels;
+
+        const originalFinalPos = data.originalFinalApproverHierarchyPosition || data.finalApproverHierarchyPosition;
+        const effectiveFinalPos = data.finalApproverHierarchyPosition || originalFinalPos;
+
+        return levels.filter(level => {
+            const levelIndex = this.getApprovalLevelIndex(level);
+            if (!levelIndex) return false;
+            return !originalFinalPos || levelIndex <= originalFinalPos || levelIndex === effectiveFinalPos;
         });
     }
 
@@ -751,7 +776,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const allLevels_ = ['sm', 'ch', 'gs', 'bm', 'md'];
         const isFinalApproverDecided = allLevels_.some(lvl => {
             const origKey = `original${this.capitalize(lvl)}${config.statusSuffix}`;
-            return this.isFinalApproverLevel(data, lvl) &&
+            return this.isEffectiveFinalApproverLevel(data, lvl) &&
                 (data[origKey] === 'Approved' || data[origKey] === 'Rejected');
         });
 
@@ -806,17 +831,28 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         if (data.finalApprover) {
             return data.finalApprover.toUpperCase() === level.toUpperCase();
         }
-        // fallback: check if the level's id matches the finalWarrantyApprover / finalValidityOfferApprover / etc.
+        // fallback: check if the level's id matches the original stream final or the effective quote final.
         const levelId = data[`${level}Id`];
         const finalId = data.finalWarrantyApprover || data.finalValidityOfferApprover ||
             data.finalTotalValueApprover || data.finalMinimumOfferValueApprover;
+        const originalFinalId = data.originalFinalWarrantyApprover || data.originalFinalValidityOfferApprover ||
+            data.originalFinalTotalValueApprover || data.originalFinalMinimumOfferValueApprover;
+        return !!levelId && ((!!finalId && levelId === finalId) || (!!originalFinalId && levelId === originalFinalId));
+    }
+
+    isEffectiveFinalApproverLevel(data, level) {
+        const levelId = data && data[`${level}Id`];
+        const finalId = data && (data.finalWarrantyApprover || data.finalValidityOfferApprover ||
+            data.finalTotalValueApprover || data.finalMinimumOfferValueApprover);
         return !!levelId && !!finalId && levelId === finalId;
     }
 
     isBeyondFinalApproverLevel(data, level) {
         const levelIndex = this.getApprovalLevelIndex(level);
-        const finalIndex = data.finalApproverHierarchyPosition;
-        return finalIndex && levelIndex && levelIndex > finalIndex;
+        const originalFinalIndex = data.originalFinalApproverHierarchyPosition || data.finalApproverHierarchyPosition;
+        const effectiveFinalIndex = data.finalApproverHierarchyPosition || originalFinalIndex;
+        return originalFinalIndex && effectiveFinalIndex && levelIndex &&
+            levelIndex > originalFinalIndex && levelIndex !== effectiveFinalIndex;
     }
 
     getApprovalLevelIndex(level) {
@@ -1643,16 +1679,23 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         (lineItems || []).forEach(item => {
             const allSoaLevels = this.getSoaLevels(item);
 
-            // Hide rows whose hierarchy is above the final approver
-            const finalLevel = allSoaLevels.find(soa => soa.approverId === item.finalDiscountApproverId);
-            const maxHierarchyIndex = finalLevel ? finalLevel.hierarchyIndex : null;
-            const soaLevels = maxHierarchyIndex
-                ? allSoaLevels.filter(soa => soa.hierarchyIndex <= maxHierarchyIndex)
-                : allSoaLevels;
+            const originalFinalApproverId = item.originalFinalDiscountApproverId || item.finalDiscountApproverId;
+            const effectiveFinalApproverId = item.finalDiscountApproverId || originalFinalApproverId;
+            const originalFinalLevel = allSoaLevels.find(soa => soa.approverId === originalFinalApproverId);
+            const effectiveFinalLevel = allSoaLevels.find(soa => soa.approverId === effectiveFinalApproverId);
+            const originalMaxHierarchyIndex = originalFinalLevel ? originalFinalLevel.hierarchyIndex : null;
+            const effectiveHierarchyIndex = effectiveFinalLevel ? effectiveFinalLevel.hierarchyIndex : originalMaxHierarchyIndex;
+            const soaLevels = originalMaxHierarchyIndex
+                ? allSoaLevels.filter(soa =>
+                    soa.hierarchyIndex <= originalMaxHierarchyIndex ||
+                    soa.hierarchyIndex === effectiveHierarchyIndex
+                )
+                : (effectiveHierarchyIndex
+                    ? allSoaLevels.filter(soa => soa.hierarchyIndex <= effectiveHierarchyIndex)
+                    : allSoaLevels);
 
-            // Lock all rows once the final approver has approved or rejected
-            const isFinalApproverDecided = !!(finalLevel &&
-                (finalLevel.originalStatus === 'Approved' || finalLevel.originalStatus === 'Rejected'));
+            const isFinalApproverDecided = !!(effectiveFinalLevel &&
+                (effectiveFinalLevel.originalStatus === 'Approved' || effectiveFinalLevel.originalStatus === 'Rejected'));
 
             soaLevels.forEach((soa, idx) => {
                 const formattedDateTime = soa.dateTime
@@ -1671,9 +1714,11 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 // Case 2: current user LOWER than final  → own comments only
                 // Case 3: current user HIGHER than final → only final approver's row (status + comments)
                 const currentUserIdx_ = this.getCurrentUserHierarchyIndex(item);
-                const isFinalApproverRow = soa.approverId === item.finalDiscountApproverId;
-                const isHigherThanFinal_ = currentUserIdx_ != null && maxHierarchyIndex != null &&
-                    currentUserIdx_ > maxHierarchyIndex;
+                const isOriginalFinalApproverRow = soa.approverId === originalFinalApproverId;
+                const isEffectiveFinalApproverRow = soa.approverId === effectiveFinalApproverId;
+                const isFinalApproverRow = isOriginalFinalApproverRow || isEffectiveFinalApproverRow;
+                const isHigherThanFinal_ = currentUserIdx_ != null && effectiveHierarchyIndex != null &&
+                    currentUserIdx_ > effectiveHierarchyIndex;
 
                 // Case 3: Higher hierarchy → only the final approver's row enabled
                 const skipSoaHigherHierarchyFinalRow = this.skipSoaRestrictions &&
@@ -1708,7 +1753,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
                 const soaStatus = this.getDisplayStatus(
                     actualStatus,
-                    soa.approverId === item.finalDiscountApproverId
+                    isFinalApproverRow
                 );
 
                 displayRows.push({
@@ -1739,16 +1784,16 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     showDiscountInput: idx === 0 && !isFinalApproverDecided && (
                         (item.isFinalDiscountApprover && item.isEditable) ||
                         (this.skipSoaRestrictions &&
-                            maxHierarchyIndex != null &&
+                            effectiveHierarchyIndex != null &&
                             this.getCurrentUserHierarchyIndex(item) != null &&
-                            this.getCurrentUserHierarchyIndex(item) > maxHierarchyIndex &&
-                            finalLevel != null &&
-                            (finalLevel.originalStatus || finalLevel.status || '') !== 'Approved' &&
-                            (finalLevel.originalStatus || finalLevel.status || '') !== 'Rejected') ||
+                            this.getCurrentUserHierarchyIndex(item) > effectiveHierarchyIndex &&
+                            effectiveFinalLevel != null &&
+                            (effectiveFinalLevel.originalStatus || effectiveFinalLevel.status || '') !== 'Approved' &&
+                            (effectiveFinalLevel.originalStatus || effectiveFinalLevel.status || '') !== 'Rejected') ||
                         ((this.skipSoaRestrictions && item.isFinalDiscountApprover)
-                            && finalLevel != null &&
-                            (finalLevel.originalStatus || finalLevel.status || '') !== 'Approved' &&
-                            (finalLevel.originalStatus || finalLevel.status || '') !== 'Rejected')
+                            && effectiveFinalLevel != null &&
+                            (effectiveFinalLevel.originalStatus || effectiveFinalLevel.status || '') !== 'Approved' &&
+                            (effectiveFinalLevel.originalStatus || effectiveFinalLevel.status || '') !== 'Rejected')
 
                     ),
                     showStatusCombobox,

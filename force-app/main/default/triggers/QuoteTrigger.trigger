@@ -1,8 +1,11 @@
 trigger QuoteTrigger on Quote (before insert, before update, after insert, after update) {
+    Boolean skipEffectiveApproverBackfillAutomation =
+        QuoteHighestFinalApproverBackfillBatch.isBackfillRunning();
+
     System.debug('In QuoteTrigger');
 
     // BEFORE INSERT
-    if (Trigger.isBefore && Trigger.isInsert) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isBefore && Trigger.isInsert) {
         System.debug('In BEFORE INSERT of QuoteTrigger');
         for (Quote q : Trigger.new) {
             q.Warranty_Terms__c = '12 Months from date of supply';
@@ -10,7 +13,7 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert, after
         }
     }
     
-    if (Trigger.isAfter && Trigger.isInsert) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isInsert) {
         QuoteTotalValueApprovalHandler.handleAfterInsert(Trigger.new);
         QuoteHighestApprovalCoordinator.afterQuoteChange(Trigger.new);
         // QuoteMinimumOfferValueApprovalHandler.handleAfterInsert(Trigger.new);
@@ -18,13 +21,13 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert, after
         QuoteFileSyncHandler.copyOpportunityFilesToQuote(Trigger.new);
     }
     
-    if (Trigger.isAfter && Trigger.isUpdate) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isUpdate) {
         QuoteFinalApprovalNotificationHandler.handleQuotesAfterUpdate(Trigger.new, Trigger.oldMap);
         QuoteHighestApprovalCoordinator.afterQuoteChange(Trigger.new);
     }
     
     // BEFORE UPDATE
-    if (Trigger.isBefore && Trigger.isUpdate) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isBefore && Trigger.isUpdate) {
         
         for (Quote q : Trigger.new) {
             
@@ -60,7 +63,7 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert, after
         // QuoteMinimumOfferValueApprovalHandler.handleBeforeUpdate(Trigger.new, Trigger.oldMap);
     }
     
-    if (Trigger.isAfter && Trigger.isUpdate) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isUpdate) {
         
         QuoteTriggerHandler.updateOpportunityStageOnQuoteApproval(Trigger.new,Trigger.oldMap);
          QuoteTriggerHandler.updateOpportunityCloseDateFromQuote(Trigger.new,Trigger.oldMap);

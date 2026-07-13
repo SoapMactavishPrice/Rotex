@@ -1,6 +1,8 @@
 trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, after update, after insert, after delete) {
+    Boolean skipEffectiveApproverBackfillAutomation =
+        QuoteHighestFinalApproverBackfillBatch.isBackfillRunning();
     
-    if (Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
         System.debug('=== APPROVAL PROCESS: BEFORE TRIGGER START ===');
         System.debug('Trigger Context: ' + (Trigger.isInsert ? 'INSERT' : 'UPDATE'));
         System.debug('Number of QLIs: ' + Trigger.new.size());
@@ -91,7 +93,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         System.debug('=== APPROVAL PROCESS: BEFORE TRIGGER END ===');
     }
     
-    if (Trigger.isAfter && Trigger.isUpdate) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isUpdate) {
         System.debug('=== APPROVAL PROCESS: AFTER UPDATE TRIGGER START ===');
         System.debug('Calling Sequential Approval Handler');
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(Trigger.new, Trigger.oldMap);
@@ -103,7 +105,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
     }
 
     // ── AFTER INSERT: Apply Discount_to_be_offered__c to UnitPrice on creation ──────
-    if (Trigger.isAfter && Trigger.isInsert) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isInsert) {
         QuoteHighestApprovalCoordinator.afterQliChange(Trigger.new, null);
         Set<Id> insertedIds = new Set<Id>();
         for (QuoteLineItem qli : Trigger.new) {
@@ -140,7 +142,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
     
     Set<Id> quoteIds = new Set<Id>();
     
-    if ( Trigger.isAfter && (Trigger.isInsert || Trigger.isUpdate)) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && (Trigger.isInsert || Trigger.isUpdate)) {
         for (QuoteLineItem qli : Trigger.new) {
             if (qli.QuoteId != null) {
                 quoteIds.add(qli.QuoteId);
@@ -148,7 +150,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         }
     }
     
-    if (Trigger.isAfter && Trigger.isDelete) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isDelete) {
         for (QuoteLineItem qli : Trigger.old) {
             if (qli.QuoteId != null) {
                 quoteIds.add(qli.QuoteId);
@@ -156,11 +158,11 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         }
     }
     
-    if (!quoteIds.isEmpty()) {
+    if (!skipEffectiveApproverBackfillAutomation && !quoteIds.isEmpty()) {
         QuoteLineItemHelper.updateSmallOrderFlag(quoteIds);
     } 
     
-    if (Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
         
         Set<Id> quoteIds = new Set<Id>();
         
@@ -211,7 +213,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         
     }
 
-    if (Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
         System.debug('=== NEGATIVE DISCOUNT DIRECT PRICE UPDATE START ===');
         
         Set<Id> qliIds = new Set<Id>();
@@ -298,7 +300,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         System.debug('=== NEGATIVE DISCOUNT DIRECT PRICE UPDATE END ===');
     }
 
-    if (Trigger.isAfter && Trigger.isUpdate) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isUpdate) {
         System.debug('=== UNIT PRICE UPDATE: AFTER UPDATE TRIGGER START ===');
         
         List<QuoteLineItem> qlisToUpdatePrice = new List<QuoteLineItem>();
@@ -323,7 +325,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         System.debug('=== UNIT PRICE UPDATE: AFTER UPDATE TRIGGER END ===');
     }
 
-    if (Trigger.isAfter && Trigger.isUpdate) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isUpdate) {
         QuoteFinalApprovalNotificationHandler.handleQuoteLineItemsAfterUpdate(Trigger.new, Trigger.oldMap);
         QuoteLineItemApprovalHandler.updateQLIUnitPrice(Trigger.new);
     }

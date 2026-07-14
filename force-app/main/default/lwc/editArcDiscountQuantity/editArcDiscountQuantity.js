@@ -145,7 +145,9 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
                         newDesiredPriceValue: null,
                         newDiscountValue: null,
                         isProposedPriceDisabled: true,
-                        isNewProposedPriceDisabled: newProposedPriceLocked
+                        isNewProposedPriceDisabled: newProposedPriceLocked,
+                        isRequestedCommentsDisabled: this.computeRequestedCommentsDisabled(item, null),
+                        requestedCommentsPlaceholder: 'Enter comments...'
                     };
                 } else {
                     // Non-approved row: only "Proposed ARC Price" is editable; Disc % is calculated & read-only
@@ -161,7 +163,9 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
                             ? this.computeDesiredPrice(item.ListPrice, item.Discount_to_be_offered__c)
                             : null,
                         isProposedPriceDisabled: baseDisabled,
-                        isNewProposedPriceDisabled: true
+                        isNewProposedPriceDisabled: true,
+                        isRequestedCommentsDisabled: this.computeRequestedCommentsDisabled(item, null),
+                        requestedCommentsPlaceholder: 'Enter comments...'
                     };
                 }
             });
@@ -211,6 +215,13 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
         return val != null && val !== '';
     }
 
+    computeRequestedCommentsDisabled(item, overrideNewDiscount) {
+        const newDiscount = overrideNewDiscount !== undefined ? overrideNewDiscount : item.newDiscountValue;
+        const hasDiscountOffered = item.Discount_to_be_offered__c != null && item.Discount_to_be_offered__c !== '';
+        const hasNewDiscount = newDiscount != null && newDiscount !== '';
+        return !(hasDiscountOffered || hasNewDiscount);
+    }
+
     isRowLocked(item) {
         return item.Item_Type__c == 'ARC' || item.Is_Discount_Approved__c || this.hasSubmittedApproverStatus(item);
     }
@@ -250,11 +261,16 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
         this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
                 const computedDiscount = this.computeDiscountFromDesiredPrice(item.ListPrice, parsedDesiredPrice);
-                return {
+                const updatedItem = {
                     ...item,
                     desiredPriceValue: parsedDesiredPrice,
-                    Discount_to_be_offered__c: computedDiscount
+                    Discount_to_be_offered__c: computedDiscount,
+                    Requested_Comments__c: null
                 };
+                updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(
+                    updatedItem, item.newDiscountValue
+                );
+                return updatedItem;
             }
             return item;
         });
@@ -269,11 +285,27 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
         this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
                 const computedDiscount = this.computeDiscountFromDesiredPrice(item.ListPrice, parsedPrice);
-                return {
+                const updatedItem = {
                     ...item,
                     newDesiredPriceValue: parsedPrice,
-                    newDiscountValue: computedDiscount
+                    newDiscountValue: computedDiscount,
+                    Requested_Comments__c: null
                 };
+                updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(
+                    updatedItem, computedDiscount
+                );
+                return updatedItem;
+            }
+            return item;
+        });
+    }
+
+    handleRequestedCommentsChange(event) {
+        const id = event.target.dataset.id;
+        const value = event.target.value;
+        this.quoteLineItemList = this.quoteLineItemList.map(item => {
+            if (item.Id === id) {
+                return { ...item, Requested_Comments__c: value };
             }
             return item;
         });

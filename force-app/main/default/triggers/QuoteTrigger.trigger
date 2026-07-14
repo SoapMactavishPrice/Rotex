@@ -1,6 +1,7 @@
 trigger QuoteTrigger on Quote (before insert, before update, after insert, after update) {
     Boolean skipEffectiveApproverBackfillAutomation =
-        QuoteHighestFinalApproverBackfillBatch.isBackfillRunning();
+        QuoteHighestFinalApproverBackfillBatch.isBackfillRunning() ||
+        QuoteSapApprovalCompletionBatch.isCompletionRunning();
 
     System.debug('In QuoteTrigger');
 

@@ -1,6 +1,7 @@
 trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, after update, after insert, after delete) {
     Boolean skipEffectiveApproverBackfillAutomation =
-        QuoteHighestFinalApproverBackfillBatch.isBackfillRunning();
+        QuoteHighestFinalApproverBackfillBatch.isBackfillRunning() ||
+        QuoteSapApprovalCompletionBatch.isCompletionRunning();
     
     if (!skipEffectiveApproverBackfillAutomation && Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
         System.debug('=== APPROVAL PROCESS: BEFORE TRIGGER START ===');

@@ -256,23 +256,37 @@
                                     <table style="width:100%; table-layout:auto; border-collapse:collapse; border:1px solid #000; font-size:12px; color:#3e3e3c;">
                                         <thead>
                                             <tr style="background-color:#007764;">
-                                                <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left; white-space:normal; word-break:break-word;">Product Name</th>
-                                                <th scope="col" style="width:5.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">List Price</th>
+                                                <th scope="col" style="width:8.5%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left; white-space:normal; word-break:break-word;">Product Name</th>
+                                                <th scope="col" style="width:4.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">List Price</th>
                                                 <template if:true={isARCRecordType}>
-                                                    <th scope="col" style="width:5.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">MOQ</th>
+                                                    <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">MOQ</th>
                                                 </template>
                                                 <template if:false={isARCRecordType}>
                                                     <th scope="col" style="width:3%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Qty</th>
                                                 </template>
-                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc. SAP%</th>
-                                                <th scope="col" style="width:4%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Pr. Disc.%</th>
-                                                <th scope="col" style="width:7%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc.%</th>
-                                                <th scope="col" style="width:5.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Sales Price</th>
-                                                <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">SOA User</th>
-                                                <th scope="col" style="width:8%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Status</th>
-                                                <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Requestor Comments</th>
-                                                <th scope="col" style="width:16%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Previous Approver Comments</th>
-                                                <th scope="col" style="width:21%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Approver Comments</th>
+                                                <th scope="col" style="width:3%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc. SAP%</th>
+                                                <th scope="col" style="width:3%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Pr. Disc.%</th>
+                                                <th scope="col" style="width:5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Disc.%</th>
+                                                <th scope="col" style="width:5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Sales Price</th>
+                                                <template if:true={isARCRecordType}>
+                                                    <th scope="col" style="width:4.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Valid From</th>
+                                                    <th scope="col" style="width:4.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Valid Till</th>
+                                                </template>
+                                                <template if:true={isARCRecordType}>
+                                                    <th scope="col" style="width:8.5%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">SOA User</th>
+                                                </template>
+                                                <template if:false={isARCRecordType}>
+                                                    <th scope="col" style="width:10.5%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">SOA User</th>
+                                                </template>
+                                                <th scope="col" style="width:6.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Status</th>
+                                                <th scope="col" style="width:12%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Requestor Comments</th>
+                                                <th scope="col" style="width:14%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Previous Approver Comments</th>
+                                                <template if:true={isARCRecordType}>
+                                                    <th scope="col" style="width:17%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Approver Comments</th>
+                                                </template>
+                                                <template if:false={isARCRecordType}>
+                                                    <th scope="col" style="width:15%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left;">Approver Comments</th>
+                                                </template>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -286,7 +300,24 @@
                                                             <strong>({row.productCode})</strong>
                                                         </td>
                                                         <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.listPriceFormatted}</td>
-                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.quantity}</td>
+                                                        <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">
+                                                            <template if:true={row.showMoqInput}>
+                                                                <lightning-input
+                                                                    type="number"
+                                                                    value={row.quantity}
+                                                                    data-parent={row.parentId}
+                                                                    data-id={row.quoteLineItemId}
+                                                                    data-field="potentialQty"
+                                                                    onchange={handleLineItemChanges}
+                                                                    variant="label-hidden"
+                                                                    step="1"
+                                                                    min="0">
+                                                                </lightning-input>
+                                                            </template>
+                                                            <template if:false={row.showMoqInput}>
+                                                                {row.quantity}
+                                                            </template>
+                                                        </td>
                                                         <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.d1}</td>
                                                         <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.previousDiscount}</td>
                                                         <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">
@@ -308,6 +339,10 @@
                                                             </template>
                                                         </td>
                                                         <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.salesPrice}</td>
+                                                        <template if:true={isARCRecordType}>
+                                                            <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.validFrom}</td>
+                                                            <td rowspan={row.soaCount} style="border:1px solid #000; padding:8px; vertical-align:middle; text-align:center;">{row.validTill}</td>
+                                                        </template>
                                                     </template>
 
                                                     <!-- SOA Label — no CSS class on span, all inline -->

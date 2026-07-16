@@ -1434,7 +1434,8 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Sales_Rep__r.DelegatedApproverId,
                        Sales_Manager_Comments__c, Country_Continent_Sales_LOB_Comments__c,
                        Global_Sales_Head_Comments__c, Rotex_Board_Member_Comments__c,
-                       Managing_Director_Comments__c, Discount_to_be_offered__c, Discount_as_per_SAP__c, Requested_Comments__c
+                       Managing_Director_Comments__c, Discount_to_be_offered__c, Discount_as_per_SAP__c,
+                       Potential_Qty__c, Requested_Comments__c
                 FROM   QuoteLineItem
                 WHERE  Id IN :updatedQuoteLineItemIds
             ]);
@@ -1459,7 +1460,10 @@ public without sharing class SalesPriceApprovalForQuotation {
                     Boolean discountChanged        = canSubmitAsFinal &&
                                                      eachQli.d2 != null &&
                                                      (existing == null || eachQli.d2 != existing.Discount_to_be_offered__c);
-                    Boolean shouldUpdate           = statusChanged || commentChanged || discountChanged;
+                    Boolean moqChanged             = canSubmitAsFinal &&
+                                                     eachQli.potentialQty != null &&
+                                                     (existing == null || eachQli.potentialQty != existing.Potential_Qty__c);
+                    Boolean shouldUpdate           = statusChanged || commentChanged || discountChanged || moqChanged;
 
                     // ── Validate discount does not exceed SOA Matrix max ──
                     if (canSubmitAsFinal && eachQli.d2 != null) {
@@ -1514,6 +1518,9 @@ public without sharing class SalesPriceApprovalForQuotation {
 
                     if (discountChanged) {
                         qli.Discount_to_be_offered__c = eachQli.d2;
+                    }
+                    if (moqChanged) {
+                        qli.Potential_Qty__c = eachQli.potentialQty;
                     }
 
                     if (shouldUpdate && eachQli.currentStageField == 'Sales_Rep_Status__c') {

@@ -1955,7 +1955,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     soaCommentsDisabled: !(soa.isCurrentUserRow && item.isEditable) && !isFinalApproverOwnRowWithSkip && !isOwnRowWithSkipSoa && !skipSoaHigherHierarchyFinalRow,
                     rowStyle: '',
                     listPriceFormatted: this.formatCurrency(item.listPrice),
-                    salesPrice: this.formatSalesPrice(item.listPrice, item.d2)
+                    salesPrice: this.formatSalesPrice(item.listPrice, item.d2),
+                    validFrom: item.validFrom || '',
+                    validTill: item.validTill || '',
+                    showMoqInput: idx === 0 && this.isARCRecordType && !isFinalApproverDecided && item.isFinalDiscountApprover
                 });
             });
         });

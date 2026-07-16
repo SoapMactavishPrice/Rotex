@@ -69,6 +69,15 @@
                                             </template>
                                             <a href={quote.quoteRecordUrl} target="_blank" class="action-link">(View)</a>
                                             <a href="javascript:void(0);" data-quote-id={quote.quoteId} onclick={handleOpenFilesModal} class="action-link" style="cursor: pointer;">(View Files)</a>
+                                            <template if:true={isARCRecordType}>
+                                                <a  href="javascript:void(0);"
+                                                    data-quote-id={quote.quoteId}
+                                                    onclick={handleDownloadCsv}
+                                                    class="action-link"
+                                                    style="cursor: pointer;">
+                                                    (CSV)
+                                                </a>
+                                            </template>
                                         </span>
                                     </div>
                                     <div class="header-field">
@@ -250,7 +259,7 @@
                                                 <th scope="col" style="width:10%; border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:left; white-space:normal; word-break:break-word;">Product Name</th>
                                                 <th scope="col" style="width:5.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">List Price</th>
                                                 <template if:true={isARCRecordType}>
-                                                    <th scope="col" style="width:5.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Pot. Qty</th>
+                                                    <th scope="col" style="width:5.5%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">MOQ</th>
                                                 </template>
                                                 <template if:false={isARCRecordType}>
                                                     <th scope="col" style="width:3%;  border:1px solid #000; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; text-align:center;">Qty</th>

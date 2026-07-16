@@ -320,6 +320,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Sales_Manager_Date_Time__c, Country_Head_Date_Time__c,
                        Global_Sales_Head_Date_Time__c, Rotex_Board_Member_Date_Time__c,
                        Managing_Director_Date_Time__c, Previous_Discount__c, Is_Discount_Approved__c,
+                       Valid_from__c, Valid_Till__c,
                        Prev_Sales_Manager_Comments__c, Prev_Country_Continent_Sales_Comments__c,
                        Prev_Global_Sales_Head_Comments__c, Prev_Rotex_Board_Member_Comments__c,
                        Prev_Managing_Director_Comments__c, Requested_Comments__c
@@ -338,14 +339,15 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
 
         Map<Id, Quote> quoteMap = new Map<Id, Quote>([
-            SELECT Id, Name, Owner.Email, Owner.Name, OwnerId, Account.Name, QuoteNumber,
+            SELECT Id, Name, Owner.Email, Owner.Name, OwnerId, AccountId, Account.Name, QuoteNumber,
                    Account.OwnerId, Sales_Rep__c, Sales_Manager__c, Sales_Manager_Status__c,
                    Sales_Rep_Status__c, Country_Continent_Sales_Head_LOB_Head__c,
                    Country_Continent_Sales_H_LOB_Status__c, Global_Sales_Head__c,
                    Managing_Director_Country_Manager__c, Managing_Director_Status__c,
                    Rotex_Board_Member__c, Rotex_Board_Member_Status__c,
                    Total_Value__c, Avg_Discount_Requested__c, Avg_Discount_Approved__c,
-                   Rev_No__c, Validity_of_Offer__c, Payment_Terms__c,
+                   CurrencyIsoCode,
+                   Rev_No__c, Validity_of_Offer__c, Payment_Terms__c, INCO_Terms__c,
                    Warranty_Terms__c, Delivery_Period__c, Warranty_Terms_Draft__c,
                    Sales_Manager__r.Name, Sales_Manager__r.DelegatedApproverId,
                    Country_Continent_Sales_Head_LOB_Head__r.Name, Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId,
@@ -384,11 +386,35 @@ public without sharing class SalesPriceApprovalForQuotation {
         ]);
 
         Map<Id, List<QuoteLineItem>> quoteToQliMap = new Map<Id, List<QuoteLineItem>>();
+        Set<Id> accountIds = new Set<Id>();
+        Set<String> productCodes = new Set<String>();
+        for (Quote q : quoteMap.values()) {
+            if (q.AccountId != null) accountIds.add(q.AccountId);
+        }
         for (QuoteLineItem eachLine : quoteLineItems) {
             if (!quoteToQliMap.containsKey(eachLine.QuoteId)) {
                 quoteToQliMap.put(eachLine.QuoteId, new List<QuoteLineItem>());
             }
             quoteToQliMap.get(eachLine.QuoteId).add(eachLine);
+            if (eachLine.Product2 != null && String.isNotBlank(eachLine.Product2.ProductCode)) {
+                productCodes.add(eachLine.Product2.ProductCode);
+            }
+        }
+
+        Map<String, Decimal> existingArcPriceByAccountAndProduct = new Map<String, Decimal>();
+        if (!accountIds.isEmpty() && !productCodes.isEmpty()) {
+            for (Customer_ARC_Pricing__c arcPrice : [
+                SELECT Customer__c, Product_Code__c, Amount__c
+                FROM   Customer_ARC_Pricing__c
+                WHERE  Customer__c IN :accountIds
+                AND    Product_Code__c IN :productCodes
+                AND    Product_Code__c != null
+            ]) {
+                existingArcPriceByAccountAndProduct.put(
+                    String.valueOf(arcPrice.Customer__c) + ':' + arcPrice.Product_Code__c,
+                    arcPrice.Amount__c
+                );
+            }
         }
 
         List<QuotationWrapper> quotations = new List<QuotationWrapper>();
@@ -401,7 +427,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                 ? quoteToQliMap.get(eachQuoteId)
                 : new List<QuoteLineItem>();
 
-            quotations.add(new QuotationWrapper(q, lineItems, currentUserId));
+            quotations.add(new QuotationWrapper(q, lineItems, currentUserId, existingArcPriceByAccountAndProduct));
         }
 
         quotations.sort();
@@ -1652,6 +1678,13 @@ public without sharing class SalesPriceApprovalForQuotation {
         } catch (SObjectException e) { return null; }
     }
 
+    public static Date getDateFieldSafely(SObject record, String fieldApiName) {
+        try {
+            Object value = record.get(fieldApiName);
+            return value == null ? null : (Date) value;
+        } catch (SObjectException e) { return null; }
+    }
+
     public static Decimal getDecimalFieldSafely(SObject record, String fieldApiName) {
         try {
             Object value = record.get(fieldApiName);
@@ -1781,11 +1814,14 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String quoteOwnerName;
         @AuraEnabled public String quoteLink;
         @AuraEnabled public String hodUserId;
+        @AuraEnabled public String currencyCode;
         @AuraEnabled public Decimal totalValue;
         @AuraEnabled public String revNo;
         @AuraEnabled public String validityOfOffer;
         @AuraEnabled public String paymentTerms;
         @AuraEnabled public String warrantyTerms;
+        @AuraEnabled public String warrantyTermsDraft;
+        @AuraEnabled public String incoTerms;
         @AuraEnabled public String deliveryPeriod;
         @AuraEnabled public Decimal avgDiscountRequested;
         @AuraEnabled public Decimal avgDiscountApproved;
@@ -1802,6 +1838,10 @@ public without sharing class SalesPriceApprovalForQuotation {
         public QuotationWrapper() {}
 
         public QuotationWrapper(Quote quote, List<QuoteLineItem> lineItems, Id currentUserId) {
+            this(quote, lineItems, currentUserId, new Map<String, Decimal>());
+        }
+
+        public QuotationWrapper(Quote quote, List<QuoteLineItem> lineItems, Id currentUserId, Map<String, Decimal> existingArcPriceByAccountAndProduct) {
             this.quoteId        = quote.Id;
             this.quoteName      = quote.Name;
             this.accountName    = quote.Account.Name;
@@ -1810,6 +1850,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.quoteOwnerId   = quote.OwnerId;
             this.quoteOwnerEmail = quote.Owner.Email;
             this.quoteOwnerName  = quote.Owner.Name;
+            this.currencyCode    = quote.CurrencyIsoCode;
             this.totalValue      = getDecimalFieldSafely(quote, 'Total_Value__c');
             this.avgDiscountRequested = getDecimalFieldSafely(quote, 'Avg_Discount_Requested__c');
             this.avgDiscountApproved  = getDecimalFieldSafely(quote, 'Avg_Discount_Approved__c');
@@ -1817,6 +1858,8 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.validityOfOffer = getStringFieldSafely(quote, 'Validity_of_Offer__c');
             this.paymentTerms    = getPicklistLabel('Quote', 'Payment_Terms__c', getStringFieldSafely(quote, 'Payment_Terms__c'));
             this.warrantyTerms   = getStringFieldSafely(quote, 'Warranty_Terms__c');
+            this.warrantyTermsDraft = getPicklistLabel('Quote', 'Warranty_Terms_Draft__c', getStringFieldSafely(quote, 'Warranty_Terms_Draft__c'));
+            this.incoTerms       = getPicklistLabel('Quote', 'INCO_Terms__c', getStringFieldSafely(quote, 'INCO_Terms__c'));
             this.deliveryPeriod  = getStringFieldSafely(quote, 'Delivery_Period__c');
             this.updated         = false;
             this.recordTypeName  = quote.RecordType != null ? quote.RecordType.Name : null;
@@ -1843,7 +1886,13 @@ public without sharing class SalesPriceApprovalForQuotation {
 
             this.quoteLineItems = new List<QuotationLineItemWrapper>();
             for (QuoteLineItem eachLine : lineItems) {
-                this.quoteLineItems.add(new QuotationLineItemWrapper(eachLine));
+                String arcPriceKey = quote.AccountId != null && eachLine.Product2 != null
+                    ? String.valueOf(quote.AccountId) + ':' + eachLine.Product2.ProductCode
+                    : null;
+                Decimal existingArcPrice = String.isNotBlank(arcPriceKey) && existingArcPriceByAccountAndProduct != null
+                    ? existingArcPriceByAccountAndProduct.get(arcPriceKey)
+                    : null;
+                this.quoteLineItems.add(new QuotationLineItemWrapper(eachLine, existingArcPrice));
             }
         }
 
@@ -2287,6 +2336,10 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public Decimal  d1;
         @AuraEnabled public Decimal  d2;
         @AuraEnabled public Decimal  previousDiscount;
+        @AuraEnabled public Date     validFrom;
+        @AuraEnabled public Date     validTill;
+        @AuraEnabled public Decimal  existingArcPrice;
+        @AuraEnabled public Boolean  isDiscountApproved;
         @AuraEnabled public Boolean  bcheck;
         @AuraEnabled public Boolean  bcheck1;
         @AuraEnabled public Boolean  bcheck2;
@@ -2310,6 +2363,10 @@ public without sharing class SalesPriceApprovalForQuotation {
         public QuotationLineItemWrapper() {}
 
         public QuotationLineItemWrapper(QuoteLineItem qli) {
+            this(qli, null);
+        }
+
+        public QuotationLineItemWrapper(QuoteLineItem qli, Decimal existingArcPrice) {
             this.parentId         = qli.QuoteId;
             this.quoteLineItemId  = qli.Id;
             this.productId        = qli.Product2Id;
@@ -2377,6 +2434,10 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.d1               = qli.Discount_as_per_SAP__c;
             this.d2               = qli.Discount_to_be_offered__c;
             this.previousDiscount = getDecimalFieldSafely(qli, 'Previous_Discount__c');
+            this.validFrom        = getDateFieldSafely(qli, 'Valid_from__c');
+            this.validTill        = getDateFieldSafely(qli, 'Valid_Till__c');
+            this.existingArcPrice = existingArcPrice;
+            this.isDiscountApproved = qli.Is_Discount_Approved__c;
             this.updated          = false;
             this.skipSoaRestrictions = false;
 

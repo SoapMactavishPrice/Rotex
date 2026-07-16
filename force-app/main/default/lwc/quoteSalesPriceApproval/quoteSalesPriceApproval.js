@@ -901,6 +901,159 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return this.formatCurrency(sp);
     }
 
+    handleDownloadCsv(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const quoteId = event.currentTarget.dataset.quoteId;
+        const quote = (this.quotes || []).find(q => q.quoteId === quoteId);
+
+        const lineItemRows = quote?.quoteLineItems || [];
+
+        if (!lineItemRows.length) {
+            this.showToast('Warning', 'No discount line items available to download.', 'warning');
+            return;
+        }
+
+        const csv = this.buildDiscountApprovalCsv(quote, lineItemRows);
+
+        const fileName = `${this.sanitizeCsvFileName(quote.quoteNumber || 'quotation')}_discount_approval.csv`;
+
+        this.downloadCsvFile(csv, fileName);
+    }
+
+    buildDiscountApprovalCsv(quote, lineItemRows) {
+        const currencySuffix = quote.currencyCode ? ` (${quote.currencyCode})` : '';
+        const totalQty = this.calculateTotalQuantity(lineItemRows);
+        const warranty = quote.warrantyTermsDraft || quote.warrantyTerms || '';
+        const headers = [
+            'Total Qty',
+            'Total Business Last FY',
+            'Total Business from ARC Item last FY',
+            'Payment Terms',
+            'Warranty',
+            'Incoterms',
+            'Material Code',
+            'Material Description',
+            `List Price${currencySuffix}`,
+            `Proposed ARC Price${currencySuffix}`,
+            'Disc.%',
+            'Req. Comments',
+            'Min Value',
+            'Max Value',
+            'MOQ',
+            'Valid From',
+            'Valid Till',
+            'Existing ARC Price'
+        ];
+
+        const rows = (lineItemRows || []).map(item => {
+            const hasPreviousApprovedDiscount = item.isDiscountApproved &&
+                item.previousDiscount !== undefined &&
+                item.previousDiscount !== null &&
+                item.previousDiscount !== '';
+            const proposedDiscount = hasPreviousApprovedDiscount ? item.previousDiscount : item.d2;
+            const newProposedPrice = hasPreviousApprovedDiscount
+                ? this.calculateSalesPriceValue(item.listPrice, item.d2)
+                : '';
+
+            const itemValues = [
+                item.productCode,
+                item.productName,
+                item.listPrice,
+                this.calculateSalesPriceValue(item.listPrice, proposedDiscount),
+                item.d2,
+                item.requestedComments,
+                '',
+                '',
+                item.potentialQty,
+                item.validFrom,
+                item.validTill,
+                item.existingArcPrice
+            ];
+
+            return [
+                totalQty,
+                '',
+                '',
+                quote.paymentTerms,
+                warranty,
+                quote.incoTerms,
+                ...itemValues
+            ];
+        });
+
+        return [headers, ...rows]
+            .map(row => row.map(value => this.escapeCsvValue(value)).join(','))
+            .join('\r\n');
+    }
+
+    calculateTotalQuantity(lineItemRows) {
+        return (lineItemRows || []).reduce((total, item) => {
+            const quantity = Number(item.potentialQty);
+            return total + (isNaN(quantity) ? 0 : quantity);
+        }, 0);
+    }
+
+    calculateSalesPriceValue(listPrice, discount) {
+        if (listPrice === undefined || listPrice === null || listPrice === '') return '';
+        const lp = Number(listPrice);
+        const d = Number(discount);
+        if (isNaN(lp)) return '';
+        return lp * (1 - (isNaN(d) ? 0 : d) / 100);
+    }
+
+    escapeCsvValue(value) {
+        if (value === undefined || value === null) return '';
+        let text = String(value);
+        if (/^[=+\-@\t\r]/.test(text)) {
+            text = `'${text}`;
+        }
+        if (/[",\r\n]/.test(text)) {
+            text = `"${text.replace(/"/g, '""')}"`;
+        }
+        return text;
+    }
+
+    sanitizeCsvFileName(value) {
+        return String(value)
+            .trim()
+            .replace(/[\\/:*?"<>|]+/g, '_')
+            .replace(/\s+/g, '_') || 'quotation';
+    }
+
+    downloadCsvFile(csv, fileName) {
+        try {
+            console.log('Preparing to download CSV file:', fileName);
+
+            if (!csv) {
+                console.error('CSV content is empty.');
+                return;
+            }
+
+            const link = document.createElement('a');
+
+            // Create data URI instead of Blob URL
+            const csvContent = '\uFEFF' + csv;
+            const encodedUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', fileName);
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+
+            console.log('Initiating CSV download...');
+            link.click();
+
+            document.body.removeChild(link);
+
+            console.log('CSV download completed.');
+        } catch (error) {
+            console.error('CSV Download Error:', error);
+        }
+    }
+
     capitalize(value) {
         return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
     }

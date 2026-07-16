@@ -207,7 +207,7 @@ private class SalesPriceApprovalForQuotationTest {
                 BM_Value_Status__c, BM_Value_Date_Time__c, BM_Value_Comments__c,
                 MD_Value_Status__c, MD_Value_Date_Time__c, MD_Value_Comments__c,
                 Final_Total_Value_Approver__c, Effective_Final_Total_Value_Approver__c,
-                RecordTypeId, RecordType.Name,
+                RecordTypeId, RecordType.Name, AccountId, INCO_Terms__c, CurrencyIsoCode,
                 Final_Total_Value_Approver__r.DelegatedApproverId,
                 GS_Min_Offer_Status__c, GS_Min_Offer_Date_Time__c, GS_Min_Offer_Comments__c,
                 BM_Min_Offer_Status__c, BM_Min_Offer_Date_Time__c, BM_Min_Offer_Comments__c,
@@ -219,7 +219,7 @@ private class SalesPriceApprovalForQuotationTest {
 
     private static List<QuoteLineItem> fetchFullQLIs(Id quoteId) {
         return [
-            SELECT Id, QuoteId, Product2Id, Product2.Name, Product2.ProductCode,
+            SELECT Id, QuoteId, Product2Id, Product2.Name, Product2.ProductCode, Valid_from__c, Valid_Till__c,
                 Quantity, ListPrice, UnitPrice, Discount, Subtotal, TotalPrice,
                 SortOrder, LineNumber, Description, ServiceDate,
                 CreatedById, LastModifiedById,

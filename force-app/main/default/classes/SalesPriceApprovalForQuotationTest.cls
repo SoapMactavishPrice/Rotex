@@ -133,23 +133,83 @@ private class SalesPriceApprovalForQuotationTest {
     private static SalesPriceApprovalForQuotation.QuotationWrapper buildWrapper(
         QuoteLineItem qli, String currentStageField, String approvalStatus
     ) {
+        QuoteLineItem fullQli = [
+            SELECT Id, QuoteId, Product2Id, Product2.Name, Product2.ProductCode,
+                Quantity, ListPrice, UnitPrice, Discount_as_per_SAP__c,
+                Discount_to_be_offered__c, Potential_Qty__c,
+                Sales_Manager__c, Country_Continent_Sales_Head_LOB_Head__c,
+                Global_Sales_Head__c, Rotex_Board_Member__c,
+                Managing_Director_Country_Manage__c,
+                Sales_Manager_Status__c, Country_Continent_Sales_H_LOB_Status__c,
+                Global_Sales_Head_Status__c, Rotex_Board_Member_Status__c,
+                Managing_Director_Status__c, Sales_Manager_Comments__c,
+                Country_Continent_Sales_LOB_Comments__c,
+                Global_Sales_Head_Comments__c, Rotex_Board_Member_Comments__c,
+                Managing_Director_Comments__c, Approval_Comments__c,
+                Final_Discount_Approver__c, Effective_Final_Discount_Approver__c
+            FROM QuoteLineItem
+            WHERE Id = :qli.Id
+            LIMIT 1
+        ];
+        Quote quote = [
+            SELECT Id, Name, OwnerId, Owner.Name, Owner.Email, Account.OwnerId,
+                RecordType.Name
+            FROM Quote
+            WHERE Id = :fullQli.QuoteId
+            LIMIT 1
+        ];
+
         SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
             new SalesPriceApprovalForQuotation.QuotationWrapper();
-        wrapper.quoteId = qli.QuoteId;
-        wrapper.quoteOwnerId = UserInfo.getUserId();
-        wrapper.quoteOwnerEmail = 'owner@test.com';
-        wrapper.quoteOwnerName = 'Test Owner';
-        wrapper.quoteName = 'Test Quote';
-        wrapper.accountOwner = UserInfo.getUserId();
+        wrapper.quoteId = fullQli.QuoteId;
+        wrapper.quoteOwnerId = quote.OwnerId;
+        wrapper.quoteOwnerEmail = quote.Owner.Email;
+        wrapper.quoteOwnerName = quote.Owner.Name;
+        wrapper.quoteName = quote.Name;
+        wrapper.accountOwner = quote.Account.OwnerId;
+        wrapper.recordTypeName = quote.RecordType != null ? quote.RecordType.Name : null;
         wrapper.updated = true;
 
         SalesPriceApprovalForQuotation.QuotationLineItemWrapper lineWrapper =
             new SalesPriceApprovalForQuotation.QuotationLineItemWrapper();
-        lineWrapper.quoteLineItemId = qli.Id;
+        lineWrapper.parentId = fullQli.QuoteId;
+        lineWrapper.quoteLineItemId = fullQli.Id;
+        lineWrapper.productId = fullQli.Product2Id;
+        lineWrapper.productName = fullQli.Product2 != null ? fullQli.Product2.Name : 'Test Product';
+        lineWrapper.productCode = fullQli.Product2 != null ? fullQli.Product2.ProductCode : 'TP-001';
+        lineWrapper.quantity = fullQli.Quantity;
+        lineWrapper.potentialQty = fullQli.Potential_Qty__c;
+        lineWrapper.listPrice = fullQli.ListPrice;
+        lineWrapper.salesPrice = fullQli.UnitPrice;
+        lineWrapper.d1 = fullQli.Discount_as_per_SAP__c;
+        lineWrapper.d2 = fullQli.Discount_to_be_offered__c;
         lineWrapper.approvalStatus = approvalStatus;
         lineWrapper.currentStageField = currentStageField;
         lineWrapper.updated = true;
         lineWrapper.isFinalDiscountApprover = true;
+        lineWrapper.salesManagerId = String.valueOf(fullQli.Sales_Manager__c);
+        lineWrapper.countryContinentSalesId = String.valueOf(fullQli.Country_Continent_Sales_Head_LOB_Head__c);
+        lineWrapper.globalSalesHeadId = String.valueOf(fullQli.Global_Sales_Head__c);
+        lineWrapper.rotexBoardMemberId = String.valueOf(fullQli.Rotex_Board_Member__c);
+        lineWrapper.managingDirectorId = String.valueOf(fullQli.Managing_Director_Country_Manage__c);
+        lineWrapper.salesManagerStatus = fullQli.Sales_Manager_Status__c;
+        lineWrapper.countryContinentSalesStatus = fullQli.Country_Continent_Sales_H_LOB_Status__c;
+        lineWrapper.globalSalesHeadStatus = fullQli.Global_Sales_Head_Status__c;
+        lineWrapper.rotexBoardMemberStatus = fullQli.Rotex_Board_Member_Status__c;
+        lineWrapper.managingDirectorStatus = fullQli.Managing_Director_Status__c;
+        lineWrapper.Sales_Manager_Comments = fullQli.Sales_Manager_Comments__c;
+        lineWrapper.Country_Continent_Sales_LOB_Comments = fullQli.Country_Continent_Sales_LOB_Comments__c;
+        lineWrapper.Global_Sales_Head_Comments = fullQli.Global_Sales_Head_Comments__c;
+        lineWrapper.Rotex_Board_Member_Comments = fullQli.Rotex_Board_Member_Comments__c;
+        lineWrapper.Managing_Director_Comments = fullQli.Managing_Director_Comments__c;
+        lineWrapper.approvalComments = fullQli.Approval_Comments__c;
+        Id effectiveFinalApprover = fullQli.Effective_Final_Discount_Approver__c != null
+            ? fullQli.Effective_Final_Discount_Approver__c
+            : fullQli.Final_Discount_Approver__c;
+        lineWrapper.originalFinalDiscountApproverId = fullQli.Final_Discount_Approver__c == null
+            ? null : String.valueOf(fullQli.Final_Discount_Approver__c);
+        lineWrapper.finalDiscountApproverId = effectiveFinalApprover == null
+            ? null : String.valueOf(effectiveFinalApprover);
 
         wrapper.quoteLineItems =
             new List<SalesPriceApprovalForQuotation.QuotationLineItemWrapper>{ lineWrapper };
@@ -162,6 +222,77 @@ private class SalesPriceApprovalForQuotationTest {
         return JSON.serialize(
             new List<SalesPriceApprovalForQuotation.QuotationWrapper>{ wrapper }
         );
+    }
+
+    private static Id approverIdForPosition(
+        Integer position, Id smId, Id chId, Id gsId, Id bmId, Id mdId
+    ) {
+        if (position == 1) return smId;
+        if (position == 2) return chId;
+        if (position == 3) return gsId;
+        if (position == 4) return bmId;
+        if (position == 5) return mdId;
+        return null;
+    }
+
+    private static SalesPriceApprovalForQuotation.WarrantyApprovalWrapper buildHigherHierarchyWarrantyWrapper(
+        Id quoteId, Id smId, Id chId, Id gsId, Id bmId, Id mdId, Integer finalPosition
+    ) {
+        SalesPriceApprovalForQuotation.WarrantyApprovalWrapper wrapper =
+            new SalesPriceApprovalForQuotation.WarrantyApprovalWrapper();
+        wrapper.quoteId = quoteId;
+        wrapper.updated = true;
+        wrapper.skipSoaRestrictions = true;
+        wrapper.isHigherHierarchy = true;
+        wrapper.finalApproverHierarchyPosition = finalPosition;
+        wrapper.finalWarrantyApprover =
+            approverIdForPosition(finalPosition, smId, chId, gsId, bmId, mdId);
+        wrapper.smId = smId; wrapper.smWarrantyStatus = 'Approved'; wrapper.smWarrantyComments = 'SM HH ' + finalPosition;
+        wrapper.chId = chId; wrapper.chWarrantyStatus = 'Approved'; wrapper.chWarrantyComments = 'CH HH ' + finalPosition;
+        wrapper.gsId = gsId; wrapper.gsWarrantyStatus = 'Approved'; wrapper.gsWarrantyComments = 'GS HH ' + finalPosition;
+        wrapper.bmId = bmId; wrapper.bmWarrantyStatus = 'Approved'; wrapper.bmWarrantyComments = 'BM HH ' + finalPosition;
+        wrapper.mdId = mdId; wrapper.mdWarrantyStatus = 'Approved'; wrapper.mdWarrantyComments = 'MD HH ' + finalPosition;
+        return wrapper;
+    }
+
+    private static SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper buildHigherHierarchyValidityWrapper(
+        Id quoteId, Id smId, Id chId, Id gsId, Id bmId, Id mdId, Integer finalPosition
+    ) {
+        SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper wrapper =
+            new SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper();
+        wrapper.quoteId = quoteId;
+        wrapper.updated = true;
+        wrapper.skipSoaRestrictions = true;
+        wrapper.isHigherHierarchy = true;
+        wrapper.finalApproverHierarchyPosition = finalPosition;
+        wrapper.finalValidityOfferApprover =
+            approverIdForPosition(finalPosition, smId, chId, gsId, bmId, mdId);
+        wrapper.smId = smId; wrapper.smValidityOfferStatus = 'Approved'; wrapper.smValidityOfferComments = 'SM validity HH ' + finalPosition;
+        wrapper.chId = chId; wrapper.chValidityOfferStatus = 'Approved'; wrapper.chValidityOfferComments = 'CH validity HH ' + finalPosition;
+        wrapper.gsId = gsId; wrapper.gsValidityOfferStatus = 'Approved'; wrapper.gsValidityOfferComments = 'GS validity HH ' + finalPosition;
+        wrapper.bmId = bmId; wrapper.bmValidityOfferStatus = 'Approved'; wrapper.bmValidityOfferComments = 'BM validity HH ' + finalPosition;
+        wrapper.mdId = mdId; wrapper.mdValidityOfferStatus = 'Approved'; wrapper.mdValidityOfferComments = 'MD validity HH ' + finalPosition;
+        return wrapper;
+    }
+
+    private static SalesPriceApprovalForQuotation.TotalValueApprovalWrapper buildHigherHierarchyTotalValueWrapper(
+        Id quoteId, Id smId, Id chId, Id gsId, Id bmId, Id mdId, Integer finalPosition
+    ) {
+        SalesPriceApprovalForQuotation.TotalValueApprovalWrapper wrapper =
+            new SalesPriceApprovalForQuotation.TotalValueApprovalWrapper();
+        wrapper.quoteId = quoteId;
+        wrapper.updated = true;
+        wrapper.skipSoaRestrictions = true;
+        wrapper.isHigherHierarchy = true;
+        wrapper.finalApproverHierarchyPosition = finalPosition;
+        wrapper.finalTotalValueApprover =
+            approverIdForPosition(finalPosition, smId, chId, gsId, bmId, mdId);
+        wrapper.smId = smId; wrapper.smValueStatus = 'Approved'; wrapper.smValueComments = 'SM value HH ' + finalPosition;
+        wrapper.chId = chId; wrapper.chValueStatus = 'Approved'; wrapper.chValueComments = 'CH value HH ' + finalPosition;
+        wrapper.gsId = gsId; wrapper.gsValueStatus = 'Approved'; wrapper.gsValueComments = 'GS value HH ' + finalPosition;
+        wrapper.bmId = bmId; wrapper.bmValueStatus = 'Approved'; wrapper.bmValueComments = 'BM value HH ' + finalPosition;
+        wrapper.mdId = mdId; wrapper.mdValueStatus = 'Approved'; wrapper.mdValueComments = 'MD value HH ' + finalPosition;
+        return wrapper;
     }
 
     private static Quote fetchFullQuote() {
@@ -314,13 +445,7 @@ private class SalesPriceApprovalForQuotationTest {
 
     @isTest
     static void testGetAllQuotations_WithTotalValue() {
-        if (Test.isRunningTest()) return;
         User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
-        // Drive Total_Value__c (formula = TotalPrice) via the QLI
-        QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];
-        qli.UnitPrice = 100000;
-        qli.Quantity  = 1;
-        update qli;
 
         Quote q = [SELECT Id FROM Quote LIMIT 1];
         q.Is_Total_Value_Approved__c = false;
@@ -393,13 +518,7 @@ private class SalesPriceApprovalForQuotationTest {
 
     @isTest
     static void testGetAllQuotations_AllParts_GlobalHead() {
-        if (Test.isRunningTest()) return;
         User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
-
-        QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];
-        qli.UnitPrice = 100000;
-        qli.Quantity  = 1;
-        update qli;
 
         Quote q = [SELECT Id FROM Quote LIMIT 1];
         q.Warranty_Terms_Draft__c    = '24 Months from date of supply';
@@ -715,6 +834,28 @@ private class SalesPriceApprovalForQuotationTest {
         }
     }
 
+    @isTest
+    static void testSubmitWarrantyApprovalSingle_HigherHierarchy_FinalPositionsTwoThroughFive() {
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com' LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+
+        System.runAs(md) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.submitWarrantyApprovalSingle(
+                    JSON.serialize(buildHigherHierarchyWarrantyWrapper(
+                        q.Id, sm.Id, ch.Id, gs.Id, bm.Id, md.Id, 5
+                    ))
+                )
+            );
+            Test.stopTest();
+        }
+    }
+
     // ── submitValidityOfferApprovalSingle ────────────────────────────────
 
     @isTest
@@ -890,6 +1031,28 @@ private class SalesPriceApprovalForQuotationTest {
         System.runAs(md) {
             Test.startTest();
             SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle(JSON.serialize(wrapper));
+            Test.stopTest();
+        }
+    }
+
+    @isTest
+    static void testSubmitValidityOfferApprovalSingle_HigherHierarchy_FinalPositionsTwoThroughFive() {
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com' LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+
+        System.runAs(md) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.submitValidityOfferApprovalSingle(
+                    JSON.serialize(buildHigherHierarchyValidityWrapper(
+                        q.Id, sm.Id, ch.Id, gs.Id, bm.Id, md.Id, 5
+                    ))
+                )
+            );
             Test.stopTest();
         }
     }
@@ -1073,6 +1236,28 @@ private class SalesPriceApprovalForQuotationTest {
         }
     }
 
+    @isTest
+    static void testSubmitTotalValueApprovalSingle_HigherHierarchy_FinalPositionsTwoThroughFive() {
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
+        User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com' LIMIT 1];
+        User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+        User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
+        Quote q = [SELECT Id FROM Quote LIMIT 1];
+
+        System.runAs(md) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.submitTotalValueApprovalSingle(
+                    JSON.serialize(buildHigherHierarchyTotalValueWrapper(
+                        q.Id, sm.Id, ch.Id, gs.Id, bm.Id, md.Id, 5
+                    ))
+                )
+            );
+            Test.stopTest();
+        }
+    }
+
     // ── submitMinimumOfferApprovalSingle ─────────────────────────────────
 
     // @isTest
@@ -1232,6 +1417,7 @@ private class SalesPriceApprovalForQuotationTest {
         User salesManager = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
         QuoteLineItem qli = [SELECT Id, QuoteId FROM QuoteLineItem LIMIT 1];
         qli.Final_Discount_Approver__c = salesManager.Id;
+        qli.Effective_Final_Discount_Approver__c = salesManager.Id;
         update qli;
         SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
             buildWrapper(qli, 'Sales_Manager_Status__c', 'Rejected');
@@ -1241,6 +1427,161 @@ private class SalesPriceApprovalForQuotationTest {
             SalesPriceApprovalForQuotation.updateQuoteLineItem(serializeWrapper(wrapper));
             Test.stopTest();
         }
+    }
+
+    @isTest
+    static void testUpdateQuoteLineItem_CountryHead_FinalApproverEmailDetails() {
+        User countryHead = [SELECT Id FROM User WHERE Email = 'countryhead@test.com' LIMIT 1];
+        QuoteLineItem qli = [SELECT Id, QuoteId FROM QuoteLineItem LIMIT 1];
+        qli.Final_Discount_Approver__c = countryHead.Id;
+        qli.Effective_Final_Discount_Approver__c = countryHead.Id;
+        qli.Country_Continent_Sales_H_LOB_Status__c = 'Submitted';
+        update qli;
+
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            buildWrapper(qli, 'Country_Continent_Sales_H_LOB_Status__c', 'Approved');
+        wrapper.quoteLineItems[0].Country_Continent_Sales_LOB_Comments = 'CH final approval';
+
+        System.runAs(countryHead) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.updateQuoteLineItem(serializeWrapper(wrapper)));
+            Test.stopTest();
+        }
+
+        QuoteLineItem updatedLine = [
+            SELECT Country_Continent_Sales_H_LOB_Status__c,
+                Country_Continent_Sales_LOB_Comments__c
+            FROM QuoteLineItem
+            WHERE Id = :qli.Id
+        ];
+        System.assertEquals('Approved', updatedLine.Country_Continent_Sales_H_LOB_Status__c);
+        System.assertEquals('CH final approval', updatedLine.Country_Continent_Sales_LOB_Comments__c);
+    }
+
+    @isTest
+    static void testUpdateQuoteLineItem_GlobalHead_FinalApproverEmailDetails() {
+        User globalHead = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
+        QuoteLineItem qli = [SELECT Id, QuoteId FROM QuoteLineItem LIMIT 1];
+        qli.Final_Discount_Approver__c = globalHead.Id;
+        qli.Effective_Final_Discount_Approver__c = globalHead.Id;
+        qli.Global_Sales_Head_Status__c = 'Submitted';
+        update qli;
+
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            buildWrapper(qli, 'Global_Sales_Head_Status__c', 'Approved');
+        wrapper.quoteLineItems[0].Global_Sales_Head_Comments = 'GS final approval';
+
+        System.runAs(globalHead) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.updateQuoteLineItem(serializeWrapper(wrapper)));
+            Test.stopTest();
+        }
+
+        QuoteLineItem updatedLine = [
+            SELECT Global_Sales_Head_Status__c, Global_Sales_Head_Comments__c
+            FROM QuoteLineItem
+            WHERE Id = :qli.Id
+        ];
+        System.assertEquals('Approved', updatedLine.Global_Sales_Head_Status__c);
+        System.assertEquals('GS final approval', updatedLine.Global_Sales_Head_Comments__c);
+    }
+
+    @isTest
+    static void testUpdateQuoteLineItem_BoardMember_FinalApproverEmailDetails() {
+        User boardMember = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
+        QuoteLineItem qli = [SELECT Id, QuoteId FROM QuoteLineItem LIMIT 1];
+        qli.Final_Discount_Approver__c = boardMember.Id;
+        qli.Effective_Final_Discount_Approver__c = boardMember.Id;
+        qli.Rotex_Board_Member_Status__c = 'Submitted';
+        update qli;
+
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            buildWrapper(qli, 'Rotex_Board_Member_Status__c', 'Approved');
+        wrapper.quoteLineItems[0].Rotex_Board_Member_Comments = 'Board final approval';
+
+        System.runAs(boardMember) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.updateQuoteLineItem(serializeWrapper(wrapper)));
+            Test.stopTest();
+        }
+
+        QuoteLineItem updatedLine = [
+            SELECT Rotex_Board_Member_Status__c, Rotex_Board_Member_Comments__c
+            FROM QuoteLineItem
+            WHERE Id = :qli.Id
+        ];
+        System.assertEquals('Approved', updatedLine.Rotex_Board_Member_Status__c);
+        System.assertEquals('Board final approval', updatedLine.Rotex_Board_Member_Comments__c);
+    }
+
+    @isTest
+    static void testUpdateQuoteLineItem_ManagingDirector_FinalApproverEmailDetails() {
+        User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
+        QuoteLineItem qli = [SELECT Id, QuoteId FROM QuoteLineItem LIMIT 1];
+        qli.Final_Discount_Approver__c = md.Id;
+        qli.Effective_Final_Discount_Approver__c = md.Id;
+        qli.Managing_Director_Status__c = 'Submitted';
+        update qli;
+
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            buildWrapper(qli, 'Managing_Director_Status__c', 'Approved');
+        wrapper.quoteLineItems[0].Managing_Director_Comments = 'MD final approval';
+
+        System.runAs(md) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.updateQuoteLineItem(serializeWrapper(wrapper)));
+            Test.stopTest();
+        }
+
+        QuoteLineItem updatedLine = [
+            SELECT Managing_Director_Status__c, Managing_Director_Comments__c
+            FROM QuoteLineItem
+            WHERE Id = :qli.Id
+        ];
+        System.assertEquals('Approved', updatedLine.Managing_Director_Status__c);
+        System.assertEquals('MD final approval', updatedLine.Managing_Director_Comments__c);
+    }
+
+    @isTest
+    static void testUpdateQuoteLineItem_FinalApproverCanUpdateDiscountAndMoq() {
+        User salesManager = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        QuoteLineItem qli = [
+            SELECT Id, QuoteId, Discount_to_be_offered__c, Potential_Qty__c
+            FROM QuoteLineItem
+            LIMIT 1
+        ];
+        qli.Final_Discount_Approver__c = salesManager.Id;
+        qli.Effective_Final_Discount_Approver__c = salesManager.Id;
+        qli.Sales_Manager_Status__c = 'Submitted';
+        qli.Discount_to_be_offered__c = 15;
+        qli.Potential_Qty__c = 1;
+        update qli;
+
+        SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+            buildWrapper(qli, 'Sales_Manager_Status__c', 'Approved');
+        wrapper.quoteLineItems[0].Sales_Manager_Comments = 'SM final with commercial changes';
+        wrapper.quoteLineItems[0].d2 = 16;
+        wrapper.quoteLineItems[0].potentialQty = 3;
+
+        System.runAs(salesManager) {
+            Test.startTest();
+            System.assertEquals('Success',
+                SalesPriceApprovalForQuotation.updateQuoteLineItem(serializeWrapper(wrapper)));
+            Test.stopTest();
+        }
+
+        QuoteLineItem updatedLine = [
+            SELECT Sales_Manager_Status__c, Discount_to_be_offered__c, Potential_Qty__c
+            FROM QuoteLineItem
+            WHERE Id = :qli.Id
+        ];
+        System.assertEquals('Approved', updatedLine.Sales_Manager_Status__c);
+        System.assertEquals(16, updatedLine.Discount_to_be_offered__c);
+        System.assertEquals(3, updatedLine.Potential_Qty__c);
     }
     
     // @isTest
@@ -1425,25 +1766,18 @@ private class SalesPriceApprovalForQuotationTest {
 
     @isTest
     static void testQuotationWrapperConstructor_WithAllApprovalFields() {
-        if (Test.isRunningTest()) return;
         User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
 
-        QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];
-        qli.UnitPrice = 100000;
-        qli.Quantity  = 1;
-        update qli;
-
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        q.Warranty_Terms_Draft__c    = '24 Months from date of supply';
-        q.SM_Warranty_Status__c      = 'Submitted';
-        q.Requested_Validity_Of_Offer__c = '60 Days';
-        q.SM_Validity_Offer_Status__c = 'Submitted';
-        q.Is_Total_Value_Approved__c = false;
-        q.SM_Value_Status__c         = 'Submitted';
-        update q;
-
         Quote fullQ = fetchFullQuote();
+        fullQ.Warranty_Terms_Draft__c    = '24 Months from date of supply';
+        fullQ.SM_Warranty_Status__c      = 'Submitted';
+        fullQ.Requested_Validity_Of_Offer__c = '60 Days';
+        fullQ.SM_Validity_Offer_Status__c = 'Submitted';
+        fullQ.Is_Total_Value_Approved__c = false;
+        fullQ.SM_Value_Status__c         = 'Submitted';
         List<QuoteLineItem> qlis = fetchFullQLIs(fullQ.Id);
+        qlis[0].UnitPrice = 100000;
+        qlis[0].Quantity  = 1;
         System.runAs(sm) {
             Test.startTest();
             new SalesPriceApprovalForQuotation.QuotationWrapper(fullQ, qlis, sm.Id);
@@ -1453,21 +1787,12 @@ private class SalesPriceApprovalForQuotationTest {
 
     @isTest
     static void testQuotationWrapperConstructor_MinimumOfferFields() {
-        if (Test.isRunningTest()) return;
         User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com' LIMIT 1];
 
-        QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];
-        qli.UnitPrice = 10000;
-        qli.Quantity  = 1;
-        update qli;
-
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        q.Is_Small_Order_Handling__c        = true;
-        q.Is_Minimum_Offer_Value_Approved__c = false;
-        q.GS_Min_Offer_Status__c            = 'Submitted';
-        update q;
-
         Quote fullQ = fetchFullQuote();
+        fullQ.Is_Small_Order_Handling__c        = true;
+        fullQ.Is_Minimum_Offer_Value_Approved__c = false;
+        fullQ.GS_Min_Offer_Status__c            = 'Submitted';
         System.runAs(gs) {
             Test.startTest();
             new SalesPriceApprovalForQuotation.QuotationWrapper(fullQ, new List<QuoteLineItem>(), gs.Id);
@@ -1477,26 +1802,17 @@ private class SalesPriceApprovalForQuotationTest {
 
     @isTest
     static void testQuotationWrapperConstructor_HigherHierarchy_BM() {
-        if (Test.isRunningTest()) return;
         User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
         User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
 
-        QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];
-        qli.UnitPrice = 100000;
-        qli.Quantity  = 1;
-        update qli;
-
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        q.Warranty_Terms_Draft__c          = '24 Months from date of supply';
-        q.Final_Warranty_Terms_Approver__c = sm.Id;
-        q.SM_Warranty_Status__c            = 'Submitted';
-        q.Requested_Validity_Of_Offer__c   = '60 Days';
-        q.Final_Validity_Offer_Approver__c = sm.Id;
-        q.Is_Total_Value_Approved__c       = false;
-        q.Final_Total_Value_Approver__c    = sm.Id;
-        update q;
-
         Quote fullQ = fetchFullQuote();
+        fullQ.Warranty_Terms_Draft__c          = '24 Months from date of supply';
+        fullQ.Final_Warranty_Terms_Approver__c = sm.Id;
+        fullQ.SM_Warranty_Status__c            = 'Submitted';
+        fullQ.Requested_Validity_Of_Offer__c   = '60 Days';
+        fullQ.Final_Validity_Offer_Approver__c = sm.Id;
+        fullQ.Is_Total_Value_Approved__c       = false;
+        fullQ.Final_Total_Value_Approver__c    = sm.Id;
         System.runAs(bm) {
             Test.startTest();
             new SalesPriceApprovalForQuotation.QuotationWrapper(fullQ, new List<QuoteLineItem>(), bm.Id);
@@ -1506,25 +1822,15 @@ private class SalesPriceApprovalForQuotationTest {
 
     @isTest
     static void testQuotationWrapperConstructor_MD_HigherHierarchy() {
-        if (Test.isRunningTest()) return;
         User md = [SELECT Id FROM User WHERE Email = 'md@test.com' LIMIT 1];
         User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
 
         // 15 000 < 25 000 — qualifies for minimum offer check
-        QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];
-        qli.UnitPrice = 15000;
-        qli.Quantity  = 1;
-        update qli;
-
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        q.Warranty_Terms_Draft__c          = '24 Months from date of supply';
-        q.Final_Warranty_Terms_Approver__c = sm.Id;
-        q.Is_Small_Order_Handling__c        = true;
-        // q.Is_Minimum_Offer_Value_Approved__c = false;
-        q.Final_Minimum_Offer_Value_Approver__c = sm.Id;
-        update q;
-
         Quote fullQ = fetchFullQuote();
+        fullQ.Warranty_Terms_Draft__c          = '24 Months from date of supply';
+        fullQ.Final_Warranty_Terms_Approver__c = sm.Id;
+        fullQ.Is_Small_Order_Handling__c        = true;
+        fullQ.Final_Minimum_Offer_Value_Approver__c = sm.Id;
         System.runAs(md) {
             Test.startTest();
             new SalesPriceApprovalForQuotation.QuotationWrapper(fullQ, new List<QuoteLineItem>(), md.Id);
@@ -1537,13 +1843,11 @@ private class SalesPriceApprovalForQuotationTest {
     static void testQuotationWrapperConstructor_FinalApproverWithPendingLower() {
         User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com' LIMIT 1];
         User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        q.Warranty_Terms_Draft__c = '24 Months from date of supply';
-        q.Final_Warranty_Terms_Approver__c = ch.Id;
-        q.SM_Warranty_Status__c = 'Submitted'; // lower level still submitted
-        q.CH_Warranty_Status__c = 'Submitted';
-        update q;
         Quote fullQ = fetchFullQuote();
+        fullQ.Warranty_Terms_Draft__c = '24 Months from date of supply';
+        fullQ.Final_Warranty_Terms_Approver__c = ch.Id;
+        fullQ.SM_Warranty_Status__c = 'Submitted';
+        fullQ.CH_Warranty_Status__c = 'Submitted';
         System.runAs(ch) {
             Test.startTest();
             new SalesPriceApprovalForQuotation.QuotationWrapper(fullQ, new List<QuoteLineItem>(), ch.Id);
@@ -1586,28 +1890,11 @@ private class SalesPriceApprovalForQuotationTest {
 
     @isTest
     static void testWarrantyApprovalWrapper_HigherHierarchy() {
-        if (Test.isRunningTest()) return;
         User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
         User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        q.Warranty_Terms_Draft__c = '24 Months from date of supply';
-        q.Final_Warranty_Terms_Approver__c = sm.Id;
-        update q;
-        Quote fullQ = [
-            SELECT Id, Name, QuoteNumber, Warranty_Terms_Draft__c, Warranty_Terms__c,
-                Sales_Manager__c, Sales_Manager__r.Name,
-                Country_Continent_Sales_Head_LOB_Head__c, Country_Continent_Sales_Head_LOB_Head__r.Name,
-                Global_Sales_Head__c, Global_Sales_Head__r.Name,
-                Rotex_Board_Member__c, Rotex_Board_Member__r.Name,
-                Managing_Director_Country_Manager__c, Managing_Director_Country_Manager__r.Name,
-                SM_Warranty_Status__c, SM_Warranty_Date_Time__c, SM_Warranty_Comments__c,
-                CH_Warranty_Status__c, CH_Warranty_Date_Time__c, CH_Warranty_Comments__c,
-                GS_Warranty_Status__c, GS_Warranty_Date_Time__c, GS_Warranty_Comments__c,
-                BM_Warranty_Status__c, BM_Warranty_Date_Time__c, BM_Warranty_Comments__c,
-                MD_Warranty_Status__c, MD_Warranty_Date_Time__c, MD_Warranty_Comments__c,
-                Final_Warranty_Terms_Approver__c
-            FROM Quote LIMIT 1
-        ];
+        Quote fullQ = fetchFullQuote();
+        fullQ.Warranty_Terms_Draft__c = '24 Months from date of supply';
+        fullQ.Final_Warranty_Terms_Approver__c = sm.Id;
         System.runAs(bm) {
             Test.startTest();
             new SalesPriceApprovalForQuotation.WarrantyApprovalWrapper(fullQ);
@@ -1619,12 +1906,10 @@ private class SalesPriceApprovalForQuotationTest {
     static void testValidityOfferApprovalWrapper_Constructor() {
         User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
         User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        q.Requested_Validity_Of_Offer__c = '60 Days';
-        q.Final_Validity_Offer_Approver__c = sm.Id;
-        q.SM_Validity_Offer_Status__c = 'Submitted';
-        update q;
         Quote fullQ = fetchFullQuote();
+        fullQ.Requested_Validity_Of_Offer__c = '60 Days';
+        fullQ.Final_Validity_Offer_Approver__c = sm.Id;
+        fullQ.SM_Validity_Offer_Status__c = 'Submitted';
         System.runAs(bm) {
             Test.startTest();
             new SalesPriceApprovalForQuotation.ValidityOfferApprovalWrapper(fullQ);
@@ -1634,22 +1919,13 @@ private class SalesPriceApprovalForQuotationTest {
 
     @isTest
     static void testTotalValueApprovalWrapper_Constructor() {
-        if (Test.isRunningTest()) return;
         User bm = [SELECT Id FROM User WHERE Email = 'board@test.com' LIMIT 1];
         User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
 
-        QuoteLineItem qli = [SELECT Id FROM QuoteLineItem LIMIT 1];
-        qli.UnitPrice = 100000;
-        qli.Quantity  = 1;
-        update qli;
-
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
-        q.Is_Total_Value_Approved__c  = false;
-        q.Final_Total_Value_Approver__c = sm.Id;
-        q.SM_Value_Status__c           = 'Submitted';
-        update q;
-
         Quote fullQ = fetchFullQuote();
+        fullQ.Is_Total_Value_Approved__c  = false;
+        fullQ.Final_Total_Value_Approver__c = sm.Id;
+        fullQ.SM_Value_Status__c           = 'Submitted';
         System.runAs(bm) {
             Test.startTest();
             new SalesPriceApprovalForQuotation.TotalValueApprovalWrapper(fullQ);
@@ -2498,87 +2774,69 @@ private class SalesPriceApprovalForQuotationTest {
 
     @isTest
     static void testIsWarrantyFinallyDecided_AllApproverPositions() {
-        if (Test.isRunningTest()) return;
         User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
         User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
         User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'   LIMIT 1];
         User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'        LIMIT 1];
         User md = [SELECT Id FROM User WHERE Email = 'md@test.com'           LIMIT 1];
 
-        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
-        User stranger = new User(
-            FirstName='X', LastName='Y', Email='stranger@test-cov.com',
-            Username='stranger@test-cov' + System.currentTimeMillis() + '.com',
-            Alias='strgr', TimeZoneSidKey='America/Los_Angeles',
-            LocaleSidKey='en_US', EmailEncodingKey='UTF-8',
-            ProfileId=p.Id, LanguageLocaleKey='en_US',
-            Division__c = 'Domestic'
-        );
-        insert stranger;
+        User stranger = [SELECT Id FROM User WHERE Email = 'salesrep@test.com' LIMIT 1];
 
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
+        Quote q = fetchFullQuote();
 
         // Batch all updates into one DML + one re-query per assertion group
         Test.startTest();
 
         // null finalId → false
+        q.Effective_Final_Warranty_Approver__c = null;
         q.Final_Warranty_Terms_Approver__c = null;
         q.SM_Warranty_Status__c = null;
-        update q;
-        Quote fresh = fetchFullQuote();
+        Quote fresh = q;
         System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh), 'null finalId should return false');
 
         // SM Approved → true
         q.Final_Warranty_Terms_Approver__c = sm.Id;
         q.SM_Warranty_Status__c = 'Approved';
-        update q;
-        fresh = fetchFullQuote();
+        fresh = q;
         System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
 
         // SM Rejected → true
         q.SM_Warranty_Status__c = 'Rejected';
-        update q;
-        fresh = fetchFullQuote();
+        fresh = q;
         System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
 
         // SM Submitted → false
         q.SM_Warranty_Status__c = 'Submitted';
-        update q;
-        fresh = fetchFullQuote();
+        fresh = q;
         System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
 
         // CH Approved → true
         q.Final_Warranty_Terms_Approver__c = ch.Id;
         q.CH_Warranty_Status__c = 'Approved';
-        update q;
-        fresh = fetchFullQuote();
+        fresh = q;
         System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
 
         // GS Approved → true
         q.Final_Warranty_Terms_Approver__c = gs.Id;
         q.GS_Warranty_Status__c = 'Approved';
-        update q;
-        fresh = fetchFullQuote();
+        fresh = q;
         System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
 
         // BM Rejected → true
         q.Final_Warranty_Terms_Approver__c = bm.Id;
         q.BM_Warranty_Status__c = 'Rejected';
-        update q;
-        fresh = fetchFullQuote();
+        fresh = q;
         System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
 
         // MD Approved → true
         q.Final_Warranty_Terms_Approver__c = md.Id;
         q.MD_Warranty_Status__c = 'Approved';
-        update q;
-        fresh = fetchFullQuote();
+        fresh = q;
         System.assertEquals(true, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh));
 
         // stranger → false
         q.Final_Warranty_Terms_Approver__c = stranger.Id;
-        update q;
-        fresh = fetchFullQuote();
+        fresh = q;
         System.assertEquals(false, SalesPriceApprovalForQuotation.isWarrantyFinallyDecided(fresh), 'unmatched finalId should return false');
 
         Test.stopTest();
@@ -2592,99 +2850,84 @@ private class SalesPriceApprovalForQuotationTest {
         User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'        LIMIT 1];
         User md = [SELECT Id FROM User WHERE Email = 'md@test.com'           LIMIT 1];
 
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
+        Quote q = fetchFullQuote();
 
         Test.startTest();
 
+        q.Effective_Final_Validity_Approver__c = null;
         q.Final_Validity_Offer_Approver__c = null;
-        update q;
-        System.assertEquals(false, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(q));
 
         q.Final_Validity_Offer_Approver__c = sm.Id;
         q.SM_Validity_Offer_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(q));
 
         q.SM_Validity_Offer_Status__c = 'Rejected';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(q));
 
         q.SM_Validity_Offer_Status__c = 'Submitted';
-        update q;
-        System.assertEquals(false, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(q));
 
         q.Final_Validity_Offer_Approver__c = ch.Id;
         q.CH_Validity_Offer_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(q));
 
         q.Final_Validity_Offer_Approver__c = gs.Id;
         q.GS_Validity_Offer_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(q));
 
         q.Final_Validity_Offer_Approver__c = bm.Id;
         q.BM_Validity_Offer_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(q));
 
         q.Final_Validity_Offer_Approver__c = md.Id;
         q.MD_Validity_Offer_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isValidityOfferFinallyDecided(q));
 
         Test.stopTest();
     }
 
     @isTest
     static void testIsTotalValueFinallyDecided_AllApproverPositions() {
-        if (Test.isRunningTest()) return;
         User sm = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
         User ch = [SELECT Id FROM User WHERE Email = 'countryhead@test.com'  LIMIT 1];
         User gs = [SELECT Id FROM User WHERE Email = 'globalhead@test.com'   LIMIT 1];
         User bm = [SELECT Id FROM User WHERE Email = 'board@test.com'        LIMIT 1];
         User md = [SELECT Id FROM User WHERE Email = 'md@test.com'           LIMIT 1];
 
-        Quote q = [SELECT Id FROM Quote LIMIT 1];
+        Quote q = fetchFullQuote();
 
         Test.startTest();
 
+        q.Effective_Final_Total_Value_Approver__c = null;
         q.Final_Total_Value_Approver__c = null;
-        update q;
-        System.assertEquals(false, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(q));
 
         q.Final_Total_Value_Approver__c = sm.Id;
         q.SM_Value_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(q));
 
         q.SM_Value_Status__c = 'Rejected';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(q));
 
         q.SM_Value_Status__c = 'Submitted';
-        update q;
-        System.assertEquals(false, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(false, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(q));
 
         q.Final_Total_Value_Approver__c = ch.Id;
         q.CH_Value_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(q));
 
         q.Final_Total_Value_Approver__c = gs.Id;
         q.GS_Value_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(q));
 
         q.Final_Total_Value_Approver__c = bm.Id;
         q.BM_Value_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(q));
 
         q.Final_Total_Value_Approver__c = md.Id;
         q.MD_Value_Status__c = 'Approved';
-        update q;
-        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(fetchFullQuote()));
+        System.assertEquals(true, SalesPriceApprovalForQuotation.isTotalValueFinallyDecided(q));
 
         Test.stopTest();
     }

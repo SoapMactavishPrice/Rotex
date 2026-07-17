@@ -927,12 +927,6 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const totalQty = this.calculateTotalQuantity(lineItemRows);
         const warranty = quote.warrantyTermsDraft || quote.warrantyTerms || '';
         const headers = [
-            'Total Qty',
-            'Total Business Last FY',
-            'Total Business from ARC Item last FY',
-            'Payment Terms',
-            'Warranty',
-            'Incoterms',
             'Material Code',
             'Material Description',
             `List Price${currencySuffix}`,
@@ -944,7 +938,12 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             'MOQ',
             'Valid From',
             'Valid Till',
-            'Existing ARC Price'
+            'Existing ARC Price',
+            'Total Business Last FY',
+            'Total Business from ARC Item last FY',
+            'Payment Terms',
+            'Warranty',
+            'Incoterms'
         ];
 
         const rows = (lineItemRows || []).map(item => {
@@ -973,13 +972,12 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             ];
 
             return [
-                totalQty,
+                ...itemValues,
                 '',
                 '',
                 quote.paymentTerms,
                 warranty,
                 quote.incoTerms,
-                ...itemValues
             ];
         });
 

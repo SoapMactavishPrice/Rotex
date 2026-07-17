@@ -213,7 +213,11 @@ public class OpportunityTriggerHandler {
                     qli.Description = oli.Description;
                     qli.Customer_Part_No__c = oli.Customer_Part_No__c;
                     qli.Discount_to_be_offered__c = oli.Discount_to_be_offered__c;
-                    qli.Discount_as_per_SAP__c = oli.Discount_as_per_SAP__c;
+                    if (oli.Discount_as_per_SAP__c != null) {
+                        qli.Discount_as_per_SAP__c = oli.Discount_as_per_SAP__c;
+                    } else {
+                        qli.Discount_as_per_SAP__c = 0;
+                    }
                     
                     // --- NEW: HSN from Plant_Data__c ---
                     if (oli.Product2 != null && oli.Product2.ProductCode != null &&

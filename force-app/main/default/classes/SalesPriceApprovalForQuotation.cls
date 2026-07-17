@@ -1587,8 +1587,8 @@ public without sharing class SalesPriceApprovalForQuotation {
         Boolean isApproved = false;
         Boolean isRejected = false;
         for (QuotationLineItemWrapper item : quotation.quoteLineItems) {
-            if (item.approvalStatus == 'Approved') isApproved = true;
-            else if (item.approvalStatus == 'Rejected') isRejected = true;
+            if (shouldIncludeLineInApprovalEmail(item, 'Approved')) isApproved = true;
+            else if (shouldIncludeLineInApprovalEmail(item, 'Rejected')) isRejected = true;
         }
         if (isApproved) { this.sendEmail(this.quotation, 'Approved'); this.sendCustomNotification(this.quotation, 'Approved'); }
         if (isRejected) { this.sendEmail(this.quotation, 'Rejected'); this.sendCustomNotification(this.quotation, 'Rejected'); }
@@ -1609,16 +1609,29 @@ public without sharing class SalesPriceApprovalForQuotation {
         body += 'Quote Name: ' + quotation.quoteName + '<br/>';
         body += 'Quote Approval Page: <a href="' + approvalPageUrl + '">click here</a><br/><br/>';
         body += 'Below are the product details:<br/><br/>';
-        body += '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse:collapse;width:100%;">';
-        body += '<thead><tr style="background-color:#f2f2f2;"><th>Product Name</th><th>List Price</th><th>Sales Price</th><th>Approval Status</th></tr></thead><tbody>';
+        body += '<table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:13px;">';
+        body += '<thead><tr style="background-color:#007764;color:#ffffff;">';
+        body += '<th style="border:1px solid #ccc;padding:8px 10px;text-align:left;">Product Name</th>';
+        body += '<th style="border:1px solid #ccc;padding:8px 10px;text-align:left;">Product Code</th>';
+        body += '<th style="border:1px solid #ccc;padding:8px 10px;text-align:right;">List Price</th>';
+        body += '<th style="border:1px solid #ccc;padding:8px 10px;text-align:right;">Sales Price</th>';
+        body += '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Discount as per SAP %</th>';
+        body += '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Discount Offered %</th>';
+        body += '<th style="border:1px solid #ccc;padding:8px 10px;text-align:center;">Approval Status</th>';
+        body += '<th style="border:1px solid #ccc;padding:8px 10px;text-align:left;">Final Approver Comments</th>';
+        body += '</tr></thead><tbody>';
 
         for (QuotationLineItemWrapper item : quotation.quoteLineItems) {
-            if (item.approvalStatus == status && item.updated) {
+            if (shouldIncludeLineInApprovalEmail(item, status)) {
                 body += '<tr>';
-                body += '<td>' + item.productName + '</td>';
-                body += '<td>' + (item.listPrice  != null ? String.valueOf(item.listPrice)  : 'Not Available') + '</td>';
-                body += '<td>' + (item.salesPrice != null ? String.valueOf(item.salesPrice) : 'Not Available') + '</td>';
-                body += '<td>' + (item.approvalStatus != null ? item.approvalStatus : '') + '</td>';
+                body += '<td style="border:1px solid #ccc;padding:6px 10px;">' + html(item.productName) + '</td>';
+                body += '<td style="border:1px solid #ccc;padding:6px 10px;">' + html(item.productCode) + '</td>';
+                body += '<td style="border:1px solid #ccc;padding:6px 10px;text-align:right;">' + html(item.listPrice) + '</td>';
+                body += '<td style="border:1px solid #ccc;padding:6px 10px;text-align:right;">' + html(item.salesPrice) + '</td>';
+                body += '<td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">' + html(item.d1) + '</td>';
+                body += '<td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">' + html(item.d2) + '</td>';
+                body += '<td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">' + html(getEmailApprovalStatus(item)) + '</td>';
+                body += '<td style="border:1px solid #ccc;padding:6px 10px;">' + html(getEmailApproverComments(item)) + '</td>';
                 body += '</tr>';
             }
         }
@@ -1630,10 +1643,133 @@ public without sharing class SalesPriceApprovalForQuotation {
         email.setHtmlBody(body);
 
         try {
-            // Messaging.sendEmail(new Messaging.SingleEmailMessage[]{ email });
+            Messaging.sendEmail(new Messaging.SingleEmailMessage[]{ email });
         } catch (Exception e) {
             System.debug('Email Sending Failed: ' + e.getMessage());
         }
+    }
+
+    private static Boolean shouldIncludeLineInApprovalEmail(QuotationLineItemWrapper item, String status) {
+        if (item == null) return false;
+        if (!isEffectiveFinalApproverDecision(item)) return false;
+        return getEmailApprovalStatus(item) == status;
+    }
+
+    private static String getEmailApprovalStatus(QuotationLineItemWrapper item) {
+        if (item != null && isEffectiveFinalApproverDecision(item)) {
+            return item.approvalStatus;
+        }
+        return getFinalApproverStatus(item);
+    }
+
+    private static String getEmailApproverComments(QuotationLineItemWrapper item) {
+        if (item != null && isEffectiveFinalApproverDecision(item)) {
+            return getCurrentStageComments(item);
+        }
+        return getFinalApproverComments(item);
+    }
+
+    private static Boolean isFinalDecision(String status) {
+        return status == 'Approved' || status == 'Rejected';
+    }
+
+    private static Boolean isEffectiveFinalApproverDecision(QuotationLineItemWrapper item) {
+        if (item == null || item.updated != true || !isFinalDecision(item.approvalStatus)) return false;
+        String currentStageApproverId = getCurrentStageApproverId(item);
+        return String.isNotBlank(currentStageApproverId) &&
+            String.isNotBlank(item.finalDiscountApproverId) &&
+            currentStageApproverId == item.finalDiscountApproverId;
+    }
+
+    private static String getCurrentStageApproverId(QuotationLineItemWrapper item) {
+        if (item == null) return null;
+        if (item.currentStageField == 'Sales_Manager_Status__c') {
+            return item.salesManagerId;
+        }
+        if (item.currentStageField == 'Country_Continent_Sales_H_LOB_Status__c') {
+            return item.countryContinentSalesId;
+        }
+        if (item.currentStageField == 'Global_Sales_Head_Status__c') {
+            return item.globalSalesHeadId;
+        }
+        if (item.currentStageField == 'Rotex_Board_Member_Status__c') {
+            return item.rotexBoardMemberId;
+        }
+        if (item.currentStageField == 'Managing_Director_Status__c') {
+            return item.managingDirectorId;
+        }
+        return null;
+    }
+
+    private static String getCurrentStageComments(QuotationLineItemWrapper item) {
+        if (item == null) return null;
+        if (item.currentStageField == 'Sales_Rep_Status__c') {
+            return item.approvalComments;
+        }
+        if (item.currentStageField == 'Sales_Manager_Status__c') {
+            return item.Sales_Manager_Comments;
+        }
+        if (item.currentStageField == 'Country_Continent_Sales_H_LOB_Status__c') {
+            return item.Country_Continent_Sales_LOB_Comments;
+        }
+        if (item.currentStageField == 'Global_Sales_Head_Status__c') {
+            return item.Global_Sales_Head_Comments;
+        }
+        if (item.currentStageField == 'Rotex_Board_Member_Status__c') {
+            return item.Rotex_Board_Member_Comments;
+        }
+        if (item.currentStageField == 'Managing_Director_Status__c') {
+            return item.Managing_Director_Comments;
+        }
+        return item.approvalComments;
+    }
+
+    private static String getFinalApproverStatus(QuotationLineItemWrapper item) {
+        if (item == null || String.isBlank(item.finalDiscountApproverId)) {
+            return item == null ? null : item.approvalStatus;
+        }
+        if (item.salesManagerId == item.finalDiscountApproverId) {
+            return item.salesManagerStatus;
+        }
+        if (item.countryContinentSalesId == item.finalDiscountApproverId) {
+            return item.countryContinentSalesStatus;
+        }
+        if (item.globalSalesHeadId == item.finalDiscountApproverId) {
+            return item.globalSalesHeadStatus;
+        }
+        if (item.rotexBoardMemberId == item.finalDiscountApproverId) {
+            return item.rotexBoardMemberStatus;
+        }
+        if (item.managingDirectorId == item.finalDiscountApproverId) {
+            return item.managingDirectorStatus;
+        }
+        return item.approvalStatus;
+    }
+
+    private static String getFinalApproverComments(QuotationLineItemWrapper item) {
+        if (item == null || String.isBlank(item.finalDiscountApproverId)) {
+            return item == null ? null : item.approvalComments;
+        }
+        if (item.salesManagerId == item.finalDiscountApproverId) {
+            return item.Sales_Manager_Comments;
+        }
+        if (item.countryContinentSalesId == item.finalDiscountApproverId) {
+            return item.Country_Continent_Sales_LOB_Comments;
+        }
+        if (item.globalSalesHeadId == item.finalDiscountApproverId) {
+            return item.Global_Sales_Head_Comments;
+        }
+        if (item.rotexBoardMemberId == item.finalDiscountApproverId) {
+            return item.Rotex_Board_Member_Comments;
+        }
+        if (item.managingDirectorId == item.finalDiscountApproverId) {
+            return item.Managing_Director_Comments;
+        }
+        return item.approvalComments;
+    }
+
+    private static String html(Object value) {
+        return value == null ? '' : String.valueOf(value).escapeHtml4();
     }
 
     private void sendCustomNotification(QuotationWrapper quotation, String status) {

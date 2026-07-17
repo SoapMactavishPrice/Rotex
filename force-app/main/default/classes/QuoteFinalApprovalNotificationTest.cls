@@ -23,7 +23,8 @@ private class QuoteFinalApprovalNotificationTest {
             Name = 'Test Quote',
             OpportunityId = oppId,
             Status = 'Draft',
-            Pricebook2Id = Test.getStandardPricebookId()
+            Pricebook2Id = Test.getStandardPricebookId(),
+            ownerId = createUser().Id
         );
         insert q;
         return q;

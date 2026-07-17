@@ -28,6 +28,7 @@ public with sharing class QuoteValidityOfferApprovalHandler {
 
                 if (q.Requested_Validity_Of_Offer__c == DEFAULT_VALIDITY_OFFER) {
                     q.Validity_of_Offer__c = q.Requested_Validity_Of_Offer__c;
+                    applyQuoteValidTill(q);
                 } else {
                     initiateApprovalProcess(q);
                 }
@@ -279,6 +280,31 @@ public with sharing class QuoteValidityOfferApprovalHandler {
 
     private static void finalizeApproval(Quote q) {
         q.Validity_of_Offer__c = q.Requested_Validity_Of_Offer__c;
+        applyQuoteValidTill(q);
+    }
+
+    private static void applyQuoteValidTill(Quote q) {
+        Integer validityDays = getValidityDays(q.Requested_Validity_Of_Offer__c);
+        Date quoteDate = getDateFieldSafely(q, 'Quote_Date__c');
+        if (quoteDate != null && validityDays != null) {
+            q.Quote_Validity_Extension__c = 'Yes';
+            q.Quote_Valid_Till__c = quoteDate.addDays(validityDays);
+        }
+    }
+
+    private static Integer getValidityDays(String validityOffer) {
+        if (String.isBlank(validityOffer)) return null;
+        Matcher m = Pattern.compile('(\\d+)').matcher(validityOffer);
+        return m.find() ? Integer.valueOf(m.group(1)) : null;
+    }
+
+    private static Date getDateFieldSafely(SObject record, String fieldApiName) {
+        try {
+            Object value = record.get(fieldApiName);
+            return value == null ? null : (Date)value;
+        } catch (SObjectException e) {
+            return null;
+        }
     }
 
     private static void resetApprovalFields(Quote q) {

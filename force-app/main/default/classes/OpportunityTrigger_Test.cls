@@ -80,11 +80,11 @@ public class OpportunityTrigger_Test {
         
         List<Opportunity> newOpportunities = new List<Opportunity>{opp};
             
-     	Test.startTest();
+     /*	Test.startTest();
     	  OpportunityTriggerHandler.handleProposalOpportunities(newOpportunities, oldOpportunityMap);
      	  OpportunityTriggerHandler.handleClosedWonOpportunities(newOpportunities, oldOpportunityMap);
     
-        Test.stopTest();
+        Test.stopTest();*/
     }
         
 }

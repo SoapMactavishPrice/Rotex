@@ -36,17 +36,28 @@ trigger OpportunityTrigger on Opportunity (After Update, before update) {
             }
             oppLineItemMap.get(oli.OpportunityId).add(oli);
         }
-        
+        Map<Id, Opportunity> oppRecordTypeMap = new Map<Id, Opportunity>(
+            [SELECT Id, RecordTypeId,RecordType.DeveloperName FROM Opportunity WHERE Id IN :oppIds]);
         // Validate
         for (Opportunity opp : Trigger.new) {
             if (!oppIds.contains(opp.Id)) continue;
             
-            if (opp.Amount < 25000) {
+           // if (opp.Amount < 25000) {
+            Opportunity oppRT = oppRecordTypeMap.get(opp.Id);
+            
+            if (
+                opp.Amount < 25000 &&
+                (
+                    oppRT.RecordTypeId == null ||
+                    oppRT.RecordType == null ||
+                    oppRT.RecordType.DeveloperName != 'ARC'
+                )
+            ) {
                 Boolean hasSpecialItem = false;
                 
                 if (oppLineItemMap.containsKey(opp.Id)) {
                     for (OpportunityLineItem oli : oppLineItemMap.get(opp.Id)) {
-                        if (oli.ProductCode == '27000002809') {
+                        if (oli.ProductCode == '27000002809') {//oli
                             hasSpecialItem = true;
                             break;
                         }

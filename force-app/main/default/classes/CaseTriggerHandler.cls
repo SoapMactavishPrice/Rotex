@@ -81,6 +81,12 @@ public class CaseTriggerHandler {
                         System.debug('Invalid state skipped: ' + matchedStateCode);
                     }
                 }
+                //leadsToInsert.add(ld);
+                // Apply Active Lead Assignment Rule
+                Database.DMLOptions dml = new Database.DMLOptions();
+                dml.assignmentRuleHeader.useDefaultRule = true;
+                ld.setOptions(dml);
+                
                 leadsToInsert.add(ld);
 
                 casesToUpdate.add(new Case(Id = cs.Id,Status = 'Potential'));
@@ -114,7 +120,17 @@ public class CaseTriggerHandler {
                 }
             }
             
+            /*if (!retryLeads.isEmpty()) {
+                insert retryLeads;
+            }*/
             if (!retryLeads.isEmpty()) {
+                
+                for (Lead retryLead : retryLeads) {
+                    Database.DMLOptions dml = new Database.DMLOptions();
+                    dml.assignmentRuleHeader.useDefaultRule = true;
+                    retryLead.setOptions(dml);
+                }
+                
                 insert retryLeads;
             }
         }

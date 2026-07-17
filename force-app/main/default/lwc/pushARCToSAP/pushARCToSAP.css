@@ -1,0 +1,37 @@
+.slds-table th {
+    background-color: #066afe !important;
+    color: #fff !important;
+    font-weight: 600;
+    padding: 10px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.slds-table td {
+    padding: 8px 12px;
+    vertical-align: middle;
+    font-size: 13px;
+}
+
+.slds-table tbody tr:hover {
+    background-color: #f5f7fa;
+}
+
+/* Center the buttons */
+.slds-grid_align_center {
+    display: flex;
+    justify-content: center !important;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .slds-table {
+        font-size: 12px;
+    }
+    
+    .slds-table th,
+    .slds-table td {
+        padding: 5px 8px;
+        min-width: 80px;
+    }
+}

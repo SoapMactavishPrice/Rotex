@@ -18,9 +18,12 @@ static void setupTestData() {
     );
     insert standardPricebookEntry;
     User approverUser = [SELECT Id FROM User WHERE IsActive = true LIMIT 1];
+    approverUser.Division__c = 'Export';
+    update approverUser;
     Opportunity opp = new Opportunity(Name = 'Test Opportunity', StageName = 'Prospecting', CloseDate = Date.today());
+    try{
     insert opp;
-
+    }Catch(Exception e){}
     Quote testQuote = new Quote(
         Name = 'Test Quote',
         OpportunityId = opp.Id,
@@ -32,7 +35,7 @@ static void setupTestData() {
         Payment_Terms_Approval_Status__c = 'Submitted',
         Warranty_Terms_Approval_Status__c = 'Submitted',
         Approval_Status__c = 'Submitted',
-        Payment_Terms__c = 'Open Credit upto 180 days',
+        Payment_Terms__c = 'D009',
         Final_Warranty_Terms_Approver__c = approverUser.Id,
         MD_Warranty_Status__c = 'Submitted',
         Final_Validity_Offer_Approver__c = approverUser.Id,

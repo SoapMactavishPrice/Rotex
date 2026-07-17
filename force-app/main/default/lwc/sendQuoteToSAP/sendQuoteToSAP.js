@@ -34,6 +34,10 @@ export default class SendQuoteToSAP extends LightningElement {
     @track isViewFile = false;
     @track selectedFilesForPreview = [];
     @track fileInputKey = Date.now();
+    @track newlyUploadedFiles = [];
+    @track uploadedFileNames = [];
+    @track newlyUploadedFiles = [];
+    @track uploadedFileNames = [];
 
     showToast(toastTitle, toastMsg, toastType) {
         const event = new ShowToastEvent({
@@ -43,6 +47,11 @@ export default class SendQuoteToSAP extends LightningElement {
             mode: "dismissable"
         });
         this.dispatchEvent(event);
+    }
+
+    // Add this method to get current session files
+    getCurrentSessionFiles() {
+        return this.newlyUploadedFiles.map(file => file.filename);
     }
 
     connectedCallback() {
@@ -200,15 +209,16 @@ export default class SendQuoteToSAP extends LightningElement {
                             reject(new Error('Empty base64 data'));
                             return;
                         }
-                        resolve({
+                        const fileObj = {
                             id: Date.now() + Math.random(),
-                            filename: file.name, // ✅ Original filename
+                            filename: file.name,
                             base64: base64,
                             url: reader.result,
                             type: file.type,
                             isImage: file.type.startsWith('image'),
                             isPdf: file.type === 'application/pdf'
-                        });
+                        };
+                        resolve(fileObj);
                     } catch (error) {
                         reject(error);
                     }
@@ -220,7 +230,13 @@ export default class SendQuoteToSAP extends LightningElement {
 
         Promise.all(filePromises)
             .then(results => {
+                // ✅ Add to both uploadedFiles (for UI) and newlyUploadedFiles (for tracking)
                 this.uploadedFiles = [...this.uploadedFiles, ...results];
+                this.newlyUploadedFiles = [...this.newlyUploadedFiles, ...results];
+                // ✅ Also track filenames for SAP call
+                const newFilenames = results.map(f => f.filename);
+                this.uploadedFileNames = [...this.uploadedFileNames, ...newFilenames];
+
                 this.showToast('Success', `${results.length} file(s) added successfully`, 'success');
                 const fileInput = this.template.querySelector('.hiddenFileInput');
                 if (fileInput) {
@@ -233,6 +249,7 @@ export default class SendQuoteToSAP extends LightningElement {
                 this.showToast('Error', error.message, 'error');
             });
     }
+
 
     viewFile() {
         if (!this.uploadedFiles || this.uploadedFiles.length === 0) {
@@ -351,6 +368,9 @@ export default class SendQuoteToSAP extends LightningElement {
     }
 
     closeModal(event) {
+        this.newlyUploadedFiles = [];
+        this.uploadedFileNames = [];
+        this.uploadedFiles = [];
         this.dispatchEvent(new CloseActionScreenEvent());
         this.dispatchEvent(new RefreshEvent());
     }
@@ -405,10 +425,10 @@ export default class SendQuoteToSAP extends LightningElement {
     }
 
     // ------------ Main Order Submit --------------------
-    handleMainSubmit(event) {
+    async handleMainSubmit(event) {
         event.preventDefault();
 
-        // Check PO Attachment first (mandatory)
+        // Check if there are any files uploaded (new or existing)
         if (this.uploadedFiles.length === 0) {
             this.showToast('Validation Error', 'PO Attachment is mandatory. Please upload at least one file.', 'error');
             const uploadButton = this.template.querySelector('lightning-button[label="Upload Files"]');
@@ -439,11 +459,9 @@ export default class SendQuoteToSAP extends LightningElement {
             if (validationFlag) {
                 this.showToast('Please fill/select all the mandatory fields', '', 'error');
             } else {
-
                 this.saveRoundOffValues().then(success => {
                     this.uploadAllFiles();
                 });
-                // this.uploadAllFiles();
             }
         }
     }
@@ -452,8 +470,19 @@ export default class SendQuoteToSAP extends LightningElement {
         this.showSpinner = true;
 
         try {
-            // Upload each file to Salesforce
-            const uploadPromises = this.uploadedFiles.map(file => {
+            // ✅ Store filenames of ONLY newly uploaded files
+            this.uploadedFileNames = this.newlyUploadedFiles.map(file => file.filename);
+            console.log('Files to upload and send (NEWLY ADDED ONLY):', this.uploadedFileNames);
+
+            if (this.newlyUploadedFiles.length === 0) {
+                // No files to upload, just submit the form
+                const form1 = this.template.querySelector('lightning-record-edit-form[data-id="mainform"]');
+                form1.submit();
+                return;
+            }
+
+            // Upload only newly added files (keep track of them)
+            const uploadPromises = this.newlyUploadedFiles.map(file => {
                 return uploadPOAttachment({
                     quoteId: this.recordId,
                     fileName: file.filename,
@@ -462,13 +491,11 @@ export default class SendQuoteToSAP extends LightningElement {
             });
 
             const results = await Promise.all(uploadPromises);
-
-            // Check if all uploads were successful
             const allSuccess = results.every(result => result.success);
 
             if (allSuccess) {
                 this.showToast('Success', 'Files uploaded successfully', 'success');
-                // Now submit the form
+                // ✅ Keep the filenames for later use - DON'T clear them here
                 const form1 = this.template.querySelector('lightning-record-edit-form[data-id="mainform"]');
                 form1.submit();
             } else {
@@ -482,6 +509,14 @@ export default class SendQuoteToSAP extends LightningElement {
             this.showSpinner = false;
         }
     }
+
+
+    handleMainSuccess(event) {
+        this.showToast('Please wait for callout response', '', 'info');
+        this.syncDataResponseFlag = true;
+        this.handleCallout();
+    }
+
 
     handleNewError(event) {
         // This will display the error in the lightning-messages component
@@ -538,48 +573,48 @@ export default class SendQuoteToSAP extends LightningElement {
     // }
 
     handleCallout() {
+        // ✅ Use ONLY the newly uploaded filenames
+        const fileNames = this.uploadedFileNames.length > 0 ? this.uploadedFileNames : [];
+
+        // Also capture files that might have been uploaded but not yet tracked
+        if (fileNames.length === 0 && this.newlyUploadedFiles.length > 0) {
+            // Fallback: get filenames from newlyUploadedFiles
+            this.uploadedFileNames = this.newlyUploadedFiles.map(file => file.filename);
+        }
+
+        console.log('Sending files to SAP (NEWLY ADDED ONLY):', this.uploadedFileNames);
+
         salesOrderCreation({
             parentId: this.recordId,
             bpFuncId: this.bpValue,
             shFuncId: this.shValue,
             caFuncId: this.caValue,
-            salesQuotationType: this.salesQuotationType
+            salesQuotationType: this.salesQuotationType,
+            fileNames: this.uploadedFileNames  // ✅ Pass ONLY newly uploaded files
         }).then((result) => {
             console.log('result ', result);
 
-            // Parse only once - result is already a JSON string from Apex
             let parsedResult = JSON.parse(result);
             console.log('parsedResult: ', parsedResult);
 
-            // Check if response is an array (your actual SAP response format)
-            if (Array.isArray(parsedResult) && parsedResult.length > 0) {
-                let sapResponse = parsedResult[0];
-
-                if (sapResponse.SalesQuotationNum) {
-                    // Success - got SAP quotation number
-                    this.handlerUpdateQuotation(sapResponse.SalesQuotationNum);
-                } else if (sapResponse.Message && sapResponse.Message.MType === 'E') {
-                    // Error from SAP
-                    this.showSpinner = false;
-                    this.errorResponseMessage = sapResponse.Message.Message1;
-                    this.showToast('Error', sapResponse.Message.Message1, 'error');
+            if (parsedResult.success === true) {
+                if (parsedResult.quotationNumber) {
+                    this.handlerUpdateQuotation(parsedResult.quotationNumber);
                 } else {
-                    // Unexpected response
                     this.showSpinner = false;
-                    this.errorResponseMessage = 'Unexpected SAP response format';
-                    this.showToast('Error', 'Something went wrong!!!', 'error');
+                    this.errorResponseMessage = 'SAP success but no quotation number returned';
+                    this.showToast('Error', this.errorResponseMessage, 'error');
+                    // ✅ Clear the tracked files on error
+                    this.newlyUploadedFiles = [];
+                    this.uploadedFileNames = [];
                 }
-            }
-            // Handle error response from Apex
-            else if (parsedResult.error) {
+            } else {
                 this.showSpinner = false;
-                this.errorResponseMessage = parsedResult.error.message;
-                this.showToast('Error', 'Something went wrong!!!', 'error');
-            }
-            else {
-                this.showSpinner = false;
-                this.errorResponseMessage = 'Invalid response from server';
-                this.showToast('Error', 'Something went wrong!!!', 'error');
+                this.errorResponseMessage = parsedResult.error || 'SAP quotation creation failed';
+                this.showToast('Error', this.errorResponseMessage, 'error');
+                // ✅ Clear the tracked files on error
+                this.newlyUploadedFiles = [];
+                this.uploadedFileNames = [];
             }
 
         }).catch((error) => {
@@ -587,8 +622,12 @@ export default class SendQuoteToSAP extends LightningElement {
             this.showToast('Error', 'Something went wrong!!!', 'error');
             this.errorResponseMessage = error;
             this.showSpinner = false;
-        })
+            // ✅ Clear the tracked files on error
+            this.newlyUploadedFiles = [];
+            this.uploadedFileNames = [];
+        });
     }
+
 
     // handlerUpdateQuotation(para) {
     //     updateQuotation({
@@ -619,6 +658,10 @@ export default class SendQuoteToSAP extends LightningElement {
                 this.showToast('Quotation created in SAP successfully!', '', 'success');
                 this.ResponseMessage = 'SAP Quotation Number: ' + para;
 
+                // ✅ Clear the tracked files after successful submission
+                this.newlyUploadedFiles = [];
+                this.uploadedFileNames = [];
+
                 // Auto close after 2 seconds on success
                 setTimeout(() => {
                     this.dispatchEvent(new CloseActionScreenEvent());
@@ -632,6 +675,9 @@ export default class SendQuoteToSAP extends LightningElement {
             console.log('= error updateQuotation : ', error);
             this.showToast('Error', 'Something went wrong while updating SAP number!!!', 'error');
             this.showSpinner = false;
+            // ✅ Clear on error too
+            this.newlyUploadedFiles = [];
+            this.uploadedFileNames = [];
         })
     }
 

@@ -18,7 +18,7 @@ public without sharing class SalesPriceApprovalForQuotation {
     public static List<QuotationWrapper> getAllQuotations(String recordType) {
         Id currentUserId = UserInfo.getUserId();
 
-        List<QuoteLineItem> submittedQlis = [
+        List<QuoteLineItem> relevantDiscountQlis = [
             SELECT QuoteId
             FROM   QuoteLineItem
             WHERE  (
@@ -34,22 +34,40 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Rotex_Board_Member__r.DelegatedApproverId = :currentUserId
                    )
                    AND Discount_offered_SAP__c = true
-                   AND Is_Discount_Approved__c = false
                    AND (
-                       Sales_Manager_Status__c = 'Submitted' OR
-                       Country_Continent_Sales_H_LOB_Status__c = 'Submitted' OR
-                       Global_Sales_Head_Status__c = 'Submitted' OR
-                       Rotex_Board_Member_Status__c = 'Submitted' OR
-                       Managing_Director_Status__c = 'Submitted'
+                       (
+                           Is_Discount_Approved__c = false
+                           AND (
+                               Sales_Manager_Status__c = 'Submitted' OR
+                               Country_Continent_Sales_H_LOB_Status__c = 'Submitted' OR
+                               Global_Sales_Head_Status__c = 'Submitted' OR
+                               Rotex_Board_Member_Status__c = 'Submitted' OR
+                               Managing_Director_Status__c = 'Submitted'
+                           )
+                       ) OR (
+                           Quote.SAP_Quotation_Number__c = null
+                           AND (
+                               ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId)
+                                   AND Sales_Manager_Status__c IN ('Approved','Rejected')) OR
+                               ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId)
+                                   AND Country_Continent_Sales_H_LOB_Status__c IN ('Approved','Rejected')) OR
+                               ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId)
+                                   AND Global_Sales_Head_Status__c IN ('Approved','Rejected')) OR
+                               ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId)
+                                   AND Rotex_Board_Member_Status__c IN ('Approved','Rejected')) OR
+                               ((Managing_Director_Country_Manage__c = :currentUserId OR Managing_Director_Country_Manage__r.DelegatedApproverId = :currentUserId)
+                                   AND Managing_Director_Status__c IN ('Approved','Rejected'))
+                           )
+                       )
                    )
         ];
 
         Set<Id> discountQuoteIds = new Set<Id>();
-        for (QuoteLineItem qli : submittedQlis) {
+        for (QuoteLineItem qli : relevantDiscountQlis) {
             discountQuoteIds.add(qli.QuoteId);
         }
 
-        List<Quote> warrantyQuotes = [
+        List<Quote> quoteApprovalQuotes = [
             SELECT Id
             FROM   Quote
             WHERE  (
@@ -64,82 +82,77 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Managing_Director_Country_Manager__c      = :currentUserId OR
                        Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId
                    )
-                   AND Warranty_Terms_Draft__c != null
-                   AND Warranty_Terms_Draft__c != '12 Months from date of supply'
                    AND (
-                       SM_Warranty_Status__c = 'Submitted' OR
-                       CH_Warranty_Status__c = 'Submitted' OR
-                       GS_Warranty_Status__c = 'Submitted' OR
-                       BM_Warranty_Status__c = 'Submitted' OR
-                       MD_Warranty_Status__c = 'Submitted'
+                       (
+                           Warranty_Terms_Draft__c != null
+                           AND Warranty_Terms_Draft__c != '12 Months from date of supply'
+                           AND (
+                               SM_Warranty_Status__c = 'Submitted' OR
+                               CH_Warranty_Status__c = 'Submitted' OR
+                               GS_Warranty_Status__c = 'Submitted' OR
+                               BM_Warranty_Status__c = 'Submitted' OR
+                               MD_Warranty_Status__c = 'Submitted' OR
+                               (
+                                   SAP_Quotation_Number__c = null
+                                   AND (
+                                       ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId) AND SM_Warranty_Status__c IN ('Approved','Rejected')) OR
+                                       ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId) AND CH_Warranty_Status__c IN ('Approved','Rejected')) OR
+                                       ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId) AND GS_Warranty_Status__c IN ('Approved','Rejected')) OR
+                                       ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId) AND BM_Warranty_Status__c IN ('Approved','Rejected')) OR
+                                       ((Managing_Director_Country_Manager__c = :currentUserId OR Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId) AND MD_Warranty_Status__c IN ('Approved','Rejected'))
+                                   )
+                               )
+                           )
+                       ) OR (
+                           Requested_Validity_Of_Offer__c != null
+                           AND Requested_Validity_Of_Offer__c != '30 Days'
+                           AND (
+                               SM_Validity_Offer_Status__c = 'Submitted' OR
+                               CH_Validity_Offer_Status__c = 'Submitted' OR
+                               GS_Validity_Offer_Status__c = 'Submitted' OR
+                               BM_Validity_Offer_Status__c = 'Submitted' OR
+                               MD_Validity_Offer_Status__c = 'Submitted' OR
+                               (
+                                   SAP_Quotation_Number__c = null
+                                   AND (
+                                       ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId) AND SM_Validity_Offer_Status__c IN ('Approved','Rejected')) OR
+                                       ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId) AND CH_Validity_Offer_Status__c IN ('Approved','Rejected')) OR
+                                       ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId) AND GS_Validity_Offer_Status__c IN ('Approved','Rejected')) OR
+                                       ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId) AND BM_Validity_Offer_Status__c IN ('Approved','Rejected')) OR
+                                       ((Managing_Director_Country_Manager__c = :currentUserId OR Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId) AND MD_Validity_Offer_Status__c IN ('Approved','Rejected'))
+                                   )
+                               )
+                           )
+                       ) OR (
+                           Total_Value__c != null
+                           AND (
+                               (
+                                   Is_Total_Value_Approved__c = false
+                                   AND (
+                                       SM_Value_Status__c = 'Submitted' OR
+                                       CH_Value_Status__c = 'Submitted' OR
+                                       GS_Value_Status__c = 'Submitted' OR
+                                       BM_Value_Status__c = 'Submitted' OR
+                                       MD_Value_Status__c = 'Submitted'
+                                   )
+                               ) OR (
+                                   SAP_Quotation_Number__c = null
+                                   AND (
+                                       ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId) AND SM_Value_Status__c IN ('Approved','Rejected')) OR
+                                       ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId) AND CH_Value_Status__c IN ('Approved','Rejected')) OR
+                                       ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId) AND GS_Value_Status__c IN ('Approved','Rejected')) OR
+                                       ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId) AND BM_Value_Status__c IN ('Approved','Rejected')) OR
+                                       ((Managing_Director_Country_Manager__c = :currentUserId OR Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId) AND MD_Value_Status__c IN ('Approved','Rejected'))
+                                   )
+                               )
+                           )
+                       )
                    )
         ];
 
-        Set<Id> warrantyQuoteIds = new Set<Id>();
-        for (Quote q : warrantyQuotes) {
-            warrantyQuoteIds.add(q.Id);
-        }
-
-        List<Quote> validityOfferQuotes = [
-            SELECT Id
-            FROM   Quote
-            WHERE  (
-                       Sales_Manager__c                          = :currentUserId OR
-                       Sales_Manager__r.DelegatedApproverId      = :currentUserId OR
-                       Country_Continent_Sales_Head_LOB_Head__c  = :currentUserId OR
-                       Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId OR
-                       Global_Sales_Head__c                      = :currentUserId OR
-                       Global_Sales_Head__r.DelegatedApproverId  = :currentUserId OR
-                       Rotex_Board_Member__c                     = :currentUserId OR
-                       Rotex_Board_Member__r.DelegatedApproverId = :currentUserId OR
-                       Managing_Director_Country_Manager__c      = :currentUserId OR
-                       Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId
-                   )
-                   AND Requested_Validity_Of_Offer__c != null
-                   AND Requested_Validity_Of_Offer__c != '30 Days'
-                   AND (
-                       SM_Validity_Offer_Status__c = 'Submitted' OR
-                       CH_Validity_Offer_Status__c = 'Submitted' OR
-                       GS_Validity_Offer_Status__c = 'Submitted' OR
-                       BM_Validity_Offer_Status__c = 'Submitted' OR
-                       MD_Validity_Offer_Status__c = 'Submitted'
-                   )
-        ];
-
-        Set<Id> validityOfferQuoteIds = new Set<Id>();
-        for (Quote q : validityOfferQuotes) {
-            validityOfferQuoteIds.add(q.Id);
-        }
-
-        List<Quote> totalValueQuotes = [
-            SELECT Id
-            FROM   Quote
-            WHERE  (
-                       Sales_Manager__c                          = :currentUserId OR
-                       Sales_Manager__r.DelegatedApproverId      = :currentUserId OR
-                       Country_Continent_Sales_Head_LOB_Head__c  = :currentUserId OR
-                       Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId OR
-                       Global_Sales_Head__c                      = :currentUserId OR
-                       Global_Sales_Head__r.DelegatedApproverId  = :currentUserId OR
-                       Rotex_Board_Member__c                     = :currentUserId OR
-                       Rotex_Board_Member__r.DelegatedApproverId = :currentUserId OR
-                       Managing_Director_Country_Manager__c      = :currentUserId OR
-                       Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId
-                   )
-                   AND Total_Value__c != null
-                   AND Is_Total_Value_Approved__c = false
-                   AND (
-                       SM_Value_Status__c = 'Submitted' OR
-                       CH_Value_Status__c = 'Submitted' OR
-                       GS_Value_Status__c = 'Submitted' OR
-                       BM_Value_Status__c = 'Submitted' OR
-                       MD_Value_Status__c = 'Submitted'
-                   )
-        ];
-
-        Set<Id> totalValueQuoteIds = new Set<Id>();
-        for (Quote q : totalValueQuotes) {
-            totalValueQuoteIds.add(q.Id);
+        Set<Id> quoteApprovalQuoteIds = new Set<Id>();
+        for (Quote q : quoteApprovalQuotes) {
+            quoteApprovalQuoteIds.add(q.Id);
         }
 
         // List<Quote> minimumOfferQuotes = [
@@ -166,127 +179,8 @@ public without sharing class SalesPriceApprovalForQuotation {
         //     minimumOfferQuoteIds.add(q.Id);
         // }
 
-        DateTime thirtyDaysAgo = DateTime.now().addDays(-30);
-
-        // ── Approved/Rejected: Discount QLIs (last 30 days) ──
-        List<QuoteLineItem> approvedRejectedQlis = [
-            SELECT QuoteId
-            FROM   QuoteLineItem
-            WHERE  Discount_offered_SAP__c = true
-            AND (
-                ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId)
-                    AND Sales_Manager_Status__c IN ('Approved','Rejected')
-                    AND Sales_Manager_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId)
-                    AND Country_Continent_Sales_H_LOB_Status__c IN ('Approved','Rejected')
-                    AND Country_Head_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId)
-                    AND Global_Sales_Head_Status__c IN ('Approved','Rejected')
-                    AND Global_Sales_Head_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId)
-                    AND Rotex_Board_Member_Status__c IN ('Approved','Rejected')
-                    AND Rotex_Board_Member_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Managing_Director_Country_Manage__c = :currentUserId OR Managing_Director_Country_Manage__r.DelegatedApproverId = :currentUserId)
-                    AND Managing_Director_Status__c IN ('Approved','Rejected')
-                    AND Managing_Director_Date_Time__c >= :thirtyDaysAgo)
-            )
-        ];
-        Set<Id> approvedRejectedDiscountQuoteIds = new Set<Id>();
-        for (QuoteLineItem qli : approvedRejectedQlis) {
-            approvedRejectedDiscountQuoteIds.add(qli.QuoteId);
-        }
-
-        // ── Approved/Rejected: Warranty (last 30 days) ──
-        List<Quote> approvedRejectedWarrantyQuotes = [
-            SELECT Id FROM Quote
-            WHERE Warranty_Terms_Draft__c != null
-            AND   Warranty_Terms_Draft__c != '12 Months from date of supply'
-            AND (
-                ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId)
-                    AND SM_Warranty_Status__c IN ('Approved','Rejected')
-                    AND SM_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId)
-                    AND CH_Warranty_Status__c IN ('Approved','Rejected')
-                    AND CH_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId)
-                    AND GS_Warranty_Status__c IN ('Approved','Rejected')
-                    AND GS_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId)
-                    AND BM_Warranty_Status__c IN ('Approved','Rejected')
-                    AND BM_Warranty_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Managing_Director_Country_Manager__c = :currentUserId OR Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId)
-                    AND MD_Warranty_Status__c IN ('Approved','Rejected')
-                    AND MD_Warranty_Date_Time__c >= :thirtyDaysAgo)
-            )
-        ];
-        Set<Id> approvedRejectedWarrantyQuoteIds = new Set<Id>();
-        for (Quote q : approvedRejectedWarrantyQuotes) {
-            approvedRejectedWarrantyQuoteIds.add(q.Id);
-        }
-
-        // ── Approved/Rejected: Validity Offer (last 30 days) ──
-        List<Quote> approvedRejectedValidityQuotes = [
-            SELECT Id FROM Quote
-            WHERE Requested_Validity_Of_Offer__c != null
-            AND   Requested_Validity_Of_Offer__c != '30 Days'
-            AND (
-                ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId)
-                    AND SM_Validity_Offer_Status__c IN ('Approved','Rejected')
-                    AND SM_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId)
-                    AND CH_Validity_Offer_Status__c IN ('Approved','Rejected')
-                    AND CH_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId)
-                    AND GS_Validity_Offer_Status__c IN ('Approved','Rejected')
-                    AND GS_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId)
-                    AND BM_Validity_Offer_Status__c IN ('Approved','Rejected')
-                    AND BM_Validity_Offer_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Managing_Director_Country_Manager__c = :currentUserId OR Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId)
-                    AND MD_Validity_Offer_Status__c IN ('Approved','Rejected')
-                    AND MD_Validity_Offer_Date_Time__c >= :thirtyDaysAgo)
-            )
-        ];
-        Set<Id> approvedRejectedValidityQuoteIds = new Set<Id>();
-        for (Quote q : approvedRejectedValidityQuotes) {
-            approvedRejectedValidityQuoteIds.add(q.Id);
-        }
-
-        // ── Approved/Rejected: Total Value (last 30 days) ──
-        List<Quote> approvedRejectedTotalValueQuotes = [
-            SELECT Id FROM Quote
-            WHERE Total_Value__c != null
-            AND (
-                ((Sales_Manager__c = :currentUserId OR Sales_Manager__r.DelegatedApproverId = :currentUserId)
-                    AND SM_Value_Status__c IN ('Approved','Rejected')
-                    AND SM_Value_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Country_Continent_Sales_Head_LOB_Head__c = :currentUserId OR Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId = :currentUserId)
-                    AND CH_Value_Status__c IN ('Approved','Rejected')
-                    AND CH_Value_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Global_Sales_Head__c = :currentUserId OR Global_Sales_Head__r.DelegatedApproverId = :currentUserId)
-                    AND GS_Value_Status__c IN ('Approved','Rejected')
-                    AND GS_Value_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Rotex_Board_Member__c = :currentUserId OR Rotex_Board_Member__r.DelegatedApproverId = :currentUserId)
-                    AND BM_Value_Status__c IN ('Approved','Rejected')
-                    AND BM_Value_Date_Time__c >= :thirtyDaysAgo) OR
-                ((Managing_Director_Country_Manager__c = :currentUserId OR Managing_Director_Country_Manager__r.DelegatedApproverId = :currentUserId)
-                    AND MD_Value_Status__c IN ('Approved','Rejected')
-                    AND MD_Value_Date_Time__c >= :thirtyDaysAgo)
-            )
-        ];
-        Set<Id> approvedRejectedTotalValueQuoteIds = new Set<Id>();
-        for (Quote q : approvedRejectedTotalValueQuotes) {
-            approvedRejectedTotalValueQuoteIds.add(q.Id);
-        }
-
         Set<Id> allRelevantQuoteIds = new Set<Id>(discountQuoteIds);
-        allRelevantQuoteIds.addAll(warrantyQuoteIds);
-        allRelevantQuoteIds.addAll(validityOfferQuoteIds);
-        allRelevantQuoteIds.addAll(totalValueQuoteIds);
-        allRelevantQuoteIds.addAll(approvedRejectedDiscountQuoteIds);  
-        allRelevantQuoteIds.addAll(approvedRejectedWarrantyQuoteIds);  
-        allRelevantQuoteIds.addAll(approvedRejectedValidityQuoteIds);  
-        allRelevantQuoteIds.addAll(approvedRejectedTotalValueQuoteIds);
+        allRelevantQuoteIds.addAll(quoteApprovalQuoteIds);
 
         if (allRelevantQuoteIds.isEmpty()) {
             throw new AuraHandledException(
@@ -301,7 +195,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                        Discount, LastModifiedById, Description, LineNumber, ListPrice,
                        Product2Id, Product2.Name, Quantity, Potential_Qty__c, QuoteId, Discount_as_per_SAP__c, Product2.ProductCode,
                        Global_Sales_Head__c, Global_Sales_Head_Status__c, Reject_Reason__c,
-                       UnitPrice, SortOrder, Subtotal, TotalPrice, Discount_to_be_offered__c,
+                       UnitPrice, SortOrder, Subtotal, TotalPrice, Discount_to_be_offered__c, Discount_offered_SAP__c,
                        Sales_Rep__c, Sales_Rep_Status__c, Sales_Manager__c, Sales_Manager_Status__c,
                        Country_Continent_Sales_Head_LOB_Head__c, Country_Continent_Sales_H_LOB_Status__c,
                        Managing_Director_Country_Manage__c, Managing_Director_Status__c,
@@ -327,14 +221,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                 FROM   QuoteLineItem
                 WHERE  QuoteId IN :allRelevantQuoteIds
                        AND Quote.Status != 'Rejected'
-                       AND Discount_offered_SAP__c = true
-                       AND (
-                           Sales_Manager_Status__c != null OR
-                           Country_Continent_Sales_H_LOB_Status__c != null OR
-                           Global_Sales_Head_Status__c != null OR
-                           Rotex_Board_Member_Status__c != null OR
-                           Managing_Director_Status__c != null
-                       )
+                ORDER BY QuoteId, SortOrder ASC, LineNumber ASC
             ];
         }
 
@@ -2483,6 +2370,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public Date     validTill;
         @AuraEnabled public Decimal  existingArcPrice;
         @AuraEnabled public Boolean  isDiscountApproved;
+        @AuraEnabled public Boolean  isDiscountApprovalRequired;
         @AuraEnabled public Boolean  bcheck;
         @AuraEnabled public Boolean  bcheck1;
         @AuraEnabled public Boolean  bcheck2;
@@ -2581,6 +2469,15 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.validTill        = getDateFieldSafely(qli, 'Valid_Till__c');
             this.existingArcPrice = existingArcPrice;
             this.isDiscountApproved = qli.Is_Discount_Approved__c;
+            this.isDiscountApprovalRequired =
+                qli.Discount_offered_SAP__c == true &&
+                (
+                    String.isNotBlank(qli.Sales_Manager_Status__c) ||
+                    String.isNotBlank(qli.Country_Continent_Sales_H_LOB_Status__c) ||
+                    String.isNotBlank(qli.Global_Sales_Head_Status__c) ||
+                    String.isNotBlank(qli.Rotex_Board_Member_Status__c) ||
+                    String.isNotBlank(qli.Managing_Director_Status__c)
+                );
             this.updated          = false;
             this.skipSoaRestrictions = false;
 

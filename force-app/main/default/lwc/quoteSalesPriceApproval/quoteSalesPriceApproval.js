@@ -422,8 +422,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     processQuote(q) {
         const quoteRecordUrl = `/lightning/r/Quote/${q.quoteId}/view`;
-        const processedLineItems = (q.quoteLineItems || []).map(item => ({
+        const processedLineItems = (q.quoteLineItems || []).map((item, originalIndex) => ({
             ...item,
+            originalIndex,
             isOriginalFinalDiscountApprover: item.originalFinalDiscountApproverId === this.userId || item.originalFinalDiscountApproverDelegatedId === this.userId,
             isEffectiveFinalDiscountApprover: item.finalDiscountApproverId === this.userId || item.finalDiscountApproverDelegatedId === this.userId,
             isFinalDiscountApprover:
@@ -443,7 +444,12 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             origGlobalSalesHeadStatus: item.globalSalesHeadStatus,
             origRotexBoardMemberStatus: item.rotexBoardMemberStatus,
             origManagingDirectorStatus: item.managingDirectorStatus
-        }));
+        })).sort((a, b) => {
+            if (a.isDiscountApprovalRequired !== b.isDiscountApprovalRequired) {
+                return a.isDiscountApprovalRequired ? -1 : 1;
+            }
+            return a.originalIndex - b.originalIndex;
+        });
 
         return {
             ...q,
@@ -1828,6 +1834,47 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     buildDisplayRows(lineItems) {
         const displayRows = [];
         (lineItems || []).forEach(item => {
+            if (!item.isDiscountApprovalRequired) {
+                displayRows.push({
+                    key: `${item.quoteLineItemId}_view`,
+                    isFirstRow: true,
+                    soaCount: 1,
+                    productName: item.productName,
+                    productCode: item.productCode,
+                    listPrice: item.listPrice,
+                    quantity: this.isARCRecordType ? item.potentialQty : item.quantity,
+                    d1: item.d1,
+                    previousDiscount: item.previousDiscount,
+                    d2: item.d2,
+                    quoteLineItemId: item.quoteLineItemId,
+                    parentId: item.parentId,
+                    approvalStatus: '',
+                    soaStatusField: '',
+                    soaDisplay: '',
+                    soaApproverId: '',
+                    soaApproverName: '',
+                    soaStatus: '',
+                    statusBadgeClass: this.getStatusBadgeClass(''),
+                    soaDateTime: '',
+                    prevSoaComments: '',
+                    soaComments: '',
+                    soaCommentsField: '',
+                    requestedComments: item.requestedComments || '',
+                    showDiscountInput: false,
+                    showStatusCombobox: false,
+                    showStatusText: false,
+                    showCommentInput: false,
+                    soaCommentsDisabled: true,
+                    rowStyle: '',
+                    listPriceFormatted: this.formatCurrency(item.listPrice),
+                    salesPrice: this.formatSalesPrice(item.listPrice, item.d2),
+                    validFrom: item.validFrom || '',
+                    validTill: item.validTill || '',
+                    showMoqInput: false
+                });
+                return;
+            }
+
             const allSoaLevels = this.getSoaLevels(item);
 
             const originalFinalApproverId = item.originalFinalDiscountApproverId || item.finalDiscountApproverId;

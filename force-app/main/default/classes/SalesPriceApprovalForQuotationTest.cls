@@ -382,7 +382,7 @@ private class SalesPriceApprovalForQuotationTest {
                 Prev_Sales_Manager_Comments__c, Prev_Country_Continent_Sales_Comments__c,
                 Prev_Global_Sales_Head_Comments__c, Prev_Rotex_Board_Member_Comments__c,
                 Prev_Managing_Director_Comments__c, Previous_Discount__c,
-                Is_Discount_Approved__c, Requested_Comments__c, Potential_Qty__c
+                Is_Discount_Approved__c, Requested_Comments__c, Potential_Qty__c, Discount_offered_SAP__c
             FROM QuoteLineItem WHERE QuoteId = :quoteId
         ];
     }

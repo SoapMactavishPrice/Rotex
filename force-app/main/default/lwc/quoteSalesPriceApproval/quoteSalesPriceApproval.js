@@ -131,6 +131,11 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return this.activeTab === 'approved' || this.activeTab === 'rejected';
     }
 
+    isSalesRepForQuote(quote) {
+        if (!quote) return false;
+        return quote.isSalesRep === true || quote.salesRepId === this.userId;
+    }
+
     /**
      * Quotes visible in the current tab.
      * - all      : every quote returned by the server
@@ -180,6 +185,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         // ── Discount QLI statuses ──
         // bcheckN === false means the current user IS that approver level
         for (const item of (quote.quoteLineItems || [])) {
+            // Skip non-approval-required items
+            if (item.isDiscountApprovalRequired !== true) continue;
+            
             let status = null;
             if (item.bcheck1 === false) status = item.origSalesManagerStatus || item.salesManagerStatus;
             else if (item.bcheck2 === false) status = item.origCountryContinentSalesStatus || item.countryContinentSalesStatus;
@@ -228,8 +236,15 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
      * has not yet approved or rejected that row (Table 1 or Table 2).
      */
     _isQuotePendingForCurrentUser(quote) {
+        if (this.isSalesRepForQuote(quote)) {
+            return !quote._isFullyDecided && !quote.isAllApprovalsFinalApproved;
+        }
+
         // ── Table 2: Discount QLIs ──
         for (const item of (quote.quoteLineItems || [])) {
+            // Skip non-approval-required items
+            if (item.isDiscountApprovalRequired !== true) continue;
+            
             let status = null;
             if (item.bcheck1 === false) status = item.origSalesManagerStatus || item.salesManagerStatus;
             else if (item.bcheck2 === false) status = item.origCountryContinentSalesStatus || item.countryContinentSalesStatus;
@@ -363,16 +378,19 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     console.log('ValidityOfferStatus final approved? ', isTable1FinalApproved(validityOfferApproval, 'ValidityOfferStatus'));
                     console.log('TotalValueStatus final approved? ', isTable1FinalApproved(totalValueApproval, 'ValueStatus'));
 
-                    // Table 2 (discount QLIs): every QLI's final approver original status is 'Approved'
+                    // Table 2 (discount QLIs): every approval-required QLI's final approver original status is 'Approved' or 'Rejected'
                     const allTable2Approved = (quote.quoteLineItems || []).every(item => {
+                        // Skip non-approval-required items
+                        if (item.isDiscountApprovalRequired !== true) return true;
+                        
                         const soaLevels = this.getSoaLevels(item);
                         const finalLevel = soaLevels.find(soa => soa.approverId === item.finalDiscountApproverId);
                         if (!finalLevel) return true; // final approver not mapped → don't block
                         return (finalLevel.originalStatus || '') === 'Approved' || (finalLevel.originalStatus || '') === 'Rejected';
                     });
 
-                    const hasContent = quote.hasLineItems || dashboardRows.length > 0;
-                    if (!hasContent) return false;          // no approvals at all → already hidden
+                    const hasContent = quote.hasActionableApprovalItems === true || dashboardRows.length > 0;
+                    if (!hasContent) return false;          // no actionable approvals at all → already hidden
                     console.log(`Quote ${quote.quoteNumber} - allTable1Approved: ${allTable1Approved}, allTable2Approved: ${allTable2Approved}`);
                     if (allTable1Approved && allTable2Approved) {
                         quote._isFullyDecided = true;
@@ -415,7 +433,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 skipEditableCommentFields: this.getSkipEditableCommentFields(item),
                 skipEditableStatusFields: this.getSkipEditableStatusFields(item)
             }));
-            return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems) };
+            return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems, quote) };
         });
         this.refreshExpandedApprovalDashboards();
     }
@@ -451,8 +469,11 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             return a.originalIndex - b.originalIndex;
         });
 
+        const isSalesRep = this.isSalesRepForQuote(q);
         return {
             ...q,
+            isSalesRep,
+            showSubmitButton: !this.isApprovedOrRejectedTab && !isSalesRep,
             quoteRecordUrl,
             isExpanded: false,
             hasLineItems: (q.quoteLineItems || []).length > 0,
@@ -466,8 +487,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             isCombinedApprovalSubmitDisabled: true,
             isUnifiedSubmitDisabled: true,
             quoteValidTill: q.quoteValidTill || '',
+            hasActionableApprovalItems: q.hasActionableApprovalItems === true,
             quoteLineItems: processedLineItems,
-            displayRows: this.buildDisplayRows(processedLineItems)
+            displayRows: this.buildDisplayRows(processedLineItems, q)
         };
     }
 
@@ -592,11 +614,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     buildApprovalRow(type, label, data, config, columns) {
         if (!data) return null;
 
-        // Show the row if the current user is any approver in this chain (regardless of status).
-        // If not in chain at all → don't show.
         const levels = ['sm', 'ch', 'gs', 'bm', 'md'];
         const currentUserIsInChain = levels.some(level => data[`is${this.capitalize(level)}CurrentUser`]);
-        if (!currentUserIsInChain) return null;
+        const isSalesRep = this.isSalesRepForQuote(data);
+        if (!currentUserIsInChain && !isSalesRep) return null;
         if (!levels.some(level => this.hasValue(data[`${level}${config.statusSuffix}`]))) return null;
 
         return {
@@ -712,6 +733,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     canEditRequestedApprovalValue(type, data) {
+        if (this.isSalesRepForQuote(data)) return false;
         if (type !== 'warranty' && type !== 'validityOffer') return false;
         const config = this.getCombinedApprovalConfig(type);
         if (!config) return false;
@@ -804,10 +826,12 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const isOwnLevelWithSkipSoa = this.skipSoaRestrictions && isCurrentUser &&
             !isAlreadyDecidedByBackend && !isHigherHierarchyWithSkip;
 
-        const showStatusCombobox = !isFinalApproverDecided &&
+        const isSalesRepView = this.isSalesRepForQuote(data);
+
+        const showStatusCombobox = !isSalesRepView && !isFinalApproverDecided &&
             ((isCurrentUser && serverCanEditStatus) || skipSoaShowStatusCombobox || isOwnFinalLevelSkipSoa);
 
-        const showCommentInput = !isFinalApproverDecided &&
+        const showCommentInput = !isSalesRepView && !isFinalApproverDecided &&
             ((isCurrentUser && serverCanEditComments) || skipSoaShowCommentInput || isOwnLevelWithSkipSoa);
 
         return {
@@ -1831,8 +1855,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return `${base} status-badge--default`;
     }
 
-    buildDisplayRows(lineItems) {
+    buildDisplayRows(lineItems, quoteContext) {
         const displayRows = [];
+        const isSalesRepView = this.isSalesRepForQuote(quoteContext);
         (lineItems || []).forEach(item => {
             if (!item.isDiscountApprovalRequired) {
                 displayRows.push({
@@ -1937,12 +1962,12 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     !isHigherThanFinal_;
                 // ────────────────────────────────────────────────────────────────────
 
-                const showStatusCombobox = !isFinalApproverDecided && (
+                const showStatusCombobox = !isSalesRepView && !isFinalApproverDecided && (
                     (item.isFinalDiscountApprover && soa.isCurrentUserRow && item.isEditable)
                     || isFinalApproverOwnRowWithSkip
                     || skipSoaHigherHierarchyFinalRow);
 
-                const showCommentInput = !isFinalApproverDecided && (
+                const showCommentInput = !isSalesRepView && !isFinalApproverDecided && (
                     (soa.isCurrentUserRow && item.isEditable)
                     || isFinalApproverOwnRowWithSkip
                     || isOwnRowWithSkipSoa
@@ -1979,7 +2004,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     soaComments: soa.commentsValue || '',
                     soaCommentsField: soa.commentsField,
                     requestedComments: item.requestedComments || '',
-                    showDiscountInput: idx === 0 && !isFinalApproverDecided && (
+                    showDiscountInput: !isSalesRepView && idx === 0 && !isFinalApproverDecided && (
                         (item.isFinalDiscountApprover && item.isEditable) ||
                         (this.skipSoaRestrictions &&
                             effectiveHierarchyIndex != null &&
@@ -1997,13 +2022,13 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     showStatusCombobox,
                     showStatusText: !showStatusCombobox,
                     showCommentInput,
-                    soaCommentsDisabled: !(soa.isCurrentUserRow && item.isEditable) && !isFinalApproverOwnRowWithSkip && !isOwnRowWithSkipSoa && !skipSoaHigherHierarchyFinalRow,
+                    soaCommentsDisabled: isSalesRepView || (!(soa.isCurrentUserRow && item.isEditable) && !isFinalApproverOwnRowWithSkip && !isOwnRowWithSkipSoa && !skipSoaHigherHierarchyFinalRow),
                     rowStyle: '',
                     listPriceFormatted: this.formatCurrency(item.listPrice),
                     salesPrice: this.formatSalesPrice(item.listPrice, item.d2),
                     validFrom: item.validFrom || '',
                     validTill: item.validTill || '',
-                    showMoqInput: idx === 0 && this.isARCRecordType && !isFinalApproverDecided && item.isFinalDiscountApprover
+                    showMoqInput: !isSalesRepView && idx === 0 && this.isARCRecordType && !isFinalApproverDecided && item.isFinalDiscountApprover
                 });
             });
         });

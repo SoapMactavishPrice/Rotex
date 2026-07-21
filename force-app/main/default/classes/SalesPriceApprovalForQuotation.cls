@@ -67,10 +67,35 @@ public without sharing class SalesPriceApprovalForQuotation {
             discountQuoteIds.add(qli.QuoteId);
         }
 
+        List<QuoteLineItem> salesRepQlis = [
+            SELECT QuoteId
+            FROM   QuoteLineItem
+            WHERE  (
+                       Sales_Rep__c = :currentUserId OR
+                       Sales_Rep__r.DelegatedApproverId = :currentUserId
+                   )
+                   AND Discount_offered_SAP__c = true
+                   AND Is_Discount_Approved__c = false
+                   AND (
+                       Sales_Manager_Status__c = 'Submitted' OR
+                       Country_Continent_Sales_H_LOB_Status__c = 'Submitted' OR
+                       Global_Sales_Head_Status__c = 'Submitted' OR
+                       Rotex_Board_Member_Status__c = 'Submitted' OR
+                       Managing_Director_Status__c = 'Submitted'
+                   )
+        ];
+
+        Set<Id> salesRepQuoteIds = new Set<Id>();
+        for (QuoteLineItem qli : salesRepQlis) {
+            salesRepQuoteIds.add(qli.QuoteId);
+        }
+
         List<Quote> quoteApprovalQuotes = [
             SELECT Id
             FROM   Quote
             WHERE  (
+                       Sales_Rep__c                               = :currentUserId OR
+                       Sales_Rep__r.DelegatedApproverId           = :currentUserId OR
                        Sales_Manager__c                          = :currentUserId OR
                        Sales_Manager__r.DelegatedApproverId      = :currentUserId OR
                        Country_Continent_Sales_Head_LOB_Head__c  = :currentUserId OR
@@ -181,6 +206,7 @@ public without sharing class SalesPriceApprovalForQuotation {
 
         Set<Id> allRelevantQuoteIds = new Set<Id>(discountQuoteIds);
         allRelevantQuoteIds.addAll(quoteApprovalQuoteIds);
+        allRelevantQuoteIds.addAll(salesRepQuoteIds);
 
         if (allRelevantQuoteIds.isEmpty()) {
             throw new AuraHandledException(
@@ -227,7 +253,8 @@ public without sharing class SalesPriceApprovalForQuotation {
 
         Map<Id, Quote> quoteMap = new Map<Id, Quote>([
             SELECT Id, Name, Owner.Email, Owner.Name, OwnerId, AccountId, Account.Name, QuoteNumber,
-                   Account.OwnerId, Sales_Rep__c, Sales_Manager__c, Sales_Manager_Status__c,
+                   Account.OwnerId, Sales_Rep__c, Sales_Rep__r.DelegatedApproverId,
+                   Sales_Manager__c, Sales_Manager_Status__c,
                    Sales_Rep_Status__c, Country_Continent_Sales_Head_LOB_Head__c,
                    Country_Continent_Sales_H_LOB_Status__c, Global_Sales_Head__c,
                    Managing_Director_Country_Manager__c, Managing_Director_Status__c,
@@ -1858,11 +1885,14 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public List<QuotationLineItemWrapper> quoteLineItems;
         @AuraEnabled public Boolean updated;
         @AuraEnabled public String recordTypeName;
+        @AuraEnabled public Boolean hasActionableApprovalItems;
         @AuraEnabled public WarrantyApprovalWrapper warrantyApproval;
         @AuraEnabled public ValidityOfferApprovalWrapper validityOfferApproval;
         @AuraEnabled public TotalValueApprovalWrapper totalValueApproval;
         @AuraEnabled public Boolean isAllApprovalsFinalApproved;
         @AuraEnabled public String quoteValidTill;
+        @AuraEnabled public String salesRepId;
+        @AuraEnabled public Boolean isSalesRep;
         // @AuraEnabled public MinimumOfferApprovalWrapper minimumOfferApproval;
 
         public QuotationWrapper() {}
@@ -1893,6 +1923,8 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.deliveryPeriod  = getStringFieldSafely(quote, 'Delivery_Period__c');
             this.updated         = false;
             this.recordTypeName  = quote.RecordType != null ? quote.RecordType.Name : null;
+            this.salesRepId      = quote.Sales_Rep__c != null ? String.valueOf(quote.Sales_Rep__c) : null;
+            this.isSalesRep      = quote.Sales_Rep__c == currentUserId;
 
             Id hod;
             if      (quote.Sales_Rep__c                              == currentUserId) hod = quote.Sales_Rep__c;
@@ -1908,6 +1940,10 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.warrantyApproval = createWarrantyApprovalIfNeeded(quote, currentUserId);
             this.validityOfferApproval = createValidityOfferApprovalIfNeeded(quote, currentUserId);
             this.totalValueApproval = createTotalValueApprovalIfNeeded(quote, currentUserId);
+            this.hasActionableApprovalItems = this.hasActionableDiscountLineItems(lineItems)
+                || this.warrantyApproval != null
+                || this.validityOfferApproval != null
+                || this.totalValueApproval != null;
             this.isAllApprovalsFinalApproved = quote.Is_all_approvals_final_approved__c == true;
             // this.minimumOfferApproval = createMinimumOfferApprovalIfNeeded(quote, currentUserId);
             this.quoteValidTill = quote.Quote_Valid_Till__c != null
@@ -1934,6 +1970,25 @@ public without sharing class SalesPriceApprovalForQuotation {
             return other.quoteNumber.compareTo(this.quoteNumber); // descending
         }
 
+        private Boolean hasActionableDiscountLineItems(List<QuoteLineItem> lineItems) {
+            if (lineItems == null || lineItems.isEmpty()) {
+                return false;
+            }
+            for (QuoteLineItem eachLine : lineItems) {
+                if (eachLine == null || eachLine.Discount_offered_SAP__c != true) {
+                    continue;
+                }
+                if (String.isNotBlank(eachLine.Sales_Manager_Status__c) ||
+                    String.isNotBlank(eachLine.Country_Continent_Sales_H_LOB_Status__c) ||
+                    String.isNotBlank(eachLine.Global_Sales_Head_Status__c) ||
+                    String.isNotBlank(eachLine.Rotex_Board_Member_Status__c) ||
+                    String.isNotBlank(eachLine.Managing_Director_Status__c)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private WarrantyApprovalWrapper createWarrantyApprovalIfNeeded(Quote q, Id currentUserId) {
             if (!hasAnyWarrantyStatus(q) &&
                 (String.isBlank(q.Warranty_Terms_Draft__c) ||
@@ -1943,6 +1998,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             // Show to ANY approver in the chain until the final approver has approved/rejected.
             // This keeps the row visible for earlier approvers (e.g. SM) even after they comment.
             Boolean isInChain =
+                q.Sales_Rep__c                             == currentUserId ||
                 q.Sales_Manager__c                         == currentUserId ||
                 q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId ||
                 q.Global_Sales_Head__c                     == currentUserId ||
@@ -1959,6 +2015,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                 return null;
             }
             Boolean isInChain =
+                q.Sales_Rep__c                             == currentUserId ||
                 q.Sales_Manager__c                         == currentUserId ||
                 q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId ||
                 q.Global_Sales_Head__c                     == currentUserId ||
@@ -1974,6 +2031,7 @@ public without sharing class SalesPriceApprovalForQuotation {
                 return null;
             }
             Boolean isInChain =
+                q.Sales_Rep__c                             == currentUserId ||
                 q.Sales_Manager__c                         == currentUserId ||
                 q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId ||
                 q.Global_Sales_Head__c                     == currentUserId ||

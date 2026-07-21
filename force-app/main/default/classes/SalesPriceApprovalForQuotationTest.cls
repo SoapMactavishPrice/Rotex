@@ -482,6 +482,38 @@ private class SalesPriceApprovalForQuotationTest {
     // }
 
     @isTest
+    static void testQuotationWrapperIgnoresNonActionableLineItems() {
+        User salesManager = [SELECT Id FROM User WHERE Email = 'salesmanager@test.com' LIMIT 1];
+        Quote quote = fetchFullQuote();
+        List<QuoteLineItem> qlis = fetchFullQLIs(quote.Id);
+        QuoteLineItem qli = qlis[0];
+        qli.Sales_Manager_Status__c = null;
+        qli.Country_Continent_Sales_H_LOB_Status__c = null;
+        qli.Global_Sales_Head_Status__c = null;
+        qli.Rotex_Board_Member_Status__c = null;
+        qli.Managing_Director_Status__c = null;
+        qli.Discount_offered_SAP__c = true;
+        update qli;
+
+        System.runAs(salesManager) {
+            Test.startTest();
+            SalesPriceApprovalForQuotation.QuotationWrapper wrapper =
+                new SalesPriceApprovalForQuotation.QuotationWrapper(
+                    quote,
+                    new List<QuoteLineItem>{ qli },
+                    salesManager.Id
+                );
+            Test.stopTest();
+
+            System.assertEquals(
+                false,
+                wrapper.hasActionableApprovalItems,
+                'Quotes with only non-actionable line items should not be marked as actionable'
+            );
+        }
+    }
+
+    @isTest
     static void testGetAllQuotations_NoRelevantQuotes() {
         Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
         User u = new User(

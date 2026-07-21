@@ -411,17 +411,18 @@
                                 </div>
                             </template>
 
-                            <!-- ── Submit Button (hidden in Approved/Rejected tabs) ── -->
                             <template if:false={isApprovedOrRejectedTab}>
-                            <div class="slds-m-top_medium slds-text-align_center slds-p-horizontal_medium slds-p-bottom_medium submit-btn-wrap">
-                                <lightning-button
-                                    label="Submit"
-                                    variant="brand"
-                                    data-quote-id={quote.quoteId}
-                                    onclick={handleUnifiedQuoteSubmit}
-                                    disabled={quote.isUnifiedSubmitDisabled}>
-                                </lightning-button>
-                            </div>
+                                <template if:false={quote.isSalesRep}>
+                                <div class="slds-m-top_medium slds-text-align_center slds-p-horizontal_medium slds-p-bottom_medium submit-btn-wrap">
+                                    <lightning-button
+                                        label="Submit"
+                                        variant="brand"
+                                        data-quote-id={quote.quoteId}
+                                        onclick={handleUnifiedQuoteSubmit}
+                                        disabled={quote.isUnifiedSubmitDisabled}>
+                                    </lightning-button>
+                                </div>
+                                </template>
                             </template>
 
                         </template>

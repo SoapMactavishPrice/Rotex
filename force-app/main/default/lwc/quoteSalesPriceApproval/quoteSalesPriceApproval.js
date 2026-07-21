@@ -39,6 +39,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     @track warrantyApprovalsMap = new Map();
     @track validityOfferApprovalsMap = new Map();
     @track totalValueApprovalsMap = new Map();
+    @track isLoading = false;
     // @track minimumOfferApprovalsMap = new Map();
 
     userId = USER_ID;
@@ -94,10 +95,6 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     error;
-
-    get isLoading() {
-        return this.isSaveDisabled;
-    }
 
     get isSubmitDisabled() {
         return this.isSaveDisabled || this.requiresNonFinalApproverComment();
@@ -295,6 +292,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     fetchQuotes(preserveExpandedQuoteIds = []) {
+        this.isLoading = true;
         getAllQuotations({ recordType: this.recordType })
             .then(result => {
                 console.log('Raw result from server', result);
@@ -312,6 +310,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 this.validityOfferApprovalsMap = newValidityMap;
                 this.totalValueApprovalsMap = newTotalValueMap;
 
+                this.isLoading = false;
                 console.log('Fetched totalValueApprovalsMap', JSON.parse(JSON.stringify(this.totalValueApprovalsMap)));
                 // this.minimumOfferApprovalsMap  = newMinimumOfferMap;
 
@@ -412,6 +411,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 }
             })
             .catch(error => {
+                this.isLoading = false;
                 console.error('Error fetching quotations', error);
                 // this.showToast('Error', error.body.message, 'error');
                 // this.redirectToHome();

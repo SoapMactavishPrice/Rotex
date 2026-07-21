@@ -21,11 +21,9 @@
                 message-toggle-inactive="">
             </lightning-input>
         </div>
-
         <template if:true={isLoading}>
             <lightning-spinner alternative-text="Loading" size="large"></lightning-spinner>
         </template>
-
         <template if:true={quotes}>
             <!-- ── Tab Navigation ── -->
             <div class="tab-nav-container">
@@ -48,7 +46,6 @@
             </div>
 
             <div class="slds-p-horizontal_medium slds-p-bottom_medium slds-p-top_small">
-
                 <template if:true={hasFilteredQuotes}>
                 <template for:each={filteredQuotes} for:item="quote">
                     <div key={quote.quoteId} class="slds-m-bottom_medium quote-panel">

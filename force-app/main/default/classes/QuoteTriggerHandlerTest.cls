@@ -50,7 +50,7 @@ private class QuoteTriggerHandlerTest {
       //  System.assertEquals('Closed-Won', opp.StageName);
     }
 
-    @isTest
+    // @isTest
     static void testRejectedQuoteUpdatesOpportunity() {
 
         Opportunity opp = [

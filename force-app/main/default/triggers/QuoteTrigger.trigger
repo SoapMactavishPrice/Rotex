@@ -15,7 +15,7 @@ trigger QuoteTrigger on Quote (before insert, before update, after insert, after
     }
     
     if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isInsert) {
-        QuoteTotalValueApprovalHandler.handleAfterInsert(Trigger.new);
+        // QuoteTotalValueApprovalHandler.handleAfterInsert(Trigger.new);
         QuoteHighestApprovalCoordinator.afterQuoteChange(Trigger.new);
         // QuoteMinimumOfferValueApprovalHandler.handleAfterInsert(Trigger.new);
         QuoteTriggerHandler.updateOpportunityCloseDateFromQuote(Trigger.new,null);

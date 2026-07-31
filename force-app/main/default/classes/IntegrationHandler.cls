@@ -751,8 +751,53 @@ public class IntegrationHandler {
                 List < IntegrationRequestBuilder.invoiceList > parentWrappers = respWrapper.d.results;
                 
                 Set < String > billDocSet = new Set < String > ();
-                for (IntegrationRequestBuilder.invoiceList parent: parentWrappers) {
-                    billDocSet.add((String) parent.bill_docnum);
+                
+                // Collect Sold To codes
+                Set<String> soldToSet = new Set<String>();
+                
+                // Collect Item Codes
+                Set<String> itemCodeSet = new Set<String>();
+
+                for (IntegrationRequestBuilder.invoiceList parent : parentWrappers) {
+                    
+                    if (String.isNotBlank(parent.bill_docnum)) {
+                        billDocSet.add(parent.bill_docnum);
+                    }
+                    
+                    if (String.isNotBlank(parent.sold_to)) {
+                        soldToSet.add(parent.sold_to);
+                    }
+                    
+                    if (parent.to_item_details != null) {
+                        
+                        for (IntegrationRequestBuilder.invItemDetailsList child :
+                             parent.to_item_details.results) {
+                                 
+                                 if (String.isNotBlank(child.item_code)) {
+                                     itemCodeSet.add(child.item_code);
+                                 }
+                             }
+                    }
+                }
+                
+                Map<String, Id> accountMap = new Map<String, Id>();
+                
+                for (Account acc : [
+                    SELECT Id, SAP_Customer_Code__c
+                    FROM Account
+                    WHERE SAP_Customer_Code__c IN :soldToSet
+                ]) {
+                    accountMap.put(acc.SAP_Customer_Code__c, acc.Id);
+                }
+                
+                Map<String, Id> productMap = new Map<String, Id>();
+                
+                for (Product2 prod : [
+                    SELECT Id, ProductCode
+                    FROM Product2
+                    WHERE ProductCode IN :itemCodeSet
+                ]) {
+                    productMap.put(prod.ProductCode, prod.Id);
                 }
                 
                 // Lists for bulk DML
@@ -776,11 +821,15 @@ public class IntegrationHandler {
                 
                 for (IntegrationRequestBuilder.invoiceList parent: parentWrappers) {
                     System.debug('parent.bill_docnum : ' + parent.bill_docnum);
+                    System.debug('Bill Date from API: ' + parent.bill_date);
                     SO_Invoice__c pRecord = new SO_Invoice__c();
+                    pRecord.Name = (String) parent.bill_docnum;
                     pRecord.Bill_Doc_No__c = (String) parent.bill_docnum;
                     pRecord.Bill_Doc_Type__c = (String) parent.bill_doctype;
-                    //pRecord.Bill_Date__c = Date.ValueOf(parent.bill_date);// need to format
+                    pRecord.Bill_Date__c = Date.ValueOf(parent.bill_date);// need to format
                     pRecord.Acc_Doc_No__c = (String) parent.acc_docnum;
+                    pRecord.Account__c = accountMap.get(parent.sold_to);
+                    pRecord.Sold_To__c = (String) parent.sold_to;
                     pRecord.Zyear__c = (String) parent.zyear;
                     pRecord.SO_No__c = (String) parent.so_num;
                     pRecord.Terms_Of_Payment__c = (String) parent.terms_of_payment;
@@ -788,7 +837,6 @@ public class IntegrationHandler {
                     pRecord.Incoterms_Location__c = (String) parent.incoterms_location;
                     pRecord.Company__c = (String) parent.company;
                     pRecord.CurrencyIsoCode = (String) parent.curr;
-                    pRecord.Sold_To__c = (String) parent.sold_to;
                     pRecord.Payer__c = (String) parent.payer;
                     pRecord.Bill_To__c = (String) parent.bill_to;
                     pRecord.Sales_Org__c = (String) parent.sales_org;
@@ -812,14 +860,20 @@ public class IntegrationHandler {
                     }
                 }
                 
+                for (SO_Invoice__c inv : existingParentList) {
+                    parentNameToIdMap.put(inv.Bill_Doc_No__c, inv.Id);
+                }
+                
                 // Process Children
                 for (IntegrationRequestBuilder.invoiceList parentWrapper: parentWrappers) {
                     String parentId = parentNameToIdMap.get(parentWrapper.bill_docnum);
                     if (parentWrapper.to_item_details != null) {
                         for (IntegrationRequestBuilder.invItemDetailsList childWrapper: parentWrapper.to_item_details.results) {
                             Invoice_Line_item__c cRecord = new Invoice_Line_item__c();
+                            cRecord.Name = childWrapper.item_no;
                             cRecord.Item_No__c = childWrapper.item_no;
                             cRecord.Item_Code__c = childWrapper.item_code;
+                            cRecord.Product__c = productMap.get(childWrapper.item_code);
                             cRecord.Product_Description__c = childWrapper.item_desc;
                             cRecord.QTY__c = Decimal.ValueOf(childWrapper.item_qty);
                             cRecord.UOM__c = childWrapper.uom;
@@ -838,8 +892,11 @@ public class IntegrationHandler {
                 if (!childList.isEmpty()) {
                     insert childList;
                     system.debug('child created');
-                    for (Invoice_Line_item__c child: childList) {
-                        childNameToIdMap.put(child.Item_No__c, child.Id);
+                    for (Invoice_Line_item__c child : childList) {
+                        
+                        String key = child.SO_Invoice__c + '_' + child.Item_No__c;
+                        
+                        childNameToIdMap.put(key, child.Id);
                     }
                 }
                 
@@ -847,7 +904,11 @@ public class IntegrationHandler {
                 for (IntegrationRequestBuilder.invoiceList parentWrapper: parentWrappers) {
                     if (parentWrapper.to_item_details != null) {
                         for (IntegrationRequestBuilder.invItemDetailsList childWrapper: parentWrapper.to_item_details.results) {
-                            String childId = childNameToIdMap.get(childWrapper.item_no);
+                            String parentId = parentNameToIdMap.get(parentWrapper.bill_docnum);
+                            
+                            String key = parentId + '_' + childWrapper.item_no;
+                            
+                            String childId = childNameToIdMap.get(key);
                             if (childWrapper.to_price_details != null) {
                                 for (IntegrationRequestBuilder.invPriceDetailsList grandchildWrapper: childWrapper.to_price_details.results) {
                                     Price_Details__c gcRecord = new Price_Details__c(
@@ -1973,7 +2034,7 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
         
         quoteLineItemList = [
             SELECT Id, QuoteId, Quantity, UnitPrice, TotalPrice, Discount, Product2Id, Product2.Name, Plant__c, LineNumber,
-            Product2.ProductCode, Discount_to_be_offered__c, Quote.CurrencyISOCode,Round_Off__c
+            Product2.ProductCode, Discount_to_be_offered__c, Quote.CurrencyISOCode,Round_Off__c, Customer_Part_No__c, P_F_Charges__c
             FROM QuoteLineItem
             WHERE QuoteId IN: quoteIds
         ];
@@ -2053,6 +2114,7 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
                     lineItemWrapper.Material = qli.Product2.ProductCode;
                     lineItemWrapper.RequestedQuantity = String.valueOf(qli.Quantity);
                     lineItemWrapper.Plant = saItem.Sales_Org__c;
+                    lineItemWrapper.Customer_Material = qli.Customer_Part_No__c != null ? qli.Customer_Part_No__c : '';
                     
                     List<ConditionWrapper> conditions = new List<ConditionWrapper>();
                     
@@ -2068,8 +2130,13 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
                     
                     ConditionWrapper cond2 = new ConditionWrapper();
                     cond2.Cond_type = 'ZROF';
-                    cond2.Cond_Value = qli.Round_Off__c != null ? String.valueOf(qli.Round_Off__c) : '';
+                    cond2.Cond_Value = qli.Round_Off__c != null ? String.valueOf(qli.Round_Off__c) : '0.00';
                     conditions.add(cond2);
+                    
+                    ConditionWrapper cond3 = new ConditionWrapper();
+                    cond3.Cond_type = 'ZPFC';
+                    cond3.Cond_Value = qli.P_F_Charges__c != null ? String.valueOf(qli.P_F_Charges__c) : '0.00';
+                    conditions.add(cond3);
                     
                     lineItemWrapper.CONDITIONS = conditions;
                     
@@ -2338,6 +2405,7 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
         public String Material;
         public String RequestedQuantity;
         public String Plant;
+        public String Customer_Material;
         //    public String Cond_type;
         //    public String Cond_Value;
         public List < PricingElementWrapper > to_PricingElement;

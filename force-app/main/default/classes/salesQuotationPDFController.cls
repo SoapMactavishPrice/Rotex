@@ -71,7 +71,8 @@ return;
                       Final_Warranty_Terms_Approver__c,MD_Warranty_Status__c,BM_Warranty_Status__c,GS_Warranty_Status__c,CH_Warranty_Status__c,SM_Warranty_Status__c,
                       Final_Validity_Offer_Approver__c,MD_Validity_Offer_Status__c,BM_Validity_Offer_Status__c,GS_Validity_Offer_Status__c,CH_Validity_Offer_Status__c,SM_Validity_Offer_Status__c,
                       Final_Minimum_Offer_Value_Approver__c,MD_Min_Offer_Status__c,BM_Min_Offer_Status__c,GS_Min_Offer_Status__c,CH_Min_Offer_Status__c,SM_Min_Offer_Status__c,
-                      Final_Total_Value_Approver__c,MD_Value_Status__c,BM_Value_Status__c,GS_Value_Status__c,CH_Value_Status__c,SM_Value_Status__c
+                      Final_Total_Value_Approver__c,MD_Value_Status__c,BM_Value_Status__c,GS_Value_Status__c,CH_Value_Status__c,SM_Value_Status__c,
+                      owner.email
                       FROM Quote WHERE Id = :qId];
         } catch (Exception e) {
             System.debug('Error querying Quote data: ' + e.getMessage());

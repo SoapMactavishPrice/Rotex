@@ -178,7 +178,16 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
      * Whether the row is intrinsically locked (ARC / approved / submitted).
      */
     isRowLocked(item) {
-        return item.Item_Type__c == 'ARC' || item.Is_Discount_Approved__c || this.hasSubmittedApproverStatus(item);
+
+        const isArcLocked =
+            item.Item_Type__c === 'ARC' &&
+            item.Quote?.Quote_Reason__c !== 'RFQ/ PO - Different ARC Price';
+
+        return (
+            isArcLocked ||
+            item.Is_Discount_Approved__c ||
+            this.hasSubmittedApproverStatus(item)
+        );
     }
 
     /**
@@ -187,7 +196,11 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
      * since that flag is what enables the New Discount column).
      */
     isRowLockedForNewDiscount(item) {
-        return item.Item_Type__c == 'ARC';
+
+        return (
+            item.Item_Type__c === 'ARC' &&
+            item.Quote?.Quote_Reason__c !== 'RFQ/ PO - Different ARC Price'
+        );
     }
 
     // ─── Existing helpers ─────────────────────────────────────────────────────

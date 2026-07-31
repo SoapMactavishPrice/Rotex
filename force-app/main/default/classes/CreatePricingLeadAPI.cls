@@ -23,12 +23,21 @@ global with sharing class CreatePricingLeadAPI {
                 l.Remark__c                  = lw.remark;
                 l.ASB_Verified_Attachment__c = lw.asbAttachment;
                 l.Any_Upload__c              = lw.anyUpload;
-                l.Email                      = lw.email;
-                l.LeadSource                 = 'Google Form - Pricing';
+                l.Email                      = lw.email; 	
+               // l.LeadSource                 = 'Google Form - Pricing';
+                l.LeadSource                 = 'Google Form Pricing';
                 insertLeadList.add(l);
             }
             
-            insert insertLeadList;
+           // insert insertLeadList;
+            Database.DMLOptions dmlOptions = new Database.DMLOptions();
+            dmlOptions.assignmentRuleHeader.useDefaultRule = true;
+            
+            for (Lead l : insertLeadList) {
+                l.setOptions(dmlOptions);
+            }
+            
+            Database.insert(insertLeadList, false);
             
             for (Lead l : insertLeadList) {
                 Map<String, String> res = new Map<String, String>();

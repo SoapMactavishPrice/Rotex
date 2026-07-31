@@ -1,0 +1,227 @@
+<template>
+
+    <lightning-card title="Quote Line Item">
+
+        <lightning-record-view-form
+                object-api-name="QuoteLineItem"
+                record-id={recordId}>
+
+            <!-- ================= Details ================= -->
+
+            <div class="sectionHeader">
+                Details
+            </div>
+
+            <lightning-layout multiple-rows>
+
+                <!-- Left Column -->
+
+                <lightning-layout-item size="6" padding="around-small">
+
+                    <lightning-output-field field-name="Product2Id"></lightning-output-field>
+
+                    <lightning-output-field field-name="QuoteId"></lightning-output-field>
+
+                    <lightning-output-field field-name="Item_Number__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Item_Group__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Item_Description__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Specification__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="HSN_SAC_Code__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Location_Code__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Type_of_Packing__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Customer_Part_No__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Plant__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Approval_Comments__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Approval_Status__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Approver__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Reject_Reason__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Item_Type__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Unit_Price__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="HSN_Code__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Is_QLI_Gone_For_Approval__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Requested_Discount__c"></lightning-output-field>
+
+                </lightning-layout-item>
+
+                <!-- Right Column -->
+
+                <lightning-layout-item size="6" padding="around-small">
+
+                    <lightning-output-field field-name="Unit__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Unit_of_Measure_Code__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Units_per_Parcel__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="ListPrice"></lightning-output-field>
+
+                    <lightning-output-field field-name="Sales_Price__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Quantity"></lightning-output-field>
+
+                    <lightning-output-field field-name="Subtotal__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="TotalPrice"></lightning-output-field>
+
+                    <lightning-output-field field-name="Discount_as_per_SAP__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Discount_to_be_offered__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Discount_offered_gt_SAP__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Previous_Discount__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="New_Discount_Entered__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Is_Discount_Approved__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="PF_Charges__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="PF_Charge_Amount__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Total_Value__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Grand_Total__c"></lightning-output-field>
+
+                </lightning-layout-item>
+
+            </lightning-layout>
+
+            <!-- ================= GST Information ================= -->
+
+            <div class="sectionHeader">
+                GST Information
+            </div>
+
+            <lightning-layout multiple-rows>
+
+                <lightning-layout-item size="6" padding="around-small">
+
+                    <lightning-output-field field-name="CGST__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="SGST__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="IGST__c"></lightning-output-field>
+
+                </lightning-layout-item>
+
+                <lightning-layout-item size="6" padding="around-small">
+
+                    <lightning-output-field field-name="CGST_Amount__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="SGST_Amount__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="IGST_Amount__c"></lightning-output-field>
+
+                </lightning-layout-item>
+
+            </lightning-layout>
+
+            <!-- ================= SOA Approval Information ================= -->
+
+            <div class="sectionHeader">
+                SOA Approval Information
+            </div>
+
+            <lightning-layout multiple-rows>
+
+                <!-- Left Column -->
+
+                <lightning-layout-item size="6" padding="around-small">
+
+                    <lightning-output-field field-name="SOA_Approval_Status__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Effective_Final_Discount_Approver__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Sales_Manager__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Regional_Manager__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Business_Head__c"></lightning-output-field>
+
+                </lightning-layout-item>
+
+                <!-- Right Column -->
+
+                <lightning-layout-item size="6" padding="around-small">
+
+                    <lightning-output-field field-name="SOA_Approval_Date__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="SOA_Approved_By__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="SOA_Remarks__c"></lightning-output-field>
+
+                    <lightning-output-field field-name="Approval_Level__c"></lightning-output-field>
+
+                </lightning-layout-item>
+
+            </lightning-layout>
+
+            <!-- ================= Previous Comments ================= -->
+
+            <div class="sectionHeader">
+                Previous Comments
+            </div>
+
+            <lightning-layout multiple-rows>
+
+                <lightning-layout-item size="12" padding="around-small">
+
+                    <lightning-output-field field-name="Previous_Comments__c"></lightning-output-field>
+
+                </lightning-layout-item>
+
+            </lightning-layout>
+
+            <!-- ================= System Information ================= -->
+
+            <div class="sectionHeader">
+                System Information
+            </div>
+
+            <lightning-layout multiple-rows>
+
+                <!-- Left Column -->
+
+                <lightning-layout-item size="6" padding="around-small">
+
+                    <lightning-output-field field-name="CreatedById"></lightning-output-field>
+
+                    <lightning-output-field field-name="CreatedDate"></lightning-output-field>
+
+                </lightning-layout-item>
+
+                <!-- Right Column -->
+
+                <lightning-layout-item size="6" padding="around-small">
+
+                    <lightning-output-field field-name="LastModifiedById"></lightning-output-field>
+
+                    <lightning-output-field field-name="LastModifiedDate"></lightning-output-field>
+
+                </lightning-layout-item>
+
+            </lightning-layout>
+
+        </lightning-record-view-form>
+
+    </lightning-card>
+
+</template>

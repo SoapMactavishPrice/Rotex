@@ -476,6 +476,42 @@ public class IntegrationRequestBuilder {
     public static IncoTermsMainResponse IncoTermsMainResponseParse(String json){
         return (IncoTermsMainResponse) System.JSON.deserialize(json, IncoTermsMainResponse.class);
     }
+    
+    public class ZPR0Response {
+        
+        public String ConditonIdent;
+        public String ConditionRecord;
+        public String ConditionType;
+        public String SalesOrg;
+        public String DistributionChannel;
+        public String Customer;
+        public String Material;
+        public String ConditionAmt;
+        public String CoditionCurr;
+        public String PricingUnit;
+        public String UnitOfMeasure;
+        public String PricelistType;
+        public String ValidTo;
+        public String ValidFrom;
+        public String ScaleQty1;
+        public String ScaleAmt1;
+        public String ScaleQty2;
+        public String ScaleAmt2;
+        public String ScaleQty3;
+        public String ScaleAmt3;
+        public String ScaleQty4;
+        public String ScaleAmt4;
+        
+    }
+    
+    public static List<ZPR0Response> ZPR0ResponseParse(String jsonString) {
+        
+        return (List<ZPR0Response>)System.JSON.deserialize(
+            jsonString,
+            List<ZPR0Response>.class
+        );
+        
+    }
 
     public static void fc(){
         Integer i = 1;

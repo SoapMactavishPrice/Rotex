@@ -178,6 +178,38 @@ public class UtilityCls {
         HttpResponse response = http.send(request);
         return response;
     }
+    
+    public static HttpResponse doPostWithBasicAuth(String apiName, String requestBody) {
+        
+        APIparamter apiparam = UtilityCls.getAPIdetails(apiName);
+        
+        HttpRequest request = new HttpRequest();
+        
+        request.setEndpoint(apiparam.endpoint);
+        request.setMethod(apiparam.method);
+        
+        // Basic Auth
+        String username = 'IBS_SD';
+        String password = 'Rotex@1234';
+        
+        String authHeader = 'Basic ' +
+            EncodingUtil.base64Encode(
+                Blob.valueOf(username + ':' + password)
+            );
+        
+        request.setHeader('Authorization', authHeader);
+        request.setHeader('Content-Type', 'application/json');
+        request.setHeader('Accept', 'application/json');
+        request.setHeader('X-CSRF-Token', 'Fetch');
+        
+        request.setBody(requestBody);
+        
+        request.setTimeout(120000);
+        
+        Http http = new Http();
+        
+        return http.send(request);
+    }
 
     // Make the method testable by allowing it to work with test data
     @TestVisible

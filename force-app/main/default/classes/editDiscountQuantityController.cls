@@ -28,7 +28,8 @@ public without sharing class editDiscountQuantityController {
             Managing_Director_Date_Time__c,
             New_Discount_Entered__c,
 
-            Quote.RecordType.Name
+            Quote.RecordType.Name,
+             Quote.Quote_Reason__c
 
             FROM QuoteLineItem 
             WHERE QuoteId = :qId

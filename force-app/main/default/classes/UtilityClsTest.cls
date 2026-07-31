@@ -224,6 +224,7 @@ private class UtilityClsTest {
         Test.startTest();
         String requestBody = '{"test": "data"}';
         HttpResponse response = UtilityCls.doPostWithoutAuth('Test_Post_API', requestBody);
+        HttpResponse response1 = UtilityCls.doPostWithBasicAuth('Test_Post_API', requestBody);
         Test.stopTest();
         
         // System.assertNotEquals(null, response, 'Response should not be null');

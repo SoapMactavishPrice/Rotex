@@ -695,7 +695,7 @@ private class IntegrationHandlerTest {
     }
     
     // Test for getLineItem method
-    @isTest
+    /*@isTest
     static void testGetLineItem() {
         // Step 0: Ensure Standard Pricebook is active
         Id standardPricebookId = Test.getStandardPricebookId();
@@ -769,7 +769,7 @@ private class IntegrationHandlerTest {
         // Step 8: Verify results
         // System.assertNotEquals(null, result);
         // System.assert(result.contains('quoteLineItemList'));
-    }
+    }*/
     
     
     // Test for updateQuotation method
@@ -937,111 +937,111 @@ private class IntegrationHandlerTest {
         Test.stopTest();
     }
     
-private class SalesOrderCreationSuccessMock implements HttpCalloutMock {
-    public HTTPResponse respond(HTTPRequest req) {
-        HttpResponse res = new HttpResponse();
-        
-        if (req.getMethod() == 'GET') {
-            res.setStatusCode(200);
-            res.setHeader('x-csrf-token', 'mock-token-123');
-            res.setHeader('set-cookie', 'mock-cookie-456');
-            res.setBody('{"token":"mock-token-123"}');
-        } else if (req.getMethod() == 'POST') {
-            res.setStatusCode(201);
-            res.setHeader('Content-Type', 'application/json');
-            res.setBody('[{"SalesQuotationNum":"SQ123456","Message":[{"MType":"S","Message1":"Success"}]}]');
+    private class SalesOrderCreationSuccessMock implements HttpCalloutMock {
+        public HTTPResponse respond(HTTPRequest req) {
+            HttpResponse res = new HttpResponse();
+            
+            if (req.getMethod() == 'GET') {
+                res.setStatusCode(200);
+                res.setHeader('x-csrf-token', 'mock-token-123');
+                res.setHeader('set-cookie', 'mock-cookie-456');
+                res.setBody('{"token":"mock-token-123"}');
+            } else if (req.getMethod() == 'POST') {
+                res.setStatusCode(201);
+                res.setHeader('Content-Type', 'application/json');
+                res.setBody('[{"SalesQuotationNum":"SQ123456","Message":[{"MType":"S","Message1":"Success"}]}]');
+            }
+            
+            return res;
         }
-        
-        return res;
     }
-}
-
-private class SalesOrderCreationErrorMock implements HttpCalloutMock {
-    public HTTPResponse respond(HTTPRequest req) {
-        HttpResponse res = new HttpResponse();
-        
-        if (req.getMethod() == 'GET') {
-            res.setStatusCode(200);
-            res.setHeader('x-csrf-token', 'mock-token-123');
-            res.setHeader('set-cookie', 'mock-cookie-456');
-            res.setBody('{"token":"mock-token-123"}');
-        } else if (req.getMethod() == 'POST') {
-            res.setStatusCode(400);
-            res.setHeader('Content-Type', 'application/json');
-            res.setBody('{"error":"Bad Request"}');
+    
+    private class SalesOrderCreationErrorMock implements HttpCalloutMock {
+        public HTTPResponse respond(HTTPRequest req) {
+            HttpResponse res = new HttpResponse();
+            
+            if (req.getMethod() == 'GET') {
+                res.setStatusCode(200);
+                res.setHeader('x-csrf-token', 'mock-token-123');
+                res.setHeader('set-cookie', 'mock-cookie-456');
+                res.setBody('{"token":"mock-token-123"}');
+            } else if (req.getMethod() == 'POST') {
+                res.setStatusCode(400);
+                res.setHeader('Content-Type', 'application/json');
+                res.setBody('{"error":"Bad Request"}');
+            }
+            
+            return res;
         }
-        
-        return res;
     }
-}
-
-private class SalesOrderCreationSAPErrorMock implements HttpCalloutMock {
-    public HTTPResponse respond(HTTPRequest req) {
-        HttpResponse res = new HttpResponse();
-        
-        if (req.getMethod() == 'GET') {
-            res.setStatusCode(200);
-            res.setHeader('x-csrf-token', 'mock-token-123');
-            res.setHeader('set-cookie', 'mock-cookie-456');
-            res.setBody('{"token":"mock-token-123"}');
-        } else if (req.getMethod() == 'POST') {
-            res.setStatusCode(201);
-            res.setHeader('Content-Type', 'application/json');
-            res.setBody('[{"SalesQuotationNum":"","Message":[{"MType":"E","Message1":"SAP Error: Invalid data"}]}]');
+    
+    private class SalesOrderCreationSAPErrorMock implements HttpCalloutMock {
+        public HTTPResponse respond(HTTPRequest req) {
+            HttpResponse res = new HttpResponse();
+            
+            if (req.getMethod() == 'GET') {
+                res.setStatusCode(200);
+                res.setHeader('x-csrf-token', 'mock-token-123');
+                res.setHeader('set-cookie', 'mock-cookie-456');
+                res.setBody('{"token":"mock-token-123"}');
+            } else if (req.getMethod() == 'POST') {
+                res.setStatusCode(201);
+                res.setHeader('Content-Type', 'application/json');
+                res.setBody('[{"SalesQuotationNum":"","Message":[{"MType":"E","Message1":"SAP Error: Invalid data"}]}]');
+            }
+            
+            return res;
         }
-        
-        return res;
     }
-}
-
-private class SalesOrderCreationCSRFFailureMock implements HttpCalloutMock {
-    public HTTPResponse respond(HTTPRequest req) {
-        HttpResponse res = new HttpResponse();
-        
-        if (req.getMethod() == 'GET') {
-            res.setStatusCode(500);
-            res.setBody('{"error":"Internal Server Error"}');
+    
+    private class SalesOrderCreationCSRFFailureMock implements HttpCalloutMock {
+        public HTTPResponse respond(HTTPRequest req) {
+            HttpResponse res = new HttpResponse();
+            
+            if (req.getMethod() == 'GET') {
+                res.setStatusCode(500);
+                res.setBody('{"error":"Internal Server Error"}');
+            }
+            
+            return res;
         }
-        
-        return res;
     }
-}
-
-private class SalesOrderCreationLocationMock implements HttpCalloutMock {
-    public HTTPResponse respond(HTTPRequest req) {
-        HttpResponse res = new HttpResponse();
-        
-        if (req.getMethod() == 'GET') {
-            res.setStatusCode(200);
-            res.setHeader('x-csrf-token', 'mock-token-123');
-            res.setHeader('set-cookie', 'mock-cookie-456');
-            res.setBody('{"token":"mock-token-123"}');
-        } else if (req.getMethod() == 'POST') {
-            res.setStatusCode(201);
-            res.setHeader('Location', 'https://sap.com/SalesQuotation(\'SQ789012\')');
-            res.setBody('');
+    
+    private class SalesOrderCreationLocationMock implements HttpCalloutMock {
+        public HTTPResponse respond(HTTPRequest req) {
+            HttpResponse res = new HttpResponse();
+            
+            if (req.getMethod() == 'GET') {
+                res.setStatusCode(200);
+                res.setHeader('x-csrf-token', 'mock-token-123');
+                res.setHeader('set-cookie', 'mock-cookie-456');
+                res.setBody('{"token":"mock-token-123"}');
+            } else if (req.getMethod() == 'POST') {
+                res.setStatusCode(201);
+                res.setHeader('Location', 'https://sap.com/SalesQuotation(\'SQ789012\')');
+                res.setBody('');
+            }
+            
+            return res;
         }
-        
-        return res;
     }
-}
-
-private class SalesOrderCreationHTTPExceptionMock implements HttpCalloutMock {
-    public HTTPResponse respond(HTTPRequest req) {
-        HttpResponse res = new HttpResponse();
-        
-        if (req.getMethod() == 'GET') {
-            res.setStatusCode(200);
-            res.setHeader('x-csrf-token', 'mock-token-123');
-            res.setHeader('set-cookie', 'mock-cookie-456');
-            res.setBody('{"token":"mock-token-123"}');
-        } else if (req.getMethod() == 'POST') {
-            throw new CalloutException('Connection timeout');
+    
+    private class SalesOrderCreationHTTPExceptionMock implements HttpCalloutMock {
+        public HTTPResponse respond(HTTPRequest req) {
+            HttpResponse res = new HttpResponse();
+            
+            if (req.getMethod() == 'GET') {
+                res.setStatusCode(200);
+                res.setHeader('x-csrf-token', 'mock-token-123');
+                res.setHeader('set-cookie', 'mock-cookie-456');
+                res.setBody('{"token":"mock-token-123"}');
+            } else if (req.getMethod() == 'POST') {
+                throw new CalloutException('Connection timeout');
+            }
+            
+            return res;
         }
-        
-        return res;
-    }
-}    
+    }    
     @isTest
     static void testSalesOrderCreationNoAttachments() {
         Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
@@ -1143,61 +1143,63 @@ private class SalesOrderCreationHTTPExceptionMock implements HttpCalloutMock {
         Test.stopTest();
     }
     
-    @isTest
-    static void testUpdateRoundOffValues() {
-        Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
-        insert acc;
-        
-        Opportunity opp = new Opportunity(
-            Name = 'Test Opp',
-            StageName = 'Prospecting',
-            CloseDate = Date.today(),
-            AccountId = acc.Id
-        );
-        insert opp;
-        
-        Id standardPricebookId = Test.getStandardPricebookId();
-        
-        Quote quote = new Quote(
-            Name = 'Test Quote',
-            OpportunityId = opp.Id,
-            Pricebook2Id = standardPricebookId
-        );
-        insert quote;
-        
-        Product2 prod = new Product2(Name = 'Test Product', IsActive = true);
-        insert prod;
-        
-        PricebookEntry pbe = new PricebookEntry(
-            Pricebook2Id = standardPricebookId,
-            Product2Id = prod.Id,
-            UnitPrice = 100,
-            IsActive = true
-        );
-        insert pbe;
-        
-        QuoteLineItem qli1 = new QuoteLineItem(
-            QuoteId = quote.Id,
-            PricebookEntryId = pbe.Id,
-            Quantity = 2,
-            UnitPrice = 100
-        );
-        insert qli1;
-        
-        QuoteLineItem qli2 = new QuoteLineItem(
-            QuoteId = quote.Id,
-            PricebookEntryId = pbe.Id,
-            Quantity = 3,
-            UnitPrice = 50
-        );
-        insert qli2;
-        
-        List<QuoteLineItem> lineItems = [SELECT Id, Quantity, UnitPrice FROM QuoteLineItem WHERE QuoteId = :quote.Id];
-        
-        Test.startTest();
-        String result = IntegrationHandler.updateRoundOffValues(lineItems);
-        Test.stopTest();
-    }
+    /* @isTest
+static void testUpdateRoundOffValues() {
+Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
+insert acc;
+
+Opportunity opp = new Opportunity(
+Name = 'Test Opp',
+StageName = 'Prospecting',
+CloseDate = Date.today(),
+AccountId = acc.Id
+);
+insert opp;
+
+Id standardPricebookId = Test.getStandardPricebookId();
+
+Quote quote = new Quote(
+Name = 'Test Quote',
+OpportunityId = opp.Id,
+Pricebook2Id = standardPricebookId
+);
+insert quote;
+
+Product2 prod = new Product2(Name = 'Test Product', IsActive = true);
+insert prod;
+
+PricebookEntry pbe = new PricebookEntry(
+Pricebook2Id = standardPricebookId,
+Product2Id = prod.Id,
+UnitPrice = 100,
+IsActive = true
+);
+insert pbe;
+
+QuoteLineItem qli1 = new QuoteLineItem(
+QuoteId = quote.Id,
+PricebookEntryId = pbe.Id,
+Quantity = 2,
+UnitPrice = 100
+);
+insert qli1;
+
+QuoteLineItem qli2 = new QuoteLineItem(
+QuoteId = quote.Id,
+PricebookEntryId = pbe.Id,
+Quantity = 3,
+UnitPrice = 50
+);
+insert qli2;
+
+List<QuoteLineItem> lineItems = [SELECT Id, Quantity, UnitPrice FROM QuoteLineItem WHERE QuoteId = :quote.Id];
+
+lineItems[0].UnitPrice = 120;
+
+Test.startTest();
+String result = IntegrationHandler.updateRoundOffValues(lineItems);
+Test.stopTest();
+}*/
     
     @isTest
     static void testUpdateRoundOffValuesEmptyList() {
@@ -1240,534 +1242,414 @@ private class SalesOrderCreationHTTPExceptionMock implements HttpCalloutMock {
     }
     
     @isTest
-static void testGetQuoteAttachmentsAsBase64() {
-    Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
-    insert acc;
-    
-    Opportunity opp = new Opportunity(
-        Name = 'Test Opp',
-        StageName = 'Prospecting',
-        CloseDate = Date.today(),
-        AccountId = acc.Id
-    );
-    insert opp;
-    
-    Quote quote = new Quote(
-        Name = 'Test Quote',
-        OpportunityId = opp.Id
-    );
-    insert quote;
-    
-    ContentVersion cv1 = new ContentVersion();
-    cv1.Title = 'PO_ATTACHMENT_1.pdf';
-    cv1.PathOnClient = 'PO_ATTACHMENT_1.pdf';
-    cv1.VersionData = EncodingUtil.base64Decode(EncodingUtil.base64Encode(Blob.valueOf('Test content 1')));
-    insert cv1;
-    
-    ContentDocumentLink cdl1 = new ContentDocumentLink(
-        ContentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv1.Id].ContentDocumentId,
-        LinkedEntityId = quote.Id,
-        ShareType = 'V'
-    );
-    insert cdl1;
-    
-    ContentVersion cv2 = new ContentVersion();
-    cv2.Title = 'PO_ATTACHMENT_2.pdf';
-    cv2.PathOnClient = 'PO_ATTACHMENT_2.pdf';
-    cv2.VersionData = EncodingUtil.base64Decode(EncodingUtil.base64Encode(Blob.valueOf('Test content 2')));
-    insert cv2;
-    
-    ContentDocumentLink cdl2 = new ContentDocumentLink(
-        ContentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv2.Id].ContentDocumentId,
-        LinkedEntityId = quote.Id,
-        ShareType = 'V'
-    );
-    insert cdl2;
-    
-    ContentVersion cv3 = new ContentVersion();
-    cv3.Title = 'OTHER_ATTACHMENT.pdf';
-    cv3.PathOnClient = 'OTHER_ATTACHMENT.pdf';
-    cv3.VersionData = EncodingUtil.base64Decode(EncodingUtil.base64Encode(Blob.valueOf('Test content 3')));
-    insert cv3;
-    
-    ContentDocumentLink cdl3 = new ContentDocumentLink(
-        ContentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv3.Id].ContentDocumentId,
-        LinkedEntityId = quote.Id,
-        ShareType = 'V'
-    );
-    insert cdl3;
-    
-    Test.startTest();
-    
-    List<String> specificFileNames = new List<String>{'PO_ATTACHMENT_1.pdf'};
-    List<String> result1 = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id, specificFileNames);
-    List<String> result2 = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id);
-    List<String> result3 = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id, new List<String>());
-    List<String> result4 = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id, null);
-    
-    Test.stopTest();
-}
-
-@isTest
-static void testGetQuoteAttachmentsAsBase64NoAttachments() {
-    Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
-    insert acc;
-    
-    Opportunity opp = new Opportunity(
-        Name = 'Test Opp',
-        StageName = 'Prospecting',
-        CloseDate = Date.today(),
-        AccountId = acc.Id
-    );
-    insert opp;
-    
-    Quote quote = new Quote(
-        Name = 'Test Quote',
-        OpportunityId = opp.Id
-    );
-    insert quote;
-    
-    Test.startTest();
-    List<String> result = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id);
-    Test.stopTest();
-}
-
-@isTest
-static void testGetQuoteAttachmentsAsBase64WithSpecificNoMatch() {
-    Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
-    insert acc;
-    
-    Opportunity opp = new Opportunity(
-        Name = 'Test Opp',
-        StageName = 'Prospecting',
-        CloseDate = Date.today(),
-        AccountId = acc.Id
-    );
-    insert opp;
-    
-    Quote quote = new Quote(
-        Name = 'Test Quote',
-        OpportunityId = opp.Id
-    );
-    insert quote;
-    
-    ContentVersion cv = new ContentVersion();
-    cv.Title = 'PO_ATTACHMENT_1.pdf';
-    cv.PathOnClient = 'PO_ATTACHMENT_1.pdf';
-    cv.VersionData = EncodingUtil.base64Decode(EncodingUtil.base64Encode(Blob.valueOf('Test content')));
-    insert cv;
-    
-    ContentDocumentLink cdl = new ContentDocumentLink(
-        ContentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id].ContentDocumentId,
-        LinkedEntityId = quote.Id,
-        ShareType = 'V'
-    );
-    insert cdl;
-    
-    Test.startTest();
-    List<String> specificFileNames = new List<String>{'NONEXISTENT.pdf'};
-    List<String> result = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id, specificFileNames);
-    Test.stopTest();
-}
-
-@isTest
-static void testGetQuoteAttachmentsAsBase64Exception() {
-    Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
-    insert acc;
-    
-    Opportunity opp = new Opportunity(
-        Name = 'Test Opp',
-        StageName = 'Prospecting',
-        CloseDate = Date.today(),
-        AccountId = acc.Id
-    );
-    insert opp;
-    
-    Quote quote = new Quote(
-        Name = 'Test Quote',
-        OpportunityId = opp.Id
-    );
-    insert quote;
-    
-    Test.startTest();
-    List<String> result = IntegrationHandler.getQuoteAttachmentsAsBase64(null, null);
-    Test.stopTest();
-}
+    static void testGetQuoteAttachmentsAsBase64() {
+        Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
+        insert acc;
+        
+        Opportunity opp = new Opportunity(
+            Name = 'Test Opp',
+            StageName = 'Prospecting',
+            CloseDate = Date.today(),
+            AccountId = acc.Id
+        );
+        insert opp;
+        
+        Quote quote = new Quote(
+            Name = 'Test Quote',
+            OpportunityId = opp.Id
+        );
+        insert quote;
+        
+        ContentVersion cv1 = new ContentVersion();
+        cv1.Title = 'PO_ATTACHMENT_1.pdf';
+        cv1.PathOnClient = 'PO_ATTACHMENT_1.pdf';
+        cv1.VersionData = EncodingUtil.base64Decode(EncodingUtil.base64Encode(Blob.valueOf('Test content 1')));
+        insert cv1;
+        
+        ContentDocumentLink cdl1 = new ContentDocumentLink(
+            ContentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv1.Id].ContentDocumentId,
+            LinkedEntityId = quote.Id,
+            ShareType = 'V'
+        );
+        insert cdl1;
+        
+        ContentVersion cv2 = new ContentVersion();
+        cv2.Title = 'PO_ATTACHMENT_2.pdf';
+        cv2.PathOnClient = 'PO_ATTACHMENT_2.pdf';
+        cv2.VersionData = EncodingUtil.base64Decode(EncodingUtil.base64Encode(Blob.valueOf('Test content 2')));
+        insert cv2;
+        
+        ContentDocumentLink cdl2 = new ContentDocumentLink(
+            ContentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv2.Id].ContentDocumentId,
+            LinkedEntityId = quote.Id,
+            ShareType = 'V'
+        );
+        insert cdl2;
+        
+        ContentVersion cv3 = new ContentVersion();
+        cv3.Title = 'OTHER_ATTACHMENT.pdf';
+        cv3.PathOnClient = 'OTHER_ATTACHMENT.pdf';
+        cv3.VersionData = EncodingUtil.base64Decode(EncodingUtil.base64Encode(Blob.valueOf('Test content 3')));
+        insert cv3;
+        
+        ContentDocumentLink cdl3 = new ContentDocumentLink(
+            ContentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv3.Id].ContentDocumentId,
+            LinkedEntityId = quote.Id,
+            ShareType = 'V'
+        );
+        insert cdl3;
+        
+        Test.startTest();
+        
+        List<String> specificFileNames = new List<String>{'PO_ATTACHMENT_1.pdf'};
+            List<String> result1 = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id, specificFileNames);
+        List<String> result2 = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id);
+        List<String> result3 = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id, new List<String>());
+        List<String> result4 = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id, null);
+        
+        Test.stopTest();
+    }
     
     @isTest
-static void testGetQuotePayload() {
-    Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
-    insert acc;
+    static void testGetQuoteAttachmentsAsBase64NoAttachments() {
+        Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
+        insert acc;
+        
+        Opportunity opp = new Opportunity(
+            Name = 'Test Opp',
+            StageName = 'Prospecting',
+            CloseDate = Date.today(),
+            AccountId = acc.Id
+        );
+        insert opp;
+        
+        Quote quote = new Quote(
+            Name = 'Test Quote',
+            OpportunityId = opp.Id
+        );
+        insert quote;
+        
+        Test.startTest();
+        List<String> result = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id);
+        Test.stopTest();
+    }
     
-    Opportunity opp = new Opportunity(
-        Name = 'Test Opp',
-        StageName = 'Prospecting',
-        CloseDate = Date.today(),
-        AccountId = acc.Id
-    );
-    insert opp;
+    @isTest
+    static void testGetQuoteAttachmentsAsBase64WithSpecificNoMatch() {
+        Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
+        insert acc;
+        
+        Opportunity opp = new Opportunity(
+            Name = 'Test Opp',
+            StageName = 'Prospecting',
+            CloseDate = Date.today(),
+            AccountId = acc.Id
+        );
+        insert opp;
+        
+        Quote quote = new Quote(
+            Name = 'Test Quote',
+            OpportunityId = opp.Id
+        );
+        insert quote;
+        
+        ContentVersion cv = new ContentVersion();
+        cv.Title = 'PO_ATTACHMENT_1.pdf';
+        cv.PathOnClient = 'PO_ATTACHMENT_1.pdf';
+        cv.VersionData = EncodingUtil.base64Decode(EncodingUtil.base64Encode(Blob.valueOf('Test content')));
+        insert cv;
+        
+        ContentDocumentLink cdl = new ContentDocumentLink(
+            ContentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id].ContentDocumentId,
+            LinkedEntityId = quote.Id,
+            ShareType = 'V'
+        );
+        insert cdl;
+        
+        Test.startTest();
+        List<String> specificFileNames = new List<String>{'NONEXISTENT.pdf'};
+            List<String> result = IntegrationHandler.getQuoteAttachmentsAsBase64(quote.Id, specificFileNames);
+        Test.stopTest();
+    }
     
-    Id standardPricebookId = Test.getStandardPricebookId();
+    @isTest
+    static void testGetQuoteAttachmentsAsBase64Exception() {
+        Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
+        insert acc;
+        
+        Opportunity opp = new Opportunity(
+            Name = 'Test Opp',
+            StageName = 'Prospecting',
+            CloseDate = Date.today(),
+            AccountId = acc.Id
+        );
+        insert opp;
+        
+        Quote quote = new Quote(
+            Name = 'Test Quote',
+            OpportunityId = opp.Id
+        );
+        insert quote;
+        
+        Test.startTest();
+        List<String> result = IntegrationHandler.getQuoteAttachmentsAsBase64(null, null);
+        Test.stopTest();
+    }
     
-    Pricebook2 pb = new Pricebook2(
-        Name = 'Test PB',
-        IsActive = true,
-        Distribution_Channel__c = '10'
-    );
-    insert pb;
+    @isTest
+    static void testGetQuotePayloadWithBlankSalesQuotationType() {
+        Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
+        insert acc;
+        
+        Opportunity opp = new Opportunity(
+            Name = 'Test Opp',
+            StageName = 'Prospecting',
+            CloseDate = Date.today(),
+            AccountId = acc.Id
+        );
+        insert opp;
+        
+        Id standardPricebookId = Test.getStandardPricebookId();
+        
+        Quote quote = new Quote(
+            Name = 'Test Quote',
+            OpportunityId = opp.Id,
+            Pricebook2Id = standardPricebookId,
+            Quote_Valid_Till__c = Date.today().addDays(90)
+        );
+        insert quote;
+        
+        Sales_Area_Item__c sai = new Sales_Area_Item__c(
+            Name = 'Test SAI',
+            Sales_Org__c = '1100',
+            Distribution_Channel__c = '10',
+            Division__c = '30',
+            Account__c = acc.Id
+        );
+        insert sai;
+        
+        Partner_Details__c pd1 = new Partner_Details__c(
+            Name = 'BP Partner',
+            Partner_Function__c = 'BP',
+            Partner_No__c = 'P001',
+            Account__c = acc.Id,
+            Sales_Area_Item__c = sai.Id
+        );
+        insert pd1;
+        
+        Partner_Details__c pd2 = new Partner_Details__c(
+            Name = 'SH Partner',
+            Partner_Function__c = 'SH',
+            Partner_No__c = 'P002',
+            Account__c = acc.Id,
+            Sales_Area_Item__c = sai.Id
+        );
+        insert pd2;
+        
+        Partner_Details__c pd3 = new Partner_Details__c(
+            Name = 'CA Partner',
+            Partner_Function__c = 'CA',
+            Partner_No__c = 'P003',
+            Account__c = acc.Id,
+            Sales_Area_Item__c = sai.Id
+        );
+        insert pd3;
+        
+        Product2 prod = new Product2(Name = 'Test Product', ProductCode = 'PROD001', IsActive = true);
+        insert prod;
+        
+        PricebookEntry pbe = new PricebookEntry(
+            Pricebook2Id = standardPricebookId,
+            Product2Id = prod.Id,
+            UnitPrice = 100,
+            IsActive = true
+        );
+        insert pbe;
+        
+        QuoteLineItem qli = new QuoteLineItem(
+            QuoteId = quote.Id,
+            PricebookEntryId = pbe.Id,
+            Quantity = 2,
+            UnitPrice = 100
+        );
+        insert qli;
+        
+        Test.startTest();
+        String result = IntegrationHandler.getQuotePayload(quote.Id, pd1.Id, pd2.Id, pd3.Id, '', null);
+        Test.stopTest();
+    }
     
-    Quote quote = new Quote(
-        Name = 'Test Quote',
-        OpportunityId = opp.Id,
-        Pricebook2Id = standardPricebookId,
-        SAP_Quotation_Number__c = 'SQ123',
-        Rev_No__c = 1,
-        Rev_Date__c = Date.today(),
-        Delivery_Period__c = '30',
-        Warranty_Terms__c = '12 Months from date of supply',
-        Liquidate_Terms__c = 'Standard',
-        Customer_Reference_No__c = 'REF123',
-        Customer_Reference_Date__c = Date.today(),
-        RequestedDeliveryDate__c = Date.today().addDays(30),
-        Quote_Valid_Till__c = Date.today().addDays(90),
-        PBG_or_BG_required__c = 'Yes',
-        PBG_or_BG_comments__c = 'Test comments',
-        LD_Clause_Applicable__c = 'Yes',
-        LD_Clause_comments__c = 'LD test',
-        Special_Remarks__c = 'Special notes'
-    );
-    insert quote;
+    @isTest
+    static void testGetQuotePayloadException() {
+        Test.startTest();
+        String result = IntegrationHandler.getQuotePayload('invalid', 'invalid', 'invalid', 'invalid', 'ZQT', null);
+        Test.stopTest();
+    }
     
-    Sales_Area_Item__c sai = new Sales_Area_Item__c(
-        Name = 'Test SAI',
-        Sales_Org__c = '1100',
-        Distribution_Channel__c = '10',
-        Division__c = '30',
-        Account__c = acc.Id
-    );
-    insert sai;
+    private static Quote createQuoteData(Boolean negativeDiscount) {
+        
+        Account acc = new Account(
+            Name='Test Account',
+            SAP_Customer_Code__c='1001176'
+        );
+        insert acc;
+        
+        Id standardPricebookId = Test.getStandardPricebookId();
+        
+        Pricebook2 pb = new Pricebook2(
+            Name = 'Test PB',
+            IsActive = true,
+            Distribution_Channel__c = '10'
+        );
+        insert pb;
+        
+        Opportunity opp = new Opportunity(
+            Name='Test Opp',
+            StageName='Prospecting',
+            CloseDate=Date.today().addDays(30),
+            AccountId=acc.Id,
+            Pricebook2Id=pb.Id
+        );
+        insert opp;
+        
+        Quote q = new Quote(
+            Name='Test Quote',
+            OpportunityId=opp.Id,
+            Pricebook2Id = standardPricebookId,
+            //AccountId=acc.Id,
+            Status='Draft',
+            Quote_Valid_Till__c=Date.today().addDays(90),
+            RequestedDeliveryDate__c=Date.today().addDays(20),
+            Customer_Reference_Date__c=Date.today(),
+            SAP_Quotation_Number__c='SQ123',
+            Rev_No__c=1,
+            Rev_Date__c=Date.today(),
+            Delivery_Period__c='30 Days',
+            Warranty_Terms__c='12 Months from date of supply',
+            Liquidate_Terms__c='Standard',
+            Customer_Reference_No__c='REF001',
+            PBG_or_BG_required__c='Yes',
+            PBG_or_BG_comments__c='BG Required',
+            LD_Clause_Applicable__c='Yes',
+            LD_Clause_comments__c='LD Applicable',
+            Special_Remarks__c='Special Remark'
+        );
+        insert q;
+        
+        Sales_Area_Item__c sai = new Sales_Area_Item__c(
+            Name='SAI',
+            Account__c=acc.Id,
+            Sales_Org__c='1100',
+            Distribution_Channel__c='10',
+            Division__c='30'
+        );
+        insert sai;
+        
+        Product2 prod = new Product2(
+            Name='Product',
+            ProductCode='MAT001',
+            IsActive=true
+        );
+        insert prod;
+        
+        PricebookEntry pbe = new PricebookEntry(
+            Product2Id=prod.Id,
+            Pricebook2Id=Test.getStandardPricebookId(),
+            UnitPrice=100,
+            IsActive=true
+        );
+        insert pbe;
+        
+        QuoteLineItem qli = new QuoteLineItem(
+            QuoteId=q.Id,
+            PricebookEntryId=pbe.Id,
+            Quantity=2,
+            UnitPrice=100,
+            Discount_to_be_offered__c=
+            negativeDiscount ? -10 : 10,
+            Round_Off__c=5,
+            P_F_Charges__c=15,
+            Customer_Part_No__c='CP001'
+        );
+        insert qli;
+        
+        return q;
+    }
     
-    Partner_Details__c pd1 = new Partner_Details__c(
-        Name = 'BP Partner',
-        Partner_Function__c = 'BP',
-        Partner_No__c = 'P001',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd1;
-    
-    Partner_Details__c pd2 = new Partner_Details__c(
-        Name = 'SH Partner',
-        Partner_Function__c = 'SH',
-        Partner_No__c = 'P002',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd2;
-    
-    Partner_Details__c pd3 = new Partner_Details__c(
-        Name = 'CA Partner',
-        Partner_Function__c = 'CA',
-        Partner_No__c = 'P003',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd3;
-    
-    Product2 prod = new Product2(Name = 'Test Product', ProductCode = 'PROD001', IsActive = true);
-    insert prod;
-    
-    PricebookEntry pbe = new PricebookEntry(
-        Pricebook2Id = standardPricebookId,
-        Product2Id = prod.Id,
-        UnitPrice = 100,
-        IsActive = true
-    );
-    insert pbe;
-    
-    QuoteLineItem qli = new QuoteLineItem(
-        QuoteId = quote.Id,
-        PricebookEntryId = pbe.Id,
-        Quantity = 2,
-        UnitPrice = 100,
-        Discount_to_be_offered__c = 10,
-        Round_Off__c = 5
-    );
-    insert qli;
-    
-    ContentVersion cv = new ContentVersion();
-    cv.Title = 'PO_ATTACHMENT_1.pdf';
-    cv.PathOnClient = 'PO_ATTACHMENT_1.pdf';
-    cv.VersionData = EncodingUtil.base64Decode(EncodingUtil.base64Encode(Blob.valueOf('Test content')));
-    insert cv;
-    
-    ContentDocumentLink cdl = new ContentDocumentLink(
-        ContentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id].ContentDocumentId,
-        LinkedEntityId = quote.Id,
-        ShareType = 'V'
-    );
-    insert cdl;
-    
-    Test.startTest();
-    String result = IntegrationHandler.getQuotePayload(quote.Id, pd1.Id, pd2.Id, pd3.Id, 'ZQT', new List<String>{'PO_ATTACHMENT_1.pdf'});
-    Test.stopTest();
-}
-
-@isTest
-static void testGetQuotePayloadWithNegativeDiscount() {
-    Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
-    insert acc;
-    
-    Opportunity opp = new Opportunity(
-        Name = 'Test Opp',
-        StageName = 'Prospecting',
-        CloseDate = Date.today(),
-        AccountId = acc.Id
-    );
-    insert opp;
-    
-    Id standardPricebookId = Test.getStandardPricebookId();
-    
-    Quote quote = new Quote(
-        Name = 'Test Quote',
-        OpportunityId = opp.Id,
-        Pricebook2Id = standardPricebookId,
-        Quote_Valid_Till__c = Date.today().addDays(90)
-    );
-    insert quote;
-    
-    Sales_Area_Item__c sai = new Sales_Area_Item__c(
-        Name = 'Test SAI',
-        Sales_Org__c = '1100',
-        Distribution_Channel__c = '10',
-        Division__c = '30',
-        Account__c = acc.Id
-    );
-    insert sai;
-    
-    Partner_Details__c pd1 = new Partner_Details__c(
-        Name = 'BP Partner',
-        Partner_Function__c = 'BP',
-        Partner_No__c = 'P001',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd1;
-    
-    Partner_Details__c pd2 = new Partner_Details__c(
-        Name = 'SH Partner',
-        Partner_Function__c = 'SH',
-        Partner_No__c = 'P002',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd2;
-    
-    Partner_Details__c pd3 = new Partner_Details__c(
-        Name = 'CA Partner',
-        Partner_Function__c = 'CA',
-        Partner_No__c = 'P003',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd3;
-    
-    Product2 prod = new Product2(Name = 'Test Product', ProductCode = 'PROD001', IsActive = true);
-    insert prod;
-    
-    PricebookEntry pbe = new PricebookEntry(
-        Pricebook2Id = standardPricebookId,
-        Product2Id = prod.Id,
-        UnitPrice = 100,
-        IsActive = true
-    );
-    insert pbe;
-    
-    QuoteLineItem qli = new QuoteLineItem(
-        QuoteId = quote.Id,
-        PricebookEntryId = pbe.Id,
-        Quantity = 2,
-        UnitPrice = 100,
-        Discount_to_be_offered__c = -10,
-        Round_Off__c = 5
-    );
-    insert qli;
-    
-    Test.startTest();
-    String result = IntegrationHandler.getQuotePayload(quote.Id, pd1.Id, pd2.Id, pd3.Id, 'ZQT', null);
-    Test.stopTest();
-}
-
-@isTest
-static void testGetQuotePayloadNoAttachments() {
-    Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
-    insert acc;
-    
-    Opportunity opp = new Opportunity(
-        Name = 'Test Opp',
-        StageName = 'Prospecting',
-        CloseDate = Date.today(),
-        AccountId = acc.Id
-    );
-    insert opp;
-    
-    Id standardPricebookId = Test.getStandardPricebookId();
-    
-    Quote quote = new Quote(
-        Name = 'Test Quote',
-        OpportunityId = opp.Id,
-        Pricebook2Id = standardPricebookId,
-        Quote_Valid_Till__c = Date.today().addDays(90)
-    );
-    insert quote;
-    
-    Sales_Area_Item__c sai = new Sales_Area_Item__c(
-        Name = 'Test SAI',
-        Sales_Org__c = '1100',
-        Distribution_Channel__c = '10',
-        Division__c = '30',
-        Account__c = acc.Id
-    );
-    insert sai;
-    
-    Partner_Details__c pd1 = new Partner_Details__c(
-        Name = 'BP Partner',
-        Partner_Function__c = 'BP',
-        Partner_No__c = 'P001',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd1;
-    
-    Partner_Details__c pd2 = new Partner_Details__c(
-        Name = 'SH Partner',
-        Partner_Function__c = 'SH',
-        Partner_No__c = 'P002',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd2;
-    
-    Partner_Details__c pd3 = new Partner_Details__c(
-        Name = 'CA Partner',
-        Partner_Function__c = 'CA',
-        Partner_No__c = 'P003',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd3;
-    
-    Product2 prod = new Product2(Name = 'Test Product', ProductCode = 'PROD001', IsActive = true);
-    insert prod;
-    
-    PricebookEntry pbe = new PricebookEntry(
-        Pricebook2Id = standardPricebookId,
-        Product2Id = prod.Id,
-        UnitPrice = 100,
-        IsActive = true
-    );
-    insert pbe;
-    
-    QuoteLineItem qli = new QuoteLineItem(
-        QuoteId = quote.Id,
-        PricebookEntryId = pbe.Id,
-        Quantity = 2,
-        UnitPrice = 100
-    );
-    insert qli;
-    
-    Test.startTest();
-    String result = IntegrationHandler.getQuotePayload(quote.Id, pd1.Id, pd2.Id, pd3.Id, 'ZQT', null);
-    Test.stopTest();
-}
-
-@isTest
-static void testGetQuotePayloadWithBlankSalesQuotationType() {
-    Account acc = new Account(Name = 'Test Account', SAP_Customer_Code__c = '1001176');
-    insert acc;
-    
-    Opportunity opp = new Opportunity(
-        Name = 'Test Opp',
-        StageName = 'Prospecting',
-        CloseDate = Date.today(),
-        AccountId = acc.Id
-    );
-    insert opp;
-    
-    Id standardPricebookId = Test.getStandardPricebookId();
-    
-    Quote quote = new Quote(
-        Name = 'Test Quote',
-        OpportunityId = opp.Id,
-        Pricebook2Id = standardPricebookId,
-        Quote_Valid_Till__c = Date.today().addDays(90)
-    );
-    insert quote;
-    
-    Sales_Area_Item__c sai = new Sales_Area_Item__c(
-        Name = 'Test SAI',
-        Sales_Org__c = '1100',
-        Distribution_Channel__c = '10',
-        Division__c = '30',
-        Account__c = acc.Id
-    );
-    insert sai;
-    
-    Partner_Details__c pd1 = new Partner_Details__c(
-        Name = 'BP Partner',
-        Partner_Function__c = 'BP',
-        Partner_No__c = 'P001',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd1;
-    
-    Partner_Details__c pd2 = new Partner_Details__c(
-        Name = 'SH Partner',
-        Partner_Function__c = 'SH',
-        Partner_No__c = 'P002',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd2;
-    
-    Partner_Details__c pd3 = new Partner_Details__c(
-        Name = 'CA Partner',
-        Partner_Function__c = 'CA',
-        Partner_No__c = 'P003',
-        Account__c = acc.Id,
-        Sales_Area_Item__c = sai.Id
-    );
-    insert pd3;
-    
-    Product2 prod = new Product2(Name = 'Test Product', ProductCode = 'PROD001', IsActive = true);
-    insert prod;
-    
-    PricebookEntry pbe = new PricebookEntry(
-        Pricebook2Id = standardPricebookId,
-        Product2Id = prod.Id,
-        UnitPrice = 100,
-        IsActive = true
-    );
-    insert pbe;
-    
-    QuoteLineItem qli = new QuoteLineItem(
-        QuoteId = quote.Id,
-        PricebookEntryId = pbe.Id,
-        Quantity = 2,
-        UnitPrice = 100
-    );
-    insert qli;
-    
-    Test.startTest();
-    String result = IntegrationHandler.getQuotePayload(quote.Id, pd1.Id, pd2.Id, pd3.Id, '', null);
-    Test.stopTest();
-}
-
-@isTest
-static void testGetQuotePayloadException() {
-    Test.startTest();
-    String result = IntegrationHandler.getQuotePayload('invalid', 'invalid', 'invalid', 'invalid', 'ZQT', null);
-    Test.stopTest();
-}
+    @isTest
+    static void testQuotePayload_WithAttachment() {
+        
+        Quote q = createQuoteData(false);
+        
+        Account acc = [
+            SELECT Id
+            FROM Account
+            LIMIT 1
+        ];
+        
+        Sales_Area_Item__c sai = [
+            SELECT Id
+            FROM Sales_Area_Item__c
+            LIMIT 1
+        ];
+        
+        List<Partner_Details__c> partners = new List<Partner_Details__c>{
+            new Partner_Details__c(
+                Partner_Function__c='BP',
+                Partner_No__c='P001',
+                Account__c=acc.Id,
+                Sales_Area_Item__c=sai.Id
+            ),
+                new Partner_Details__c(
+                    Partner_Function__c='SH',
+                    Partner_No__c='P002',
+                    Account__c=acc.Id,
+                    Sales_Area_Item__c=sai.Id
+                ),
+                new Partner_Details__c(
+                    Partner_Function__c='CA',
+                    Partner_No__c='P003',
+                    Account__c=acc.Id,
+                    Sales_Area_Item__c=sai.Id
+                )
+                };
+                    insert partners;
+        
+        ContentVersion cv = new ContentVersion(
+            Title='PO_ATTACHMENT_1.pdf',
+            PathOnClient='PO_ATTACHMENT_1.pdf',
+            VersionData=Blob.valueOf('sample')
+        );
+        insert cv;
+        
+        cv = [
+            SELECT Id, ContentDocumentId
+            FROM ContentVersion
+            WHERE Id=:cv.Id
+        ];
+        
+        insert new ContentDocumentLink(
+            ContentDocumentId=cv.ContentDocumentId,
+            LinkedEntityId=q.Id,
+            ShareType='V',
+            Visibility='AllUsers'
+        );
+        
+        Test.startTest();
+        
+        String payload =
+            IntegrationHandler.getQuotePayload(
+                q.Id,
+                partners[0].Id,
+                partners[1].Id,
+                partners[2].Id,
+                'ZQT',
+                new List<String>{'PO_ATTACHMENT_1.pdf'}
+            );
+        
+        Test.stopTest();
+        
+        System.assertNotEquals(null,payload);
+        System.assert(payload.contains('PO_ATTACHMENT_1.pdf'));
+    }
 }

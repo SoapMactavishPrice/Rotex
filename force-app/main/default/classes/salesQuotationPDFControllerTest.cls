@@ -19,7 +19,7 @@ static void setupTestData() {
     insert standardPricebookEntry;
     User approverUser = [SELECT Id FROM User WHERE IsActive = true LIMIT 1];
     approverUser.Division__c = 'Export';
-    update approverUser;
+    //update approverUser;
     Opportunity opp = new Opportunity(Name = 'Test Opportunity', StageName = 'Prospecting', CloseDate = Date.today());
     try{
     insert opp;

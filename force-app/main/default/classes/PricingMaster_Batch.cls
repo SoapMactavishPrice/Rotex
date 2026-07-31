@@ -38,7 +38,7 @@ global class PricingMaster_Batch implements Database.Batchable < sObject > , Dat
             // Start processing the first invoice using Queueable
             System.enqueueJob(new PricingMasterQableCallout(cspMappingList, 0));
         }
-
+        
     }
 
     global void finish(Database.BatchableContext BC) {}

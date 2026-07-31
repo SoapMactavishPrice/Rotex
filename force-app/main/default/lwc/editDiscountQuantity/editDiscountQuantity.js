@@ -124,46 +124,46 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     /**
      * Calculates Discount% from ListPrice and Desired Price.
      * Returns null if inputs are missing or ListPrice is 0.
-     * Result is clamped to 2 decimal places.
+     * Result is clamped to 15 decimal places.
      */
     computeDiscountFromDesiredPrice(listPrice, desiredPrice) {
         if (listPrice == null || listPrice === 0 || desiredPrice == null || desiredPrice === '') return null;
         const raw = ((listPrice - parseFloat(desiredPrice)) / listPrice) * 100;
-        return this.roundTo3Decimals(raw);
+        return this.roundTo15Decimals(raw);
     }
 
     /**
-     * Rounds a number to max 2 decimal places.
+     * Rounds a number to max 15 decimal places.
      * Strips trailing zeros (e.g. 10.50 → 10.5, 10.00 → 10).
      */
-    roundTo3Decimals(value) {
+    roundTo15Decimals(value) {
         if (value == null) return null;
-        return parseFloat(parseFloat(value).toFixed(3));
+        return parseFloat(parseFloat(value).toFixed(15));
     }
 
     /**
-     * Enforces max 3 decimal places on a string input value.
+     * Enforces max 15 decimal places on a string input value.
      * Returns the clamped numeric value, or null if empty.
-     * Shows a toast warning if the user typed more than 3 decimals.
+     * Shows a toast warning if the user typed more than 15 decimals.
      */
-    enforceMax3Decimals(value) {
+    enforceMax15Decimals(value) {
         if (value === '' || value == null) return null;
         const str = String(value);
         const dotIndex = str.indexOf('.');
-        if (dotIndex !== -1 && str.length - dotIndex - 1 > 3) {
-            this.showToast('Invalid Input', 'Discount can have a maximum of 3 decimal places.', 'warning');
-            return this.roundTo3Decimals(parseFloat(value));
+        if (dotIndex !== -1 && str.length - dotIndex - 1 > 15) {
+            this.showToast('Invalid Input', 'Discount can have a maximum of 15 decimal places.', 'warning');
+            return this.roundTo15Decimals(parseFloat(value));
         }
         return parseFloat(value);
     }
 
     /**
-     * Checks whether a raw input string has more than 3 decimal places.
+     * Checks whether a raw input string has more than 15 decimal places.
      */
-    hasMoreThan3Decimals(rawValue) {
+    hasMoreThan15Decimals(rawValue) {
         const str = String(rawValue);
         const dotIndex = str.indexOf('.');
-        return dotIndex !== -1 && str.length - dotIndex - 1 > 3;
+        return dotIndex !== -1 && str.length - dotIndex - 1 > 15;
     }
 
     hasDiscountOfferedValue(val) {
@@ -251,7 +251,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
      *  - Re-enable Discount Offered if Desired Price is cleared or 0
      *
      * APPROVED row (New Discount ↔ Desired Price):
-     *  - Compute New Discount dynamically (max 2 decimals)
+     *  - Compute New Discount dynamically (max 15 decimals)
      *  - Lock New Discount if Desired Price is non-null AND non-zero
      *  - Re-enable New Discount if Desired Price is cleared or 0
      *  - Discount Offered stays disabled regardless
@@ -304,7 +304,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
 
     /**
      * When the user types into the Discount Offered field (only active on non-approved rows):
-     *  - Enforce max 2 decimal places
+     *  - Enforce max 15 decimal places
      *  - Compute Desired Price dynamically
      *  - Lock Desired Price if Discount Offered is non-null AND non-zero
      *  - Re-enable Desired Price if Discount Offered is cleared or 0
@@ -312,10 +312,10 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     handleDiscountChange(event) {
         const id = event.target.dataset.id;
         const rawValue = event.target.value;
-        const parsedDiscount = this.enforceMax3Decimals(rawValue);
+        const parsedDiscount = this.enforceMax15Decimals(rawValue);
 
         // Push corrected value back if clamped
-        if (parsedDiscount !== null && this.hasMoreThan3Decimals(rawValue)) {
+        if (parsedDiscount !== null && this.hasMoreThan15Decimals(rawValue)) {
             event.target.value = parsedDiscount;
         }
 
@@ -368,7 +368,7 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
 
     /**
      * When the user types into the New Discount field (only active on approved rows):
-     *  - Enforce max 2 decimal places
+     *  - Enforce max 15 decimal places
      *  - Compute Desired Price dynamically (same as Discount Offered logic)
      *  - Lock Desired Price if New Discount is non-null AND non-zero
      *  - Re-enable Desired Price if New Discount is cleared or 0
@@ -377,10 +377,10 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
     handleNewDiscountChange(event) {
         const id = event.target.dataset.id;
         const rawValue = event.target.value;
-        const parsedValue = this.enforceMax3Decimals(rawValue);
+        const parsedValue = this.enforceMax15Decimals(rawValue);
 
         // Push corrected value back if clamped
-        if (parsedValue !== null && this.hasMoreThan3Decimals(rawValue)) {
+        if (parsedValue !== null && this.hasMoreThan15Decimals(rawValue)) {
             event.target.value = parsedValue;
         }
 

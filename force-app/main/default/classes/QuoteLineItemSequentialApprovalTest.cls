@@ -218,6 +218,7 @@ public class QuoteLineItemSequentialApprovalTest {
         
         Test.startTest();
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(new List<QuoteLineItem>{ qli });
+        List<QuoteProductViewController.QuoteProductWrapper> data = QuoteProductViewController.getQuoteProducts(qli.QuoteId);
         Test.stopTest();
         
         QuoteLineItem updatedQLI = [

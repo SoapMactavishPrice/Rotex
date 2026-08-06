@@ -1896,12 +1896,22 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.recordTypeName  = quote.RecordType != null ? quote.RecordType.Name : null;
 
             Id hod;
-            if      (quote.Sales_Rep__c                              == currentUserId) hod = quote.Sales_Rep__c;
-            else if (quote.Sales_Manager__c                          == currentUserId) hod = quote.Sales_Manager__c;
-            else if (quote.Country_Continent_Sales_Head_LOB_Head__c  == currentUserId) hod = quote.Country_Continent_Sales_Head_LOB_Head__c;
-            else if (quote.Global_Sales_Head__c                      == currentUserId) hod = quote.Global_Sales_Head__c;
-            else if (quote.Rotex_Board_Member__c                     == currentUserId) hod = quote.Rotex_Board_Member__c;
-            else if (quote.Managing_Director_Country_Manager__c      == currentUserId) hod = quote.Managing_Director_Country_Manager__c;
+            if      (quote.Sales_Rep__c == currentUserId) hod = quote.Sales_Rep__c;
+            else if (quote.Sales_Manager__c == currentUserId
+                    || (quote.Sales_Manager__r != null && quote.Sales_Manager__r.DelegatedApproverId == currentUserId))
+                    hod = quote.Sales_Manager__c;
+            else if (quote.Country_Continent_Sales_Head_LOB_Head__c == currentUserId
+                    || (quote.Country_Continent_Sales_Head_LOB_Head__r != null && quote.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == currentUserId))
+                    hod = quote.Country_Continent_Sales_Head_LOB_Head__c;
+            else if (quote.Global_Sales_Head__c == currentUserId
+                    || (quote.Global_Sales_Head__r != null && quote.Global_Sales_Head__r.DelegatedApproverId == currentUserId))
+                    hod = quote.Global_Sales_Head__c;
+            else if (quote.Rotex_Board_Member__c == currentUserId
+                    || (quote.Rotex_Board_Member__r != null && quote.Rotex_Board_Member__r.DelegatedApproverId == currentUserId))
+                    hod = quote.Rotex_Board_Member__c;
+            else if (quote.Managing_Director_Country_Manager__c == currentUserId
+                    || (quote.Managing_Director_Country_Manager__r != null && quote.Managing_Director_Country_Manager__r.DelegatedApproverId == currentUserId))
+                    hod = quote.Managing_Director_Country_Manager__c;
             this.hodUserId = hod;
 
             // Warranty approval data — always populate when current user is a
@@ -1967,11 +1977,16 @@ public without sharing class SalesPriceApprovalForQuotation {
             // Show to ANY approver in the chain until the final approver has approved/rejected.
             // This keeps the row visible for earlier approvers (e.g. SM) even after they comment.
             Boolean isInChain =
-                q.Sales_Manager__c                         == currentUserId ||
-                q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId ||
-                q.Global_Sales_Head__c                     == currentUserId ||
-                q.Rotex_Board_Member__c                    == currentUserId ||
-                q.Managing_Director_Country_Manager__c     == currentUserId;
+                q.Sales_Manager__c == currentUserId                                                                                    ||
+                (q.Sales_Manager__r != null && q.Sales_Manager__r.DelegatedApproverId == currentUserId)                                ||
+                q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId                                                            ||
+                (q.Country_Continent_Sales_Head_LOB_Head__r != null && q.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == currentUserId) ||
+                q.Global_Sales_Head__c == currentUserId                                                                                ||
+                (q.Global_Sales_Head__r != null && q.Global_Sales_Head__r.DelegatedApproverId == currentUserId)                        ||
+                q.Rotex_Board_Member__c == currentUserId                                                                               ||
+                (q.Rotex_Board_Member__r != null && q.Rotex_Board_Member__r.DelegatedApproverId == currentUserId)                      ||
+                q.Managing_Director_Country_Manager__c == currentUserId                                                                ||
+                (q.Managing_Director_Country_Manager__r != null && q.Managing_Director_Country_Manager__r.DelegatedApproverId == currentUserId);
             if (!isInChain) return null;
             return new WarrantyApprovalWrapper(q);
         }
@@ -1983,11 +1998,16 @@ public without sharing class SalesPriceApprovalForQuotation {
                 return null;
             }
             Boolean isInChain =
-                q.Sales_Manager__c                         == currentUserId ||
-                q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId ||
-                q.Global_Sales_Head__c                     == currentUserId ||
-                q.Rotex_Board_Member__c                    == currentUserId ||
-                q.Managing_Director_Country_Manager__c     == currentUserId;
+                q.Sales_Manager__c == currentUserId                                                                                    ||
+                (q.Sales_Manager__r != null && q.Sales_Manager__r.DelegatedApproverId == currentUserId)                                ||
+                q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId                                                            ||
+                (q.Country_Continent_Sales_Head_LOB_Head__r != null && q.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == currentUserId) ||
+                q.Global_Sales_Head__c == currentUserId                                                                                ||
+                (q.Global_Sales_Head__r != null && q.Global_Sales_Head__r.DelegatedApproverId == currentUserId)                        ||
+                q.Rotex_Board_Member__c == currentUserId                                                                               ||
+                (q.Rotex_Board_Member__r != null && q.Rotex_Board_Member__r.DelegatedApproverId == currentUserId)                      ||
+                q.Managing_Director_Country_Manager__c == currentUserId                                                                ||
+                (q.Managing_Director_Country_Manager__r != null && q.Managing_Director_Country_Manager__r.DelegatedApproverId == currentUserId);
             if (!isInChain) return null;
             return new ValidityOfferApprovalWrapper(q);
         }
@@ -1998,11 +2018,16 @@ public without sharing class SalesPriceApprovalForQuotation {
                 return null;
             }
             Boolean isInChain =
-                q.Sales_Manager__c                         == currentUserId ||
-                q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId ||
-                q.Global_Sales_Head__c                     == currentUserId ||
-                q.Rotex_Board_Member__c                    == currentUserId ||
-                q.Managing_Director_Country_Manager__c     == currentUserId;
+                q.Sales_Manager__c == currentUserId                                                                                    ||
+                (q.Sales_Manager__r != null && q.Sales_Manager__r.DelegatedApproverId == currentUserId)                                ||
+                q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId                                                            ||
+                (q.Country_Continent_Sales_Head_LOB_Head__r != null && q.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == currentUserId) ||
+                q.Global_Sales_Head__c == currentUserId                                                                                ||
+                (q.Global_Sales_Head__r != null && q.Global_Sales_Head__r.DelegatedApproverId == currentUserId)                        ||
+                q.Rotex_Board_Member__c == currentUserId                                                                               ||
+                (q.Rotex_Board_Member__r != null && q.Rotex_Board_Member__r.DelegatedApproverId == currentUserId)                      ||
+                q.Managing_Director_Country_Manager__c == currentUserId                                                                ||
+                (q.Managing_Director_Country_Manager__r != null && q.Managing_Director_Country_Manager__r.DelegatedApproverId == currentUserId);
             if (!isInChain) return null;
             return new TotalValueApprovalWrapper(q);
         }
@@ -2585,27 +2610,37 @@ public without sharing class SalesPriceApprovalForQuotation {
 
             this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r != null ? q.Sales_Manager__r.Name : null;
             this.smWarrantyStatus = q.SM_Warranty_Status__c; this.smWarrantyDateTime = q.SM_Warranty_Date_Time__c;
-            this.smWarrantyComments = q.SM_Warranty_Comments__c; this.isSmCurrentUser = q.Sales_Manager__c == currentUserId;
+            this.smWarrantyComments = q.SM_Warranty_Comments__c;
+            this.isSmCurrentUser = q.Sales_Manager__c == currentUserId
+                || (q.Sales_Manager__r != null && q.Sales_Manager__r.DelegatedApproverId == currentUserId);
             this.originalSmWarrantyStatus = q.SM_Warranty_Status__c; this.originalSmWarrantyComments = q.SM_Warranty_Comments__c;
 
             this.chId = q.Country_Continent_Sales_Head_LOB_Head__c; this.chName = q.Country_Continent_Sales_Head_LOB_Head__r != null ? q.Country_Continent_Sales_Head_LOB_Head__r.Name : null;
             this.chWarrantyStatus = q.CH_Warranty_Status__c; this.chWarrantyDateTime = q.CH_Warranty_Date_Time__c;
-            this.chWarrantyComments = q.CH_Warranty_Comments__c; this.isChCurrentUser = q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId;
+            this.chWarrantyComments = q.CH_Warranty_Comments__c;
+            this.isChCurrentUser = q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId
+                || (q.Country_Continent_Sales_Head_LOB_Head__r != null && q.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == currentUserId);
             this.originalChWarrantyStatus = q.CH_Warranty_Status__c; this.originalChWarrantyComments = q.CH_Warranty_Comments__c;
 
             this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r != null ? q.Global_Sales_Head__r.Name : null;
             this.gsWarrantyStatus = q.GS_Warranty_Status__c; this.gsWarrantyDateTime = q.GS_Warranty_Date_Time__c;
-            this.gsWarrantyComments = q.GS_Warranty_Comments__c; this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId;
+            this.gsWarrantyComments = q.GS_Warranty_Comments__c;
+            this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId
+                || (q.Global_Sales_Head__r != null && q.Global_Sales_Head__r.DelegatedApproverId == currentUserId);
             this.originalGsWarrantyStatus = q.GS_Warranty_Status__c; this.originalGsWarrantyComments = q.GS_Warranty_Comments__c;
 
             this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r != null ? q.Rotex_Board_Member__r.Name : null;
             this.bmWarrantyStatus = q.BM_Warranty_Status__c; this.bmWarrantyDateTime = q.BM_Warranty_Date_Time__c;
-            this.bmWarrantyComments = q.BM_Warranty_Comments__c; this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId;
+            this.bmWarrantyComments = q.BM_Warranty_Comments__c;
+            this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId
+                || (q.Rotex_Board_Member__r != null && q.Rotex_Board_Member__r.DelegatedApproverId == currentUserId);
             this.originalBmWarrantyStatus = q.BM_Warranty_Status__c; this.originalBmWarrantyComments = q.BM_Warranty_Comments__c;
 
             this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r != null ? q.Managing_Director_Country_Manager__r.Name : null;
             this.mdWarrantyStatus = q.MD_Warranty_Status__c; this.mdWarrantyDateTime = q.MD_Warranty_Date_Time__c;
-            this.mdWarrantyComments = q.MD_Warranty_Comments__c; this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId;
+            this.mdWarrantyComments = q.MD_Warranty_Comments__c;
+            this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId
+                || (q.Managing_Director_Country_Manager__r != null && q.Managing_Director_Country_Manager__r.DelegatedApproverId == currentUserId);
             this.originalMdWarrantyStatus = q.MD_Warranty_Status__c; this.originalMdWarrantyComments = q.MD_Warranty_Comments__c;
 
             setHierarchyPositions(q, currentUserId);
@@ -2737,27 +2772,37 @@ public without sharing class SalesPriceApprovalForQuotation {
 
             this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r != null ? q.Sales_Manager__r.Name : null;
             this.smValidityOfferStatus = q.SM_Validity_Offer_Status__c; this.smValidityOfferDateTime = q.SM_Validity_Offer_Date_Time__c;
-            this.smValidityOfferComments = q.SM_Validity_Offer_Comments__c; this.isSmCurrentUser = q.Sales_Manager__c == currentUserId;
+            this.smValidityOfferComments = q.SM_Validity_Offer_Comments__c;
+            this.isSmCurrentUser = q.Sales_Manager__c == currentUserId
+                || (q.Sales_Manager__r != null && q.Sales_Manager__r.DelegatedApproverId == currentUserId);
             this.originalSmValidityOfferStatus = q.SM_Validity_Offer_Status__c; this.originalSmValidityOfferComments = q.SM_Validity_Offer_Comments__c;
 
             this.chId = q.Country_Continent_Sales_Head_LOB_Head__c; this.chName = q.Country_Continent_Sales_Head_LOB_Head__r != null ? q.Country_Continent_Sales_Head_LOB_Head__r.Name : null;
             this.chValidityOfferStatus = q.CH_Validity_Offer_Status__c; this.chValidityOfferDateTime = q.CH_Validity_Offer_Date_Time__c;
-            this.chValidityOfferComments = q.CH_Validity_Offer_Comments__c; this.isChCurrentUser = q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId;
+            this.chValidityOfferComments = q.CH_Validity_Offer_Comments__c;
+            this.isChCurrentUser = q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId
+                || (q.Country_Continent_Sales_Head_LOB_Head__r != null && q.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == currentUserId);
             this.originalChValidityOfferStatus = q.CH_Validity_Offer_Status__c; this.originalChValidityOfferComments = q.CH_Validity_Offer_Comments__c;
 
             this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r != null ? q.Global_Sales_Head__r.Name : null;
             this.gsValidityOfferStatus = q.GS_Validity_Offer_Status__c; this.gsValidityOfferDateTime = q.GS_Validity_Offer_Date_Time__c;
-            this.gsValidityOfferComments = q.GS_Validity_Offer_Comments__c; this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId;
+            this.gsValidityOfferComments = q.GS_Validity_Offer_Comments__c;
+            this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId
+                || (q.Global_Sales_Head__r != null && q.Global_Sales_Head__r.DelegatedApproverId == currentUserId);
             this.originalGsValidityOfferStatus = q.GS_Validity_Offer_Status__c; this.originalGsValidityOfferComments = q.GS_Validity_Offer_Comments__c;
 
             this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r != null ? q.Rotex_Board_Member__r.Name : null;
             this.bmValidityOfferStatus = q.BM_Validity_Offer_Status__c; this.bmValidityOfferDateTime = q.BM_Validity_Offer_Date_Time__c;
-            this.bmValidityOfferComments = q.BM_Validity_Offer_Comments__c; this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId;
+            this.bmValidityOfferComments = q.BM_Validity_Offer_Comments__c;
+            this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId
+                || (q.Rotex_Board_Member__r != null && q.Rotex_Board_Member__r.DelegatedApproverId == currentUserId);
             this.originalBmValidityOfferStatus = q.BM_Validity_Offer_Status__c; this.originalBmValidityOfferComments = q.BM_Validity_Offer_Comments__c;
 
             this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r != null ? q.Managing_Director_Country_Manager__r.Name : null;
             this.mdValidityOfferStatus = q.MD_Validity_Offer_Status__c; this.mdValidityOfferDateTime = q.MD_Validity_Offer_Date_Time__c;
-            this.mdValidityOfferComments = q.MD_Validity_Offer_Comments__c; this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId;
+            this.mdValidityOfferComments = q.MD_Validity_Offer_Comments__c;
+            this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId
+                || (q.Managing_Director_Country_Manager__r != null && q.Managing_Director_Country_Manager__r.DelegatedApproverId == currentUserId);
             this.originalMdValidityOfferStatus = q.MD_Validity_Offer_Status__c; this.originalMdValidityOfferComments = q.MD_Validity_Offer_Comments__c;
 
             setValidityOfferHierarchyPositions(q, currentUserId);
@@ -2878,27 +2923,37 @@ public without sharing class SalesPriceApprovalForQuotation {
 
             this.smId = q.Sales_Manager__c; this.smName = q.Sales_Manager__r != null ? q.Sales_Manager__r.Name : null;
             this.smValueStatus = q.SM_Value_Status__c; this.smValueDateTime = q.SM_Value_Date_Time__c;
-            this.smValueComments = q.SM_Value_Comments__c; this.isSmCurrentUser = q.Sales_Manager__c == currentUserId;
+            this.smValueComments = q.SM_Value_Comments__c;
+            this.isSmCurrentUser = q.Sales_Manager__c == currentUserId
+                || (q.Sales_Manager__r != null && q.Sales_Manager__r.DelegatedApproverId == currentUserId);
             this.originalSmValueStatus = q.SM_Value_Status__c; this.originalSmValueComments = q.SM_Value_Comments__c;
 
             this.chId = q.Country_Continent_Sales_Head_LOB_Head__c; this.chName = q.Country_Continent_Sales_Head_LOB_Head__r != null ? q.Country_Continent_Sales_Head_LOB_Head__r.Name : null;
             this.chValueStatus = q.CH_Value_Status__c; this.chValueDateTime = q.CH_Value_Date_Time__c;
-            this.chValueComments = q.CH_Value_Comments__c; this.isChCurrentUser = q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId;
+            this.chValueComments = q.CH_Value_Comments__c;
+            this.isChCurrentUser = q.Country_Continent_Sales_Head_LOB_Head__c == currentUserId
+                || (q.Country_Continent_Sales_Head_LOB_Head__r != null && q.Country_Continent_Sales_Head_LOB_Head__r.DelegatedApproverId == currentUserId);
             this.originalChValueStatus = q.CH_Value_Status__c; this.originalChValueComments = q.CH_Value_Comments__c;
 
             this.gsId = q.Global_Sales_Head__c; this.gsName = q.Global_Sales_Head__r != null ? q.Global_Sales_Head__r.Name : null;
             this.gsValueStatus = q.GS_Value_Status__c; this.gsValueDateTime = q.GS_Value_Date_Time__c;
-            this.gsValueComments = q.GS_Value_Comments__c; this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId;
+            this.gsValueComments = q.GS_Value_Comments__c;
+            this.isGsCurrentUser = q.Global_Sales_Head__c == currentUserId
+                || (q.Global_Sales_Head__r != null && q.Global_Sales_Head__r.DelegatedApproverId == currentUserId);
             this.originalGsValueStatus = q.GS_Value_Status__c; this.originalGsValueComments = q.GS_Value_Comments__c;
 
             this.bmId = q.Rotex_Board_Member__c; this.bmName = q.Rotex_Board_Member__r != null ? q.Rotex_Board_Member__r.Name : null;
             this.bmValueStatus = q.BM_Value_Status__c; this.bmValueDateTime = q.BM_Value_Date_Time__c;
-            this.bmValueComments = q.BM_Value_Comments__c; this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId;
+            this.bmValueComments = q.BM_Value_Comments__c;
+            this.isBmCurrentUser = q.Rotex_Board_Member__c == currentUserId
+                || (q.Rotex_Board_Member__r != null && q.Rotex_Board_Member__r.DelegatedApproverId == currentUserId);
             this.originalBmValueStatus = q.BM_Value_Status__c; this.originalBmValueComments = q.BM_Value_Comments__c;
 
             this.mdId = q.Managing_Director_Country_Manager__c; this.mdName = q.Managing_Director_Country_Manager__r != null ? q.Managing_Director_Country_Manager__r.Name : null;
             this.mdValueStatus = q.MD_Value_Status__c; this.mdValueDateTime = q.MD_Value_Date_Time__c;
-            this.mdValueComments = q.MD_Value_Comments__c; this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId;
+            this.mdValueComments = q.MD_Value_Comments__c;
+            this.isMdCurrentUser = q.Managing_Director_Country_Manager__c == currentUserId
+                || (q.Managing_Director_Country_Manager__r != null && q.Managing_Director_Country_Manager__r.DelegatedApproverId == currentUserId);
             this.originalMdValueStatus = q.MD_Value_Status__c; this.originalMdValueComments = q.MD_Value_Comments__c;
 
             setTotalValueHierarchyPositions(q, currentUserId);

@@ -43,8 +43,19 @@ public without sharing class QuoteHighestApprovalCoordinator {
         recalculate(quoteIds, isolatedReapprovalQliIds);
     }
 
+    private static Set<Id> recalculatedQuoteIds = new Set<Id>();
+
     private static void recalculate(Set<Id> quoteIds, Set<Id> isolatedReapprovalQliIds) {
         if (recalculationInProgress || quoteIds == null || quoteIds.isEmpty()) return;
+
+        Set<Id> quoteIdsToProcess = new Set<Id>();
+        for (Id qId : quoteIds) {
+            if (!recalculatedQuoteIds.contains(qId)) quoteIdsToProcess.add(qId);
+        }
+        if (quoteIdsToProcess.isEmpty()) return;
+        recalculatedQuoteIds.addAll(quoteIdsToProcess);
+        quoteIds = quoteIdsToProcess;
+
         recalculationInProgress = true;
         try {
             Map<Id, Quote> quotes = new Map<Id, Quote>([
@@ -222,7 +233,7 @@ public without sharing class QuoteHighestApprovalCoordinator {
         Integer effectiveRank = quoteRank(q, effectiveId);
         return effectiveRank > 0 && isTerminal(statuses[effectiveRank - 1]);
     }
-
+    
     private static Boolean isQliTerminal(QuoteLineItem qli) {
         Integer effectiveRank = qliRank(qli, qli.Effective_Final_Discount_Approver__c);
         if (effectiveRank == 0) return false;

@@ -77,67 +77,68 @@ export default class SendQuoteToSAP extends LightningElement {
         let value = event.target.value;
 
         if (value === '' || value === null || value === undefined) {
-            this.orderLineItemList[index].Round_Off__c = null;
+            this.orderLineItemList[index].Round_Off__c = '';
             return;
         }
 
-        // Allow temporary values like "0.", "-0."
-        if (value === '0.' || value === '-0.' || value === '-' || value === '-0') {
+        // Allow temporary values while typing
+        if (value === '-' || value === '0.' || value === '-0.') {
             this.orderLineItemList[index].Round_Off__c = value;
             return;
         }
 
-        // Clean the value - only allow digits, decimal, and negative sign
-        let cleanValue = value.replace(/[^0-9.-]/g, '');
+        // Only digits, decimal and minus
+        value = value.replace(/[^0-9.-]/g, '');
 
-        // Handle multiple negative signs
-        if (cleanValue.split('-').length > 2) {
-            cleanValue = cleanValue.replace(/-/g, '');
-            if (cleanValue.length > 0 && cleanValue[0] !== '-') {
-                cleanValue = '-' + cleanValue;
-            }
+        // Minus only at beginning
+        if (value.includes('-')) {
+            value = '-' + value.replace(/-/g, '');
         }
 
-        const parts = cleanValue.split('.');
-
-        // Limit to 2 decimal places
-        if (parts.length > 1) {
-            parts[1] = parts[1].substring(0, 2);
-            cleanValue = parts.join('.');
+        // Only one decimal point
+        const firstDot = value.indexOf('.');
+        if (firstDot !== -1) {
+            value =
+                value.substring(0, firstDot + 1) +
+                value.substring(firstDot + 1).replace(/\./g, '');
         }
 
-        let numericValue = parseFloat(cleanValue);
-
-        if (!isNaN(numericValue)) {
-            numericValue = Math.round(numericValue * 100) / 100;
-            this.orderLineItemList[index].Round_Off__c = numericValue;
-        } else {
-            this.orderLineItemList[index].Round_Off__c = null;
+        // Maximum 2 decimal places
+        if (value.includes('.')) {
+            const parts = value.split('.');
+            value = parts[0] + '.' + parts[1].substring(0, 2);
         }
+
+        // IMPORTANT:
+        // Do NOT check -1 to 1 here.
+        // User can temporarily enter 2 or -2.
+        this.orderLineItemList[index].Round_Off__c = value;
+
+        // Clear any previous error while editing
+        event.target.setCustomValidity('');
+        event.target.reportValidity();
     }
 
     handleRoundOffBlur(event) {
         const index = event.target.dataset.index;
         let value = this.orderLineItemList[index].Round_Off__c;
 
-        if (value === null || value === undefined || value === '') {
-            this.orderLineItemList[index].Round_Off__c = null;
+        if (value === '' || value === null || value === undefined) {
             return;
         }
 
-        // If value is a string (like "0." or "-0."), convert to proper number
-        if (typeof value === 'string') {
-            let numericValue = parseFloat(value);
-            if (!isNaN(numericValue)) {
-                numericValue = Math.round(numericValue * 100) / 100;
-                this.orderLineItemList[index].Round_Off__c = numericValue;
-            } else {
-                this.orderLineItemList[index].Round_Off__c = null;
-            }
+        const numericValue = Number(value);
+
+        if (!isNaN(numericValue)) {
+            this.orderLineItemList[index].Round_Off__c = value;
         }
     }
 
     handleKeyDown(event) {
+        const input = event.target;
+        const key = event.key;
+        const value = input.value;
+
         const allowedKeys = [
             'Backspace',
             'Delete',
@@ -148,44 +149,66 @@ export default class SendQuoteToSAP extends LightningElement {
             'End'
         ];
 
-        if (allowedKeys.includes(event.key)) {
+        if (allowedKeys.includes(key)) {
             return;
         }
 
         // Block scientific notation
-        if (event.key === 'e' || event.key === 'E') {
+        if (key === 'e' || key === 'E') {
             event.preventDefault();
             return;
         }
 
-        // Allow only one decimal point
-        if (event.key === '.') {
-            if (event.target.value.includes('.')) {
+        // Block plus sign
+        if (key === '+') {
+            event.preventDefault();
+            return;
+        }
+
+        // Allow minus only at beginning
+        if (key === '-') {
+            if (input.selectionStart !== 0 || value.includes('-')) {
                 event.preventDefault();
             }
             return;
         }
 
-        // Allow minus only at first position
-        if (event.key === '-') {
-            if (event.target.selectionStart !== 0 || event.target.value.includes('-')) {
-                event.preventDefault();
-            }
-            return;
-        }
-
-        // Allow plus only at first position (remove this block if + is not required)
-        if (event.key === '+') {
-            if (event.target.selectionStart !== 0 || event.target.value.includes('+')) {
+        // Allow decimal only once
+        if (key === '.') {
+            if (value.includes('.')) {
                 event.preventDefault();
             }
             return;
         }
 
         // Allow digits only
-        if (!/^[0-9]$/.test(event.key)) {
+        if (!/^[0-9]$/.test(key)) {
             event.preventDefault();
+            return;
         }
+
+        // Check the value after typing
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+
+        const newValue =
+            value.substring(0, start) +
+            key +
+            value.substring(end);
+
+        // Maximum 2 decimal places
+        if (newValue.includes('.')) {
+            const decimalPart = newValue.split('.')[1];
+
+            if (decimalPart.length > 2) {
+                event.preventDefault();
+                return;
+            }
+        }
+
+        // IMPORTANT:
+        // Do NOT check -1 to 1 here.
+        // Allow user to type values like 2 or -2.
     }
 
     handleFileChange(event) {
@@ -249,7 +272,6 @@ export default class SendQuoteToSAP extends LightningElement {
                 this.showToast('Error', error.message, 'error');
             });
     }
-
 
     viewFile() {
         if (!this.uploadedFiles || this.uploadedFiles.length === 0) {
@@ -427,6 +449,63 @@ export default class SendQuoteToSAP extends LightningElement {
     // ------------ Main Order Submit --------------------
     async handleMainSubmit(event) {
         event.preventDefault();
+
+        // Validate Round Off values first
+        for (let i = 0; i < this.orderLineItemList.length; i++) {
+
+            const value = this.orderLineItemList[i].Round_Off__c;
+
+            // Ignore empty values
+            if (value === '' || value === null || value === undefined) {
+                continue;
+            }
+
+            const numericValue = Number(value);
+
+            // Invalid number
+            if (isNaN(numericValue)) {
+                this.showToast(
+                    'Validation Error',
+                    'Please enter a valid Round Off value.',
+                    'error'
+                );
+                return;
+            }
+
+            // Greater than 1
+            if (numericValue > 1) {
+                this.showToast(
+                    'Validation Error',
+                    'Round Off cannot be greater than 1. Please enter a value of 1 or less.',
+                    'error'
+                );
+                return;
+            }
+
+            // Less than -1
+            if (numericValue < -1) {
+                this.showToast(
+                    'Validation Error',
+                    'Round Off cannot be less than -1. Please enter a value of -1 or greater.',
+                    'error'
+                );
+                return;
+            }
+
+            // Maximum 2 decimal places
+            if (String(value).includes('.')) {
+                const decimalPart = String(value).split('.')[1];
+
+                if (decimalPart.length > 2) {
+                    this.showToast(
+                        'Validation Error',
+                        'Round Off cannot have more than 2 decimal places.',
+                        'error'
+                    );
+                    return;
+                }
+            }
+        }
 
         // Check if there are any files uploaded (new or existing)
         if (this.uploadedFiles.length === 0) {

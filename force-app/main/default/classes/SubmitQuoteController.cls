@@ -11,7 +11,8 @@ public with sharing class SubmitQuoteController {
                 LIMIT 1
             ];
         
-        if (quoteRecord.Status == 'Submitted') {
+      //  if (quoteRecord.Status == 'Submitted') {
+        if (quoteRecord.Status == 'Under Review by Sales Rep') {
             throw new AuraHandledException('Quote is already submitted.');
         }
         
@@ -19,7 +20,8 @@ public with sharing class SubmitQuoteController {
 
         Id newOwnerId = quoteRecord.Account.OwnerId;
         
-        quoteRecord.Status = 'Submitted';
+       // quoteRecord.Status = 'Submitted';
+        quoteRecord.Status = 'Under Review by Sales Rep';
         
         quoteRecord.OwnerId = newOwnerId;
         
@@ -48,7 +50,8 @@ public with sharing class SubmitQuoteController {
         
         String emailBody = '<html><body>';
         emailBody += '<p>Dear ' + accountOwner.Name + ',</p>';
-        emailBody += '<p>The following quote has been successfully submitted to the customer for review:</p>';
+      //  emailBody += '<p>The following quote has been successfully submitted to the customer for review:</p>';
+        emailBody += '<p>The following quote has been successfully submitted to the Sales Engineer for review:</p>';
         emailBody += '<p><strong>Quote Details:</strong></p>';
         emailBody += '<ul>';
         emailBody += '<li><strong>Quote Number:</strong> ' + quoteRecord.QuoteNumber + '</li>';

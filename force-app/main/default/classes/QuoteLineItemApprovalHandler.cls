@@ -3,6 +3,8 @@ public class QuoteLineItemApprovalHandler {
     // Prevents recursive after-update firing when this method does its own DML
     public static Boolean directDiscountUpdateInProgress = false;
 
+    private static Set<Id> processedApprovalQliIds = new Set<Id>();
+
     public static void processApprovals(List<QuoteLineItem> newList) {
         System.debug('=== INITIAL APPROVAL HANDLER START ===');
         System.debug('Input QLI List Size: ' + newList.size());
@@ -12,14 +14,21 @@ public class QuoteLineItemApprovalHandler {
             return;
         }
         
-        // ✅ Filter out negative discounts (they don't need approval)
+        // ✅ Filter out negative discounts and QLIs already processed this transaction
         List<QuoteLineItem> qlisNeedingApproval = new List<QuoteLineItem>();
         for (QuoteLineItem qli : newList) {
             if (qli.Discount_to_be_offered__c != null && qli.Discount_to_be_offered__c < 0) {
                 System.debug('APPROVAL: Skipping QLI ' + qli.Id + ' - Negative discount (' + qli.Discount_to_be_offered__c + '%) does not need approval');
                 continue;
             }
+            if (qli.Id != null && processedApprovalQliIds.contains(qli.Id)) {
+                System.debug('APPROVAL: Skipping QLI ' + qli.Id + ' - already processed this transaction');
+                continue;
+            }
             qlisNeedingApproval.add(qli);
+        }
+        for (QuoteLineItem qli : qlisNeedingApproval) {
+            if (qli.Id != null) processedApprovalQliIds.add(qli.Id);
         }
         
         if (qlisNeedingApproval.isEmpty()) {

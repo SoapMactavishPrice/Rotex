@@ -1,5 +1,7 @@
 public class QuoteLineItemHandler {
     
+    private static Set<Id> hierarchyFromQuoteProcessedIds = new Set<Id>();
+
     public static void updateHierarchyFromQuote(List<QuoteLineItem> newList) {
         
         if (QuoteLineItemHandlerControl.isRunning) {
@@ -12,15 +14,17 @@ public class QuoteLineItemHandler {
 
         // Existing code stays exactly the same
         
-        // 🔹 1. Collect Quote Ids
+        // 🔹 1. Collect Quote Ids not already processed this transaction
         Set<Id> quoteIds = new Set<Id>();
         for (QuoteLineItem qli : newList) {
-            if (qli.QuoteId != null) {
+            if (qli.QuoteId != null && !hierarchyFromQuoteProcessedIds.contains(qli.QuoteId)) {
                 quoteIds.add(qli.QuoteId);
             }
         }
         
         if (quoteIds.isEmpty()) return;
+
+        hierarchyFromQuoteProcessedIds.addAll(quoteIds);
         
         // 🔹 2. Fetch Quotes with hierarchy fields
         Map<Id, Quote> quoteMap = new Map<Id, Quote>(

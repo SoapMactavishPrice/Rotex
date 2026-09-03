@@ -226,7 +226,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         }
 
         Map<Id, Quote> quoteMap = new Map<Id, Quote>([
-            SELECT Id, Name, Owner.Email, Owner.Name, OwnerId, AccountId, Account.Name, QuoteNumber,
+            SELECT Id, Name, Owner.Email, Owner.Name, OwnerId, AccountId, Account.Name, QuoteNumber, Quote_Reason__c,
                    Account.OwnerId, Sales_Rep__c, Sales_Manager__c, Sales_Manager_Status__c,
                    Sales_Rep_Status__c, Country_Continent_Sales_Head_LOB_Head__c,
                    Country_Continent_Sales_H_LOB_Status__c, Global_Sales_Head__c,
@@ -1838,6 +1838,7 @@ public without sharing class SalesPriceApprovalForQuotation {
         @AuraEnabled public String quoteName;
         @AuraEnabled public String quoteNumber;
         @AuraEnabled public String accountName;
+        @AuraEnabled public String quoteReason;
         @AuraEnabled public String accountOwner;
         @AuraEnabled public String quoteOwnerId;
         @AuraEnabled public String quoteOwnerEmail;
@@ -1878,6 +1879,7 @@ public without sharing class SalesPriceApprovalForQuotation {
             this.accountName    = quote.Account.Name;
             this.accountOwner   = quote.Account.OwnerId;
             this.quoteNumber    = quote.QuoteNumber;
+            this.quoteReason   = getStringFieldSafely(quote, 'Quote_Reason__c');
             this.quoteOwnerId   = quote.OwnerId;
             this.quoteOwnerEmail = quote.Owner.Email;
             this.quoteOwnerName  = quote.Owner.Name;

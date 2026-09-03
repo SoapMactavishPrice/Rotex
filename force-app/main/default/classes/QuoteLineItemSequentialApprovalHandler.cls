@@ -6,6 +6,8 @@ public class QuoteLineItemSequentialApprovalHandler {
         processSequentialApprovals(qliList, null);
     }
 
+    private static Set<Id> processedSequentialQliIds = new Set<Id>();
+
     public static void processSequentialApprovals(List<QuoteLineItem> qliList, Map<Id, QuoteLineItem> oldMap) {
         System.debug('=== SEQUENTIAL APPROVAL HANDLER START ===');
         System.debug('QLI Input Size: ' + (qliList == null ? 0 : qliList.size()));
@@ -21,6 +23,9 @@ public class QuoteLineItemSequentialApprovalHandler {
             if (qli.Do_not_proceed_approval__c) {
                 continue;
             }
+            if (qli.Id != null && processedSequentialQliIds.contains(qli.Id)) {
+                continue;
+            }
             if (qli.Id != null) qliIds.add(qli.Id);
             if (qli.QuoteId != null) quoteIds.add(qli.QuoteId);
         }
@@ -29,6 +34,8 @@ public class QuoteLineItemSequentialApprovalHandler {
             System.debug('SEQUENTIAL: No QLI Ids found, exiting');
             return;
         }
+
+        processedSequentialQliIds.addAll(qliIds);
 
         Map<Id, Quote> quoteMap = new Map<Id, Quote>();
         if (!quoteIds.isEmpty()) {

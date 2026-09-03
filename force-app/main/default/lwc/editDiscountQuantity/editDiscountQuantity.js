@@ -508,7 +508,8 @@ export default class EditDiscountQuantity extends NavigationMixin(LightningEleme
         updateQuoteLineItem({
             quoteId: this.recordId,
             quoteLineItems: itemsToUpdate,
-            shouldUpdateQuoteStatus: hasNewDiscountEntered
+           /* shouldUpdateQuoteStatus: hasNewDiscountEntered */
+            shouldUpdateQuoteStatus: true
         }).then(() => {
             this.showToast('Quote Line Items Updated', '', 'success');
             this.closeModal();

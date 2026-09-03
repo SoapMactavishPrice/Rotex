@@ -1,5 +1,7 @@
 public class QuoteHierarchyHandler {
     
+        private static Set<Id> hierarchyProcessedQuoteIds = new Set<Id>();
+
     public static void updateQuoteHierarchy(List<Quote> newList, Map<Id, Quote> oldMap) {
         
         Boolean isInsert = (oldMap == null);
@@ -9,6 +11,9 @@ public class QuoteHierarchyHandler {
         Map<Id, Quote> quotesToProcess = new Map<Id, Quote>();
         
         for (Quote q : newList) {
+            if (q.Id != null && hierarchyProcessedQuoteIds.contains(q.Id)) {
+                continue;
+            }
             Boolean shouldRun = false;
             
             if (isInsert) {
@@ -26,6 +31,7 @@ public class QuoteHierarchyHandler {
             if (shouldRun) {
                 quotesToProcess.put(q.Id, q);
                 accIds.add(q.AccountId);
+                hierarchyProcessedQuoteIds.add(q.Id);
             }
         }
         

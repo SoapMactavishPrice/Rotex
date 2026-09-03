@@ -284,129 +284,180 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
     fetchQuotes(preserveExpandedQuoteIds = []) {
         this.isLoading = true;
+
         getAllQuotations({ recordType: this.recordType })
             .then(result => {
                 console.log('Raw result from server', result);
+
                 const newWarrantyMap = new Map();
                 const newValidityMap = new Map();
                 const newTotalValueMap = new Map();
-                // const newMinimumOfferMap  = new Map();
+
                 result.forEach(q => {
-                    if (q.warrantyApproval) newWarrantyMap.set(q.quoteId, { ...q.warrantyApproval });
-                    if (q.validityOfferApproval) newValidityMap.set(q.quoteId, { ...q.validityOfferApproval });
-                    if (q.totalValueApproval) newTotalValueMap.set(q.quoteId, { ...q.totalValueApproval });
-                    // if (q.minimumOfferApproval) newMinimumOfferMap.set(q.quoteId, { ...q.minimumOfferApproval });
+                    if (q.warrantyApproval) {
+                        newWarrantyMap.set(q.quoteId, { ...q.warrantyApproval });
+                    }
+                    if (q.validityOfferApproval) {
+                        newValidityMap.set(q.quoteId, { ...q.validityOfferApproval });
+                    }
+                    if (q.totalValueApproval) {
+                        newTotalValueMap.set(q.quoteId, { ...q.totalValueApproval });
+                    }
                 });
+
                 this.warrantyApprovalsMap = newWarrantyMap;
                 this.validityOfferApprovalsMap = newValidityMap;
                 this.totalValueApprovalsMap = newTotalValueMap;
 
-                this.isLoading = false;
-                console.log('Fetched totalValueApprovalsMap', JSON.parse(JSON.stringify(this.totalValueApprovalsMap)));
-                // this.minimumOfferApprovalsMap  = newMinimumOfferMap;
+                const isTable1FinalApproved = (data, suffix) => {
+                    if (!data) return true;
+
+                    const levelByPos = { 1: 'sm', 2: 'ch', 3: 'gs', 4: 'bm', 5: 'md' };
+                    const finalPos = data.finalApproverHierarchyPosition;
+                    if (!finalPos) return true;
+
+                    const finalLevel = levelByPos[finalPos];
+                    if (!finalLevel) return false;
+
+                    const key = `original${this.capitalize(finalLevel)}${suffix}`;
+                    const status = data[key] || '';
+
+                    return status === 'Approved' || status === 'Rejected';
+                };
 
                 this.quotes = result.map(q => {
-                    q.totalValueFormatted = q.totalValue ? Number(q.totalValue).toLocaleString('en-IN') : '0';
+                    q.totalValueFormatted = q.totalValue
+                        ? Number(q.totalValue).toLocaleString('en-IN')
+                        : '0';
+
                     const processed = this.processQuote(q);
 
-                    // ── Restore expanded state for quotes that were open ──
-                    if (preserveExpandedQuoteIds.includes(q.quoteId)) {
-                        const warrantyApproval = this.warrantyApprovalsMap.get(q.quoteId) || null;
-                        const validityOfferApproval = this.validityOfferApprovalsMap.get(q.quoteId) || null;
-                        const totalValueApproval = this.totalValueApprovalsMap.get(q.quoteId) || null;
-                        // const minimumOfferApproval  = this.minimumOfferApprovalsMap.get(q.quoteId)  || null;
-                        const approvalDashboard = this.buildApprovalDashboard({
-                            warrantyApproval, validityOfferApproval, totalValueApproval
-                        });
-                        return {
+                    const warrantyApproval =
+                        this.warrantyApprovalsMap.get(q.quoteId) || null;
+
+                    const validityOfferApproval =
+                        this.validityOfferApprovalsMap.get(q.quoteId) || null;
+
+                    const totalValueApproval =
+                        this.totalValueApprovalsMap.get(q.quoteId) || null;
+
+                    const currentPendingApprover =
+                        this.getCurrentPendingApprovers({
                             ...processed,
-                            isExpanded: true,
                             warrantyApproval,
                             validityOfferApproval,
-                            totalValueApproval,
-                            // minimumOfferApproval,
+                            totalValueApproval
+                        });
+
+                    const baseQuote = {
+                        ...processed,
+                        quoteReason: q.quoteReason || '',
+                        currentPendingApprover,
+                        warrantyApproval,
+                        validityOfferApproval,
+                        totalValueApproval
+                    };
+
+                    if (preserveExpandedQuoteIds.includes(q.quoteId)) {
+                        const approvalDashboard = this.buildApprovalDashboard({
+                            warrantyApproval,
+                            validityOfferApproval,
+                            totalValueApproval
+                        });
+
+                        return {
+                            ...baseQuote,
+                            isExpanded: true,
                             showApprovalDashboard: approvalDashboard.rows.length > 0,
                             approvalColumns: approvalDashboard.columns,
                             approvalDashboardRows: approvalDashboard.rows,
-                            isCombinedApprovalSubmitDisabled: true   // fresh data, nothing changed yet
+                            isCombinedApprovalSubmitDisabled: true
                         };
                     }
 
-                    return processed;
+                    return baseQuote;
                 }).filter(quote => {
                     quote._isFullyDecided = false;
-                    const warrantyApproval = this.warrantyApprovalsMap.get(quote.quoteId) || null;
-                    const validityOfferApproval = this.validityOfferApprovalsMap.get(quote.quoteId) || null;
-                    const totalValueApproval = this.totalValueApprovalsMap.get(quote.quoteId) || null;
-                    // const minimumOfferApproval  = this.minimumOfferApprovalsMap.get(quote.quoteId)  || null;
+
+                    const warrantyApproval =
+                        this.warrantyApprovalsMap.get(quote.quoteId) || null;
+
+                    const validityOfferApproval =
+                        this.validityOfferApprovalsMap.get(quote.quoteId) || null;
+
+                    const totalValueApproval =
+                        this.totalValueApprovalsMap.get(quote.quoteId) || null;
 
                     const dashboardRows = this.buildApprovalDashboard({
-                        warrantyApproval, validityOfferApproval, totalValueApproval
+                        warrantyApproval,
+                        validityOfferApproval,
+                        totalValueApproval
                     }).rows;
-
-                    // ── Visibility rule: hide a quote only when ALL backend approvals are 'Approved' ──
-                    // Checks original (server-persisted) statuses only — live UI changes never trigger hiding.
-                    // Table 1 (warranty / validity of offer / total value / minimum offer):
-                    const isTable1FinalApproved = (approvalData, statusSuffix) => {
-                        if (!approvalData) return true; // this approval type not applicable → don't block
-                        const levelByPos = { 1: 'sm', 2: 'ch', 3: 'gs', 4: 'bm', 5: 'md' };
-                        const finalPos = approvalData.finalApproverHierarchyPosition;
-                        if (!finalPos) return true;
-                        const finalLevel = levelByPos[finalPos];
-                        if (!finalLevel) return false;
-                        const origKey = `original${this.capitalize(finalLevel)}${statusSuffix}`;
-                        return (approvalData[origKey] || '') === 'Approved' || (approvalData[origKey] || '') === 'Rejected';
-                    };
 
                     const allTable1Approved =
                         isTable1FinalApproved(warrantyApproval, 'WarrantyStatus') &&
                         isTable1FinalApproved(validityOfferApproval, 'ValidityOfferStatus') &&
-                        isTable1FinalApproved(totalValueApproval, 'ValueStatus')
-                    // isTable1FinalApproved(minimumOfferApproval,  'MinOfferStatus');
+                        isTable1FinalApproved(totalValueApproval, 'ValueStatus');
 
-                    console.log('WarrantyStatus final approved? ', isTable1FinalApproved(warrantyApproval, 'WarrantyStatus'));
-                    console.log('ValidityOfferStatus final approved? ', isTable1FinalApproved(validityOfferApproval, 'ValidityOfferStatus'));
-                    console.log('TotalValueStatus final approved? ', isTable1FinalApproved(totalValueApproval, 'ValueStatus'));
+                    const allTable2Approved =
+                        (quote.quoteLineItems || []).every(item => {
+                            if (item.isDiscountApprovalRequired !== true) return true;
 
-                    // Table 2 (discount QLIs): every approval-required QLI's final approver original status is 'Approved' or 'Rejected'
-                    const allTable2Approved = (quote.quoteLineItems || []).every(item => {
-                        // Skip non-approval-required items
-                        if (item.isDiscountApprovalRequired !== true) return true;
-                        
-                        const soaLevels = this.getSoaLevels(item);
-                        const finalLevel = soaLevels.find(soa => soa.approverId === item.finalDiscountApproverId);
-                        if (!finalLevel) return true; // final approver not mapped → don't block
-                        return (finalLevel.originalStatus || '') === 'Approved' || (finalLevel.originalStatus || '') === 'Rejected';
-                    });
+                            const soaLevels = this.getSoaLevels(item);
+                            const finalLevel = soaLevels.find(
+                                soa => soa.approverId === item.finalDiscountApproverId
+                            );
 
-                    const hasContent = quote.hasActionableApprovalItems === true || dashboardRows.length > 0;
-                    if (!hasContent) return false;          // no actionable approvals at all → already hidden
-                    console.log(`Quote ${quote.quoteNumber} - allTable1Approved: ${allTable1Approved}, allTable2Approved: ${allTable2Approved}`);
+                            if (!finalLevel) return true;
+
+                            const status = finalLevel.originalStatus || '';
+                            return status === 'Approved' || status === 'Rejected';
+                        });
+
+                    const hasContent =
+                        quote.hasActionableApprovalItems === true ||
+                        dashboardRows.length > 0;
+
+                    if (!hasContent) return false;
+
+                    console.log(
+                        `Quote ${quote.quoteNumber} - ` +
+                        `allTable1Approved: ${allTable1Approved}, ` +
+                        `allTable2Approved: ${allTable2Approved}, ` +
+                        `pendingApprover: ${quote.currentPendingApprover}`
+                    );
+
                     if (allTable1Approved && allTable2Approved) {
                         quote._isFullyDecided = true;
-                        const userStatuses = this._getCurrentUserStatusesForQuote(quote);
-                        const hasDecidedStatus = userStatuses.some(s => s === 'Approved' || s === 'Rejected');
-                        if (!hasDecidedStatus) return false;
-                        return true;
+
+                        const userStatuses =
+                            this._getCurrentUserStatusesForQuote(quote);
+
+                        const hasDecidedStatus =
+                            userStatuses.some(
+                                s => s === 'Approved' || s === 'Rejected'
+                            );
+
+                        return hasDecidedStatus;
                     }
+
                     return true;
                 });
 
-                console.log('Processed quotes', JSON.parse(JSON.stringify(this.quotes)));
+                console.log(
+                    'Processed quotes',
+                    JSON.parse(JSON.stringify(this.quotes))
+                );
 
-                // ── Re-apply Skip SOA editable-field snapshots if the toggle is still ON ──
-                // After a submit + re-fetch, processQuote resets skipEditableCommentFields/StatusFields
-                // to {}. Re-compute them from the fresh server data so the UI stays consistent.
                 if (this.skipSoaRestrictions) {
                     this.applySkipSoaToQuotes();
                 }
+
+                this.isLoading = false;
             })
             .catch(error => {
                 this.isLoading = false;
                 console.error('Error fetching quotations', error);
-                // this.showToast('Error', error.body.message, 'error');
-                // this.redirectToHome();
-                // setTimeout(() => { window.location.reload(); }, 2500);
             });
     }
 
@@ -427,6 +478,59 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems, quote) };
         });
         this.refreshExpandedApprovalDashboards();
+    }
+
+    getCurrentPendingApprovers(quote) {
+        const pendingApprovers = new Map();
+
+        const addPending = (id, name) => {
+            if (!name) return;
+            const cleanName = String(name).trim();
+            if (!cleanName) return;
+
+            const key = id || cleanName.toLowerCase();
+            if (!pendingApprovers.has(key)) {
+                pendingApprovers.set(key, cleanName);
+            }
+        };
+
+        for (const item of (quote.quoteLineItems || [])) {
+            if (item.isDiscountApprovalRequired !== true) continue;
+
+            for (const soa of this.getSoaLevels(item)) {
+                const status = soa.originalStatus || soa.status || '';
+                if (status === 'Submitted') {
+                    addPending(soa.approverId, soa.name);
+                }
+            }
+        }
+
+        const configs = [
+            { approval: quote.warrantyApproval, suffix: 'WarrantyStatus' },
+            { approval: quote.validityOfferApproval, suffix: 'ValidityOfferStatus' },
+            { approval: quote.totalValueApproval, suffix: 'ValueStatus' }
+        ];
+
+        for (const { approval, suffix } of configs) {
+            if (!approval) continue;
+
+            for (const level of ['sm', 'ch', 'gs', 'bm', 'md']) {
+                const p = this.capitalize(level);
+                const status =
+                    approval[`original${p}${suffix}`] ||
+                    approval[`${level}${suffix}`] ||
+                    '';
+
+                if (status === 'Submitted') {
+                    addPending(
+                        approval[`${level}Id`],
+                        approval[`${level}Name`]
+                    );
+                }
+            }
+        }
+
+        return Array.from(pendingApprovers.values()).join(', ');
     }
 
     processQuote(q) {
@@ -460,9 +564,16 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             return a.originalIndex - b.originalIndex;
         });
 
+        const currentPendingApprover = this.getCurrentPendingApprovers({
+            ...q,
+            quoteLineItems: processedLineItems
+        });
+
         return {
             ...q,
             quoteRecordUrl,
+            quoteReason: q.quoteReason || '',
+            currentPendingApprover,
             isExpanded: false,
             hasLineItems: (q.quoteLineItems || []).length > 0,
             warrantyApproval: null,

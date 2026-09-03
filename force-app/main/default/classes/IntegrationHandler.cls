@@ -500,7 +500,7 @@ public class IntegrationHandler {
                 List < Pricebook2 > pbList = [
                     SELECT Id, Name, Distribution_Channel__c
                     FROM Pricebook2
-                    WHERE Distribution_Channel__c != null
+                    WHERE Distribution_Channel__c != null AND Channel_Partner__c = null
                 ];
                 
                 Map < String, Object > pbMap = new Map < String, Object > ();
@@ -1236,7 +1236,8 @@ system.debug('grandchild created');
                 
                 System.debug(productIdMap);
                 
-                List < Pricebook2 > pricebookList = [SELECT Id, Name, Distribution_Channel__c FROM Pricebook2 WHERE Distribution_Channel__c != null];
+                List < Pricebook2 > pricebookList = [SELECT Id, Name, Distribution_Channel__c,Channel_Partner__c 
+                                                     FROM Pricebook2 WHERE Distribution_Channel__c != null AND Channel_Partner__c=null];
                 
                 Map < String, String > pbMap = new Map < String, String > ();
                 for (Pricebook2 pb: pricebookList) {
@@ -1343,7 +1344,8 @@ system.debug('grandchild created');
                 
                 System.debug(productIdMap);
                 
-                List < Pricebook2 > pricebookList = [SELECT Id, Name, Distribution_Channel__c FROM Pricebook2 WHERE Distribution_Channel__c != null];
+                List < Pricebook2 > pricebookList = [SELECT Id, Name, Distribution_Channel__c,Channel_Partner__c 
+                                                     FROM Pricebook2 WHERE Distribution_Channel__c != null AND Channel_Partner__c=null];
                 
                 Map < String, String > pbMap = new Map < String, String > ();
                 for (Pricebook2 pb: pricebookList) {
@@ -2124,7 +2126,11 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
                         cond1.Cond_Value = String.valueOf(qli.Discount_to_be_offered__c * -1);
                     } else {
                         cond1.Cond_type = 'ZDIS';
-                        cond1.Cond_Value = qli.Discount_to_be_offered__c != null ? String.valueOf(qli.Discount_to_be_offered__c) : '';
+                        if (qli.Discount_to_be_offered__c != null && qli.Discount_to_be_offered__c > 0.0) {
+                            cond1.Cond_Value = String.valueOf( qli.Discount_to_be_offered__c); 
+                        } else {
+                            cond1.Cond_Value = '0';
+                        }
                     }
                     conditions.add(cond1);
                     

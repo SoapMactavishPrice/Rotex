@@ -416,6 +416,7 @@ public without sharing class AddProductPageQuote {
             oli.QuoteId = recId;
             oli.Product2Id = pw.Product2Id;
             oli.PricebookEntryId = pw.Id;
+            oli.Item_Type__c = pw.IsARC ? 'ARC' : null;
             lstOpp.add(oli);
         }
         try {

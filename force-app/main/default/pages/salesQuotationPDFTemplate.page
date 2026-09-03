@@ -1,6 +1,104 @@
 <apex:page controller="salesQuotationPDFController" applyHtmlTag="false" showHeader="false" docType="html-5.0" >
     <head>
         <apex:slds />
+        <style>
+            .quote-type-section {
+                padding: 15px;
+                background-color: #f8f9fa;
+                border: 1px solid #dddbda;
+                border-radius: 4px;
+                margin-bottom: 15px;
+            }
+            .main-container {
+                width: 80%;
+                margin: 0 auto;
+            }
+            .button-container {
+                margin: 10px 5px;
+                text-align: right;
+            }
+            .signature-box {
+                margin-top: 6px;
+                border: 1px solid #dddbda;
+                border-radius: 4px;
+                background: #f3f3f3;
+                padding: 8px 12px;
+                color: #3e3e3c;
+                font-size: 13px;
+                pointer-events: none;
+                user-select: none;
+            }
+            .signature-label {
+                font-size: 11px;
+                color: #706e6b;
+                margin-bottom: 4px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .cancel-container {
+                margin: 10px 5px;
+                text-align: center;
+            }
+            .pdf-frame {
+                width: 100%;
+                height: 100vh;
+            }
+            .status-text {
+                margin-left: 15px;
+                font-size: 13px;
+                font-weight: 500;
+            }
+            .slds-input {
+                width: 100%;
+            }
+            .slds-button_brand {
+                background-color: #0070d2;
+                border-color: #0070d2;
+                color: #fff;
+            }
+            .slds-button_brand:hover {
+                background-color: #005fb2;
+                border-color: #005fb2;
+                color: #fff;
+            }
+            .slds-button_destructive {
+                background-color: #c23934;
+                border-color: #c23934;
+                color: #fff;
+            }
+            .slds-button_destructive:hover {
+                background-color: #a12b27;
+                border-color: #a12b27;
+                color: #fff;
+            }
+            .slds-button_neutral {
+                background-color: #fff;
+                border-color: #dddbda;
+                color: #0070d2;
+            }
+            .slds-button_neutral:hover {
+                background-color: #f3f3f3;
+                border-color: #dddbda;
+                color: #005fb2;
+            }
+            .button-group {
+                display: flex;
+                gap: 10px;
+                justify-content: flex-end;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            .selected-label {
+                font-weight: 600;
+                font-size: 14px;
+                color: #3e3e3c;
+                margin-right: 15px;
+            }
+            .selected-label .selected-value {
+                color: #0070d2;
+            }
+        </style>
     </head>
     
     <body style="width: 80%; margin: 0 auto" class="slds-scope">
@@ -8,77 +106,144 @@
         
         <apex:outputText rendered="{!isValid}">
             
-            <!-- SAVE, SAVE AND SEND -->
-            <div style="width:80%; padding-bottom: 2%; margin: 0 auto">
-                    <apex:slds />
-                    <div style="padding: 5px">
-                        <apex:form >
-                             <div style="padding: 5px">
-                                <apex:inputText html-placeholder="Email ID" value="{!emailId}" styleClass="slds-input" />
-                                <apex:inputText html-placeholder="CC Addresses  (Comma Seperated)" value="{!CC_Addresses}" styleClass="slds-input" style="margin-top: 5px" />
-                                <apex:inputText html-placeholder="Subject" value="{!subject}" styleClass="slds-input" style="margin-top: 5px; margin-bottom: 10px" />
-                                <div style="margin-top: 10px; margin-bottom: 6px;">
-                                    <label style="font-size: 12px; font-weight: 600; color: #3e3e3c; display:block; margin-bottom: 4px;">
-                                        Additional Attachments
-                                    </label>
-                                    <label for="fileUploadInput" class="slds-button slds-button_neutral" style="cursor:pointer; display:inline-block;">
-                                        &#128206; Upload Files
-                                    </label>
-                                    <input type="file" id="fileUploadInput" multiple="multiple"
-                                        style="display:none;"
-                                        onchange="handleFileUpload(event)" />
-                                    <div id="fileListContainer" style="margin-top: 8px;"></div>
-                                </div>
-                                <apex:inputTextarea richText="true" value="{!body}" styleClass="slds-input" />
-
-                                <apex:outputPanel rendered="{!NOT(ISBLANK(userSignature))}">
-                                    <div style="
-                                        margin-top: 6px;
-                                        border: 1px solid #dddbda;
-                                        border-radius: 4px;
-                                        background: #f3f3f3;
-                                        padding: 8px 12px;
-                                        color: #3e3e3c;
-                                        font-size: 13px;
-                                        pointer-events: none;
-                                        user-select: none;
-                                    ">
-                                        <div style="font-size: 11px; color: #706e6b; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-                                            Signature (non-editable)
-                                        </div>
-                                        <apex:outputText value="{!userSignature}" escape="false" />
+            <!-- Quote Type Dropdown - Only show when applicable and no selection made -->
+            <div id="quoteTypeSection" class="quote-type-section" style="width:80%; padding-bottom: 2%; margin: 0 auto;">
+                <div style="text-align: center;">
+                    <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 8px;">Quote Type</label>
+                    <apex:form style="display: inline-block;" id="dropdownForm">
+                        <apex:selectList value="{!selectedQuoteType}" size="1" styleClass="slds-select" style="width: 200px;" id="quoteTypeDropdown">
+                            <apex:selectOptions value="{!quoteTypeOptions}"/>
+                            <apex:actionSupport event="onchange" action="{!updateQuoteType}" rerender="subjectFieldNormal,subjectFieldAmendment,statusText" oncomplete="updateUIVisibility();"/>
+                        </apex:selectList>
+                    </apex:form>
+                    <span id="statusText" class="status-text"></span>
+                </div>
+            </div>
+            
+            <!-- Main Container -->
+            <div class="main-container" id="mainContainer">
+                
+                <!-- Normal Quote Section -->
+                <div id="normalQuoteSection" style="display: none;">
+                    <div style="width:80%; padding-bottom: 2%; margin: 0 auto">
+                        <apex:slds />
+                        <div style="padding: 5px">
+                            <apex:form id="normalForm">
+                                 <div style="padding: 5px">
+                                    <apex:inputText html-placeholder="Email ID" value="{!emailId}" styleClass="slds-input" id="normalEmail" />
+                                    <apex:inputText html-placeholder="CC Addresses (Comma Separated)" value="{!CC_Addresses}" styleClass="slds-input" style="margin-top: 5px" id="normalCC" />
+                                    
+                                    <apex:outputPanel id="subjectFieldNormal">
+                                        <apex:inputText html-placeholder="Subject" value="{!subject}" styleClass="slds-input" style="margin-top: 5px; margin-bottom: 10px" id="normalSubject" />
+                                    </apex:outputPanel>
+                                    
+                                    <div style="margin-top: 10px; margin-bottom: 6px;">
+                                        <label style="font-size: 12px; font-weight: 600; color: #3e3e3c; display:block; margin-bottom: 4px;">
+                                            Additional Attachments
+                                        </label>
+                                        <label for="fileUploadInput" class="slds-button slds-button_neutral" style="cursor:pointer; display:inline-block;">
+                                            &#128206; Upload Files
+                                        </label>
+                                        <input type="file" id="fileUploadInput" multiple="multiple"
+                                            style="display:none;"
+                                            onchange="handleFileUpload(event)" />
+                                        <div id="fileListContainer" style="margin-top: 8px;"></div>
                                     </div>
-                                </apex:outputPanel>
-                            </div>
-                            
-                         
-                            <div style="margin: 10px 5px; text-align: right" >
-                               <apex:commandButton value="Save PDF" styleClass="slds-button slds-button_brand" onclick="return prepareAndSubmit('save');"></apex:commandButton>
-                                <apex:commandButton value="Save And Send" styleClass="slds-button slds-button_brand" onclick="return prepareAndSubmit('saveAndSend');"></apex:commandButton>
+                                    <apex:inputTextarea richText="true" value="{!body}" styleClass="slds-input" id="normalBody" />
 
-                                <apex:commandButton action="{!cancel}" value="Cancel" styleClass="slds-button slds-button_destructive"></apex:commandButton> 
-                            </div>
+                                    <apex:outputPanel rendered="{!NOT(ISBLANK(userSignature))}">
+                                        <div class="signature-box">
+                                            <div class="signature-label">
+                                                Signature (non-editable)
+                                            </div>
+                                            <apex:outputText value="{!userSignature}" escape="false" />
+                                        </div>
+                                    </apex:outputPanel>
+                                </div>
+                                
+                                <div class="button-container">
+                                    <div class="button-group">
+                                        <!-- Back button - Only show when showAmendmentOptions is true -->
+                                        <apex:outputPanel rendered="{!showAmendmentOptions}">
+                                            <apex:commandButton value="Back" styleClass="slds-button slds-button_neutral" onclick="goBack(); return false;"></apex:commandButton>
+                                        </apex:outputPanel>
+                                        <apex:commandButton value="Save PDF" styleClass="slds-button slds-button_brand" onclick="return prepareAndSubmit('save');"></apex:commandButton>
+                                        <apex:commandButton value="Save And Send" styleClass="slds-button slds-button_brand" onclick="return prepareAndSubmit('saveAndSend');"></apex:commandButton>
+                                        <apex:commandButton action="{!cancel}" value="Cancel" styleClass="slds-button slds-button_destructive"></apex:commandButton> 
+                                    </div>
+                                </div>
 
-                            <input type="hidden" name="attachmentData" id="attachmentDataField" />
-                            <apex:actionFunction name="doSave" action="{!save}" />
-                            <apex:actionFunction name="doSaveAndSend" action="{!saveAndSend}" />
-                        </apex:form>
+                                <input type="hidden" name="attachmentData" id="attachmentDataField" />
+                                <apex:actionFunction name="doSave" action="{!save}" />
+                                <apex:actionFunction name="doSaveAndSend" action="{!saveAndSend}" />
+                            </apex:form>
+                        </div>
+                    </div>
+                    
+                    <!-- PDF iframe -->
+                    <iframe id="pdf" src="{!pdfURL}" class="pdf-frame"></iframe>
+                </div>
+                
+                <!-- Amendment Quote Section -->
+                <div id="amendmentQuoteSection" style="display: none;">
+                    <div style="width:80%; padding-bottom: 2%; margin: 0 auto">
+                        <apex:slds />
+                        <div style="padding: 5px">
+                            <apex:form id="amendmentForm">
+                                 <div style="padding: 5px">
+                                    <apex:inputText html-placeholder="Email ID" value="{!emailId}" styleClass="slds-input" id="amendmentEmail" />
+                                    <apex:inputText html-placeholder="CC Addresses (Comma Separated)" value="{!CC_Addresses}" styleClass="slds-input" style="margin-top: 5px" id="amendmentCC" />
+                                    
+                                    <apex:outputPanel id="subjectFieldAmendment">
+                                        <apex:inputText html-placeholder="Subject" value="{!subject}" styleClass="slds-input" style="margin-top: 5px; margin-bottom: 10px" id="amendmentSubject" />
+                                    </apex:outputPanel>
+                                    
+                                    <apex:inputTextarea richText="true" value="{!body}" styleClass="slds-input" id="amendmentBody" />
+
+                                    <apex:outputPanel rendered="{!NOT(ISBLANK(userSignature))}">
+                                        <div class="signature-box">
+                                            <div class="signature-label">
+                                                Signature (non-editable)
+                                            </div>
+                                            <apex:outputText value="{!userSignature}" escape="false" />
+                                        </div>
+                                    </apex:outputPanel>
+                                </div>
+                                
+                                <div class="button-container">
+                                    <div class="button-group">
+                                        <!-- Back button - Only show when showAmendmentOptions is true -->
+                                        <apex:outputPanel rendered="{!showAmendmentOptions}">
+                                            <apex:commandButton value="Back" styleClass="slds-button slds-button_neutral" onclick="goBack(); return false;"></apex:commandButton>
+                                        </apex:outputPanel>
+                                        <apex:commandButton value="Send Email" styleClass="slds-button slds-button_brand" onclick="return prepareAndSubmitAmendment();"></apex:commandButton>
+                                        <apex:commandButton action="{!cancel}" value="Cancel" styleClass="slds-button slds-button_destructive"></apex:commandButton> 
+                                    </div>
+                                </div>
+
+                                <apex:actionFunction name="doSendAmendment" action="{!sendAmendmentEmail}" />
+                            </apex:form>
+                        </div>
                     </div>
                 </div>
-            
-            <iframe id="pdf" src="{!pdfURL}" style="width: 100%; height: 100vh"></iframe>
-            
+                
+            </div>
         </apex:outputText>
-        <!-- ❗ ALWAYS SHOW CANCEL BUTTON -->
-        <div style="margin: 10px 5px; text-align: center">
+        
+        <!-- Always Show Cancel Button (hidden when selection is made) -->
+        <div class="cancel-container" id="defaultCancel">
             <apex:form >
                 <apex:commandButton action="{!cancel}" 
                                     value="Cancel" 
                                     styleClass="slds-button slds-button_destructive"/>
             </apex:form>
         </div>
+        
         <script>
             var uploadedFiles = [];
+            var showAmendmentOptions = {!showAmendmentOptions};
+
+            console.log('showAmendmentOptions: ' + showAmendmentOptions);
 
             function handleFileUpload(event) {
                 var newFiles = Array.from(event.target.files);
@@ -130,6 +295,104 @@
                 container.innerHTML = html;
             }
 
+            function goBack() {
+                var dropdown = document.querySelector('[id$="quoteTypeDropdown"]');
+                if (dropdown) {
+                    dropdown.value = '';
+                }
+                // Update the server-side variable via action function
+                updateUIVisibility();
+            }
+
+            function updateUIVisibility() {
+                var dropdown = document.querySelector('[id$="quoteTypeDropdown"]');
+                if (!dropdown) {
+                    console.log('Dropdown not found');
+                    return;
+                }
+                
+                var selectedValue = dropdown.value;
+                console.log('Dropdown value: ' + selectedValue);
+                
+                var normalSection = document.getElementById('normalQuoteSection');
+                var amendmentSection = document.getElementById('amendmentQuoteSection');
+                var quoteTypeSection = document.getElementById('quoteTypeSection');
+                var defaultCancel = document.getElementById('defaultCancel');
+                var statusText = document.getElementById('statusText');
+                
+                if (!normalSection || !amendmentSection) {
+                    console.log('Sections not found');
+                    return;
+                }
+                
+                // Update status text
+                if (statusText) {
+                    if (selectedValue === 'Normal') {
+                        statusText.innerHTML = '<span style="color: #0070d2;">&#9679; Showing Normal Quote view</span>';
+                    } else if (selectedValue === 'Amendment') {
+                        statusText.innerHTML = '<span style="color: #c23934;">&#9679; Showing Amendment Quote view</span>';
+                    } else {
+                        statusText.innerHTML = '';
+                    }
+                }
+                
+                // Show/hide sections based on selection
+                if (selectedValue === 'Amendment') {
+                    console.log('Showing Amendment Quote');
+                    if (quoteTypeSection) quoteTypeSection.style.display = 'none';
+                    if (defaultCancel) defaultCancel.style.display = 'none';
+                    normalSection.style.display = 'none';
+                    amendmentSection.style.display = 'block';
+                } else if (selectedValue === 'Normal') {
+                    console.log('Showing Normal Quote');
+                    if (quoteTypeSection) quoteTypeSection.style.display = 'none';
+                    if (defaultCancel) defaultCancel.style.display = 'none';
+                    normalSection.style.display = 'block';
+                    amendmentSection.style.display = 'none';
+                } else {
+                    console.log('No selection - showing dropdown only');
+                    if (quoteTypeSection) quoteTypeSection.style.display = 'block';
+                    if (defaultCancel) defaultCancel.style.display = 'block';
+                    normalSection.style.display = 'none';
+                    amendmentSection.style.display = 'none';
+                }
+                
+                // Update subject fields manually via JavaScript
+                updateSubjectFields(selectedValue);
+            }
+            
+            function updateSubjectFields(selectedValue) {
+                var normalSubject = document.getElementById('normalSubject');
+                var amendmentSubject = document.getElementById('amendmentSubject');
+                
+                if (!normalSubject && !amendmentSubject) return;
+                
+                var customerRef = '{!quData.Customer_Reference_No__c}' || 'N/A';
+                var accountName = '{!quData.Account.Name}' || '';
+                
+                // Clean up null/empty values
+                if (customerRef === 'null' || customerRef === '' || customerRef === 'undefined') {
+                    customerRef = 'N/A';
+                }
+                if (accountName === 'null' || accountName === '' || accountName === 'undefined') {
+                    accountName = 'Unknown';
+                }
+                
+                var newSubject = '';
+                if (selectedValue === 'Amendment') {
+                    newSubject = 'Amendment for Customer Ref No: ' + customerRef + ' - ' + accountName;
+                } else if (selectedValue === 'Normal') {
+                    newSubject = 'Sales Quotation for Customer Ref No: ' + customerRef + ' - ' + accountName;
+                }
+                
+                if (normalSubject) {
+                    normalSubject.value = newSubject;
+                }
+                if (amendmentSubject) {
+                    amendmentSubject.value = newSubject;
+                }
+            }
+
             function prepareAndSubmit(action) {
                 var payload = uploadedFiles.map(function(f) {
                     return { name: f.name, data: f.data, type: f.type };
@@ -137,11 +400,62 @@
                 document.getElementById('attachmentDataField').value = JSON.stringify(payload);
                 if (action === 'save') {
                     doSave();
-                } else {
+                } else if (action === 'saveAndSend') {
                     doSaveAndSend();
                 }
                 return false;
             }
+            
+            function prepareAndSubmitAmendment() {
+                doSendAmendment();
+                return false;
+            }
+
+            // Initialize UI visibility on page load
+            function initializeUI() {
+                console.log('Initializing UI...');
+                console.log('showAmendmentOptions: ' + showAmendmentOptions);
+                
+                var normalSection = document.getElementById('normalQuoteSection');
+                var amendmentSection = document.getElementById('amendmentQuoteSection');
+                var quoteTypeSection = document.getElementById('quoteTypeSection');
+                var defaultCancel = document.getElementById('defaultCancel');
+                var dropdown = document.querySelector('[id$="quoteTypeDropdown"]');
+                var statusText = document.getElementById('statusText');
+                
+                // If showAmendmentOptions is false, show Normal Quote directly
+                if (!showAmendmentOptions) {
+                    console.log('showAmendmentOptions is false - showing Normal Quote directly');
+                    if (quoteTypeSection) quoteTypeSection.style.display = 'none';
+                    if (defaultCancel) defaultCancel.style.display = 'none';
+                    if (normalSection) normalSection.style.display = 'block';
+                    if (amendmentSection) amendmentSection.style.display = 'none';
+                    return;
+                }
+                
+                // showAmendmentOptions is true - show only dropdown initially
+                console.log('showAmendmentOptions is true - showing dropdown only');
+                
+                // Set dropdown to empty - no selection
+                if (dropdown) {
+                    dropdown.value = '';
+                }
+                
+                // Show dropdown, hide sections
+                if (quoteTypeSection) quoteTypeSection.style.display = 'block';
+                if (defaultCancel) defaultCancel.style.display = 'block';
+                if (normalSection) normalSection.style.display = 'none';
+                if (amendmentSection) amendmentSection.style.display = 'none';
+                if (statusText) statusText.innerHTML = '';
+            }
+
+            // Initialize on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeUI();
+            });
+            
+            // Also call after any partial page updates
+            setTimeout(initializeUI, 200);
         </script>
     </body>
     

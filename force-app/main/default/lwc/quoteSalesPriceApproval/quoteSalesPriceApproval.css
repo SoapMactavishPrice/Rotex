@@ -48,7 +48,7 @@
 
 .quote-header-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 8px 12px;
 }
 
@@ -727,7 +727,7 @@ lightning-textarea.comment-input {
 
 .quote-header-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 8px 12px;
     width: 100%;
     box-sizing: border-box;

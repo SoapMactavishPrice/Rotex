@@ -1580,7 +1580,7 @@ Test.stopTest();
     static void testQuotePayload_WithAttachment() {
         
         Quote q = createQuoteData(false);
-        
+        Test.startTest();
         Account acc = [
             SELECT Id
             FROM Account
@@ -1635,7 +1635,6 @@ Test.stopTest();
             Visibility='AllUsers'
         );
         
-        Test.startTest();
         
         String payload =
             IntegrationHandler.getQuotePayload(

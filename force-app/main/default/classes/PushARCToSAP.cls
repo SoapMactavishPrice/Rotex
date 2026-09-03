@@ -130,7 +130,7 @@ public with sharing class PushARCToSAP {
                 sapPayload.put('unit_of_measure', 'EA');
                 sapPayload.put('pricing_unit', '1');
                 sapPayload.put('codition_curr', currencyCode);
-                sapPayload.put('condition_amt', listPrice);
+                sapPayload.put('condition_amt', salesPrice);
                 sapPayload.put('material', materialValue);
                 sapPayload.put('customer', customerCode);
                 sapPayload.put('distribution_channel', distributionChannel);

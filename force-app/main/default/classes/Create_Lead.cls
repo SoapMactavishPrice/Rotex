@@ -28,6 +28,8 @@ global with sharing class Create_Lead {
             }
 
             List<Lead> upsertLeadList = new List<Lead>();
+            Database.DMLOptions dmlOptions = new Database.DMLOptions();
+            dmlOptions.assignmentRuleHeader.useDefaultRule = true;
             for (LeadWrapper lw : leadList) {
                 String phone = lw.mobileNumber != null ? lw.mobileNumber.trim() : null;
                 Lead l = new Lead();
@@ -62,6 +64,7 @@ global with sharing class Create_Lead {
                 l.Country = lw.country;
                 l.Requirement__c = lw.requirement;
                 l.LeadSource = 'WA AI Sales Bot';
+                l.setOptions(dmlOptions);
                 upsertLeadList.add(l);
             }
 

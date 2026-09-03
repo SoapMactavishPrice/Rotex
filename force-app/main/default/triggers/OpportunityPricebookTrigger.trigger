@@ -45,7 +45,9 @@ trigger OpportunityPricebookTrigger on Opportunity (before insert) {
             Map<String, Id> pricebookMap = new Map<String, Id>();
             for(Pricebook2 pb : [SELECT Id, Distribution_Channel__c FROM Pricebook2 
                                  WHERE IsActive = true 
-                                 AND Distribution_Channel__c IN ('10', '20')]) {
+                                 AND Distribution_Channel__c IN ('10', '20')
+                                 AND Channel_Partner__c = null
+                                ]) {
                 if(pb.Distribution_Channel__c != null) {
                     pricebookMap.put(pb.Distribution_Channel__c, pb.Id);
                 }

@@ -189,7 +189,7 @@ public without sharing class editDiscountQuantityController {
             } else {
                 actionLog.add('DML: No QuoteLineItems to update (list empty).');
             }
-
+            /*
             if (shouldUpdateQuoteStatus && String.isNotBlank(quoteId)) {
                 Quote quoteToUpdate = new Quote(
                     Id = quoteId,
@@ -201,16 +201,31 @@ public without sharing class editDiscountQuantityController {
             } else {
                 actionLog.add('Quote status update skipped. shouldUpdateQuoteStatus=' + shouldUpdateQuoteStatus + ', quoteId=' + quoteId);
             }
-
+             */
+            if (shouldUpdateQuoteStatus && String.isNotBlank(quoteId)) {
+                // Get current Quote Status before deciding whether to update it
+                Quote existingQuote = [SELECT Id, Status FROM Quote WHERE Id = :quoteId LIMIT 1];
+                if (
+                    existingQuote.Status == 'Draft' || existingQuote.Status == 'Under Review by Sales Rep'
+                ) {
+                    Quote quoteToUpdate = new Quote(Id = quoteId,Status = 'Submit for SOA Approval');
+                    update quoteToUpdate;
+                    quoteStatusUpdated = true;
+                    actionLog.add('DML: Quote Id=' + quoteId + ' Status changed from "' + existingQuote.Status + '" to "Submit for SOA Approval".');
+                } else {
+                    actionLog.add('Quote status update skipped. Current Status="' + existingQuote.Status + '". Status must be Draft or Under Review by Sales Rep.');
+                }
+            } else {
+                actionLog.add('Quote status update skipped. shouldUpdateQuoteStatus=' + shouldUpdateQuoteStatus + ', quoteId=' + quoteId);
+            }
             responseText = 'Updated QuoteLineItems: ' + String.valueOf(updatedQuoteLines) + '. ';
             if (quoteStatusUpdated) {
-                responseText += 'Quote status updated to Need Revision. ';
+                responseText += 'Quote status updated to Submit for SOA Approval. ';
             }
             if (updatedQuoteLines == 0 && !quoteStatusUpdated) {
                 responseText += 'No records were updated. ';
             }
             responseText += '\nDETAILED ACTION LOG:\n' + String.join(actionLog, '\n');
-
         } catch (Exception e) {
             status = 'Failed';
             statusCode = 500;
@@ -218,7 +233,6 @@ public without sharing class editDiscountQuantityController {
             UtilityCls.logApiCall(apiName, 'QuoteLineItem Update', requestText, responseText, status, statusCode);
             throw e;
         }
-
         UtilityCls.logApiCall(apiName, 'QuoteLineItem Update', requestText, responseText, status, statusCode);
     }
 

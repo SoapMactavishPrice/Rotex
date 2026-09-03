@@ -1,9 +1,19 @@
 public class QuoteLineItemHelper {
    
+    private static Set<Id> smallOrderProcessedQuoteIds = new Set<Id>();
+
     public static void updateSmallOrderFlag(Set<Id> quoteIds) {
         System.debug('=== SMALL ORDER FLAG UPDATE START ===');
         System.debug('Input Quote IDs: ' + quoteIds);
-        System.debug('Number of Quote IDs to process: ' + quoteIds.size());
+
+        Set<Id> newQuoteIds = new Set<Id>();
+        for (Id qId : quoteIds) {
+            if (!smallOrderProcessedQuoteIds.contains(qId)) newQuoteIds.add(qId);
+        }
+        quoteIds = newQuoteIds;
+        smallOrderProcessedQuoteIds.addAll(quoteIds);
+
+        System.debug('Number of Quote IDs to process after dedupe: ' + quoteIds.size());
         
         if (quoteIds.isEmpty()) {
             System.debug('SMALL ORDER: No Quote IDs provided, exiting');

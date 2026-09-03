@@ -90,7 +90,33 @@ public class UtilityCls {
 
             request.setEndpoint(apiparam.endpoint + strUrl);
             // system.debug('inside if'+apiparam.endpoint+strUrl);
-        } else {
+        }
+        else if(apiType=='BY_NUMBER'){
+            String strUrl ='&$filter=bill_docnum%20eq%20%27' +
+        EncodingUtil.urlEncode(filterData, 'UTF-8') +
+        '%27';
+        System.debug('BY_NUMBER FILTER: '+ strUrl);
+        System.debug('BY_NUMER ENDPOINT: '+ apiparam.endpoint);
+        request.setEndpoint(apiparam.endpoint + strUrl);
+        }
+        else if(apiType == 'SALES_ORDER') {
+
+        String strUrl =
+            '?$expand=to_item_details/to_price_details' +
+            '&$format=json' +
+            '&$filter=so_num%20eq%20%27' +
+            EncodingUtil.urlEncode(filterData, 'UTF-8') +
+            '%27';
+
+        System.debug('SALES ORDER FILTER: ' + strUrl);
+        System.debug('SALES ORDER ENDPOINT: ' + apiparam.endpoint);
+
+        request.setEndpoint(
+            apiparam.endpoint + strUrl
+        );
+    }
+            
+         else {
             system.debug('inside else' + apiparam.endpoint);
             request.setEndpoint(apiparam.endpoint);
         }

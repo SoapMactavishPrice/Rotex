@@ -1,0 +1,28 @@
+.section {
+    margin-bottom: 1.5rem;
+}
+
+.section:last-child {
+    margin-bottom: 0;
+}
+
+.sectionHeader {
+    background: #f3f3f3;
+    font-weight: 700;
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid #d8dde6;
+    border-bottom: 1px solid #d8dde6;
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+    color: #080707;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .sectionHeader {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.5rem;
+    }
+}

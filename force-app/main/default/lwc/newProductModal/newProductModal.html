@@ -1,0 +1,169 @@
+<template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
+    <div class="modal-container" onclick={stopPropagation}>
+        <div class="modal-header">
+            <div class="modal-title">{modalTitle}</div>
+            <button type="button" class="modal-close-btn" onclick={handleClose} disabled={isSaving}>✕</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="section-label">PRODUCT DETAILS</div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label form-required">Product Name</label>
+                    <input
+                        type="text"
+                        class={nameInputClass}
+                        data-field="name"
+                        value={name}
+                        oninput={handleFieldChange}/>
+                    <template if:true={errors.name}>
+                        <div class="form-error">{errors.name}</div>
+                    </template>
+                </div>
+                <div class="form-field">
+                    <label class="form-label form-required">Active</label>
+                    <select class="form-input" value={activeValue} onchange={handleActiveChange}>
+                        <option value="true">TRUE</option>
+                        <option value="false">FALSE</option>
+                    </select>
+                    <template if:true={errors.isActive}>
+                        <div class="form-error">{errors.isActive}</div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label form-required">Product Code</label>
+                    <input
+                        type="text"
+                        class={productCodeInputClass}
+                        data-field="productCode"
+                        value={productCode}
+                        oninput={handleFieldChange}/>
+                    <template if:true={errors.productCode}>
+                        <div class="form-error">{errors.productCode}</div>
+                    </template>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">HSN Code</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        data-field="hsnCode"
+                        value={hsnCode}
+                        oninput={handleFieldChange}
+                        placeholder="e.g. 1234"/>
+                </div>
+            </div>
+
+            <div class="form-field form-field-full">
+                <label class="form-label form-required">Product Description</label>
+                <textarea
+                    class={descriptionInputClass}
+                    data-field="description"
+                    rows="2"
+                    oninput={handleFieldChange}>{description}</textarea>
+                <template if:true={errors.description}>
+                    <div class="form-error">{errors.description}</div>
+                </template>
+            </div>
+
+            <div class="section-divider"></div>
+            <div class="section-label">PRICE INFORMATION</div>
+
+            <div class="price-table">
+                <div class="price-table-header">
+                    <div>Currency</div>
+                    <div>List Price</div>
+                    <div>Valid From</div>
+                    <div>Valid To</div>
+                    <div>Action</div>
+                </div>
+                <div class="price-table-body">
+                    <template for:each={priceRowsView} for:item="row">
+                        <div key={row.key} class="price-table-row">
+                            <div>
+                                <select
+                                    class="form-input"
+                                    data-key={row.key}
+                                    data-field="currencyIsoCode"
+                                    onchange={handlePriceFieldChange}>
+                                    <template for:each={row.currencyOptions} for:item="opt">
+                                        <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <input
+                                    type="text"
+                                    inputmode="decimal"
+                                    class="form-input"
+                                    data-key={row.key}
+                                    data-field="unitPrice"
+                                    value={row.unitPrice}
+                                    oninput={handlePriceFieldChange}
+                                    placeholder="1"/>
+                            </div>
+                            <div>
+                                <input
+                                    type="date"
+                                    class="form-input"
+                                    data-key={row.key}
+                                    data-field="validFrom"
+                                    value={row.validFrom}
+                                    onchange={handlePriceFieldChange}/>
+                            </div>
+                            <div>
+                                <input
+                                    type="date"
+                                    class="form-input"
+                                    data-key={row.key}
+                                    data-field="validTo"
+                                    value={row.validTo}
+                                    onchange={handlePriceFieldChange}/>
+                            </div>
+                            <div class="price-actions">
+                                <button
+                                    type="button"
+                                    class="btn-icon btn-add"
+                                    title="Add price entry"
+                                    onclick={handleAddPriceRow}
+                                    disabled={isSaving}>+</button>
+                                <template if:true={row.showDelete}>
+                                    <button
+                                        type="button"
+                                        class="btn-icon btn-remove"
+                                        title="Remove"
+                                        data-key={row.key}
+                                        onclick={handleRemovePriceRow}
+                                        disabled={isSaving}>✕</button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            <template if:true={errors.priceEntries}>
+                <div class="form-error">{errors.priceEntries}</div>
+            </template>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick={handleClose} disabled={isSaving}>Cancel</button>
+            <button type="button" class="btn-save" onclick={handleSave} disabled={isSaving}>
+                <template if:false={isSaving}>Save</template>
+                <template if:true={isSaving}>Saving…</template>
+            </button>
+        </div>
+    </div>
+</template>

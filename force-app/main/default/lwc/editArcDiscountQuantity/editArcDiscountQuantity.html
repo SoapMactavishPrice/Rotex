@@ -89,6 +89,7 @@
                             <th class="col-arcprice">Proposed ARC Price ({currencyCode})</th>
                             <th class="col-newdisc">New Proposed ARC Price ({currencyCode})</th>
                             <th class="col-disc">Disc. %</th>
+                            <th class="col-comments">Req. Comments</th>
                             <th class="col-potval">Min Value</th>
                             <th class="col-potval">Max Value</th>
                             <th class="col-potqty">MOQ</th>
@@ -138,11 +139,22 @@
                                 <!-- Disc. % (read-only, always calculated) -->
                                 <td class="col-disc amount" style="text-align: left;">
                                     <template if:true={item.Is_Discount_Approved__c}>
-                                        <lightning-formatted-number value={item.newDiscountValue} format-style="decimal" maximum-fraction-digits="2"></lightning-formatted-number>
+                                        <lightning-formatted-number value={item.newDiscountValue} format-style="decimal" maximum-fraction-digits="15"></lightning-formatted-number>
                                     </template>
                                     <template if:false={item.Is_Discount_Approved__c}>
-                                        <lightning-formatted-number value={item.Discount_to_be_offered__c} format-style="decimal" maximum-fraction-digits="2"></lightning-formatted-number>
+                                        <lightning-formatted-number value={item.Discount_to_be_offered__c} format-style="decimal" maximum-fraction-digits="15"></lightning-formatted-number>
                                     </template>
+                                </td>
+
+                                <!-- Requested Comments -->
+                                <td class="col-comments">
+                                    <lightning-textarea data-id={item.Id} variant="label-hidden"
+                                        value={item.Requested_Comments__c} class="input-field textarea-field"
+                                        disabled={item.isRequestedCommentsDisabled}
+                                        placeholder={item.requestedCommentsPlaceholder}
+                                        max-length="255"
+                                        onchange={handleRequestedCommentsChange}>
+                                    </lightning-textarea>
                                 </td>
 
                                 <!-- Min and Max Value -->

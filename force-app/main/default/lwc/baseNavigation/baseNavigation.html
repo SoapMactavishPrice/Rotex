@@ -5,7 +5,6 @@
         <div class="logo-section">
             <img src={logoUrl} class="logo"/>
         </div>
-<br>
 
         <!-- MENU -->
         <template if:true={isNavReady}>
@@ -29,35 +28,6 @@
 
             </ul>
         </template>
-
-        <!-- FOOTER -->
-        <div class="sidebar-footer">
-
-            <div class="user-avatar">
-                {currentUserInitials}
-            </div>
-
-            <div class="user-info">
-
-                <div class="user-name">
-                    {currentUserName}
-                </div>
-            
-                <template if:true={currentAccountName}>
-                    <div class="user-account">
-                        {currentAccountName}
-                    </div>
-                </template>
-            
-            </div>
-           <lightning-icon
-    icon-name="utility:logout"
-    size="x-small"
-    class="logout-icon"
-    onclick={handleLogout}>
-</lightning-icon>
-
-        </div>
 
     </div>
 </template>

@@ -1,0 +1,286 @@
+<template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
+    <c-dealer-user-menu></c-dealer-user-menu>
+
+    <div class={listViewClass}>
+  
+        <div class="page-header">
+                <div>
+                    <div class="breadcrumb">PRODUCTS · YOUR CATALOGUE</div>
+                    <div class="page-title">Products</div>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <div class="search-row">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+                            <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+                            <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                        </svg>
+                        <input
+                            type="text"
+                            class="search-input"
+                            placeholder="Search by name, code, description, HSN..."
+                            oninput={handleSearchInput}
+                            onkeydown={handleSearchKeydown}
+                            autocomplete="off"
+                            spellcheck="false"/>
+                    </div>
+                    <button type="button" class="btn-search" onclick={handleSearchClick}>
+                        Search
+                    </button>
+                </div>
+
+                <div class="filter-bar-right">
+                    <template if:true={isNonRotexTab}>
+                        <div class="status-tabs">
+                            <button type="button" class={allTabClass} data-status="All" onclick={handleStatusFilter}>
+                                All <span>{totalCount}</span>
+                            </button>
+                            <button type="button" class={activeTabClass} data-status="Active" onclick={handleStatusFilter}>
+                                Active <span>{activeCount}</span>
+                            </button>
+                            <button type="button" class={inactiveTabClass} data-status="Inactive" onclick={handleStatusFilter}>
+                                Inactive <span>{inactiveCount}</span>
+                            </button>
+                        </div>
+                    </template>
+
+                    <template if:true={isRotexTab}>
+                        <div class="item-type-wrap">
+                            <label class="item-type-label">Item Type</label>
+                            <select class="item-type-select" onchange={handleItemTypeChange}>
+                                <template for:each={itemTypeOptionsView} for:item="opt">
+                                    <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                </template>
+                            </select>
+                        </div>
+                    </template>
+
+                    <div class="filter-actions">
+                        <template if:true={isNonRotexTab}>
+                            <c-dealer-data-export
+                                object-key="Product"
+                                button-label="Export"
+                                status-filter={selectedStatus}
+                                search-key={searchKey}
+                            ></c-dealer-data-export>
+                            <button type="button" class="btn-create" onclick={handleCreateProduct}>
+                                <svg viewBox="0 0 16 16" fill="none" class="btn-create-icon">
+                                    <path d="M8 3v10M3 8h10" stroke="currentColor"
+                                        stroke-width="2.2" stroke-linecap="round"/>
+                                </svg>
+                                Create Product
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pill-tab-row">
+                <button type="button" class={rotexTabClass} data-tab="rotex" onclick={handleProductSourceTab}>
+                    Rotex Product
+                </button>
+                <button type="button" class={nonRotexTabClass} data-tab="nonRotex" onclick={handleProductSourceTab}>
+                    Non-Rotex Product
+                </button>
+            </div>
+
+            <div class="product-table">
+                <div class={tableHeaderClass}>
+                    <div>PRODUCT NAME</div>
+                    <div>PRODUCT CODE</div>
+                    <template if:true={isRotexTab}>
+                        <div>LIST PRICE</div>
+                        <div>CURRENCY</div>
+                        <div>ITEM TYPE</div>
+                        <div>STATUS</div>
+                    </template>
+                    <template if:true={isNonRotexTab}>
+                        <div>DESCRIPTION</div>
+                        <div>HSN CODE</div>
+                        <div>ACTIVE</div>
+                        <div>CREATED</div>
+                    </template>
+                </div>
+
+                <template if:true={isLoadingRotex}>
+                    <div class="empty-state">Loading Rotex products…</div>
+                </template>
+
+                <template if:false={isLoadingRotex}>
+                    <template if:true={showRotexItemTypePrompt}>
+                        <div class="empty-state">Select Item Type to view Rotex products.</div>
+                    </template>
+                    <template if:false={showRotexItemTypePrompt}>
+                        <template if:true={hasProducts}>
+                            <template for:each={filteredProducts} for:item="product">
+                                <div
+                                    key={product.rowKey}
+                                    class={tableRowClass}
+                                    data-id={product.id}
+                                    onclick={openProductDetail}>
+                                    <div>
+                                        <div class="product-name" title={product.name}>{product.name}</div>
+                                    </div>
+                                    <div class="product-text">{product.productCode}</div>
+                                    <template if:true={isRotexTab}>
+                                        <div class="product-text">{product.listPriceDisplay}</div>
+                                        <div class="product-text">{product.currencyIsoCode}</div>
+                                        <div class="product-text">{product.itemTypeDisplay}</div>
+                                        <div>
+                                            <span class={product.statusBadgeClass}>{product.statusDisplay}</span>
+                                        </div>
+                                    </template>
+                                    <template if:true={isNonRotexTab}>
+                                        <div class="product-text" title={product.description}>{product.description}</div>
+                                        <div class="product-text">{product.hsnCode}</div>
+                                        <div>
+                                            <span class={product.statusBadgeClass}>{product.statusDisplay}</span>
+                                        </div>
+                                        <div class="product-text">{product.createdDate}</div>
+                                    </template>
+                                </div>
+                            </template>
+                        </template>
+
+                        <template if:false={hasProducts}>
+                            <div class="empty-state">{emptyStateMessage}</div>
+                        </template>
+                    </template>
+                </template>
+            </div>
+    </div>
+
+    <template if:true={selectedProduct}>
+        <div class="detail-view">
+            <div class="detail-header">
+                <div class="detail-topbar">
+                    <button type="button" class="back-btn" onclick={backToList}>
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8"
+                                stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Back to Products
+                    </button>
+                </div>
+
+                <div class="detail-top">
+                    <div class="detail-identity">
+                        <div>
+                            <div class="detail-meta">PRODUCT · {selectedProduct.productCodeDisplay}</div>
+                            <div class="detail-name">{selectedProduct.name}</div>
+                            <div class="detail-company">
+                                <span class={selectedProduct.statusBadgeClass}>{selectedProduct.statusDisplay}</span>
+                                <span class="divider-dot">·</span>
+                                <span>Created {selectedProduct.createdDate}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-actions">
+                        <template if:true={canEditSelectedProduct}>
+                            <button type="button" class="btn-edit" onclick={handleEditProduct}>Edit</button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-layout">
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <div class="info-card-icon">
+                            <lightning-icon icon-name="utility:product" size="x-small"></lightning-icon>
+                        </div>
+                        <div class="info-card-title">Product Information</div>
+                    </div>
+                    <div class="info-card-body info-card-body-2col">
+                        <div class="info-row">
+                            <div class="info-row-label">Product Name</div>
+                            <div class="info-row-value">{selectedProduct.name}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Active</div>
+                            <div class="info-row-value">
+                                <span class={selectedProduct.statusBadgeClass}>{selectedProduct.statusDisplay}</span>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Product Code</div>
+                            <div class={selectedProduct.productCodeClass}>{selectedProduct.productCodeDisplay}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">HSN Code</div>
+                            <div class={selectedProduct.hsnClass}>{selectedProduct.hsnDisplay}</div>
+                        </div>
+                        <template if:true={selectedProduct.isRotex}>
+                            <div class="info-row">
+                                <div class="info-row-label">Product Description</div>
+                                <div class={selectedProduct.descriptionClass}>{selectedProduct.descriptionDisplay}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-row-label">Item Type</div>
+                                <div class="info-row-value">{selectedProduct.itemTypeDisplay}</div>
+                            </div>
+                        </template>
+                        <template if:false={selectedProduct.isRotex}>
+                            <div class="info-row info-row-span">
+                                <div class="info-row-label">Product Description</div>
+                                <div class={selectedProduct.descriptionClass}>{selectedProduct.descriptionDisplay}</div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <template if:true={selectedProduct.hasPriceEntries}>
+                    <div class="info-card" style="margin-top: 22px;">
+                        <div class="info-card-header">
+                            <div class="info-card-icon">
+                                <lightning-icon icon-name="utility:money" size="x-small"></lightning-icon>
+                            </div>
+                            <div class="info-card-title">Price Information</div>
+                        </div>
+                        <div class="info-card-body">
+                            <div class="detail-price-table">
+                                <div class="detail-price-header">
+                                    <div>Currency</div>
+                                    <div>List Price</div>
+                                    <div>Valid From</div>
+                                    <div>Valid To</div>
+                                </div>
+                                <template for:each={selectedProduct.priceEntriesView} for:item="row">
+                                    <div key={row.key} class="detail-price-row">
+                                        <div>{row.currencyIsoCode}</div>
+                                        <div>{row.unitPriceDisplay}</div>
+                                        <div>{row.validFromDisplay}</div>
+                                        <div>{row.validToDisplay}</div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={showProductModal}>
+        <div class="product-modal-host" onclick={closeProductModal}>
+            <div class="product-modal-stop" onclick={stopProductModalBubble}>
+                <c-new-product-modal
+                    partner-account-id={partnerAccountId}
+                    product-record={editingProduct}
+                    onclose={closeProductModal}
+                    onsave={handleProductSaved}
+                ></c-new-product-modal>
+            </div>
+        </div>
+    </template>
+</template>

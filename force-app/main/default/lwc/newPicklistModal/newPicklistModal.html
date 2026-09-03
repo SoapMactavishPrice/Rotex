@@ -1,0 +1,314 @@
+<template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
+
+    <template if:true={isOpen}>
+        <div class="modal-backdrop" onclick={handleBackdropClick}>
+            <div class="modal-dialog" onclick={stopPropagation}>
+                <div class={modalContainerClass} role="dialog" aria-modal="true">
+                <div class="modal-header">
+                    <div class="modal-title">{modalTitle}</div>
+                    <button type="button" class="modal-close-btn" onclick={handleClose} disabled={isSaving}>✕</button>
+                </div>
+
+                <div class="modal-body">
+                    <template if:true={isSaving}>
+                        <div class="save-overlay">
+                            <lightning-spinner alternative-text="Saving" size="medium"></lightning-spinner>
+                            <div class="save-overlay__text">Creating picklist...</div>
+                        </div>
+                    </template>
+
+                    <!-- STEP 1: HEADER -->
+                    <template if:true={isStepHeader}>
+                        <div class="section-label">PICK LIST INFORMATION</div>
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label class="form-label">Pick List Number</label>
+                                <input type="text" class="form-input form-input-readonly" value={picklistNumberDisplay} disabled />
+                            </div>
+                            <div class="form-field">
+                                <label class="form-label">Owner Name</label>
+                                <input type="text" class="form-input form-input-readonly" value={ownerName} disabled />
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label class="form-label">Channel Partner</label>
+                                <input type="text" class="form-input form-input-readonly" value={channelPartnerDisplay} disabled />
+                            </div>
+                            <div class="form-field">
+                                <label class="form-label">Secondary Customer</label>
+                                <div class="lookup-wrap">
+                                    <input
+                                        type="text"
+                                        class="form-input"
+                                        placeholder="Search secondary customer..."
+                                        value={secondarySearch}
+                                        onfocus={handleCustomerFocus}
+                                        oninput={handleCustomerSearch}
+                                        autocomplete="off" />
+                                    <template if:true={showCustomerDropdown}>
+                                        <div class="lookup-results">
+                                            <template if:true={hasCustomerResults}>
+                                                <template for:each={customerResults} for:item="row">
+                                                    <div
+                                                        key={row.id}
+                                                        class="lookup-item"
+                                                        data-id={row.id}
+                                                        data-label={row.label}
+                                                        onclick={handleSelectCustomer}>
+                                                        <div class="lookup-item-label">{row.label}</div>
+                                                        <template if:true={row.subLabel}>
+                                                            <div class="lookup-item-sub">{row.subLabel}</div>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </template>
+                                            <template if:false={hasCustomerResults}>
+                                                <div class="lookup-empty">No customers found</div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                                <template if:true={secondaryCustomerId}>
+                                    <button type="button" class="clear-link" onclick={clearSecondaryCustomer}>Clear</button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label class="form-label form-required">Pick List Date</label>
+                                <input
+                                    type="date"
+                                    class="form-input"
+                                    data-field="pickListDate"
+                                    value={pickListDate}
+                                    onchange={handleFieldChange} />
+                                <template if:true={errors.pickListDate}>
+                                    <div class="form-error">{errors.pickListDate}</div>
+                                </template>
+                            </div>
+                            <div class="form-field">
+                                <label class="form-label">Requested Delivery Date</label>
+                                <input
+                                    type="date"
+                                    class="form-input"
+                                    data-field="requestedDeliveryDate"
+                                    value={requestedDeliveryDate}
+                                    onchange={handleFieldChange} />
+                            </div>
+                        </div>
+
+                        <div class="form-field form-field-full">
+                            <label class="form-label">Remarks</label>
+                            <textarea
+                                class="form-input form-textarea"
+                                data-field="remarks"
+                                value={remarks}
+                                oninput={handleFieldChange}
+                                rows="3"></textarea>
+                        </div>
+                    </template>
+
+                    <!-- STEP 2: PRODUCTS (inventory only; no Item Type filter) -->
+                    <template if:true={isStepProducts}>
+                        <div class="product-step">
+                            <div class="product-filters">
+                                <div class="searchBoxWrapper">
+                                    <lightning-input
+                                        type="search"
+                                        value={searchKey}
+                                        label="Search Product"
+                                        variant="label-stacked"
+                                        placeholder="Search Product here..."
+                                        onkeyup={handleSearchKeyup}
+                                        class="searchBox search-field"
+                                        disabled={searchDisabled}>
+                                    </lightning-input>
+                                </div>
+                            </div>
+
+                            <div class="product-table-scroll">
+                                <div class="product-table-box">
+                                    <template if:true={isLoadingProducts}>
+                                        <div class="product-table-spinner slds-is-relative">
+                                            <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                                        </div>
+                                    </template>
+                                    <template if:false={isLoadingProducts}>
+                                        <lightning-datatable
+                                            class="product-pick-datatable"
+                                            data={tableData}
+                                            key-field="Id"
+                                            columns={productColumns}
+                                            selected-rows={selectedKeys}
+                                            onrowselection={handleRowSelection}
+                                            data-id="datatable">
+                                        </lightning-datatable>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- STEP 3: CART — same layout/styling as quote Add Product view cart -->
+                    <template if:true={isStepCart}>
+                        <div class="cart-edit-wrap slds-is-relative">
+                            <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_col-bordered cart-edit-table">
+                                <thead>
+                                    <tr class="slds-line-height_reset">
+                                        <th scope="col" class="cart-col-name"><div>Product Name</div></th>
+                                        <th scope="col" class="cart-col-code"><div>Product Code</div></th>
+                                        <th scope="col" class="cart-col-avail cart-num-cell"><div>Available Qty</div></th>
+                                        <th scope="col" class="cart-col-pick cart-num-cell"><div>PickList Qty</div></th>
+                                        <th scope="col" class="cart-col-remain cart-num-cell"><div>Remaining Qty</div></th>
+                                        <th scope="col" class="cart-col-remarks"><div>Remarks</div></th>
+                                        <th scope="col" class="cart-action-cell cart-col-actions">
+                                            <div class="action-cell-center">Actions</div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template if:true={hasCartItems}>
+                                        <template for:each={cartItems} for:item="item">
+                                            <tr key={item.inventoryId} data-row-id={item.inventoryId}>
+                                                <th scope="row" class="cart-col-name">
+                                                    <div class="cart-product-name">{item.productName}</div>
+                                                </th>
+                                                <td class="cart-col-code">
+                                                    <div class="cart-product-code">{item.productCode}</div>
+                                                </td>
+                                                <td class="cart-col-avail cart-num-cell">
+                                                    <lightning-input
+                                                        class="cart-num-input"
+                                                        type="text"
+                                                        value={item.availableQtyDisplay}
+                                                        variant="label-hidden"
+                                                        disabled>
+                                                    </lightning-input>
+                                                </td>
+                                                <td class="cart-col-pick cart-num-cell">
+                                                    <lightning-input
+                                                        class="cart-num-input"
+                                                        type="text"
+                                                        value={item.pickQuantity}
+                                                        placeholder="0"
+                                                        data-id={item.inventoryId}
+                                                        variant="label-hidden"
+                                                        onchange={handlePickQtyChange}>
+                                                    </lightning-input>
+                                                    <template if:true={item.qtyError}>
+                                                        <div class="form-error">{item.qtyError}</div>
+                                                    </template>
+                                                </td>
+                                                <td class="cart-col-remain cart-num-cell">
+                                                    <lightning-input
+                                                        class="cart-num-input"
+                                                        type="text"
+                                                        value={item.remainingQtyDisplay}
+                                                        variant="label-hidden"
+                                                        disabled>
+                                                    </lightning-input>
+                                                </td>
+                                                <td class="cart-col-remarks">
+                                                    <lightning-textarea
+                                                        class="cart-comments-input"
+                                                        value={item.remarks}
+                                                        data-id={item.inventoryId}
+                                                        variant="label-hidden"
+                                                        max-length="255"
+                                                        onchange={handleRemarkChange}>
+                                                    </lightning-textarea>
+                                                </td>
+                                                <td class="cart-action-cell cart-col-actions">
+                                                    <div class="action-cell-center">
+                                                        <lightning-button-icon
+                                                            icon-name="utility:delete"
+                                                            alternative-text="Delete"
+                                                            title="Remove Product"
+                                                            variant="destructive"
+                                                            data-id={item.inventoryId}
+                                                            onclick={handleRemoveCartItem}>
+                                                        </lightning-button-icon>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </template>
+                                    <template if:false={hasCartItems}>
+                                        <tr>
+                                            <td colspan="7" class="empty-cell">Cart is empty.</td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+                </div>
+
+                <div class={modalFooterClass}>
+                    <template if:true={isStepHeader}>
+                        <div class="footer-actions footer-actions--end">
+                            <button type="button" class="footer-btn-secondary" onclick={handleClose} disabled={isSaving}>Cancel</button>
+                            <button type="button" class="footer-btn-primary" onclick={handleNextFromHeader}>Next</button>
+                        </div>
+                    </template>
+                    <template if:true={isStepProducts}>
+                        <div class="footer-actions footer-actions--products">
+                            <div class="footer-pagination">
+                                <lightning-button
+                                    disabled={isFirstPageDisabled}
+                                    icon-name="utility:jump_to_left"
+                                    label="First"
+                                    onclick={goFirstPage}>
+                                </lightning-button>
+                                <lightning-button
+                                    disabled={isFirstPageDisabled}
+                                    icon-name="utility:chevronleft"
+                                    label="Previous"
+                                    onclick={goPrevPage}>
+                                </lightning-button>
+                                <span class="slds-badge slds-badge_lightest page-badge">{pageInfo}</span>
+                                <lightning-button
+                                    disabled={isLastPageDisabled}
+                                    icon-name="utility:chevronright"
+                                    label="Next"
+                                    icon-position="right"
+                                    onclick={goNextPage}>
+                                </lightning-button>
+                                <lightning-button
+                                    disabled={isLastPageDisabled}
+                                    icon-name="utility:jump_to_right"
+                                    label="Last"
+                                    icon-position="right"
+                                    onclick={goLastPage}>
+                                </lightning-button>
+                            </div>
+                            <button type="button" class="footer-btn-secondary" onclick={handleBackToHeader}>Back</button>
+                            <button type="button" class="footer-btn-primary" onclick={handleAddToCart} disabled={addToCartDisabled}>Add to Cart</button>
+                            <template if:true={showViewCart}>
+                                <button type="button" class="footer-btn-primary" onclick={handleViewCart}>View Cart</button>
+                            </template>
+                        </div>
+                    </template>
+                    <template if:true={isStepCart}>
+                        <div class="footer-actions footer-actions--end">
+                            <button type="button" class="footer-btn-secondary" onclick={handleBackToProducts} disabled={isSaving}>Back</button>
+                            <button type="button" class="footer-btn-primary" onclick={handleSave} disabled={saveDisabled}>Save Picklist</button>
+                        </div>
+                    </template>
+                </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</template>

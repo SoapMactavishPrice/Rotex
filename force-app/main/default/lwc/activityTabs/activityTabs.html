@@ -1,0 +1,650 @@
+<template>
+    <div class="act-wrapper">
+
+        <template if:true={isLoading}>
+            <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+        </template>
+
+        <!-- ═══════════════ LIST VIEW ═══════════════ -->
+        <template if:false={showDetail}>
+            <c-dealer-user-menu></c-dealer-user-menu>
+
+            <div class="act-page-header">
+                <div class="act-page-header__left">
+                    <div class="act-page-header__meta">ACTIVITY · ASSIGNED TO YOU</div>
+                    <h1 class="act-page-header__title">Activity</h1>
+                </div>
+            </div>
+
+            <div class="act-toolbar">
+                <div class="act-search-wrap">
+                    <svg class="act-search-icon" viewBox="0 0 20 20" fill="none">
+                        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+                        <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                    <input
+                        class="act-search-input"
+                        type="text"
+                        placeholder="Search by subject..."
+                        value={searchTerm}
+                        oninput={handleSearch}/>
+                </div>
+
+                <div class="act-toolbar__actions">
+                    <c-dealer-data-export
+                        object-key={activityExportObjectKey}
+                        button-label="Export"
+                        search-key={searchTerm}
+                    ></c-dealer-data-export>
+                    <template if:true={isEventsTab}>
+                        <button type="button" class="act-btn-create" onclick={handleCreateVisit}>
+                            <svg viewBox="0 0 16 16" fill="none" class="act-btn-icon">
+                                <path d="M8 3v10M3 8h10" stroke="currentColor"
+                                    stroke-width="2.2" stroke-linecap="round"/>
+                            </svg>
+                            Create Visit
+                        </button>
+                    </template>
+
+                    <template if:true={isTasksTab}>
+                        <button type="button" class="act-btn-create" onclick={handleCreateTask}>
+                            <svg viewBox="0 0 16 16" fill="none" class="act-btn-icon">
+                                <path d="M8 3v10M3 8h10" stroke="currentColor"
+                                    stroke-width="2.2" stroke-linecap="round"/>
+                            </svg>
+                            Create Task
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <div class="pill-tab-row">
+                <button class={eventsTabClass} data-tab="events" onclick={handleTabClick}>Events</button>
+                <button class={tasksTabClass} data-tab="tasks" onclick={handleTabClick}>Tasks</button>
+            </div>
+
+            <div class="act-content">
+                <template if:true={isEventsTab}>
+                    <h3 class="act-section-title">Upcoming Events</h3>
+
+                    <template if:true={hasUpcomingEvents}>
+                        <ul class="activity-list">
+                            <template for:each={upcomingEvents} for:item="ev">
+                                <li
+                                    key={ev.id}
+                                    class="activity-row activity-row_clickable"
+                                    data-id={ev.id}
+                                    data-object="Event"
+                                    onclick={handleRecordClick}>
+                                    <div class="activity-row-main">
+                                        <lightning-icon icon-name="utility:event" size="x-small" class="activity-row-icon"></lightning-icon>
+                                        <div>
+                                            <div class="activity-row-subject">{ev.subject}</div>
+                                            <div class="activity-row-date">{ev.dueDate}</div>
+                                        </div>
+                                    </div>
+                                    <lightning-button-icon
+                                        icon-name="utility:delete"
+                                        alternative-text="Delete"
+                                        title="Delete"
+                                        data-id={ev.id}
+                                        onclick={handleDelete}
+                                    ></lightning-button-icon>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template if:false={hasUpcomingEvents}>
+                        <p class="act-empty">No upcoming events.</p>
+                    </template>
+
+                    <template if:true={hasPastEvents}>
+                        <div class="act-toggle-wrap">
+                            <button type="button" class="act-link-btn" onclick={togglePastEvents}>
+                                {pastEventsToggleLabel}
+                            </button>
+                        </div>
+                        <template if:true={showPastEvents}>
+                            <ul class="activity-list">
+                                <template for:each={pastEvents} for:item="ev">
+                                    <li
+                                        key={ev.id}
+                                        class="activity-row activity-row_past activity-row_clickable"
+                                        data-id={ev.id}
+                                        data-object="Event"
+                                        onclick={handleRecordClick}>
+                                        <div class="activity-row-main">
+                                            <lightning-icon icon-name="utility:event" size="x-small" class="activity-row-icon"></lightning-icon>
+                                            <div>
+                                                <div class="activity-row-subject">{ev.subject}</div>
+                                                <div class="activity-row-date">{ev.dueDate}</div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </template>
+                            </ul>
+                        </template>
+                    </template>
+                </template>
+
+                <template if:true={isTasksTab}>
+                    <h3 class="act-section-title">Open Tasks</h3>
+
+                    <template if:true={hasUpcomingTasks}>
+                        <ul class="activity-list">
+                            <template for:each={upcomingTasks} for:item="t">
+                                <li
+                                    key={t.id}
+                                    class="activity-row activity-row_clickable"
+                                    data-id={t.id}
+                                    data-object="Task"
+                                    onclick={handleRecordClick}>
+                                    <div class="activity-row-main">
+                                        <lightning-icon icon-name="utility:task" size="x-small" class="activity-row-icon"></lightning-icon>
+                                        <div>
+                                            <div class="activity-row-subject">{t.subject}</div>
+                                            <template if:true={t.isOverdue}>
+                                                <span class="slds-badge slds-theme_warning">Overdue</span>
+                                            </template>
+                                            <div class="activity-row-date">{t.dueDate}</div>
+                                        </div>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template if:false={hasUpcomingTasks}>
+                        <p class="act-empty">No open tasks.</p>
+                    </template>
+
+                    <template if:true={hasPastTasks}>
+                        <div class="act-toggle-wrap">
+                            <button type="button" class="act-link-btn" onclick={togglePastTasks}>
+                                {pastTasksToggleLabel}
+                            </button>
+                        </div>
+                        <template if:true={showPastTasks}>
+                            <ul class="activity-list">
+                                <template for:each={pastTasks} for:item="t">
+                                    <li
+                                        key={t.id}
+                                        class="activity-row activity-row_past activity-row_clickable"
+                                        data-id={t.id}
+                                        data-object="Task"
+                                        onclick={handleRecordClick}>
+                                        <div class="activity-row-main">
+                                            <lightning-icon icon-name="utility:task" size="x-small" class="activity-row-icon"></lightning-icon>
+                                            <div>
+                                                <div class="activity-row-subject">{t.subject}</div>
+                                                <div class="activity-row-date">{t.dueDate}</div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </template>
+                            </ul>
+                        </template>
+                    </template>
+                </template>
+            </div>
+        </template>
+
+        <!-- ═══════════════ DETAIL VIEW ═══════════════ -->
+        <template if:true={showDetail}>
+            <div class="act-detail">
+                <c-dealer-user-menu></c-dealer-user-menu>
+                <div class="act-detail__topbar">
+                    <button type="button" class="act-back-btn" onclick={handleBack}>
+                        <svg viewBox="0 0 16 16" fill="none">
+                            <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8"
+                                stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {backLabel}
+                    </button>
+                    <div class="act-detail__topbar-actions">
+                        <button type="button" class="act-btn-edit" onclick={handleEditClick}>
+                            Edit
+                        </button>
+                    </div>
+                </div>
+
+                <template if:true={selectedActivity}>
+                    <div class="act-detail__hero">
+                        <div class="act-detail__hero-info">
+                            <div class="act-detail__eyebrow">{detailEyebrow}</div>
+                            <h1 class="act-detail__name">{selectedActivity.subject}</h1>
+                            <div class="act-detail__meta-row">
+                                <span class="act-owner-tag">
+                                    <svg viewBox="0 0 14 14" fill="none" class="act-owner-tag__icon">
+                                        <circle cx="7" cy="5" r="2.5" stroke="currentColor" stroke-width="1.2"/>
+                                        <path d="M2 13c0-2.76 2.24-5 5-5s5 2.24 5 5"
+                                            stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                                    </svg>
+                                    {assignedToDisplay}
+                                </span>
+                                <span class="act-divider">|</span>
+                                <span class="act-created-label">Created {createdDateDisplay}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="act-detail__body">
+                        <!-- EVENT -->
+                        <template if:true={isEventDetail}>
+                            <div class="act-detail-card act-detail-card--event">
+                                <div class="act-detail-card__title">
+                                    <svg viewBox="0 0 16 16" fill="none" class="act-card-icon">
+                                        <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/>
+                                        <path d="M5 1.5v3M11 1.5v3M2 6.5h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                                    </svg>
+                                    Event Information
+                                </div>
+                                <div class="act-detail-rows">
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Subject</span>
+                                        <span class="act-detail-row__val">{subjectDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Start</span>
+                                        <span class="act-detail-row__val">{startDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">End</span>
+                                        <span class="act-detail-row__val">{endDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Location</span>
+                                        <span class="act-detail-row__val">{locationDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Visit Status</span>
+                                        <span class="act-detail-row__val">{visitStatusDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Visit Type</span>
+                                        <span class="act-detail-row__val">{visitTypeDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row act-detail-row--block">
+                                        <span class="act-detail-row__lbl">Visit Description</span>
+                                        <span class="act-detail-row__val">{descriptionDisplay}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="act-detail-card act-detail-card--related">
+                                <div class="act-detail-card__title">
+                                    <svg viewBox="0 0 16 16" fill="none" class="act-card-icon">
+                                        <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/>
+                                        <path d="M2.5 14c0-3.04 2.46-5.5 5.5-5.5s5.5 2.46 5.5 5.5"
+                                            stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                                    </svg>
+                                    Related Information
+                                </div>
+                                <div class="act-detail-rows">
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Assigned To</span>
+                                        <span class="act-detail-row__val">{assignedToDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Related To</span>
+                                        <span class="act-detail-row__val">{relatedToDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Name</span>
+                                        <span class="act-detail-row__val">{nameDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Reminder</span>
+                                        <span class="act-detail-row__val">{reminderLabel}</span>
+                                    </div>
+                                    <template if:true={hasReminderDateTime}>
+                                        <div class="act-detail-row">
+                                            <span class="act-detail-row__lbl">Reminder Date/Time</span>
+                                            <span class="act-detail-row__val">{reminderDateTimeDisplay}</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="act-detail-card act-detail-card--status">
+                                <div class="act-detail-card__title">
+                                    <svg viewBox="0 0 16 16" fill="none" class="act-card-icon">
+                                        <path d="M3 3h10v10H3z" stroke="currentColor" stroke-width="1.3"/>
+                                        <path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                                    </svg>
+                                    Status &amp; Description
+                                </div>
+                                <div class="act-detail-rows">
+                                    <div class="act-detail-row act-detail-row--block">
+                                        <span class="act-detail-row__lbl">MOM</span>
+                                        <span class="act-detail-row__val">{momDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row act-detail-row--block">
+                                        <span class="act-detail-row__lbl">Next Action Points</span>
+                                        <span class="act-detail-row__val">{nextActionPointsDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Next Action Applicable</span>
+                                        <span class="act-detail-row__val">{nextActionApplicableDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Next Action Date</span>
+                                        <span class="act-detail-row__val">{nextActionDateDisplay}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- TASK -->
+                        <template if:true={isTaskDetail}>
+                            <div class="act-detail-card">
+                                <div class="act-detail-card__title">
+                                    <svg viewBox="0 0 16 16" fill="none" class="act-card-icon">
+                                        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/>
+                                        <path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    Task Information
+                                </div>
+                                <div class="act-detail-rows">
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Subject</span>
+                                        <span class="act-detail-row__val">{subjectDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Status</span>
+                                        <span class="act-detail-row__val">{statusDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Priority</span>
+                                        <span class="act-detail-row__val">{priorityDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Due Date</span>
+                                        <span class="act-detail-row__val">{dueDateDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row act-detail-row--block">
+                                        <span class="act-detail-row__lbl">Task Description</span>
+                                        <span class="act-detail-row__val">{descriptionDisplay}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="act-detail-card">
+                                <div class="act-detail-card__title">
+                                    <svg viewBox="0 0 16 16" fill="none" class="act-card-icon">
+                                        <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/>
+                                        <path d="M2.5 14c0-3.04 2.46-5.5 5.5-5.5s5.5 2.46 5.5 5.5"
+                                            stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                                    </svg>
+                                    Related Information
+                                </div>
+                                <div class="act-detail-rows">
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Assigned To</span>
+                                        <span class="act-detail-row__val">{assignedToDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Related To</span>
+                                        <span class="act-detail-row__val">{relatedToDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Name</span>
+                                        <span class="act-detail-row__val">{nameDisplay}</span>
+                                    </div>
+                                    <div class="act-detail-row">
+                                        <span class="act-detail-row__lbl">Reminder</span>
+                                        <span class="act-detail-row__val">{reminderLabel}</span>
+                                    </div>
+                                    <template if:true={hasReminderDateTime}>
+                                        <div class="act-detail-row">
+                                            <span class="act-detail-row__lbl">Reminder Date/Time</span>
+                                            <span class="act-detail-row__val">{reminderDateTimeDisplay}</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- Edit popup -->
+        <template if:true={showEditModal}>
+            <div class="act-edit-overlay" onclick={handleCancelEdit}>
+                <div class="act-edit-modal" onclick={stopRowClick} role="dialog" aria-modal="true">
+                    <div class="act-edit-header">
+                        <div class="act-edit-title">{editModalTitle}</div>
+                        <button type="button" class="act-edit-close" onclick={handleCancelEdit} disabled={isSaving}>✕</button>
+                    </div>
+
+                    <div class="act-edit-body">
+                        <template if:true={isEventEdit}>
+                            <div class="act-edit-section-label">EVENT DETAILS</div>
+                            <!-- Subject (searchable + free text) — full width row like create left column -->
+                            <div class="act-edit-row">
+                                <div class="act-edit-field act-edit-field--combo">
+                                    <label class="act-edit-label act-edit-label--required">Subject</label>
+                                    <div class="act-edit-lookup-wrap">
+                                        <input type="text" class="act-edit-control act-edit-control--search"
+                                            data-field="subject"
+                                            placeholder="Search or type a subject..."
+                                            value={editForm.subject}
+                                            oninput={handleSubjectInput}
+                                            onfocus={handleSubjectFocus}
+                                            onblur={handleSubjectBlur}
+                                            autocomplete="off"/>
+                                        <lightning-icon icon-name="utility:search" size="x-small" class="act-edit-search-icon"></lightning-icon>
+                                    </div>
+                                    <template if:true={showSubjectDropdown}>
+                                        <div class="act-edit-result-list">
+                                            <template if:true={hasFilteredEditSubjects}>
+                                                <template for:each={filteredEditSubjectOptions} for:item="opt">
+                                                    <div key={opt.value} class="act-edit-result-item"
+                                                        data-value={opt.value} onmousedown={selectEditSubject}>
+                                                        {opt.label}
+                                                    </div>
+                                                </template>
+                                            </template>
+                                            <template if:true={showUseCustomEditSubject}>
+                                                <div class="act-edit-result-item act-edit-result-item--custom"
+                                                    data-value={customEditSubjectValue}
+                                                    onmousedown={selectEditSubject}>
+                                                    Use “{customEditSubjectValue}”
+                                                </div>
+                                            </template>
+                                            <template if:true={showNoEditSubjectMatches}>
+                                                <div class="act-edit-result-empty">Type to enter a custom subject</div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div class="act-edit-field"></div>
+                            </div>
+                            <!-- Start / End -->
+                            <div class="act-edit-row">
+                                <div class="act-edit-field">
+                                    <label class="act-edit-label act-edit-label--required">Start</label>
+                                    <input type="datetime-local" class={startInputClass} data-field="startDateTimeIso"
+                                        value={editForm.startDateTimeIso} onchange={handleEditFieldChange}/>
+                                </div>
+                                <div class="act-edit-field">
+                                    <label class="act-edit-label act-edit-label--required">End</label>
+                                    <input type="datetime-local" class={endInputClass} data-field="endDateTimeIso"
+                                        value={editForm.endDateTimeIso} onchange={handleEditFieldChange}/>
+                                </div>
+                            </div>
+                            <!-- Location / Visit Status -->
+                            <div class="act-edit-row">
+                                <div class="act-edit-field">
+                                    <label class="act-edit-label act-edit-label--required">Location</label>
+                                    <input type="text" class={locationInputClass} data-field="location"
+                                        value={editForm.location} oninput={handleEditFieldChange}/>
+                                </div>
+                                <div class="act-edit-field">
+                                    <label class="act-edit-label act-edit-label--required">Visit Status</label>
+                                    <select class={visitStatusInputClass} data-field="visitStatus"
+                                        onchange={handleEditFieldChange}>
+                                        <option value="" selected={visitStatusBlankSelected}>Select</option>
+                                        <template for:each={visitStatusSelectOptions} for:item="opt">
+                                            <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Visit Type -->
+                            <div class="act-edit-row">
+                                <div class="act-edit-field">
+                                    <label class="act-edit-label act-edit-label--required">Visit Type</label>
+                                    <select class={visitTypeInputClass} data-field="visitType"
+                                        onchange={handleEditFieldChange}>
+                                        <option value="" selected={visitTypeBlankSelected}>Select</option>
+                                        <template for:each={visitTypeSelectOptions} for:item="opt">
+                                            <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="act-edit-field"></div>
+                            </div>
+                            <!-- Visit Description -->
+                            <div class="act-edit-field act-edit-field--full">
+                                <label class="act-edit-label act-edit-label--required">Visit Description</label>
+                                <textarea class={descriptionInputClass} data-field="description"
+                                    oninput={handleEditFieldChange}>{editForm.description}</textarea>
+                            </div>
+
+                            <template if:true={isEditVisitCompleted}>
+                                <div class="act-edit-section-label act-edit-section-label--spaced">STATUS &amp; DESCRIPTION</div>
+                                <div class="act-edit-field act-edit-field--full">
+                                    <label class="act-edit-label act-edit-label--required">MOM</label>
+                                    <textarea class={momInputClass} data-field="mom"
+                                        oninput={handleEditFieldChange}>{editForm.mom}</textarea>
+                                    <template if:true={momError}>
+                                        <div class="act-edit-error">{momError}</div>
+                                    </template>
+                                </div>
+                                <div class="act-edit-field act-edit-field--full">
+                                    <label class="act-edit-label act-edit-label--required">Next Action Applicable</label>
+                                    <select class={nextActionApplicableInputClass} data-field="nextActionApplicable"
+                                        onchange={handleEditFieldChange}>
+                                        <option value="" selected={nextActionApplicableBlankSelected}>Select</option>
+                                        <template for:each={nextActionApplicableSelectOptions} for:item="opt">
+                                            <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                        </template>
+                                    </select>
+                                    <template if:true={nextActionApplicableError}>
+                                        <div class="act-edit-error">{nextActionApplicableError}</div>
+                                    </template>
+                                </div>
+                                <template if:true={showEditNextActionExtras}>
+                                    <div class="act-edit-field act-edit-field--full">
+                                        <label class="act-edit-label act-edit-label--required">Next Action Points</label>
+                                        <textarea class={nextActionPointsInputClass} data-field="nextActionPoints"
+                                            oninput={handleEditFieldChange}>{editForm.nextActionPoints}</textarea>
+                                        <template if:true={nextActionPointsError}>
+                                            <div class="act-edit-error">{nextActionPointsError}</div>
+                                        </template>
+                                    </div>
+                                    <div class="act-edit-field act-edit-field--full">
+                                        <label class="act-edit-label act-edit-label--required">Next Action Date</label>
+                                        <input type="date" class={nextActionDateInputClass} data-field="nextActionDateIso"
+                                            value={editForm.nextActionDateIso}
+                                            onchange={handleEditFieldChange}/>
+                                        <template if:true={nextActionDateError}>
+                                            <div class="act-edit-error">{nextActionDateError}</div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </template>
+                        </template>
+
+                        <template if:true={isTaskEdit}>
+                            <div class="act-edit-section-label">TASK DETAILS</div>
+                            <div class="act-edit-row">
+                                <div class="act-edit-field">
+                                    <label class="act-edit-label">Subject</label>
+                                    <select class={subjectInputClass} data-field="subject"
+                                        onchange={handleEditFieldChange}>
+                                        <option value="" selected={subjectBlankSelected}>Select</option>
+                                        <template for:each={taskSubjectSelectOptions} for:item="opt">
+                                            <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="act-edit-field">
+                                    <label class="act-edit-label">Status</label>
+                                    <select class={statusInputClass} data-field="status"
+                                        onchange={handleEditFieldChange}>
+                                        <option value="" selected={statusBlankSelected}>Select</option>
+                                        <template for:each={taskStatusSelectOptions} for:item="opt">
+                                            <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="act-edit-row">
+                                <div class="act-edit-field">
+                                    <label class="act-edit-label">Priority</label>
+                                    <select class={priorityInputClass} data-field="priority"
+                                        onchange={handleEditFieldChange}>
+                                        <option value="" selected={priorityBlankSelected}>Select</option>
+                                        <template for:each={taskPrioritySelectOptions} for:item="opt">
+                                            <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="act-edit-field">
+                                    <label class="act-edit-label">Due Date</label>
+                                    <input type="date" class={dueDateInputClass} data-field="dueDateIso"
+                                        value={editForm.dueDateIso} onchange={handleEditFieldChange}/>
+                                </div>
+                            </div>
+                            <div class="act-edit-field act-edit-field--full">
+                                <label class="act-edit-label">Task Description</label>
+                                <textarea class={descriptionInputClass} data-field="description"
+                                    oninput={handleEditFieldChange}>{editForm.description}</textarea>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="act-edit-footer">
+                        <button type="button" class="act-btn-cancel" onclick={handleCancelEdit} disabled={isSaving}>Cancel</button>
+                        <button type="button" class="act-btn-save" onclick={handleSaveEdit} disabled={isSaving}>Save</button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Modals -->
+        <template if:true={showEventModal}>
+            <c-new-event-modal
+                onclose={closeEventModal}
+                onsave={handleEventSaved}
+            ></c-new-event-modal>
+        </template>
+
+        <template if:true={showEditEventModal}>
+            <c-new-event-modal
+                event-id={editEventId}
+                mode="edit"
+                onclose={closeEditEventModal}
+                onsave={handleEditEventSaved}
+            ></c-new-event-modal>
+        </template>
+
+        <template if:true={showTaskModal}>
+            <c-newtaskmodal
+                onclose={closeTaskModal}
+                onsave={handleTaskSaved}
+            ></c-newtaskmodal>
+        </template>
+
+        <template if:true={showEditTaskModal}>
+            <c-newtaskmodal
+                task-id={editTaskId}
+                onclose={closeEditTaskModal}
+                onsave={handleEditTaskSaved}
+            ></c-newtaskmodal>
+        </template>
+
+    </div>
+</template>

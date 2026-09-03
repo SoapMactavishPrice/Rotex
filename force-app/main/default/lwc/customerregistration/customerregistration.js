@@ -7,7 +7,8 @@ import getStateDistrictByPincode from '@salesforce/apex/CustomerController.getSt
 import updateCustomer from '@salesforce/apex/CustomerController.updateCustomer';
 import saveAttachment from '@salesforce/apex/CustomerController.saveAttachment';
 import getAttachments from '@salesforce/apex/CustomerController.getAttachments';
-import verifyGST from '@salesforce/apex/CustomerController.verifyGST';
+import fetchGSTDetails from '@salesforce/apex/CustomerController.fetchGSTDetails';
+import getCustomerContacts from '@salesforce/apex/CustomerController.getCustomerContacts';
 import getShowSoTreeFlag from '@salesforce/apex/CustomerController.getShowSoTreeFlag';
 
 export default class CustomerRegistration extends LightningElement {
@@ -33,9 +34,18 @@ export default class CustomerRegistration extends LightningElement {
     @track toastMessage = '';
     @track gstVerified = false;
     @track gstMessage = '';
+    /** Lock only fields that GST API actually returned */
+    @track gstNameLocked = false;
+    @track gstAddressLocked = false;
+    @track gstPinLocked = false;
+    /** Lock District/State only when pincode API populated that field */
+    @track districtLocked = false;
+    @track stateLocked = false;
     // ── Form model ────────────────────────────────────────────────────────────
     @track form = this._emptyForm();
     @track errors = {};
+    @track contacts = [this._emptyContact()];
+    @track contactErrors = {};
 
     // ── File attachments (client-side only until save) ────────────────────────
     @track attach = this._emptyAttach();
@@ -47,11 +57,232 @@ export default class CustomerRegistration extends LightningElement {
     @track expandedCustomers = {};
     @track expandedSOs = {};
     @track statusFilter = '';
+    /** Business line tab filter — mirrors lead status tabs UI: All | ROTEX | Non ROTEX | BOTH */
+    @track businessLineFilter = 'All';
 
     get gstClass() {
         return this.gstVerified
             ? 'gst-success'
             : 'gst-error';
+    }
+
+    get customerNameClass() {
+        return this.gstNameLocked
+            ? 'cm-input cm-input-readonly'
+            : 'cm-input';
+    }
+
+    get addressClass() {
+        return this.gstAddressLocked
+            ? 'cm-textarea cm-textarea--small cm-input-readonly'
+            : 'cm-textarea cm-textarea--small';
+    }
+
+    get pinCodeClass() {
+        return this.gstPinLocked
+            ? 'cm-input cm-input-readonly'
+            : 'cm-input';
+    }
+
+    get districtClass() {
+        return this.districtLocked
+            ? 'cm-input cm-input-readonly'
+            : 'cm-input';
+    }
+
+    get stateClass() {
+        return this.stateLocked
+            ? 'cm-input cm-input-readonly'
+            : 'cm-input';
+    }
+
+    get contactsView() {
+        const total = this.contacts.length;
+        const lastKey = total ? this.contacts[total - 1].key : null;
+        return this.contacts.map((c, i) => {
+            const err = this.contactErrors[c.key] || {};
+            return {
+                ...c,
+                indexLabel: String(i + 1),
+                canRemove: total > 1,
+                showAddButton: c.key === lastKey,
+                errFirstName: err.firstName || '',
+                errLastName: err.lastName || '',
+                errDesignation: err.designation || '',
+                errPhone: err.phone || '',
+                errEmail: err.email || ''
+            };
+        });
+    }
+
+    _emptyContact(seed = {}) {
+        return {
+            key: `c-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            contactId: seed.contactId || null,
+            firstName: seed.firstName || '',
+            lastName: seed.lastName || '',
+            designation: seed.designation || '',
+            phone: seed.phone || '',
+            email: seed.email || ''
+        };
+    }
+
+    _resetGstLocks() {
+        this.gstNameLocked = false;
+        this.gstAddressLocked = false;
+        this.gstPinLocked = false;
+    }
+
+    /**
+     * Apply Jamku GST payload onto the registration form (same path for type + Edit).
+     */
+    async _applyFetchedGstDetails(gstVal, details) {
+        const tradeName = (details.tradeName || '').trim();
+        const filledAddress = (
+            details.registeredAddress ||
+            details.address ||
+            details.adr ||
+            ''
+        ).trim();
+        const filledPin = (
+            details.pincode ||
+            details.pinCode ||
+            ''
+        ).trim();
+
+        const missing = [];
+        if (!tradeName) missing.push('name');
+        if (!filledAddress) missing.push('address');
+        if (!filledPin) missing.push('pincode');
+        this.gstVerified = true;
+        this.gstMessage = missing.length
+            ? `GST Verified (enter ${missing.join(', ')} manually)`
+            : 'GST Verified';
+
+        this.gstNameLocked = !!tradeName;
+        this.gstAddressLocked = !!filledAddress;
+        this.gstPinLocked = false;
+
+        this.form = {
+            ...this.form,
+            gstNo: gstVal,
+            customerName: tradeName,
+            address: filledAddress,
+            pinCode: filledPin,
+            district: filledPin ? this.form.district : '',
+            state: filledPin ? this.form.state : ''
+        };
+
+        this._syncAddressTextarea();
+
+        const e = { ...this.errors };
+        if (tradeName) delete e.customerName;
+        if (filledAddress) delete e.address;
+        if (filledPin) delete e.pinCode;
+        delete e.gstNo;
+        this.errors = e;
+
+        if (filledPin && String(filledPin).length === 6) {
+            await this.populateStateDistrict(filledPin);
+        } else {
+            this.form = {
+                ...this.form,
+                district: '',
+                state: ''
+            };
+            this._resetLocationLocks();
+        }
+    }
+
+    /**
+     * Fetch GST details and fill form fields.
+     * @param {string} gstVal
+     * @param {{ preserveOnFailure?: boolean }} options
+     *        preserveOnFailure: on Edit, keep saved values if API fails so save is not blocked
+     */
+    async _fetchAndApplyGst(gstVal, options = {}) {
+        const gst = (gstVal || '').trim().toUpperCase();
+        if (gst.length !== 15) {
+            return false;
+        }
+        try {
+            const details = await fetchGSTDetails({ gstNo: gst });
+            if (details && details.isValid) {
+                await this._applyFetchedGstDetails(gst, details);
+                return true;
+            }
+            this.gstVerified = options.preserveOnFailure === true;
+            this.gstMessage = 'GST Number is not verified';
+            this._resetGstLocks();
+            return false;
+        } catch (error) {
+            this.gstVerified = options.preserveOnFailure === true;
+            this.gstMessage = 'Unable to verify GST';
+            this._resetGstLocks();
+            return false;
+        }
+    }
+
+    _resetLocationLocks() {
+        this.districtLocked = false;
+        this.stateLocked = false;
+    }
+
+    /**
+     * Lock only fields that have a value (API fill or existing customer data).
+     */
+    _applyLocationLocks(state, district) {
+        this.stateLocked = !!(state || '').trim();
+        this.districtLocked = !!(district || '').trim();
+    }
+
+    _syncAddressTextarea() {
+        // LWC does not always re-render native textarea text
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        window.setTimeout(() => {
+            this._syncFormNativeControls();
+        }, 0);
+    }
+
+    /**
+     * Force native select/textarea/input values after edit prefill.
+     * LWC often leaves <select>/<textarea> stale when only property bindings change.
+     */
+    _syncFormNativeControls() {
+        const f = this.form || {};
+        const setVal = (sel, value) => {
+            const el = this.template.querySelector(sel);
+            if (el && String(el.value) !== String(value || '')) {
+                el.value = value == null ? '' : String(value);
+            }
+        };
+
+        setVal('input[data-field="customerName"]', f.customerName);
+        setVal('input[data-field="gstNo"]', f.gstNo);
+        setVal('input[data-field="customerWebsite"]', f.customerWebsite);
+        setVal('select[data-field="businessType"]', f.businessType);
+        setVal('select[data-field="customerProfile"]', f.customerProfile);
+        setVal('textarea[data-field="address"]', f.address);
+        setVal('textarea[data-field="oemDetails"]', f.oemDetails);
+        setVal('input[data-field="pinCode"]', f.pinCode);
+        setVal('input[data-field="district"]', f.district);
+        setVal('input[data-field="state"]', f.state);
+        setVal('input[data-field="country"]', f.country);
+        setVal('input[data-field="annualPotential"]', f.annualPotential);
+        setVal('input[data-field="target"]', f.target);
+        setVal('input[data-field="targetNonRotex"]', f.targetNonRotex);
+
+        // Contact rows
+        (this.contacts || []).forEach((c) => {
+            ['firstName', 'lastName', 'designation', 'phone', 'email'].forEach((field) => {
+                const el = this.template.querySelector(
+                    `input[data-key="${c.key}"][data-field="${field}"]`
+                );
+                if (el) {
+                    el.value = c[field] == null ? '' : String(c[field]);
+                }
+            });
+        });
     }
     // ─────────────────────────────────────────────────────────────────────────
     // Lifecycle
@@ -92,7 +323,13 @@ export default class CustomerRegistration extends LightningElement {
     async _loadCustomers() {
         try {
             const raw = await getCustomersByDealer({ dealerAccountId: this.dealerAccountId });
-            this.customers = raw.map(c => this._mapCustomer(c));
+            // Apex returns { record, rejectionRemark, lastModifiedDate }
+            this.customers = (raw || []).map(row => {
+                const rec = row.record || row;
+                const remark = row.rejectionRemark != null ? row.rejectionRemark : '';
+                const lastMod = row.lastModifiedDate || rec.LastModifiedDate || null;
+                return this._mapCustomer(rec, remark, lastMod);
+            });
         } catch (e) {
             this._showToast('Error loading customers: ' + this._errorMsg(e), true);
         }
@@ -100,14 +337,17 @@ export default class CustomerRegistration extends LightningElement {
 
     // ─────────────────────────────────────────────────────────────────────────
     // Map Apex Account → UI object
+    // rejectionRemark = CRM Reject Account Comments (approval history)
+    // lastModifiedDate = latest related activity (quote/order/task/etc.)
     // ─────────────────────────────────────────────────────────────────────────
-    _mapCustomer(c) {
+    _mapCustomer(c, rejectionRemark, lastModifiedDate) {
         const amount = c.Annual_Business_Potential__c;
         const status = c.Approval_Status__c || 'Pending Approval';
         const statusClass =
             status === 'Approved' ? 'cm-status cm-status--approved' :
                 status === 'Rejected' ? 'cm-status cm-status--rejected' :
                     'cm-status cm-status--pending';
+        const remark = (rejectionRemark || '').trim();
         return {
             id: c.Id,
             customerName: c.Customer_Name__c || c.Name || '—',
@@ -116,7 +356,13 @@ export default class CustomerRegistration extends LightningElement {
             address: c.Street__c || '',
             businessType: c.Business_type__c || '',
             target: c.Target__c || '',
-            customerProfile: c.Customer_Profile__c || '—',
+            targetNonRotex:
+                c.Target_Non_Rotex__c != null && c.Target_Non_Rotex__c !== undefined
+                    ? String(c.Target_Non_Rotex__c)
+                    : '',
+            // Raw picklist value for edit form (do not use display placeholder '—')
+            customerProfile: c.Customer_Profile__c || '',
+            customerProfileDisplay: c.Customer_Profile__c || '—',
             oemDetails: c.Additional_details_in_case_of_OEM__c || '',
             state: c.State__c || '',
             district: c.District__c || '',
@@ -137,7 +383,16 @@ export default class CustomerRegistration extends LightningElement {
             timestampDisplay: c.Timestamp__c ? this._fmtDateTime(c.Timestamp__c) : '—',
             addressDisplay: c.Street__c || '—',
             businessTypeDisplay: c.Business_type__c || '—',
-            targetDisplay: c.Target__c || '—',
+            targetDisplay: this._formatTargetDisplay(c.Business_type__c, c.Target__c, c.Target_Non_Rotex__c),
+            targetRotexDisplay: c.Target__c || '—',
+            targetNonRotexDisplay:
+                c.Target_Non_Rotex__c != null && c.Target_Non_Rotex__c !== undefined
+                    ? String(c.Target_Non_Rotex__c)
+                    : '—',
+            showTargetRotexDetail:
+                c.Business_type__c === 'ROTEX' || c.Business_type__c === 'BOTH',
+            showTargetNonRotexDetail:
+                c.Business_type__c === 'Non ROTEX' || c.Business_type__c === 'BOTH',
             stateDisplay: c.State__c || '—',
             districtDisplay: c.District__c || '—',
             pinCodeDisplay: c.Postal_Code__c || '—',
@@ -148,8 +403,24 @@ export default class CustomerRegistration extends LightningElement {
             contactEmailDisplay: c.Contact_Person_Email_ID__c || '—',
             contactDesignationDisplay: c.Contact_Person_Designation__c || '—',
             customerWebsiteDisplay: c.Website || '—',
-            status,                   // ← ADD
-            statusClass,              // ← ADD
+            status,
+            statusClass,
+            rejectionRemark: remark,
+            rejectionRemarkDisplay: remark || '—',
+            isApproved: status === 'Approved',
+            isRejected: status === 'Rejected',
+            approvedDate: c.Approved_Date__c || null,
+            approvedDateDisplay:
+                status === 'Approved' && c.Approved_Date__c
+                    ? this._fmtDate(c.Approved_Date__c)
+                    : '—',
+            rejectionDate: c.Rejection_date__c || null,
+            rejectionDateDisplay:
+                status === 'Rejected' && c.Rejection_date__c
+                    ? this._fmtDate(c.Rejection_date__c)
+                    : '—',
+            lastModifiedDate: lastModifiedDate || c.LastModifiedDate || null,
+            lastModifiedDisplay: this._fmtDate(lastModifiedDate || c.LastModifiedDate),
             attach: { purchaseOrder: false, latestEnquiry: false, bdPlan: false }
         };
     }
@@ -242,6 +513,9 @@ export default class CustomerRegistration extends LightningElement {
         if (this.statusFilter) {
             list = list.filter(c => c.status === this.statusFilter);
         }
+        if (this.businessLineFilter && this.businessLineFilter !== 'All') {
+            list = list.filter(c => c.businessType === this.businessLineFilter);
+        }
 
         // Hardcoded SO data per customer (replace with Apex data later)
 const hardcodedSOs = [
@@ -304,6 +578,79 @@ const hardcodedSOs = [
 
     get hasRecords() { return this.filteredCustomers.length > 0; }
 
+    /** Remark column only when viewing Rejected filter (menu / statusParam) */
+    get showRemarkColumn() {
+        return this.statusFilter === 'Rejected';
+    }
+
+    /** Approved Date column only on Approved filter */
+    get showApprovedDateColumn() {
+        return this.statusFilter === 'Approved';
+    }
+
+    /** Rejection Date column only on Rejected filter */
+    get showRejectionDateColumn() {
+        return this.statusFilter === 'Rejected';
+    }
+
+    get customerTableClass() {
+        const classes = ['cm-table'];
+        if (this.showApprovedDateColumn) {
+            classes.push('cm-table--with-approved-date');
+        }
+        if (this.showRejectionDateColumn || this.showRemarkColumn) {
+            classes.push('cm-table--with-remark');
+        }
+        return classes.join(' ');
+    }
+
+    get tableColSpan() {
+        let cols = 8;
+        if (this.showApprovedDateColumn) cols += 1;
+        if (this.showRejectionDateColumn) cols += 1;
+        if (this.showRemarkColumn) cols += 1;
+        return cols;
+    }
+
+    /** Detail: show reject Comments for rejected customers */
+    get showDetailRejectionRemark() {
+        return !!(this.selectedCustomer && this.selectedCustomer.isRejected);
+    }
+
+    get showDetailApprovedDate() {
+        return !!(this.selectedCustomer && this.selectedCustomer.isApproved);
+    }
+
+    get showDetailRejectionDate() {
+        return !!(this.selectedCustomer && this.selectedCustomer.isRejected);
+    }
+
+    get blAllCount() {
+        return this.customers.length;
+    }
+    get blRotexCount() {
+        return this.customers.filter(c => c.businessType === 'ROTEX').length;
+    }
+    get blNonRotexCount() {
+        return this.customers.filter(c => c.businessType === 'Non ROTEX').length;
+    }
+    get blBothCount() {
+        return this.customers.filter(c => c.businessType === 'BOTH').length;
+    }
+
+    get blAllTabClass() {
+        return this.businessLineFilter === 'All' ? 'cm-filter-tab cm-filter-tab--active' : 'cm-filter-tab';
+    }
+    get blRotexTabClass() {
+        return this.businessLineFilter === 'ROTEX' ? 'cm-filter-tab cm-filter-tab--active' : 'cm-filter-tab';
+    }
+    get blNonRotexTabClass() {
+        return this.businessLineFilter === 'Non ROTEX' ? 'cm-filter-tab cm-filter-tab--active' : 'cm-filter-tab';
+    }
+    get blBothTabClass() {
+        return this.businessLineFilter === 'BOTH' ? 'cm-filter-tab cm-filter-tab--active' : 'cm-filter-tab';
+    }
+
     handleSearch(event) { this.searchTerm = event.target.value; }
     handleCustomerExpand(event) {
         event.stopPropagation();
@@ -317,6 +664,12 @@ const hardcodedSOs = [
     }
     handleStatusFilter(event) {
         this.statusFilter = event.target.value;
+    }
+    handleBusinessLineFilter(event) {
+        const line = event.currentTarget.dataset.line;
+        if (line) {
+            this.businessLineFilter = line;
+        }
     }
 
     handleSOExpand(event) {
@@ -402,68 +755,143 @@ const hardcodedSOs = [
         this.selectedCustomer = null;
     }
     async handleEdit() {
-
         this.isEditMode = true;
-
         this.editingCustomerId = this.selectedCustomer.id;
+        this.errors = {};
+        this.contactErrors = {};
+
+        const sc = this.selectedCustomer;
+        // Normalize placeholders so select/input show real values
+        const rawProfile =
+            sc.customerProfile && sc.customerProfile !== '—'
+                ? sc.customerProfile
+                : '';
 
         this.form = {
-            customerName: this.selectedCustomer.customerName,
-            gstNo: this.selectedCustomer.gstNo,
-            address: this.selectedCustomer.address,
-            businessType: this.selectedCustomer.businessType,
-            target: this.selectedCustomer.target,
-            customerProfile: this.selectedCustomer.customerProfile,
-            oemDetails: this.selectedCustomer.oemDetails,
-            state: this.selectedCustomer.state,
-            district: this.selectedCustomer.district,
-            pinCode: this.selectedCustomer.pinCode,
-            annualPotential: this.selectedCustomer.annualPotential,
-            customerWebsite: this.selectedCustomer.customerWebsite,
-            contactFirstName: this.selectedCustomer.contactFirstName,
-       contactLastName: this.selectedCustomer.contactLastName,
-        country: this.selectedCustomer.country,
-            contactPhone: this.selectedCustomer.contactPhone,
-            contactEmail: this.selectedCustomer.contactEmail,
-            contactDesignation: this.selectedCustomer.contactDesignation
+            customerName: sc.customerName && sc.customerName !== '—' ? sc.customerName : '',
+            gstNo: sc.gstNo || '',
+            address: sc.address || '',
+            businessType: sc.businessType || '',
+            target: sc.target != null ? String(sc.target) : '',
+            targetNonRotex: sc.targetNonRotex != null ? String(sc.targetNonRotex) : '',
+            customerProfile: this._normalizeCustomerProfile(rawProfile),
+            oemDetails: sc.oemDetails || '',
+            state: sc.state || '',
+            district: sc.district || '',
+            pinCode: sc.pinCode || '',
+            annualPotential:
+                sc.annualPotential != null && sc.annualPotential !== undefined
+                    ? String(sc.annualPotential)
+                    : '',
+            customerWebsite: sc.customerWebsite || '',
+            country: sc.country || ''
         };
 
-        // ── Load existing attachments into attach state ──
+        try {
+            const rows = await getCustomerContacts({
+                customerId: this.editingCustomerId
+            });
+            if (rows && rows.length) {
+                this.contacts = rows.map(r => this._emptyContact({
+                    contactId: r.contactId,
+                    firstName: r.firstName || '',
+                    lastName: r.lastName || '',
+                    designation: r.designation || '',
+                    phone: r.phone || '',
+                    email: r.email || ''
+                }));
+            } else {
+                this.contacts = [this._emptyContact({
+                    firstName: sc.contactFirstName || '',
+                    lastName: sc.contactLastName || '',
+                    designation: sc.contactDesignation || '',
+                    phone: sc.contactPhone || '',
+                    email: sc.contactEmail || ''
+                })];
+            }
+        } catch (e) {
+            this.contacts = [this._emptyContact({
+                firstName: sc.contactFirstName || '',
+                lastName: sc.contactLastName || '',
+                designation: sc.contactDesignation || '',
+                phone: sc.contactPhone || '',
+                email: sc.contactEmail || ''
+            })];
+        }
+
         try {
             const files = await getAttachments({
                 recordId: this.editingCustomerId
             });
-
             const mapped = this._mapAttachments(files);
-
             this.attach = {
                 ...this._emptyAttach(),
-
-                // Purchase Order
                 purchaseOrder: mapped.purchaseOrder,
                 purchaseOrderName: mapped.purchaseOrderName || null,
                 purchaseOrderIsImage: mapped.purchaseOrderIsImage || false,
                 purchaseOrderPreview: mapped.purchaseOrderPreview || null,
-
-                // Latest Enquiry
                 latestEnquiry: mapped.latestEnquiry,
                 latestEnquiryName: mapped.latestEnquiryName || null,
                 latestEnquiryIsImage: mapped.latestEnquiryIsImage || false,
                 latestEnquiryPreview: mapped.latestEnquiryPreview || null,
-
-                // BD Plan
                 bdPlan: mapped.bdPlan,
                 bdPlanName: mapped.bdPlanName || null,
                 bdPlanIsImage: mapped.bdPlanIsImage || false,
                 bdPlanPreview: mapped.bdPlanPreview || null
             };
-
         } catch (e) {
-            // if attachments fail to load, just open with empty attach
             this.attach = this._emptyAttach();
         }
 
+        this.gstVerified = false;
+        this.gstMessage = '';
+        this._resetGstLocks();
+        this._applyLocationLocks(this.form.state, this.form.district);
         this.isModalOpen = true;
+
+        // Let modal render then force-fill all native controls so values are visible
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        window.setTimeout(() => {
+            this._syncFormNativeControls();
+        }, 0);
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        window.setTimeout(() => {
+            this._syncFormNativeControls();
+        }, 50);
+
+        // Same GST fetch/auto-fill as when typing GST (import + older records on Edit)
+        const gstVal = (this.form.gstNo || '').trim().toUpperCase();
+        if (gstVal.length === 15) {
+            await this._fetchAndApplyGst(gstVal, { preserveOnFailure: true });
+            // eslint-disable-next-line @lwc/lwc/no-async-operation
+            window.setTimeout(() => {
+                this._syncFormNativeControls();
+            }, 0);
+        } else if (gstVal.length > 0) {
+            this.gstMessage = 'GST Number must be exactly 15 characters.';
+        } else {
+            this.gstVerified = true;
+        }
+    }
+
+    /** Map legacy / alternate labels onto actual Customer_Profile__c values. */
+    _normalizeCustomerProfile(value) {
+        if (!value || value === '—') {
+            return '';
+        }
+        const v = String(value).trim();
+        const map = {
+            OEM: 'Project OEM',
+            'Project OEM': 'Project OEM',
+            VAC: 'VAC',
+            Trader: 'Trader',
+            'Machine OEM': 'Machine OEM',
+            User: 'User',
+            'End User': 'End User',
+            'System Integrator / EPC': 'System Integrator / EPC',
+            'System Integrator/EPC': 'System Integrator / EPC'
+        };
+        return map[v] || v;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -481,12 +909,57 @@ const hardcodedSOs = [
 
         this.errors = {};
 
+        this.contacts = [this._emptyContact()];
+        this.contactErrors = {};
+
         this.attach = this._emptyAttach();
+
+        this.gstVerified = false;
+        this.gstMessage = '';
+        this._resetGstLocks();
+        this._resetLocationLocks();
 
     }
     closeModal() { this.isModalOpen = false; }
     handleBackdropClick() { this.closeModal(); }
     stopPropagation(event) { event.stopPropagation(); }
+
+    handleAddContact() {
+        this.contacts = [...this.contacts, this._emptyContact()];
+    }
+
+    handleRemoveContact(event) {
+        const key = event.currentTarget.dataset.key;
+        if (this.contacts.length <= 1) {
+            return;
+        }
+        this.contacts = this.contacts.filter(c => c.key !== key);
+        if (this.contactErrors[key]) {
+            const next = { ...this.contactErrors };
+            delete next[key];
+            this.contactErrors = next;
+        }
+    }
+
+    handleContactInput(event) {
+        const key = event.currentTarget.dataset.key;
+        const field = event.currentTarget.dataset.field;
+        const val = event.target.value;
+        this.contacts = this.contacts.map(c =>
+            c.key === key ? { ...c, [field]: val } : c
+        );
+        if (this.contactErrors[key]?.[field]) {
+            const next = {
+                ...this.contactErrors,
+                [key]: { ...this.contactErrors[key] }
+            };
+            delete next[key][field];
+            if (!Object.keys(next[key]).length) {
+                delete next[key];
+            }
+            this.contactErrors = next;
+        }
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Form input handlers
@@ -506,38 +979,47 @@ const hardcodedSOs = [
             delete e[field];
             this.errors = e;
         }
+
+        if (field === 'annualPotential' || field === 'target') {
+            this._syncAnnualPotentialVsTargetError();
+        }
     
-        // ── GST validation ──
+        // ── GST validation + auto-fill (Jamku) ──
         if (field === 'gstNo') {
-    
+            const gstVal = (val || '').trim().toUpperCase();
+            if (gstVal !== val) {
+                this.form = { ...this.form, gstNo: gstVal };
+            }
+
             this.gstVerified = false;
             this.gstMessage = '';
-    
-            if (val.length > 0 && val.length < 15) {
+            this._resetGstLocks();
+
+            // Clear previous GST auto-fill so stale pin/name don't stick when GST changes
+            if (gstVal.length !== 15) {
+                this.form = {
+                    ...this.form,
+                    gstNo: gstVal,
+                    customerName: '',
+                    address: '',
+                    pinCode: '',
+                    district: '',
+                    state: ''
+                };
+                this._syncAddressTextarea();
+            }
+
+            if (gstVal.length > 0 && gstVal.length < 15) {
                 this.errors = {
                     ...this.errors,
                     gstNo: 'GST Number must be exactly 15 characters.'
                 };
-            } else if (val.length === 15) {
-    
-                try {
-                    const verified = await verifyGST({ gstNo: val });
-    
-                    if (verified) {
-                        this.gstVerified = true;
-                        this.gstMessage = 'GST Verified';
-                    } else {
-                        this.gstVerified = false;
-                        this.gstMessage = 'GST Number is not verified';
-                    }
-                } catch (error) {
-                    this.gstVerified = false;
-                    this.gstMessage = 'Unable to verify GST';
-                }
+            } else if (gstVal.length === 15) {
+                await this._fetchAndApplyGst(gstVal);
             }
         }
-    
-        // ── Pin Code validation ──
+
+        // ── Pin Code validation (always editable, including after GST auto-fill) ──
         if (field === 'pinCode') {
     
             if (val.length > 0 && val.length < 6) {
@@ -551,14 +1033,106 @@ const hardcodedSOs = [
                     ...this.errors,
                     pinCode: 'Invalid Pincode.'
                 };
+                this.form = {
+                    ...this.form,
+                    district: '',
+                    state: ''
+                };
+                this._resetLocationLocks();
     
             } else if (val.length === 6) {
                 await this.populateStateDistrict(val);
+            } else if (!val.length) {
+                this.form = {
+                    ...this.form,
+                    district: '',
+                    state: ''
+                };
+                this._resetLocationLocks();
+                const e = { ...this.errors };
+                delete e.pinCode;
+                this.errors = e;
             }
         }
     }
 
-    get showOemDetails() { return this.form.customerProfile === 'OEM' || this.form.customerProfile === 'Machine OEM'; }
+    get showOemDetails() {
+        const p = this.form.customerProfile || '';
+        return p === 'OEM' || p === 'Project OEM' || p === 'Machine OEM';
+    }
+
+    get businessTypeOptions() {
+        const current = this.form.businessType || '';
+        return [
+            { key: 'bt-blank', value: '', label: '-- Select Business Line --', selected: !current },
+            { key: 'bt-ROTEX', value: 'ROTEX', label: 'ROTEX', selected: current === 'ROTEX' },
+            { key: 'bt-Non', value: 'Non ROTEX', label: 'Non ROTEX', selected: current === 'Non ROTEX' },
+            { key: 'bt-BOTH', value: 'BOTH', label: 'BOTH', selected: current === 'BOTH' }
+        ];
+    }
+
+    get customerProfileOptions() {
+        const current = this.form.customerProfile || '';
+        // Values must match Account.Customer_Profile__c picklist API names
+        return [
+            { key: 'cp-blank', value: '', label: '-- Select Profile --', selected: !current },
+            {
+                key: 'cp-ProjectOEM',
+                value: 'Project OEM',
+                label: 'Project OEM',
+                selected: current === 'Project OEM'
+            },
+            { key: 'cp-VAC', value: 'VAC', label: 'VAC', selected: current === 'VAC' },
+            {
+                key: 'cp-MachineOEM',
+                value: 'Machine OEM',
+                label: 'Machine OEM',
+                selected: current === 'Machine OEM'
+            },
+            { key: 'cp-EndUser', value: 'End User', label: 'End User', selected: current === 'End User' },
+            {
+                key: 'cp-SI',
+                value: 'System Integrator / EPC',
+                label: 'System Integrator / EPC',
+                selected: current === 'System Integrator / EPC'
+            }
+        ];
+    }
+
+    /** Non ROTEX: only Customer Name + GST are mandatory (incl. BD plan optional). */
+    get isNonRotexBusiness() {
+        return this.form.businessType === 'Non ROTEX';
+    }
+
+    get isRotexBusiness() {
+        return this.form.businessType === 'ROTEX';
+    }
+
+    get isBothBusiness() {
+        return this.form.businessType === 'BOTH';
+    }
+
+    get showTargetRotexField() {
+        return this.isRotexBusiness || this.isBothBusiness;
+    }
+
+    get showTargetNonRotexField() {
+        return this.isNonRotexBusiness || this.isBothBusiness;
+    }
+
+    get showFullFieldRequired() {
+        return !this.isNonRotexBusiness;
+    }
+
+    get showBdPlanRequired() {
+        return !this.isNonRotexBusiness;
+    }
+
+    get bdPlanMandatoryNote() {
+        return this.isNonRotexBusiness
+            ? 'Business Development Plan is optional for Non ROTEX'
+            : 'Business Development Plan is mandatory';
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // File handlers
@@ -611,33 +1185,140 @@ const hardcodedSOs = [
     // ─────────────────────────────────────────────────────────────────────────
     // Validation
     // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Annual Business Potential must not be less than Target (Rotex).
+     * Shows / clears error under Annual Business Potential as values change.
+     */
+    _syncAnnualPotentialVsTargetError() {
+        const e = { ...this.errors };
+        delete e.annualPotential;
+        const msg = this._annualPotentialVsTargetMessage();
+        if (msg) {
+            e.annualPotential = msg;
+        } else if (
+            this.showFullFieldRequired &&
+            (this.form.annualPotential === '' || this.form.annualPotential == null)
+        ) {
+            // only set require message on full validate, not while typing empty after edit
+        }
+        this.errors = e;
+    }
+
+    _annualPotentialVsTargetMessage() {
+        if (!this.showTargetRotexField) {
+            return null;
+        }
+        const targetRaw = this.form.target != null ? String(this.form.target).trim() : '';
+        if (
+            this.form.annualPotential === '' ||
+            this.form.annualPotential == null ||
+            !targetRaw
+        ) {
+            return null;
+        }
+        const potential = parseFloat(this.form.annualPotential);
+        const targetRotex = parseFloat(targetRaw.replace(/,/g, ''));
+        if (
+            Number.isNaN(potential) ||
+            Number.isNaN(targetRotex) ||
+            potential >= targetRotex
+        ) {
+            return null;
+        }
+        return 'Annual Business Potential cannot be less than Target (Rotex).';
+    }
+
     _validate() {
         const e = {};
+        const nonRotex = this.isNonRotexBusiness;
+        const hasBusinessLine = !!this.form.businessType;
+
+        // Always required
         if (!this.form.customerName?.trim()) e.customerName = 'Customer Name is required.';
-        if (!this.form.customerProfile) e.customerProfile = 'Customer Profile is required.';
-       if (!this.form.contactFirstName?.trim()) {
-    e.contactFirstName = 'Contact Person First Name is required.';
-}
-
-if (!this.form.contactLastName?.trim()) {
-    e.contactLastName = 'Contact Person Last Name is required.';
-}
         if (!this.form.gstNo?.trim()) e.gstNo = 'GST No. is required.';
-        if (!this.form.customerWebsite?.trim()) e.customerWebsite = 'Customer Website is required.';
-        if (!this.form.businessType) e.businessType = 'Business Type is required.';
-        if (!this.form.address?.trim()) e.address = 'Address is required.';
-        if (!this.form.country?.trim()) {
-    e.country = 'Country is required.';
-}
-        if (!this.form.pinCode?.trim()) e.pinCode = 'Pin Code is required.';
-        else if (!/^\d{6}$/.test(this.form.pinCode)) e.pinCode = 'Pin Code must be exactly 6 digits.';
-        if (!this.form.annualPotential) e.annualPotential = 'Annual Business Potential is required.';
-        if (!this.form.target) e.target = 'Target is required.';
-        if (!this.form.contactPhone?.trim()) e.contactPhone = 'Telephone No. is required.';
-        if (!this.form.contactEmail?.trim()) e.contactEmail = 'Email ID is required.';
+        else if (this.form.gstNo.trim().length !== 15) {
+            e.gstNo = 'GST Number must be exactly 15 characters.';
+        }
+        if (!hasBusinessLine) e.businessType = 'Business Line is required.';
 
-        // Attachment: only BD Plan is mandatory
-        if (!this.isEditMode && !this.attach.bdPlan) e.bdPlan = 'Business Development Plan is required.';
+        // Until Non ROTEX is selected, apply full rules only when business line is ROTEX/BOTH
+        if (hasBusinessLine && !nonRotex) {
+            if (!this.form.customerProfile) e.customerProfile = 'Customer Profile is required.';
+            if (!this.form.customerWebsite?.trim()) e.customerWebsite = 'Customer Website is required.';
+            if (!this.form.address?.trim()) e.address = 'Address is required.';
+            if (!this.form.country?.trim()) {
+                e.country = 'Country is required.';
+            }
+            if (!this.form.pinCode?.trim()) e.pinCode = 'Pin Code is required.';
+            else if (!/^\d{6}$/.test(this.form.pinCode)) e.pinCode = 'Pin Code must be exactly 6 digits.';
+            if (!this.form.annualPotential && this.form.annualPotential !== 0) {
+                e.annualPotential = 'Annual Business Potential is required.';
+            } else {
+                const cmpMsg = this._annualPotentialVsTargetMessage();
+                if (cmpMsg) e.annualPotential = cmpMsg;
+            }
+            if (this.showTargetRotexField && !this.form.target?.trim()) {
+                e.target = 'Target (Rotex) is required.';
+            }
+            if (this.showTargetNonRotexField && !this.form.targetNonRotex && this.form.targetNonRotex !== 0) {
+                e.targetNonRotex = 'Target (Non-Rotex) is required.';
+            }
+            // BOTH has both fields required via the above; pure ROTEX only Rotex field
+            if (this.showOemDetails && !this.form.oemDetails?.trim()) {
+                e.oemDetails = 'Product Manufactured By (OEM) is required.';
+            }
+
+            if (!this.isEditMode && !this.attach.bdPlan) {
+                e.bdPlan = 'Business Development Plan is required.';
+            }
+
+            const cErr = {};
+            if (!this.contacts.length) {
+                e.contacts = 'At least one contact is required.';
+            }
+            this.contacts.forEach((c, i) => {
+                const row = {};
+                if (!c.firstName?.trim()) row.firstName = 'First Name is required.';
+                if (!c.lastName?.trim()) row.lastName = 'Last Name is required.';
+                if (!c.designation?.trim()) row.designation = 'Designation is required.';
+                if (!c.phone?.trim()) row.phone = 'Telephone No. is required.';
+                if (!c.email?.trim()) row.email = 'Email ID is required.';
+                if (Object.keys(row).length) {
+                    cErr[c.key] = row;
+                    e[`contact_${i}`] = 'Contact incomplete';
+                }
+            });
+            this.contactErrors = cErr;
+        } else if (nonRotex) {
+            // Soft format check if pin is filled for Non ROTEX
+            if (this.form.pinCode?.trim() && !/^\d{6}$/.test(this.form.pinCode.trim())) {
+                e.pinCode = 'Pin Code must be exactly 6 digits.';
+            }
+            // Soft-validate partially filled contacts only
+            const cErr = {};
+            this.contacts.forEach((c, i) => {
+                const hasAny =
+                    c.firstName?.trim() ||
+                    c.lastName?.trim() ||
+                    c.designation?.trim() ||
+                    c.phone?.trim() ||
+                    c.email?.trim();
+                if (!hasAny) return;
+                const row = {};
+                if (!c.firstName?.trim()) row.firstName = 'First Name is required.';
+                if (!c.lastName?.trim()) row.lastName = 'Last Name is required.';
+                if (!c.designation?.trim()) row.designation = 'Designation is required.';
+                if (!c.phone?.trim()) row.phone = 'Telephone No. is required.';
+                if (!c.email?.trim()) row.email = 'Email ID is required.';
+                if (Object.keys(row).length) {
+                    cErr[c.key] = row;
+                    e[`contact_${i}`] = 'Contact incomplete';
+                }
+            });
+            this.contactErrors = cErr;
+        } else {
+            this.contactErrors = {};
+        }
 
         this.errors = e;
         return Object.keys(e).length === 0;
@@ -655,31 +1336,45 @@ if (!this.form.contactLastName?.trim()) {
 
         this.isSaving = true;
         try {
-            // 1. Create the Account record
-           const input = {
-    dealerAccountId: this.dealerAccountId,
-    customerName: this.form.customerName,
-    gstNo: this.form.gstNo,
-    address: this.form.address,
-    country: this.form.country,
-    businessType: this.form.businessType,
-    target: this.form.target ? parseFloat(this.form.target) : null,
-    customerProfile: this.form.customerProfile,
-    oemDetails: this.form.oemDetails,
-    state: this.form.state,
-    district: this.form.district,
-    pinCode: this.form.pinCode,
-    annualPotential: this.form.annualPotential
-        ? parseFloat(this.form.annualPotential)
-        : null,
-    customerWebsite: this.form.customerWebsite,
+            const primary = this.contacts[0] || {};
+            const contactsPayload = this.contacts.map(c => ({
+                contactId: c.contactId || null,
+                firstName: c.firstName,
+                lastName: c.lastName,
+                designation: c.designation,
+                phone: c.phone,
+                email: c.email
+            }));
 
-    contactFirstName: this.form.contactFirstName,
-    contactLastName: this.form.contactLastName,
-    contactPhone: this.form.contactPhone,
-    contactEmail: this.form.contactEmail,
-    contactDesignation: this.form.contactDesignation
-};
+            // 1. Create / update the Account record
+            const input = {
+                dealerAccountId: this.dealerAccountId,
+                customerName: this.form.customerName,
+                gstNo: this.form.gstNo,
+                address: this.form.address,
+                country: this.form.country,
+                businessType: this.form.businessType,
+                target: this.form.target || null,
+                targetNonRotex: this.form.targetNonRotex !== '' && this.form.targetNonRotex != null
+                    ? parseFloat(this.form.targetNonRotex)
+                    : null,
+                customerProfile: this.form.customerProfile,
+                oemDetails: this.form.oemDetails,
+                state: this.form.state,
+                district: this.form.district,
+                pinCode: this.form.pinCode,
+                annualPotential: this.form.annualPotential
+                    ? parseFloat(this.form.annualPotential)
+                    : null,
+                customerWebsite: this.form.customerWebsite,
+
+                contactFirstName: primary.firstName || '',
+                contactLastName: primary.lastName || '',
+                contactPhone: primary.phone || '',
+                contactEmail: primary.email || '',
+                contactDesignation: primary.designation || '',
+                contacts: contactsPayload
+            };
 
             let newId;
 
@@ -768,20 +1463,39 @@ if (!this.form.contactLastName?.trim()) {
         country: '',
         businessType: '',
         target: '',
+        targetNonRotex: '',
         customerProfile: '',
         oemDetails: '',
         state: '',
         district: '',
         pinCode: '',
         annualPotential: '',
-        customerWebsite: '',
-        contactFirstName: '',
-        contactLastName: '',
-        contactPhone: '',
-        contactEmail: '',
-        contactDesignation: ''
+        customerWebsite: ''
     };
 }
+
+    _formatTargetDisplay(businessType, targetRotex, targetNonRotex) {
+        const rotex = targetRotex != null && String(targetRotex).trim() !== ''
+            ? String(targetRotex).trim()
+            : null;
+        const non =
+            targetNonRotex != null && targetNonRotex !== undefined
+                ? String(targetNonRotex)
+                : null;
+        if (businessType === 'ROTEX') {
+            return rotex || '—';
+        }
+        if (businessType === 'Non ROTEX') {
+            return non || '—';
+        }
+        if (businessType === 'BOTH') {
+            const parts = [];
+            if (rotex) parts.push('R: ' + rotex);
+            if (non) parts.push('NR: ' + non);
+            return parts.length ? parts.join(' · ') : '—';
+        }
+        return rotex || non || '—';
+    }
 
     _emptyAttach() {
         return {
@@ -845,47 +1559,75 @@ if (!this.form.contactLastName?.trim()) {
     async populateStateDistrict(pinCode) {
         try {
             const result = await getStateDistrictByPincode({ pinCode });
-    
-            if (result && result.state && result.district) {
+
+            const state = result && result.state ? String(result.state).trim() : '';
+            const district = result && result.district ? String(result.district).trim() : '';
+
+            if (state || district) {
+                // Fill what API returned; leave missing fields blank & editable
                 this.form = {
                     ...this.form,
-                    state: result.state,
-                    district: result.district
+                    state,
+                    district
                 };
-    
+                this._applyLocationLocks(state, district);
+
                 const e = { ...this.errors };
                 delete e.pinCode;
+                if (state) delete e.state;
+                if (district) delete e.district;
                 this.errors = e;
-    
+
+                // Force native inputs to show filled values
+                // eslint-disable-next-line @lwc/lwc/no-async-operation
+                window.setTimeout(() => {
+                    this._syncFormNativeControls();
+                }, 0);
             } else {
+                // Invalid / unknown pincode — enable manual State & District
                 this.form = {
                     ...this.form,
                     state: '',
                     district: ''
                 };
+                this._resetLocationLocks();
                 this.errors = {
                     ...this.errors,
-                    pinCode: 'Invalid Pincode.'
+                    pinCode: 'Invalid Pincode. Enter District and State manually.'
                 };
+                // eslint-disable-next-line @lwc/lwc/no-async-operation
+                window.setTimeout(() => {
+                    this._syncFormNativeControls();
+                }, 0);
             }
-    
+
         } catch (error) {
             console.error('Pincode Error:', JSON.stringify(error));
-    
+
             this.form = {
                 ...this.form,
                 state: '',
                 district: ''
             };
+            this._resetLocationLocks();
             this.errors = {
                 ...this.errors,
-                pinCode: 'Invalid Pincode.'
+                pinCode: 'Invalid Pincode. Enter District and State manually.'
             };
+            // eslint-disable-next-line @lwc/lwc/no-async-operation
+            window.setTimeout(() => {
+                this._syncFormNativeControls();
+            }, 0);
         }
     }
     _handleStatusChange(event) {
         if (event.detail && event.detail.status !== undefined) {
             this.statusFilter = event.detail.status;
+            // Leave detail view so the selected status tab/list is shown
+            this.selectedCustomer = null;
+            this.isEditMode = false;
+            this.editingCustomerId = null;
+            this.isModalOpen = false;
         }
     }
     

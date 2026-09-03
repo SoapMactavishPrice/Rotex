@@ -1,0 +1,574 @@
+<template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
+    <template if:false={selectedInvoice}>
+        <div class="list-view">
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="page-header">
+                <div>
+                    <div class="breadcrumb">INVOICES · ASSIGNED TO YOU</div>
+                    <div class="page-title">Invoices</div>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+                        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6" />
+                        <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    </svg>
+                    <input type="text" class="search-input" placeholder="Search by invoice no, name, account, status..."
+                        onkeyup={handleSearch} />
+                </div>
+                <div class="filter-actions">
+                    <c-dealer-data-export
+                        object-key="Invoice"
+                        button-label="Export"
+                        search-key={searchKey}
+                    ></c-dealer-data-export>
+                </div>
+            </div>
+
+            <div class="quote-table">
+                <div class="table-header">
+                    <div>INVOICE NO</div>
+                    <div>SO NO</div>
+                    <div>ACCOUNT NAME</div>
+                    <div>BILL DATE</div>
+                    <div>NET VALUE</div>
+                    <div>TAX VALUE</div>
+                    <div>OWNER</div>
+                </div>
+
+                <template if:true={hasInvoices}>
+                    <template for:each={filteredInvoices} for:item="invoice">
+                        <div key={invoice.Id} class="table-row" data-id={invoice.Id} onclick={openInvoiceDetail}>
+                            <div>
+                                <div class="customer-name">{invoice.invoiceNumberDisplay}</div>
+                            </div>
+                            <div class="contact-text">{invoice.soNumberDisplay}</div>
+                            <div class="contact-text">{invoice.accountName}</div>
+                            <div class="contact-text">{invoice.billDateDisplay}</div>
+                            <div class="contact-text">{invoice.netValueDisplay}</div>
+                            <div class="contact-text">{invoice.taxValueDisplay}</div>
+                            <div class="contact-text">{invoice.ownerName}</div>
+                        </div>
+                    </template>
+                </template>
+
+                <template if:false={hasInvoices}>
+                    <div class="empty-state">No invoices found for your Channel Partner customers.</div>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={selectedInvoice}>
+        <div class="detail-view">
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="detail-header">
+                <div class="detail-topbar">
+                    <button type="button" class="back-btn" onclick={backToList}>
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        Back to Invoices
+                    </button>
+                </div>
+
+                <div class="detail-top">
+                    <div class="detail-identity">
+                        <div>
+                            <div class="detail-meta">INVOICE · {selectedInvoice.invoiceNumberDisplay}</div>
+                            <div class="detail-name">{selectedInvoice.Name}</div>
+                            <div class="detail-company">
+                                <span>{selectedInvoice.accountName}</span>
+                                <span class="divider-dot">·</span>
+                                <span>Created {selectedInvoice.createdDate}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-actions">
+                        <template if:true={showCreateGrnButton}>
+                            <button type="button" class="action-btn action-btn-primary"
+                                onclick={handleCreateGrn} disabled={showCreateGrnModal}>
+                                Create GRN
+                            </button>
+                        </template>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="quote-tabs">
+                <button type="button" class={detailsTabClass} data-tab="details" onclick={handleTabClick}>
+                    Details
+                </button>
+                <button type="button" class={lineItemTabClass} data-tab="lineItem" onclick={handleTabClick}>
+                    Invoice Line Item
+                </button>
+                <button type="button" class={grnTabClass} data-tab="grn" onclick={handleTabClick}>
+                    GRN
+                </button>
+                <button type="button" class={grnLineTabClass} data-tab="grnLine" onclick={handleTabClick}>
+                    GRN Line Item
+                </button>
+            </div>
+
+            <template if:true={isDetailsTab}>
+                <div class="detail-layout">
+                    <div class="detail-columns">
+                        <div class="detail-col detail-col-left" style="width: 100%; max-width: 100%;">
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="utility:moneybag" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Order Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Bill Doc No.</div>
+                                        <div class="info-row-value">{selectedInvoice.invoiceNumberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Bill Date</div>
+                                        <div class="info-row-value">{selectedInvoice.billDateDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">SO No.</div>
+                                        <div class="info-row-value">{selectedInvoice.soNumberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Bill Doc Type</div>
+                                        <div class="info-row-value">{selectedInvoice.billDocTypeDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Acc Doc No</div>
+                                        <div class="info-row-value">{selectedInvoice.accDocNumberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Invoice Currency</div>
+                                        <div class="info-row-value">{selectedInvoice.currencyDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Sold To Party Name</div>
+                                        <div class="info-row-value">{selectedInvoice.soldToDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Net Value</div>
+                                        <div class="info-row-value">{selectedInvoice.netValueDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Exc Rate</div>
+                                        <div class="info-row-value">{selectedInvoice.excRateDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Tax Value</div>
+                                        <div class="info-row-value">{selectedInvoice.taxValueDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Additional Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Sold To</div>
+                                        <div class="info-row-value">{selectedInvoice.soldToDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Terms Of Payment</div>
+                                        <div class="info-row-value">{selectedInvoice.termsOfPaymentDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Bill To</div>
+                                        <div class="info-row-value">{selectedInvoice.billToDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Incoterms</div>
+                                        <div class="info-row-value">{selectedInvoice.incotermsDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Payer</div>
+                                        <div class="info-row-value">{selectedInvoice.payerDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <template if:true={isLineItemTab}>
+                <div class="detail-layout">
+
+                    <!-- List View -->
+                    <template if:true={showLineItemListView}>
+                        <template if:true={selectedInvoice.hasLineItems}>
+                            <div class="qli-list-wrap">
+                                <div class="qli-list-meta">
+                                    {selectedInvoice.lineItems.length} items · Sorted by Line Number
+                                </div>
+                                <div class="qli-table">
+                                    <div class="qli-table-header">
+                                        <div>SR NO.</div>
+                                        <div>PRODUCT</div>
+                                        <div>PRODUCT CODE</div>
+                                        <div>UOM</div>
+                                        <div>UNIT PRICE</div>
+                                        <div>QUANTITY</div>
+                                        <div>GRN QTY</div>
+                                        <div>GST AMOUNT</div>
+                                        <div>TOTAL VALUE</div>
+                                    </div>
+                                    <template for:each={selectedInvoice.lineItems} for:item="li">
+                                        <div
+                                            key={li.id}
+                                            class="qli-table-row"
+                                            data-id={li.id}
+                                            onclick={handleLineItemClick}
+                                            role="button"
+                                            tabindex="0">
+                                            <div class="qli-cell qli-cell-num">{li.itemNumberDisplay}</div>
+                                            <div class="qli-cell qli-cell-link" title={li.itemDisplay}>{li.itemDisplay}</div>
+                                            <div class="qli-cell qli-cell-link">{li.itemCodeDisplay}</div>
+                                            <div class="qli-cell">{li.uomDisplay}</div>
+                                            <div class="qli-cell">{li.unitPriceDisplay}</div>
+                                            <div class="qli-cell">{li.quantityDisplay}</div>
+                                            <div class="qli-cell">{li.grnQtyDisplay}</div>
+                                            <div class="qli-cell">{li.gstAmountDisplay}</div>
+                                            <div class="qli-cell">{li.totalPriceDisplay}</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                        <template if:false={selectedInvoice.hasLineItems}>
+                            <div class="qli-empty">No line items found for this invoice.</div>
+                        </template>
+                    </template>
+
+                    <!-- Detail View -->
+                    <template if:true={showLineItemDetailView}>
+                        <div class="qli-detail">
+                            <div class="qli-detail-topbar">
+                                <button type="button" class="qli-back-btn" onclick={handleBackToLineItems}>
+                                    ← Back to Line Items
+                                </button>
+                            </div>
+
+                            <div class="info-card qli-card">
+                                
+                                <!-- First Section -->
+                                <div class="info-card-header">
+                                    <div class="info-card-title">Invoice Line Item Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Item Number</div>
+                                        <div class="info-row-value">{selectedLineItem.itemNumberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Item Code</div>
+                                        <div class="info-row-value">{selectedLineItem.itemCodeDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Item</div>
+                                        <div class="info-row-value">{selectedLineItem.itemDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">UOM</div>
+                                        <div class="info-row-value">{selectedLineItem.uomDisplay}</div>
+                                    </div>
+                                </div>
+
+                                <!-- Second Section -->
+                                <div class="info-card-header">
+                                    <div class="info-card-title">Discount & Price Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Unit Price</div>
+                                        <div class="info-row-value">{selectedLineItem.unitPriceDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Quantity</div>
+                                        <div class="info-row-value">{selectedLineItem.quantityDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">GRN Qty</div>
+                                        <div class="info-row-value">{selectedLineItem.grnQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Pending GRN Qty</div>
+                                        <div class="info-row-value">{selectedLineItem.pendingGrnQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">GST Amount</div>
+                                        <div class="info-row-value">{selectedLineItem.gstAmountDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Total Price</div>
+                                        <div class="info-row-value">{selectedLineItem.totalPriceDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                </div>
+            </template>
+
+            <template if:true={isGrnTab}>
+                <div class="detail-layout">
+                    <template if:true={isLoadingGrn}>
+                        <div class="qli-empty">Loading GRNs...</div>
+                    </template>
+                    <template if:false={isLoadingGrn}>
+                        <template if:true={showGrnListView}>
+                            <template if:true={hasGrns}>
+                                <div class="qli-list-wrap">
+                                    <div class="qli-list-meta">{grnRows.length} GRN record(s)</div>
+                                    <div class="qli-table grn-table">
+                                        <div class="qli-table-header grn-header">
+                                            <div>GRN NO</div>
+                                            <div>GRN DATE</div>
+                                            <div>CHANNEL PARTNER</div>
+                                            <div>RECEIVED BY</div>
+                                            <div>STATUS</div>
+                                            <div>REMARKS</div>
+                                        </div>
+                                        <template for:each={grnRows} for:item="grn">
+                                            <div key={grn.id} class="qli-table-row grn-row grn-row-clickable"
+                                                data-id={grn.id} onclick={handleGrnClick}
+                                                role="button" tabindex="0">
+                                                <div class="qli-cell qli-cell-link">{grn.nameDisplay}</div>
+                                                <div class="qli-cell">{grn.dateDisplay}</div>
+                                                <div class="qli-cell">{grn.partnerDisplay}</div>
+                                                <div class="qli-cell">{grn.receivedByDisplay}</div>
+                                                <div class="qli-cell">
+                                                    <span class={grn.statusClass}>{grn.statusDisplay}</span>
+                                                </div>
+                                                <div class="qli-cell">{grn.remarksDisplay}</div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                            <template if:false={hasGrns}>
+                                <div class="qli-empty">No record of GRN</div>
+                            </template>
+                        </template>
+
+                        <template if:true={showGrnDetailView}>
+                            <div class="qli-detail">
+                                <div class="qli-detail-topbar">
+                                    <button type="button" class="qli-back-btn" onclick={handleBackToGrns}>
+                                        ← Back to GRNs
+                                    </button>
+                                </div>
+                                <div class="info-card qli-card">
+                                    <div class="info-card-header">
+                                        <div class="info-card-title">GRN Information</div>
+                                    </div>
+                                    <div class="info-card-body info-card-body-2col">
+                                        <div class="info-row">
+                                            <div class="info-row-label">GRN Number</div>
+                                            <div class="info-row-value">{selectedGrn.nameDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">GRN Date</div>
+                                            <div class="info-row-value">{selectedGrn.dateDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Channel Partner</div>
+                                            <div class="info-row-value">{selectedGrn.partnerDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Received By</div>
+                                            <div class="info-row-value">{selectedGrn.receivedByDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Status</div>
+                                            <div class="info-row-value">
+                                                <span class={selectedGrn.statusClass}>{selectedGrn.statusDisplay}</span>
+                                            </div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Remarks</div>
+                                            <div class="info-row-value">{selectedGrn.remarksDisplay}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+            </template>
+
+            <template if:true={isGrnLineTab}>
+                <div class="detail-layout">
+                    <template if:true={isLoadingGrn}>
+                        <div class="qli-empty">Loading GRN line items...</div>
+                    </template>
+                    <template if:false={isLoadingGrn}>
+                        <template if:true={showGrnLineListView}>
+                            <template if:true={hasGrnLines}>
+                                <div class="qli-list-wrap">
+                                    <div class="qli-list-meta">{grnLineRows.length} line item(s)</div>
+                                    <div class="qli-table grn-line-table">
+                                        <div class="qli-table-header grn-line-header">
+                                            <div>GRN NO</div>
+                                            <div>LINE NO</div>
+                                            <div>PRODUCT</div>
+                                            <div>INVOICE</div>
+                                            <div>RECEIVED</div>
+                                            <div>PENDING</div>
+                                            <div>DAMAGE</div>
+                                            <div>SHORT</div>
+                                            <div>ACCEPTED</div>
+                                            <div>STATUS</div>
+                                            <div>REJECTION REASON</div>
+                                        </div>
+                                        <template for:each={grnLineRows} for:item="line">
+                                            <div key={line.id} class="qli-table-row grn-line-row grn-row-clickable"
+                                                data-id={line.id} onclick={handleGrnLineClick}
+                                                role="button" tabindex="0">
+                                                <div class="qli-cell">{line.grnNameDisplay}</div>
+                                                <div class="qli-cell qli-cell-link">{line.nameDisplay}</div>
+                                                <div class="qli-cell qli-cell-link">{line.productDisplay}</div>
+                                                <div class="qli-cell">{line.orderedDisplay}</div>
+                                                <div class="qli-cell">{line.receivedDisplay}</div>
+                                                <div class="qli-cell">{line.pendingDisplay}</div>
+                                                <div class="qli-cell">{line.damageDisplay}</div>
+                                                <div class="qli-cell">{line.shortDisplay}</div>
+                                                <div class="qli-cell">{line.acceptedDisplay}</div>
+                                                <div class="qli-cell">
+                                                    <span class={line.statusClass}>{line.statusDisplay}</span>
+                                                </div>
+                                                <div class="qli-cell">{line.rejectionDisplay}</div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                            <template if:false={hasGrnLines}>
+                                <div class="qli-empty">No record of GRN line item</div>
+                            </template>
+                        </template>
+
+                        <template if:true={showGrnLineDetailView}>
+                            <div class="qli-detail">
+                                <div class="qli-detail-topbar">
+                                    <button type="button" class="qli-back-btn" onclick={handleBackToGrnLines}>
+                                        ← Back to GRN Line Items
+                                    </button>
+                                </div>
+                                <div class="info-card qli-card">
+                                    <div class="info-card-header">
+                                        <div class="info-card-title">GRN Line Item Information</div>
+                                    </div>
+                                    <div class="info-card-body info-card-body-2col">
+                                        <div class="info-row">
+                                            <div class="info-row-label">GRN Number</div>
+                                            <div class="info-row-value">{selectedGrnLine.grnNameDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Line No</div>
+                                            <div class="info-row-value">{selectedGrnLine.nameDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Product</div>
+                                            <div class="info-row-value">{selectedGrnLine.productDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Product Code</div>
+                                            <div class="info-row-value">{selectedGrnLine.productCodeDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Invoice Qty</div>
+                                            <div class="info-row-value">{selectedGrnLine.orderedDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Received Qty</div>
+                                            <div class="info-row-value">{selectedGrnLine.receivedDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Pending Qty</div>
+                                            <div class="info-row-value">{selectedGrnLine.pendingDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Damage Qty</div>
+                                            <div class="info-row-value">{selectedGrnLine.damageDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Short Qty</div>
+                                            <div class="info-row-value">{selectedGrnLine.shortDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Accepted Qty</div>
+                                            <div class="info-row-value">{selectedGrnLine.acceptedDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Status</div>
+                                            <div class="info-row-value">
+                                                <span class={selectedGrnLine.statusClass}>{selectedGrnLine.statusDisplay}</span>
+                                            </div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Rejection Reason</div>
+                                            <div class="info-row-value">{selectedGrnLine.rejectionDisplay}</div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Remarks</div>
+                                            <div class="info-row-value">{selectedGrnLine.remarksDisplay}</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="info-card-header">
+                                        <div class="info-card-title">Attachments</div>
+                                    </div>
+                                    <div class="info-card-body">
+                                        <template if:true={hasGrnLineFiles}>
+                                            <template for:each={selectedGrnLineFiles} for:item="file">
+                                                <div key={file.id} class="grn-file-row">
+                                                    <span class="grn-file-title">{file.title}</span>
+                                                    <span class="grn-file-meta">{file.uploadedDate} · {file.size}</span>
+                                                </div>
+                                            </template>
+                                        </template>
+                                        <template if:false={hasGrnLineFiles}>
+                                            <div class="qli-empty" style="padding: 12px;">No attachments</div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </template>
+
+    <template if:true={showCreateGrnModal}>
+        <c-dealer-create-grn-modal
+            invoice-id={selectedInvoice.Id}
+            invoice-label={selectedInvoice.invoiceLabel}
+            onclose={handleCloseCreateGrn}
+            onsave={handleGrnSaved}
+        ></c-dealer-create-grn-modal>
+    </template>
+</template>

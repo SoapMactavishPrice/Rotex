@@ -28,6 +28,7 @@ public with sharing class QuoteValidityOfferApprovalHandler {
 
                 if (q.Requested_Validity_Of_Offer__c == DEFAULT_VALIDITY_OFFER) {
                     q.Validity_of_Offer__c = q.Requested_Validity_Of_Offer__c;
+                    applyQuoteValidTill(q);
                 } else {
                     initiateApprovalProcess(q);
                 }
@@ -46,6 +47,9 @@ public with sharing class QuoteValidityOfferApprovalHandler {
     private static void initiateApprovalProcess(Quote q) {
         String finalApproverProfile              = determineFinalApproverProfile(q.Requested_Validity_Of_Offer__c);
         q.Final_Validity_Offer_Approver__c       = resolveApproverUserId(q, finalApproverProfile);
+        q.Effective_Final_Validity_Approver__c   = QuoteHighestApprovalCoordinator.effectiveQuoteApprover(
+            q, q.Final_Validity_Offer_Approver__c
+        );
         q.SM_Validity_Offer_Status__c            = STATUS_SUBMITTED;
     }
 
@@ -84,140 +88,228 @@ public with sharing class QuoteValidityOfferApprovalHandler {
     }
 
     private static void handleApprovalProgression(List<Quote> newQuotes, Map<Id, Quote> oldQuoteMap) {
+        progressUsingEffectiveFinal(
+            newQuotes,
+            oldQuoteMap,
+            new List<String>{ 'SM_Validity_Offer_Status__c', 'CH_Validity_Offer_Status__c',
+                'GS_Validity_Offer_Status__c', 'BM_Validity_Offer_Status__c',
+                'MD_Validity_Offer_Status__c' },
+            new List<String>{ 'SM_Validity_Offer_Date_Time__c', 'CH_Validity_Offer_Date_Time__c',
+                'GS_Validity_Offer_Date_Time__c', 'BM_Validity_Offer_Date_Time__c',
+                'MD_Validity_Offer_Date_Time__c' }
+        );
+    }
 
+    private static void progressUsingEffectiveFinal(
+        List<Quote> newQuotes,
+        Map<Id, Quote> oldQuoteMap,
+        List<String> statusFields,
+        List<String> dateFields
+    ) {
         Set<Id> quoteIdsForApprover = new Set<Id>();
-        Set<Id> quoteIdsForOwner    = new Set<Id>();
-
+        Set<Id> quoteIdsForOwner = new Set<Id>();
         for (Quote q : newQuotes) {
             Quote oldQ = oldQuoteMap.get(q.Id);
-
-            String finalProfile = determineFinalApproverProfile(q.Requested_Validity_Of_Offer__c);
-
-            // ── Sales Manager ─────────────────────────────────────────────
-            if (q.SM_Validity_Offer_Status__c != oldQ.SM_Validity_Offer_Status__c) {
-                if (q.SM_Validity_Offer_Status__c == STATUS_SUBMITTED) {
+            Integer intrinsicRank = QuoteHighestApprovalCoordinator.quoteRank(
+                q, q.Final_Validity_Offer_Approver__c
+            );
+            Id effectiveId = q.Effective_Final_Validity_Approver__c == null
+                ? q.Final_Validity_Offer_Approver__c : q.Effective_Final_Validity_Approver__c;
+            Integer effectiveRank = Math.max(
+                intrinsicRank, QuoteHighestApprovalCoordinator.quoteRank(q, effectiveId)
+            );
+            for (Integer i = 0; i < statusFields.size(); i++) {
+                String status = (String)q.get(statusFields[i]);
+                if (status == (String)oldQ.get(statusFields[i])) continue;
+                if (status == STATUS_SUBMITTED) {
                     quoteIdsForApprover.add(q.Id);
-
-                } else if (q.SM_Validity_Offer_Status__c == STATUS_APPROVED) {
-                    q.SM_Validity_Offer_Date_Time__c = System.now();
-                    if (shouldProgressToNextLevel(finalProfile, PROFILE_SALES_MANAGER)) {
-                        if (q.CH_Validity_Offer_Status__c != STATUS_APPROVED && q.CH_Validity_Offer_Status__c != STATUS_REJECTED) {
-                            q.CH_Validity_Offer_Status__c = STATUS_SUBMITTED;
+                } else if (status == STATUS_REJECTED) {
+                    quoteIdsForOwner.add(q.Id);
+                } else if (status == STATUS_APPROVED) {
+                    q.put(dateFields[i], System.now());
+                    Integer currentRank = i + 1;
+                    if (currentRank >= effectiveRank) {
+                        finalizeApproval(q);
+                    } else {
+                        Integer nextRank = currentRank < intrinsicRank
+                            ? currentRank + 1 : effectiveRank;
+                        String nextStatus = (String)q.get(statusFields[nextRank - 1]);
+                        if (nextStatus != STATUS_APPROVED && nextStatus != STATUS_REJECTED) {
+                            q.put(statusFields[nextRank - 1], STATUS_SUBMITTED);
                             quoteIdsForApprover.add(q.Id);
                         }
-                    } else {
-                        finalizeApproval(q);
                     }
-                } else if (q.SM_Validity_Offer_Status__c == STATUS_REJECTED) {
-                    quoteIdsForOwner.add(q.Id);
-                }
-            }
-
-            // ── Country / Continent Head ──────────────────────────────────
-            if (q.CH_Validity_Offer_Status__c != oldQ.CH_Validity_Offer_Status__c) {
-                if (q.CH_Validity_Offer_Status__c == STATUS_SUBMITTED) {
-                    quoteIdsForApprover.add(q.Id);
-
-                } else if (q.CH_Validity_Offer_Status__c == STATUS_APPROVED) {
-                    q.CH_Validity_Offer_Date_Time__c = System.now();
-                    if (shouldProgressToNextLevel(finalProfile, PROFILE_COUNTRY_HEAD)) {
-                        if (q.GS_Validity_Offer_Status__c != STATUS_APPROVED && q.GS_Validity_Offer_Status__c != STATUS_REJECTED) {
-                            q.GS_Validity_Offer_Status__c = STATUS_SUBMITTED;
-                            quoteIdsForApprover.add(q.Id);
-                        }
-                    } else {
-                        finalizeApproval(q);
-                    }
-                } else if (q.CH_Validity_Offer_Status__c == STATUS_REJECTED) {
-                    quoteIdsForOwner.add(q.Id);
-                }
-            }
-
-            // ── Global Sales Head ─────────────────────────────────────────
-            if (q.GS_Validity_Offer_Status__c != oldQ.GS_Validity_Offer_Status__c) {
-                if (q.GS_Validity_Offer_Status__c == STATUS_SUBMITTED) {
-                    quoteIdsForApprover.add(q.Id);
-
-                } else if (q.GS_Validity_Offer_Status__c == STATUS_APPROVED) {
-                    q.GS_Validity_Offer_Date_Time__c = System.now();
-                    if (shouldProgressToNextLevel(finalProfile, PROFILE_GLOBAL_SALES_HEAD)) {
-                        if (q.BM_Validity_Offer_Status__c != STATUS_APPROVED && q.BM_Validity_Offer_Status__c != STATUS_REJECTED) {
-                            q.BM_Validity_Offer_Status__c = STATUS_SUBMITTED;
-                            quoteIdsForApprover.add(q.Id);
-                        }
-                    } else {
-                        finalizeApproval(q);
-                    }
-                } else if (q.GS_Validity_Offer_Status__c == STATUS_REJECTED) {
-                    quoteIdsForOwner.add(q.Id);
-                }
-            }
-
-            // ── Rotex Board Member ────────────────────────────────────────
-            if (q.BM_Validity_Offer_Status__c != oldQ.BM_Validity_Offer_Status__c) {
-                if (q.BM_Validity_Offer_Status__c == STATUS_SUBMITTED) {
-                    quoteIdsForApprover.add(q.Id);
-
-                } else if (q.BM_Validity_Offer_Status__c == STATUS_APPROVED) {
-                    q.BM_Validity_Offer_Date_Time__c = System.now();
-                    if (shouldProgressToNextLevel(finalProfile, PROFILE_ROTEX_BOARD_MEMBER)) {
-                        if (q.MD_Validity_Offer_Status__c != STATUS_APPROVED && q.MD_Validity_Offer_Status__c != STATUS_REJECTED) {
-                            q.MD_Validity_Offer_Status__c = STATUS_SUBMITTED;
-                            quoteIdsForApprover.add(q.Id);
-                        }
-                    } else {
-                        finalizeApproval(q);
-                    }
-                } else if (q.BM_Validity_Offer_Status__c == STATUS_REJECTED) {
-                    quoteIdsForOwner.add(q.Id);
-                }
-            }
-
-            // ── Managing Director ─────────────────────────────────────────
-            if (q.MD_Validity_Offer_Status__c != oldQ.MD_Validity_Offer_Status__c) {
-                if (q.MD_Validity_Offer_Status__c == STATUS_SUBMITTED) {
-                    quoteIdsForApprover.add(q.Id);
-
-                } else if (q.MD_Validity_Offer_Status__c == STATUS_APPROVED) {
-                    q.MD_Validity_Offer_Date_Time__c = System.now();
-                    finalizeApproval(q);
-                } else if (q.MD_Validity_Offer_Status__c == STATUS_REJECTED) {
-                    quoteIdsForOwner.add(q.Id);
                 }
             }
         }
-
         if (!quoteIdsForApprover.isEmpty() || !quoteIdsForOwner.isEmpty()) {
             sendApprovalNotifications(
-                new List<Id>(quoteIdsForApprover),
-                new List<Id>(quoteIdsForOwner)
+                new List<Id>(quoteIdsForApprover), new List<Id>(quoteIdsForOwner)
             );
         }
     }
 
-    private static Boolean shouldProgressToNextLevel(
-            String finalApproverProfile, String currentApprover) {
+    // private static void handleLegacyApprovalProgression(List<Quote> newQuotes, Map<Id, Quote> oldQuoteMap) {
 
-        List<String> hierarchy = new List<String>{
-            PROFILE_SALES_MANAGER,
-            PROFILE_COUNTRY_HEAD,
-            PROFILE_GLOBAL_SALES_HEAD,
-            PROFILE_ROTEX_BOARD_MEMBER,
-            PROFILE_MANAGING_DIRECTOR
-        };
+    //     Set<Id> quoteIdsForApprover = new Set<Id>();
+    //     Set<Id> quoteIdsForOwner    = new Set<Id>();
 
-        Integer currentIdx = hierarchy.indexOf(currentApprover);
-        Integer finalIdx   = hierarchy.indexOf(finalApproverProfile);
+    //     for (Quote q : newQuotes) {
+    //         Quote oldQ = oldQuoteMap.get(q.Id);
 
-        return currentIdx < finalIdx;
-    }
+    //         String finalProfile = determineFinalApproverProfile(q.Requested_Validity_Of_Offer__c);
+
+    //         // ── Sales Manager ─────────────────────────────────────────────
+    //         if (q.SM_Validity_Offer_Status__c != oldQ.SM_Validity_Offer_Status__c) {
+    //             if (q.SM_Validity_Offer_Status__c == STATUS_SUBMITTED) {
+    //                 quoteIdsForApprover.add(q.Id);
+
+    //             } else if (q.SM_Validity_Offer_Status__c == STATUS_APPROVED) {
+    //                 q.SM_Validity_Offer_Date_Time__c = System.now();
+    //                 if (shouldProgressToNextLevel(finalProfile, PROFILE_SALES_MANAGER)) {
+    //                     if (q.CH_Validity_Offer_Status__c != STATUS_APPROVED && q.CH_Validity_Offer_Status__c != STATUS_REJECTED) {
+    //                         q.CH_Validity_Offer_Status__c = STATUS_SUBMITTED;
+    //                         quoteIdsForApprover.add(q.Id);
+    //                     }
+    //                 } else {
+    //                     finalizeApproval(q);
+    //                 }
+    //             } else if (q.SM_Validity_Offer_Status__c == STATUS_REJECTED) {
+    //                 quoteIdsForOwner.add(q.Id);
+    //             }
+    //         }
+
+    //         // ── Country / Continent Head ──────────────────────────────────
+    //         if (q.CH_Validity_Offer_Status__c != oldQ.CH_Validity_Offer_Status__c) {
+    //             if (q.CH_Validity_Offer_Status__c == STATUS_SUBMITTED) {
+    //                 quoteIdsForApprover.add(q.Id);
+
+    //             } else if (q.CH_Validity_Offer_Status__c == STATUS_APPROVED) {
+    //                 q.CH_Validity_Offer_Date_Time__c = System.now();
+    //                 if (shouldProgressToNextLevel(finalProfile, PROFILE_COUNTRY_HEAD)) {
+    //                     if (q.GS_Validity_Offer_Status__c != STATUS_APPROVED && q.GS_Validity_Offer_Status__c != STATUS_REJECTED) {
+    //                         q.GS_Validity_Offer_Status__c = STATUS_SUBMITTED;
+    //                         quoteIdsForApprover.add(q.Id);
+    //                     }
+    //                 } else {
+    //                     finalizeApproval(q);
+    //                 }
+    //             } else if (q.CH_Validity_Offer_Status__c == STATUS_REJECTED) {
+    //                 quoteIdsForOwner.add(q.Id);
+    //             }
+    //         }
+
+    //         // ── Global Sales Head ─────────────────────────────────────────
+    //         if (q.GS_Validity_Offer_Status__c != oldQ.GS_Validity_Offer_Status__c) {
+    //             if (q.GS_Validity_Offer_Status__c == STATUS_SUBMITTED) {
+    //                 quoteIdsForApprover.add(q.Id);
+
+    //             } else if (q.GS_Validity_Offer_Status__c == STATUS_APPROVED) {
+    //                 q.GS_Validity_Offer_Date_Time__c = System.now();
+    //                 if (shouldProgressToNextLevel(finalProfile, PROFILE_GLOBAL_SALES_HEAD)) {
+    //                     if (q.BM_Validity_Offer_Status__c != STATUS_APPROVED && q.BM_Validity_Offer_Status__c != STATUS_REJECTED) {
+    //                         q.BM_Validity_Offer_Status__c = STATUS_SUBMITTED;
+    //                         quoteIdsForApprover.add(q.Id);
+    //                     }
+    //                 } else {
+    //                     finalizeApproval(q);
+    //                 }
+    //             } else if (q.GS_Validity_Offer_Status__c == STATUS_REJECTED) {
+    //                 quoteIdsForOwner.add(q.Id);
+    //             }
+    //         }
+
+    //         // ── Rotex Board Member ────────────────────────────────────────
+    //         if (q.BM_Validity_Offer_Status__c != oldQ.BM_Validity_Offer_Status__c) {
+    //             if (q.BM_Validity_Offer_Status__c == STATUS_SUBMITTED) {
+    //                 quoteIdsForApprover.add(q.Id);
+
+    //             } else if (q.BM_Validity_Offer_Status__c == STATUS_APPROVED) {
+    //                 q.BM_Validity_Offer_Date_Time__c = System.now();
+    //                 if (shouldProgressToNextLevel(finalProfile, PROFILE_ROTEX_BOARD_MEMBER)) {
+    //                     if (q.MD_Validity_Offer_Status__c != STATUS_APPROVED && q.MD_Validity_Offer_Status__c != STATUS_REJECTED) {
+    //                         q.MD_Validity_Offer_Status__c = STATUS_SUBMITTED;
+    //                         quoteIdsForApprover.add(q.Id);
+    //                     }
+    //                 } else {
+    //                     finalizeApproval(q);
+    //                 }
+    //             } else if (q.BM_Validity_Offer_Status__c == STATUS_REJECTED) {
+    //                 quoteIdsForOwner.add(q.Id);
+    //             }
+    //         }
+
+    //         // ── Managing Director ─────────────────────────────────────────
+    //         if (q.MD_Validity_Offer_Status__c != oldQ.MD_Validity_Offer_Status__c) {
+    //             if (q.MD_Validity_Offer_Status__c == STATUS_SUBMITTED) {
+    //                 quoteIdsForApprover.add(q.Id);
+
+    //             } else if (q.MD_Validity_Offer_Status__c == STATUS_APPROVED) {
+    //                 q.MD_Validity_Offer_Date_Time__c = System.now();
+    //                 finalizeApproval(q);
+    //             } else if (q.MD_Validity_Offer_Status__c == STATUS_REJECTED) {
+    //                 quoteIdsForOwner.add(q.Id);
+    //             }
+    //         }
+    //     }
+
+    //     if (!quoteIdsForApprover.isEmpty() || !quoteIdsForOwner.isEmpty()) {
+    //         sendApprovalNotifications(
+    //             new List<Id>(quoteIdsForApprover),
+    //             new List<Id>(quoteIdsForOwner)
+    //         );
+    //     }
+    // }
+
+    // private static Boolean shouldProgressToNextLevel(
+    //         String finalApproverProfile, String currentApprover) {
+
+    //     List<String> hierarchy = new List<String>{
+    //         PROFILE_SALES_MANAGER,
+    //         PROFILE_COUNTRY_HEAD,
+    //         PROFILE_GLOBAL_SALES_HEAD,
+    //         PROFILE_ROTEX_BOARD_MEMBER,
+    //         PROFILE_MANAGING_DIRECTOR
+    //     };
+
+    //     Integer currentIdx = hierarchy.indexOf(currentApprover);
+    //     Integer finalIdx   = hierarchy.indexOf(finalApproverProfile);
+
+    //     return currentIdx < finalIdx;
+    // }
 
     private static void finalizeApproval(Quote q) {
         q.Validity_of_Offer__c = q.Requested_Validity_Of_Offer__c;
+        applyQuoteValidTill(q);
+    }
+
+    private static void applyQuoteValidTill(Quote q) {
+        Integer validityDays = getValidityDays(q.Requested_Validity_Of_Offer__c);
+        Date quoteDate = getDateFieldSafely(q, 'Quote_Date__c');
+        if (quoteDate != null && validityDays != null) {
+            q.Quote_Validity_Extension__c = 'Yes';
+            q.Quote_Valid_Till__c = quoteDate.addDays(validityDays);
+        }
+    }
+
+    private static Integer getValidityDays(String validityOffer) {
+        if (String.isBlank(validityOffer)) return null;
+        Matcher m = Pattern.compile('(\\d+)').matcher(validityOffer);
+        return m.find() ? Integer.valueOf(m.group(1)) : null;
+    }
+
+    private static Date getDateFieldSafely(SObject record, String fieldApiName) {
+        try {
+            Object value = record.get(fieldApiName);
+            return value == null ? null : (Date)value;
+        } catch (SObjectException e) {
+            return null;
+        }
     }
 
     private static void resetApprovalFields(Quote q) {
         q.Final_Validity_Offer_Approver__c = null;
+        q.Effective_Final_Validity_Approver__c = null;
 
         q.SM_Validity_Offer_Status__c      = null;
         q.SM_Validity_Offer_Date_Time__c   = null;

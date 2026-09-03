@@ -1,0 +1,285 @@
+<template>
+    <div class="sap-modal-root">
+    <div class="modal-container" onclick={stopPropagation}>
+        <template if:true={showSpinner}>
+            <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+        </template>
+
+        <template if:false={syncDataResponseFlag}>
+            <div class="modal-header">
+                <h2>Push Quote To SAP</h2>
+                <button type="button" class="modal-close-btn" onclick={handleClose} disabled={isSaving}>×</button>
+                <div class="header-divider"></div>
+            </div>
+
+            <div class="modal-body">
+                <template if:true={loadError}>
+                    <div class="response-message response-message-error">{loadError}</div>
+                </template>
+
+                <template if:false={loadError}>
+                    <template if:true={showValidationBannerMessage}>
+                        <div class="validation-banner" role="alert">{validationBannerMessage}</div>
+                    </template>
+                    <div class="subheaddiv">Quotation Information</div>
+                    <div class="form-grid form-grid-4">
+                        <div class="form-field">
+                            <label class="form-label"><span>*</span> Requested Delivery Date</label>
+                            <input type="date" class={requestedDeliveryDateInputClass} data-field="requestedDeliveryDate"
+                                value={requestedDeliveryDate} onchange={handleFieldChange}/>
+                            <template if:true={errors.requestedDeliveryDate}>
+                                <div class="form-error">{errors.requestedDeliveryDate}</div>
+                            </template>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label"><span>*</span> Customer PO Date</label>
+                            <input type="date" class={customerReferenceDateInputClass} data-field="customerReferenceDate"
+                                value={customerReferenceDate} onchange={handleFieldChange}/>
+                            <template if:true={errors.customerReferenceDate}>
+                                <div class="form-error">{errors.customerReferenceDate}</div>
+                            </template>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label"><span>*</span> Customer PO No</label>
+                            <input type="text" class={customerReferenceNoInputClass} data-field="customerReferenceNo"
+                                value={customerReferenceNo} onchange={handleFieldChange}/>
+                            <template if:true={errors.customerReferenceNo}>
+                                <div class="form-error">{errors.customerReferenceNo}</div>
+                            </template>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label"><span>*</span> PO Attachment</label>
+                            <div class="po-upload-wrap">
+                                <label class="po-upload-btn" for="sapPoFileInput">
+                                    <lightning-icon icon-name="utility:upload" size="xx-small" class="po-upload-icon"></lightning-icon>
+                                    Upload Files
+                                </label>
+                                <input
+                                    type="file"
+                                    id="sapPoFileInput"
+                                    class="file-input-hidden"
+                                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                                    multiple
+                                    onchange={handlePoFileInputChange}/>
+                                <template if:true={hasPoFiles}>
+                                    <button
+                                        type="button"
+                                        class="po-view-btn"
+                                        title="View uploaded files"
+                                        onclick={openPoFilesPreview}>
+                                        <lightning-icon icon-name="utility:preview" size="x-small" class="po-view-icon"></lightning-icon>
+                                    </button>
+                                </template>
+                            </div>
+                            <template if:true={hasPoFiles}>
+                                <div class="upload-hint upload-hint-ok">PO file attached</div>
+                            </template>
+                            <template if:true={errors.poAttachment}>
+                                <div class="form-error">{errors.poAttachment}</div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="form-grid form-grid-2">
+                        <div class="form-field">
+                            <label class="form-label"><span>*</span> Bill To Party</label>
+                            <lightning-combobox class={billToInputClass} variant="label-hidden" placeholder="Select Bill To Party"
+                                options={billToOptions} value={billToPartnerId} data-field="billToPartnerId"
+                                onchange={handleFieldChange}></lightning-combobox>
+                            <template if:true={errors.billToPartnerId}>
+                                <div class="form-error">{errors.billToPartnerId}</div>
+                            </template>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label"><span>*</span> Ship To Party</label>
+                            <lightning-combobox class={shipToInputClass} variant="label-hidden" placeholder="Select Ship To Party"
+                                options={shipToOptions} value={shipToPartnerId} data-field="shipToPartnerId"
+                                onchange={handleFieldChange}></lightning-combobox>
+                            <template if:true={errors.shipToPartnerId}>
+                                <div class="form-error">{errors.shipToPartnerId}</div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="form-grid form-grid-1">
+                        <div class="form-field">
+                            <label class="form-label">Sales Agent</label>
+                            <lightning-combobox variant="label-hidden" placeholder="Select Sales Agent"
+                                options={salesAgentOptions} value={salesAgentPartnerId} data-field="salesAgentPartnerId"
+                                onchange={handleFieldChange}></lightning-combobox>
+                        </div>
+                    </div>
+
+                    <div class={pbgRowClass}>
+                        <div class="form-field form-field-pick">
+                            <label class="form-label"><span>*</span> PBG or BG required?</label>
+                            <lightning-combobox
+                                class={pbgRequiredInputClass}
+                                variant="label-hidden"
+                                placeholder="--None--"
+                                options={yesNoOptions}
+                                value={pbgOrBgRequired}
+                                data-field="pbgOrBgRequired"
+                                onchange={handleFieldChange}></lightning-combobox>
+                            <template if:true={errors.pbgOrBgRequired}>
+                                <div class="form-error">{errors.pbgOrBgRequired}</div>
+                            </template>
+                        </div>
+                        <template if:true={showPbgComments}>
+                            <div class="form-field form-field-comment">
+                                <label class="form-label"><span>*</span> PBG comment</label>
+                                <textarea
+                                    class={pbgCommentsInputClass}
+                                    data-field="pbgOrBgComments"
+                                    value={pbgOrBgComments}
+                                    onchange={handleFieldChange}
+                                    placeholder="Enter PBG comment"></textarea>
+                                <template if:true={errors.pbgOrBgComments}>
+                                    <div class="form-error">{errors.pbgOrBgComments}</div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class={ldRowClass}>
+                        <div class="form-field form-field-pick">
+                            <label class="form-label"><span>*</span> LD Clause Applicable</label>
+                            <lightning-combobox
+                                class={ldApplicableInputClass}
+                                variant="label-hidden"
+                                placeholder="--None--"
+                                options={yesNoOptions}
+                                value={ldClauseApplicable}
+                                data-field="ldClauseApplicable"
+                                onchange={handleFieldChange}></lightning-combobox>
+                            <template if:true={errors.ldClauseApplicable}>
+                                <div class="form-error">{errors.ldClauseApplicable}</div>
+                            </template>
+                        </div>
+                        <template if:true={showLdComments}>
+                            <div class="form-field form-field-comment">
+                                <label class="form-label"><span>*</span> LD clause from quote</label>
+                                <textarea
+                                    class={ldCommentsInputClass}
+                                    data-field="ldClauseComments"
+                                    value={ldClauseComments}
+                                    onchange={handleFieldChange}
+                                    placeholder="Enter LD clause from quote"></textarea>
+                                <template if:true={errors.ldClauseComments}>
+                                    <div class="form-error">{errors.ldClauseComments}</div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="product-table">
+                        <div class="product-table-header">
+                            <div>Product</div>
+                            <div>List Price</div>
+                            <div>Sales Price</div>
+                            <div>Round Off</div>
+                            <div>Discount</div>
+                            <div>Quantity</div>
+                            <div>Total Price</div>
+                        </div>
+                        <template if:true={hasLineItems}>
+                            <template for:each={lineItems} for:item="item">
+                                <div key={item.Id} class="product-table-row">
+                                    <div>{item.productName}</div>
+                                    <div>{item.ListPrice}</div>
+                                    <div>{item.UnitPrice}</div>
+                                    <div>
+                                        <input
+                                            type="number"
+                                            class="form-input round-off-input"
+                                            data-id={item.Id}
+                                            value={item.roundOff}
+                                            step="0.01"
+                                            onchange={handleRoundOffChange}
+                                            placeholder=""/>
+                                    </div>
+                                    <div>{item.Discount_to_be_offered__c}</div>
+                                    <div>{item.Quantity}</div>
+                                    <div>{item.TotalPrice}</div>
+                                </div>
+                            </template>
+                        </template>
+                        <template if:false={hasLineItems}>
+                            <div class="empty-row">No quote line items found.</div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-save" onclick={handleSave} disabled={isSaveDisabled}>Save</button>
+                <button type="button" class="btn-cancel" onclick={handleClose} disabled={isSaving}>Cancel</button>
+            </div>
+        </template>
+
+        <template if:true={syncDataResponseFlag}>
+            <div class="modal-header">
+                <h2>Update Quotation Details</h2>
+                <button type="button" class="modal-close-btn" onclick={handleClose}>×</button>
+                <div class="header-divider"></div>
+            </div>
+            <div class="modal-body">
+                <template if:true={responseMessage}>
+                    <div class="response-message response-message-success">{responseMessage}</div>
+                </template>
+                <template if:true={errorResponseMessage}>
+                    <div class="response-message response-message-error">{errorResponseMessage}</div>
+                </template>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-save" onclick={handleClose}>Close</button>
+            </div>
+        </template>
+    </div>
+
+    <template if:true={showPoFilesPreview}>
+        <div class="po-preview-overlay" onclick={closePoFilesPreview}>
+            <div class="po-preview-modal" onclick={stopPropagation}>
+                <div class="po-preview-header">
+                    <div class="po-preview-title">{poFilesPreviewTitle}</div>
+                    <button type="button" class="po-preview-close-x" onclick={closePoFilesPreview}>×</button>
+                </div>
+                <div class="po-preview-body">
+                    <template for:each={poFiles} for:item="file">
+                        <div key={file.id} class="po-preview-item">
+                            <div class="po-preview-item-header">
+                                <div class="po-preview-file-name" title={file.title}>{file.title}</div>
+                                <button
+                                    type="button"
+                                    class="po-preview-delete-btn"
+                                    title="Remove file"
+                                    data-id={file.id}
+                                    onclick={handleDeletePoFile}>
+                                    <lightning-icon icon-name="utility:delete" size="x-small"></lightning-icon>
+                                </button>
+                            </div>
+                            <template if:true={file.isImage}>
+                                <img src={file.url} alt={file.title} class="po-preview-image"/>
+                            </template>
+                            <template if:true={file.isPdf}>
+                                <iframe src={file.url} class="po-preview-iframe" title={file.title}></iframe>
+                            </template>
+                            <template if:true={file.isOther}>
+                                <div class="po-preview-fallback">
+                                    Preview isn’t available for this file type.
+                                    <a href={file.url} target="_blank" rel="noopener noreferrer" class="po-preview-download">
+                                        Download {file.title}
+                                    </a>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+                <div class="po-preview-footer">
+                    <button type="button" class="btn-cancel" onclick={closePoFilesPreview}>Close</button>
+                </div>
+            </div>
+        </div>
+    </template>
+    </div>
+</template>

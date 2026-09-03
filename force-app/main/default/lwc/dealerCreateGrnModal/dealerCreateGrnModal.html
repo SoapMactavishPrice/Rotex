@@ -1,0 +1,215 @@
+<template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
+    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open grn-modal-shell">
+        <div class="slds-modal__container grn-modal">
+            <header class="slds-modal__header">
+                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                    title="Close" onclick={handleClose} disabled={isSaving}>
+                    <lightning-icon icon-name="utility:close" alternative-text="Close" size="small"></lightning-icon>
+                </button>
+                <h2 class="slds-modal__title">{modalTitle}</h2>
+            </header>
+
+            <div class="slds-modal__content slds-p-around_medium">
+                <template if:true={isLoading}>
+                    <div class="loading-wrap">
+                        <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                    </div>
+                </template>
+
+                <template if:false={isLoading}>
+                    <div class="section-label">GRN DETAILS</div>
+                    <div class="header-grid">
+                        <div class="field">
+                            <label class="field-label">GRN Number</label>
+                            <input type="text" class="form-input" value={grnNumberDisplay} disabled/>
+                        </div>
+                        <div class="field">
+                            <label class="field-label"><span class="req">*</span> GRN Date</label>
+                            <input type="date" class="form-input" data-field="grnDate" value={grnDate}
+                                onchange={handleHeaderChange} disabled={isSaving}/>
+                            <template if:true={errors.grnDate}>
+                                <div class="form-error">{errors.grnDate}</div>
+                            </template>
+                        </div>
+                        <div class="field">
+                            <label class="field-label">Channel Partner</label>
+                            <input type="text" class="form-input" value={partnerAccountName} disabled/>
+                        </div>
+                        <div class="field">
+                            <label class="field-label"><span class="req">*</span> Received By</label>
+                            <select class="form-input" data-field="receivedByContactId"
+                                value={receivedByContactId}
+                                onchange={handleHeaderChange} disabled={isSaving}>
+                                <option value="">Select contact</option>
+                                <template for:each={partnerContacts} for:item="contact">
+                                    <option key={contact.contactId} value={contact.contactId}>
+                                        {contact.label}
+                                    </option>
+                                </template>
+                            </select>
+                            <template if:true={errors.receivedBy}>
+                                <div class="form-error">{errors.receivedBy}</div>
+                            </template>
+                        </div>
+                        <div class="field">
+                            <label class="field-label">Status</label>
+                            <input type="text" class="form-input" value={headerStatusDisplay} disabled
+                                title="Auto based on GRN line items"/>
+                        </div>
+                        <div class="field field-remarks">
+                            <label class="field-label"><span class="req">*</span> Remarks</label>
+                            <textarea class="form-input form-textarea" data-field="remarks" value={remarks}
+                                oninput={handleHeaderChange} disabled={isSaving} rows="2"></textarea>
+                            <template if:true={errors.remarks}>
+                                <div class="form-error">{errors.remarks}</div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="section-label">GRN LINE ITEMS</div>
+                    <template if:true={errors.lines}>
+                        <div class="form-error form-error-banner">{errors.lines}</div>
+                    </template>
+
+                    <template if:true={hasLines}>
+                        <div class="line-table-wrap">
+                            <table class="line-table">
+                                <colgroup>
+                                    <col class="col-product"/>
+                                    <col class="col-qty"/>
+                                    <col class="col-qty"/>
+                                    <col class="col-qty"/>
+                                    <col class="col-qty"/>
+                                    <col class="col-qty"/>
+                                    <col class="col-qty"/>
+                                    <col class="col-qty"/>
+                                    <col class="col-qty"/>
+                                    <col class="col-reason"/>
+                                    <col class="col-status"/>
+                                    <col class="col-attach"/>
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th class="th-num">Order<br/>Qty</th>
+                                        <th class="th-num">Invoice<br/>Qty</th>
+                                        <th class="th-num">Pending<br/>GRN Qty</th>
+                                        <th class="th-num">Received<br/>Qty</th>
+                                        <th class="th-num">Pending<br/>Qty</th>
+                                        <th class="th-num">Damage<br/>Qty</th>
+                                        <th class="th-num">Short<br/>Qty</th>
+                                        <th class="th-num">Accepted<br/>Qty</th>
+                                        <th class="th-num">Rejection<br/>Reason</th>
+                                        <th class="th-num">Status</th>
+                                        <th class="th-num">Attachment</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={lineRowsView} for:item="row">
+                                        <tr key={row.key} class={row.rowClass}>
+                                            <td class="td-product">
+                                                <div class="product-cell">
+                                                    <div class="product-name" title={row.productName}>{row.productName}</div>
+                                                    <div class="product-code" title={row.productCode}>{row.productCode}</div>
+                                                </div>
+                                            </td>
+                                            <td class="num-center td-qty">{row.orderQtyDisplay}</td>
+                                            <td class="num-center td-qty">{row.orderedQty}</td>
+                                            <td class="num-center td-qty">{row.pendingGrnQtyDisplay}</td>
+                                            <td class="td-qty">
+                                                <input type="number" min="0" step="0.01"
+                                                    class={row.receivedInputClass}
+                                                    data-key={row.key} data-field="receivedQty"
+                                                    value={row.receivedQty} oninput={handleLineChange}
+                                                    disabled={isSaving}/>
+                                                <template if:true={row.hasReceivedError}>
+                                                    <div class="field-error">{row.receivedQtyError}</div>
+                                                </template>
+                                            </td>
+                                            <td class="num-center td-qty">{row.pendingQtyDisplay}</td>
+                                            <td class="td-qty">
+                                                <input type="number" min="0" step="0.01"
+                                                    class={row.damageInputClass}
+                                                    data-key={row.key} data-field="damageQty"
+                                                    value={row.damageQty} oninput={handleLineChange}
+                                                    disabled={isSaving}/>
+                                                <template if:true={row.hasDamageError}>
+                                                    <div class="field-error">{row.damageQtyError}</div>
+                                                </template>
+                                            </td>
+                                            <td class="td-qty">
+                                                <input type="number" min="0" step="0.01"
+                                                    class={row.shortInputClass}
+                                                    data-key={row.key} data-field="shortQty"
+                                                    value={row.shortQty} oninput={handleLineChange}
+                                                    disabled={isSaving}/>
+                                                <template if:true={row.hasShortError}>
+                                                    <div class="field-error">{row.shortQtyError}</div>
+                                                </template>
+                                            </td>
+                                            <td class="num-center td-qty">{row.acceptedQtyDisplay}</td>
+                                            <td class="td-reason">
+                                                <input type="text"
+                                                    class={row.rejectionInputClass}
+                                                    data-key={row.key} data-field="rejectionReason"
+                                                    value={row.rejectionReason} oninput={handleLineChange}
+                                                    disabled={isSaving} placeholder="If damaged"/>
+                                                <template if:true={row.hasRejectionError}>
+                                                    <div class="field-error">{row.rejectionReasonError}</div>
+                                                </template>
+                                            </td>
+                                            <td class="td-status">{row.statusDisplay}</td>
+                                            <td class="attach-cell">
+                                                <label class="attach-btn">
+                                                    <input type="file" class="attach-input"
+                                                        data-key={row.key}
+                                                        onchange={handleFileChange}
+                                                        disabled={isSaving}
+                                                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"/>
+                                                    Add file
+                                                </label>
+                                                <template if:true={row.hasAttachments}>
+                                                    <ul class="attach-list">
+                                                        <template for:each={row.attachments} for:item="file">
+                                                            <li key={file.id} class="attach-item">
+                                                                <span class="attach-name" title={file.name}>{file.name}</span>
+                                                                <button type="button" class="attach-remove"
+                                                                    data-key={row.key} data-file-id={file.id}
+                                                                    onclick={handleRemoveFile}
+                                                                    disabled={isSaving}>×</button>
+                                                            </li>
+                                                        </template>
+                                                    </ul>
+                                                </template>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+                    <template if:false={hasLines}>
+                        <div class="empty-lines">No invoice line items found to receive.</div>
+                    </template>
+                </template>
+            </div>
+
+            <footer class="slds-modal__footer">
+                <button type="button" class="btn-secondary" onclick={handleClose} disabled={isSaving}>Cancel</button>
+                <button type="button" class="btn-primary" onclick={handleSave} disabled={isSaving}>
+                    <template if:true={isSaving}>Saving...</template>
+                    <template if:false={isSaving}>Save GRN</template>
+                </button>
+            </footer>
+        </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open grn-backdrop"></div>
+</template>

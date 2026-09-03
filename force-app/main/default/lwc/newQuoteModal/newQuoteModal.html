@@ -1,0 +1,959 @@
+<template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
+
+    <div class={quoteModalContainerClass} onclick={stopPropagation}>
+
+        <div class="modal-header">
+            <template if:true={showModalTitle}>
+                <div class="modal-title">{modalTitle}</div>
+            </template>
+            <template if:false={showModalTitle}>
+                <div class="modal-title"></div>
+            </template>
+            <button
+                type="button"
+                class="modal-close-btn"
+                onclick={handleClose}
+                disabled={isSaving}>
+                ✕
+            </button>
+        </div>
+
+        <div class="modal-body">
+
+            <template if:true={showCreateQuoteForm}>
+
+            <div class="section-label">QUOTE INFORMATION</div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Quote Number</label>
+                    <input type="text" class="form-input form-input-readonly" value={quoteNumberDisplay} disabled/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Owner Name</label>
+                    <input type="text" class="form-input form-input-readonly" value={ownerName} disabled/>
+                </div>
+            </div>
+
+            <!-- Quote for + Quote Name (Self/None) OR Quote for + Record Type (Secondary) -->
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label form-required">Quote for</label>
+                    <select class={quoteTypeInputClass} data-field="quoteType" value={quoteType} onchange={handleQuoteTypeChange}>
+                        <option value="">--None--</option>
+                        <template for:each={quoteTypeOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                    <template if:true={errors.quoteType}>
+                        <div class="form-error">{errors.quoteType}</div>
+                    </template>
+                </div>
+                <template if:true={showQuoteRecordTypeField}>
+                    <div class="form-field">
+                        <label class="form-label form-required">Quote Type</label>
+                        <select
+                            class={quoteRecordTypeInputClass}
+                            data-field="quoteRecordTypeId"
+                            value={quoteRecordTypeId}
+                            onchange={handleQuoteRecordTypeChange}>
+                            <option value="">--None--</option>
+                            <template for:each={quoteRecordTypeOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            </template>
+                        </select>
+                        <template if:true={errors.quoteRecordTypeId}>
+                            <div class="form-error">{errors.quoteRecordTypeId}</div>
+                        </template>
+                    </div>
+                </template>
+                <template if:false={showQuoteRecordTypeField}>
+                    <div class="form-field">
+                        <label class="form-label">Quote Name</label>
+                        <input
+                            type="text"
+                            class={nameInputClass}
+                            data-field="name"
+                            value={name}
+                            oninput={handleFieldChange}
+                            placeholder="Quote Name"/>
+                        <template if:true={errors.name}>
+                            <div class="form-error">{errors.name}</div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Self / None: Customer + Contact, then Date + Valid Till -->
+            <template if:false={showQuoteRecordTypeField}>
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label form-required">Customer Name</label>
+                        <template if:true={isSelfQuoteType}>
+                            <input type="text" class="form-input form-input-readonly" value={accountName} disabled/>
+                        </template>
+                        <template if:false={isSelfQuoteType}>
+                            <template if:false={hasSelectedAccount}>
+                                <div class="lookup-wrap">
+                                    <input
+                                        type="text"
+                                        class={accountInputClass}
+                                        placeholder="Search your Customer accounts..."
+                                        value={accountSearch}
+                                        onfocus={handleAccountFocus}
+                                        oninput={handleAccountSearch}
+                                        disabled={isAccountLookupDisabled}
+                                        autocomplete="off"/>
+                                    <template if:true={showAccountDropdown}>
+                                        <div class="lookup-results">
+                                            <template if:true={hasAccountResults}>
+                                                <template for:each={accountResults} for:item="row">
+                                                    <div
+                                                        key={row.id}
+                                                        class="lookup-item"
+                                                        data-id={row.id}
+                                                        data-label={row.label}
+                                                        onmousedown={selectAccount}>
+                                                        <div class="lookup-item-label">{row.label}</div>
+                                                        <template if:true={row.subtitle}>
+                                                            <div class="lookup-item-sub">{row.subtitle}</div>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </template>
+                                            <template if:false={hasAccountResults}>
+                                                <div class="lookup-empty">No matching customers</div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template if:true={hasSelectedAccount}>
+                                <div class="lookup-chip">
+                                    <span>{accountName}</span>
+                                    <button type="button" class="chip-clear" onclick={clearAccount}>✕</button>
+                                </div>
+                            </template>
+                        </template>
+                        <template if:true={errors.accountId}>
+                            <div class="form-error">{errors.accountId}</div>
+                        </template>
+                    </div>
+                    <div class="form-field">
+                        <label class={contactLabelClass}>Contact Name</label>
+                        <template if:false={hasSelectedContact}>
+                            <div class="lookup-wrap">
+                                <input
+                                    type="text"
+                                    class={contactInputClass}
+                                    placeholder={contactPlaceholder}
+                                    value={contactSearch}
+                                    onfocus={handleContactFocus}
+                                    oninput={handleContactSearch}
+                                    disabled={isContactLookupDisabled}
+                                    autocomplete="off"/>
+                                <template if:true={showContactDropdown}>
+                                    <div class="lookup-results">
+                                        <template if:true={hasContactResults}>
+                                            <template for:each={contactResults} for:item="row">
+                                                <div
+                                                    key={row.id}
+                                                    class="lookup-item"
+                                                    data-id={row.id}
+                                                    data-label={row.label}
+                                                    data-email={row.email}
+                                                    data-phone={row.phone}
+                                                    onmousedown={selectContact}>
+                                                    <div class="lookup-item-label">{row.label}</div>
+                                                    <template if:true={row.subtitle}>
+                                                        <div class="lookup-item-sub">{row.subtitle}</div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </template>
+                                        <template if:false={hasContactResults}>
+                                            <div class="lookup-empty">No matching contacts</div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template if:true={hasSelectedContact}>
+                            <div class="lookup-chip">
+                                <span>{contactName}</span>
+                                <button type="button" class="chip-clear" onclick={clearContact}>✕</button>
+                            </div>
+                        </template>
+                        <template if:true={errors.contactId}>
+                            <div class="form-error">{errors.contactId}</div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label">Quote Date</label>
+                        <input
+                            type="date"
+                            class="form-input form-input-readonly"
+                            data-field="quoteDate"
+                            value={quoteDate}
+                            disabled/>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Quote Valid Till</label>
+                        <input
+                            type="date"
+                            class="form-input form-input-readonly"
+                            data-field="quoteValidTill"
+                            value={quoteValidTill}
+                            disabled/>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Secondary Customer layout -->
+            <template if:true={showQuoteRecordTypeField}>
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label">Quote Name</label>
+                        <input
+                            type="text"
+                            class={nameInputClass}
+                            data-field="name"
+                            value={name}
+                            oninput={handleFieldChange}
+                            placeholder="Quote Name"/>
+                        <template if:true={errors.name}>
+                            <div class="form-error">{errors.name}</div>
+                        </template>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label form-required">Customer Name</label>
+                        <template if:false={hasSelectedAccount}>
+                            <div class="lookup-wrap">
+                                <input
+                                    type="text"
+                                    class={accountInputClass}
+                                    placeholder="Search your Customer accounts..."
+                                    value={accountSearch}
+                                    onfocus={handleAccountFocus}
+                                    oninput={handleAccountSearch}
+                                    disabled={isAccountLookupDisabled}
+                                    autocomplete="off"/>
+                                <template if:true={showAccountDropdown}>
+                                    <div class="lookup-results">
+                                        <template if:true={hasAccountResults}>
+                                            <template for:each={accountResults} for:item="row">
+                                                <div
+                                                    key={row.id}
+                                                    class="lookup-item"
+                                                    data-id={row.id}
+                                                    data-label={row.label}
+                                                    onmousedown={selectAccount}>
+                                                    <div class="lookup-item-label">{row.label}</div>
+                                                    <template if:true={row.subtitle}>
+                                                        <div class="lookup-item-sub">{row.subtitle}</div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </template>
+                                        <template if:false={hasAccountResults}>
+                                            <div class="lookup-empty">No matching customers</div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template if:true={hasSelectedAccount}>
+                            <div class="lookup-chip">
+                                <span>{accountName}</span>
+                                <button type="button" class="chip-clear" onclick={clearAccount}>✕</button>
+                            </div>
+                        </template>
+                        <template if:true={errors.accountId}>
+                            <div class="form-error">{errors.accountId}</div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class={contactLabelClass}>Contact Name</label>
+                        <template if:false={hasSelectedContact}>
+                            <div class="lookup-wrap">
+                                <input
+                                    type="text"
+                                    class={contactInputClass}
+                                    placeholder={contactPlaceholder}
+                                    value={contactSearch}
+                                    onfocus={handleContactFocus}
+                                    oninput={handleContactSearch}
+                                    disabled={isContactLookupDisabled}
+                                    autocomplete="off"/>
+                                <template if:true={showContactDropdown}>
+                                    <div class="lookup-results">
+                                        <template if:true={hasContactResults}>
+                                            <template for:each={contactResults} for:item="row">
+                                                <div
+                                                    key={row.id}
+                                                    class="lookup-item"
+                                                    data-id={row.id}
+                                                    data-label={row.label}
+                                                    data-email={row.email}
+                                                    data-phone={row.phone}
+                                                    onmousedown={selectContact}>
+                                                    <div class="lookup-item-label">{row.label}</div>
+                                                    <template if:true={row.subtitle}>
+                                                        <div class="lookup-item-sub">{row.subtitle}</div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </template>
+                                        <template if:false={hasContactResults}>
+                                            <div class="lookup-empty">No matching contacts</div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template if:true={hasSelectedContact}>
+                            <div class="lookup-chip">
+                                <span>{contactName}</span>
+                                <button type="button" class="chip-clear" onclick={clearContact}>✕</button>
+                            </div>
+                        </template>
+                        <template if:true={errors.contactId}>
+                            <div class="form-error">{errors.contactId}</div>
+                        </template>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Quote Date</label>
+                        <input
+                            type="date"
+                            class="form-input form-input-readonly"
+                            data-field="quoteDate"
+                            value={quoteDate}
+                            disabled/>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label">Quote Valid Till</label>
+                        <input
+                            type="date"
+                            class="form-input form-input-readonly"
+                            data-field="quoteValidTill"
+                            value={quoteValidTill}
+                            disabled/>
+                    </div>
+                    <div class="form-field"></div>
+                </div>
+            </template>
+
+            </template>
+
+            <template if:true={showQuoteForm}>
+
+            <!-- Quote Information -->
+            <div class="section-label">QUOTE INFORMATION</div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Quote Number</label>
+                    <input type="text" class="form-input form-input-readonly" value={quoteNumberDisplay} disabled/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Owner Name</label>
+                    <input type="text" class="form-input form-input-readonly" value={ownerName} disabled/>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label form-required">Quote for</label>
+                    <input
+                        type="text"
+                        class="form-input form-input-readonly"
+                        value={quoteTypeDisplay}
+                        disabled/>
+                    <template if:true={errors.quoteType}>
+                        <div class="form-error">{errors.quoteType}</div>
+                    </template>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Quote Name</label>
+                    <input
+                        type="text"
+                        class={nameInputClass}
+                        data-field="name"
+                        value={name}
+                        oninput={handleFieldChange}
+                        placeholder="Quote Name"/>
+                    <template if:true={errors.name}>
+                        <div class="form-error">{errors.name}</div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Quote Currency</label>
+                    <input
+                        type="text"
+                        class="form-input form-input-readonly"
+                        value={currencyDisplay}
+                        disabled/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label form-required">Customer Name</label>
+                    <template if:true={isSelfQuoteType}>
+                        <input type="text" class="form-input form-input-readonly" value={accountName} disabled/>
+                    </template>
+                    <template if:false={isSelfQuoteType}>
+                        <template if:false={hasSelectedAccount}>
+                            <div class="lookup-wrap">
+                                <input
+                                    type="text"
+                                    class={accountInputClass}
+                                    placeholder="Search your Customer accounts..."
+                                    value={accountSearch}
+                                    onfocus={handleAccountFocus}
+                                    oninput={handleAccountSearch}
+                                    disabled={isAccountLookupDisabled}
+                                    autocomplete="off"/>
+                                <template if:true={showAccountDropdown}>
+                                    <div class="lookup-results">
+                                        <template if:true={hasAccountResults}>
+                                            <template for:each={accountResults} for:item="row">
+                                                <div
+                                                    key={row.id}
+                                                    class="lookup-item"
+                                                    data-id={row.id}
+                                                    data-label={row.label}
+                                                    onmousedown={selectAccount}>
+                                                    <div class="lookup-item-label">{row.label}</div>
+                                                    <template if:true={row.subtitle}>
+                                                        <div class="lookup-item-sub">{row.subtitle}</div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </template>
+                                        <template if:false={hasAccountResults}>
+                                            <div class="lookup-empty">No matching customers</div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template if:true={hasSelectedAccount}>
+                            <div class="lookup-chip">
+                                <span>{accountName}</span>
+                                <button type="button" class="chip-clear" onclick={clearAccount}>✕</button>
+                            </div>
+                        </template>
+                    </template>
+                    <template if:true={errors.accountId}>
+                        <div class="form-error">{errors.accountId}</div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Status</label>
+                    <select class="form-input form-input-readonly" data-field="status" value={status} onchange={handleFieldChange} disabled={isEditMode}>
+                        <template for:each={statusOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Quote Date</label>
+                    <input
+                        type="date"
+                        class="form-input form-input-readonly"
+                        data-field="quoteDate"
+                        value={quoteDate}
+                        disabled/>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Quote Valid Till</label>
+                    <input
+                        type="date"
+                        class="form-input form-input-readonly"
+                        data-field="quoteValidTill"
+                        value={quoteValidTill}
+                        disabled/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Rev. No.</label>
+                    <input type="text" class="form-input form-input-readonly" value="" disabled placeholder="Non editable"/>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Rev. Date</label>
+                    <input type="text" class="form-input form-input-readonly" value="" disabled placeholder="Non editable"/>
+                </div>
+                <div class="form-field"></div>
+            </div>
+
+            <div class="section-divider"></div>
+            <div class="section-label">ADDITIONAL INFORMATION</div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Customer PO Number</label>
+                    <input
+                        type="text"
+                        class={customerPoInputClass}
+                        data-field="customerReferenceNo"
+                        value={customerReferenceNo}
+                        oninput={handleFieldChange}
+                        disabled={isEditMode}/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">SAP Quotation Number</label>
+                    <input type="text" class="form-input form-input-readonly" value="" disabled placeholder="Non editable"/>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Customer PO Date</label>
+                    <input
+                        type="date"
+                        class={customerPoInputClass}
+                        data-field="customerReferenceDate"
+                        value={customerReferenceDate}
+                        oninput={handleFieldChange}
+                        disabled={isEditMode}/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">PBG or BG required?</label>
+                    <select
+                        class={customerPoInputClass}
+                        data-field="pbgOrBgRequired"
+                        value={pbgOrBgRequired}
+                        onchange={handleFieldChange}
+                        disabled={isEditMode}>
+                        <option value="">--None--</option>
+                        <template for:each={yesNoOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Requested Delivery Date</label>
+                    <input
+                        type="date"
+                        class={customerPoInputClass}
+                        data-field="requestedDeliveryDate"
+                        value={requestedDeliveryDate}
+                        oninput={handleFieldChange}
+                        disabled={isEditMode}/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">LD Clause Applicable?</label>
+                    <select
+                        class={customerPoInputClass}
+                        data-field="ldClauseApplicable"
+                        value={ldClauseApplicable}
+                        onchange={handleFieldChange}
+                        disabled={isEditMode}>
+                        <option value="">--None--</option>
+                        <template for:each={yesNoOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <template if:true={showPbgComments}>
+                <div class="form-field form-field-full">
+                    <label class="form-label">PBG or BG comments</label>
+                    <textarea
+                        class={additionalInfoTextareaClass}
+                        data-field="pbgOrBgComments"
+                        oninput={handleFieldChange}
+                        disabled={isEditMode}>{pbgOrBgComments}</textarea>
+                </div>
+            </template>
+
+            <template if:true={showLdComments}>
+                <div class="form-field form-field-full">
+                    <label class="form-label">LD Clause comments</label>
+                    <textarea
+                        class={additionalInfoTextareaClass}
+                        data-field="ldClauseComments"
+                        oninput={handleFieldChange}
+                        disabled={isEditMode}>{ldClauseComments}</textarea>
+                </div>
+            </template>
+
+            <div class="section-divider"></div>
+            <div class="section-label">SPECIAL TERMS &amp; CONDITIONS</div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Validity of Offer</label>
+                    <select class="form-input form-input-readonly" data-field="validityOfOffer" value={validityOfOffer} disabled>
+                        <option value="">--None--</option>
+                        <template for:each={validityOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Requested Validity Of Offer</label>
+                    <select class="form-input" data-field="requestedValidityOfOffer" value={requestedValidityOfOffer} onchange={handleFieldChange}>
+                        <option value="">--None--</option>
+                        <template for:each={requestedValidityOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Delivery Period</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        data-field="deliveryPeriod"
+                        value={deliveryPeriod}
+                        oninput={handleFieldChange}
+                        placeholder="e.g. 10 days"/>
+                </div>
+                <div class="form-field"></div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Inco Terms</label>
+                    <select class="form-input form-input-readonly" data-field="incoTerms" value={incoTerms} disabled>
+                        <option value="">--None--</option>
+                        <template for:each={incoOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Payment Terms</label>
+                    <select class="form-input" data-field="paymentTerms" value={paymentTerms} onchange={handleFieldChange}>
+                        <option value="">--None--</option>
+                        <template for:each={paymentOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-field form-field-full">
+                <label class="form-label">Prices</label>
+                <textarea
+                    class="form-input form-textarea form-input-readonly"
+                    data-field="prices"
+                    disabled>{prices}</textarea>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Warranty Terms</label>
+                    <select class="form-input form-input-readonly" data-field="warrantyTerms" value={warrantyTerms} disabled>
+                        <option value="">--None--</option>
+                        <template for:each={warrantyOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Requested Warranty Terms</label>
+                    <select class="form-input" data-field="requestedWarrantyTerms" value={requestedWarrantyTerms} onchange={handleFieldChange}>
+                        <option value="">--None--</option>
+                        <template for:each={requestedWarrantyOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Liquidate Terms</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        data-field="liquidateTerms"
+                        value={liquidateTerms}
+                        oninput={handleFieldChange}/>
+                </div>
+                <div class="form-field"></div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Transport Details</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        data-field="transportDetails"
+                        value={transportDetails}
+                        oninput={handleFieldChange}/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Delivery Location</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        data-field="deliveryLocation"
+                        value={deliveryLocation}
+                        oninput={handleFieldChange}/>
+                </div>
+            </div>
+
+            <div class="form-field form-field-full">
+                <label class="form-label">Special Remarks</label>
+                <textarea
+                    class="form-input form-textarea"
+                    data-field="specialRemarks"
+                    oninput={handleFieldChange}>{specialRemarks}</textarea>
+            </div>
+
+            <div class="section-divider"></div>
+            <div class="section-label">PREPARED FOR</div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Contact Name</label>
+                    <template if:false={hasSelectedContact}>
+                        <div class="lookup-wrap">
+                            <input
+                                type="text"
+                                class="form-input"
+                                placeholder="Search contacts for selected Account..."
+                                value={contactSearch}
+                                onfocus={handleContactFocus}
+                                oninput={handleContactSearch}
+                                autocomplete="off"/>
+                            <template if:true={showContactDropdown}>
+                                <div class="lookup-results">
+                                    <template if:true={hasContactResults}>
+                                        <template for:each={contactResults} for:item="row">
+                                            <div
+                                                key={row.id}
+                                                class="lookup-item"
+                                                data-id={row.id}
+                                                data-label={row.label}
+                                                data-email={row.email}
+                                                data-phone={row.phone}
+                                                onmousedown={selectContact}>
+                                                <div class="lookup-item-label">{row.label}</div>
+                                                <template if:true={row.subtitle}>
+                                                    <div class="lookup-item-sub">{row.subtitle}</div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </template>
+                                    <template if:false={hasContactResults}>
+                                        <div class="lookup-empty">No matching contacts</div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template if:true={hasSelectedContact}>
+                        <div class="lookup-chip">
+                            <span>{contactName}</span>
+                            <button type="button" class="chip-clear" onclick={clearContact}>✕</button>
+                        </div>
+                    </template>
+                    <div class="form-field form-field-nested">
+                        <label class="form-label">Email</label>
+                        <input
+                            type="email"
+                            class="form-input"
+                            data-field="email"
+                            value={email}
+                            oninput={handleFieldChange}/>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Phone</label>
+                    <input
+                        type="tel"
+                        class="form-input"
+                        data-field="phone"
+                        value={phone}
+                        oninput={handleFieldChange}/>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+            <div class="section-label">ADDRESS INFORMATION</div>
+
+            <div class="address-grid">
+                <div class="address-col">
+                    <div class="address-col-title">Bill To</div>
+                    <div class="form-field">
+                        <label class="form-label">Bill To Party Code</label>
+                        <input type="text" class={addressInputClass} data-field="billToPartyCode" value={billToPartyCode} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Bill To Street</label>
+                        <input type="text" class={addressInputClass} data-field="billToStreet" value={billToStreet} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Bill To City</label>
+                        <input type="text" class={addressInputClass} data-field="billToCity" value={billToCity} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Bill To Postal Code</label>
+                        <input type="text" class={addressInputClass} data-field="billToPostalCode" value={billToPostalCode} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Bill To State</label>
+                        <input type="text" class={addressInputClass} data-field="billToState" value={billToState} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Bill To Country</label>
+                        <input type="text" class={addressInputClass} data-field="billToCountry" value={billToCountry} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                </div>
+
+                <div class="address-col">
+                    <div class="address-col-title">Ship To</div>
+                    <div class="form-field">
+                        <label class="form-label">Ship To Party Code</label>
+                        <input type="text" class={addressInputClass} data-field="shipToPartyCode" value={shipToPartyCode} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Ship To Street</label>
+                        <input type="text" class={addressInputClass} data-field="shipToStreet" value={shipToStreet} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Ship To City</label>
+                        <input type="text" class={addressInputClass} data-field="shipToCity" value={shipToCity} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Ship To Postal Code</label>
+                        <input type="text" class={addressInputClass} data-field="shipToPostalCode" value={shipToPostalCode} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Ship To State</label>
+                        <input type="text" class={addressInputClass} data-field="shipToState" value={shipToState} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Ship To Country</label>
+                        <input type="text" class={addressInputClass} data-field="shipToCountry" value={shipToCountry} oninput={handleFieldChange} disabled={isEditMode}/>
+                    </div>
+                </div>
+            </div>
+
+            </template>
+
+            <template if:true={showCreateProducts}>
+                <c-dealer-add-product-modal
+                    key={productStepKey}
+                    account-id={accountId}
+                    partner-account-id={partnerAccountId}
+                    create-mode={createModeFlag}
+                    embedded={embeddedFlag}
+                    use-partner-products={usePartnerProducts}
+                    business-line={businessLine}
+                    quote-type={quoteType}
+                    quote-record-type-name={selectedQuoteRecordTypeName}
+                    product-mode={productMode}
+                    onback={handleProductStepBack}
+                    onsave={handleCreateProductsSave}
+                    onclose={handleClose}
+                    oncartviewchange={handleCartViewChange}
+                ></c-dealer-add-product-modal>
+            </template>
+
+            <template if:true={discountQtyMode}>
+                <div class="section-label">QUOTE LINE ITEMS</div>
+                <template if:true={hasLineItemRows}>
+                    <div class="line-table">
+                        <div class="line-table-header">
+                            <div>Line</div>
+                            <div>Product</div>
+                            <div>Quantity</div>
+                            <div>Requested Discount</div>
+                            <div>Discount to be Offered</div>
+                        </div>
+                        <template for:each={lineItemRows} for:item="row">
+                            <div key={row.id} class="line-table-row">
+                                <div>{row.lineItemNumber}</div>
+                                <div>{row.productName}</div>
+                                <div>
+                                    <input
+                                        type="number"
+                                        class="line-input"
+                                        data-id={row.id}
+                                        data-field="quantity"
+                                        value={row.quantity}
+                                        step="any"
+                                        oninput={handleLineItemChange}/>
+                                </div>
+                                <div>
+                                    <input
+                                        type="number"
+                                        class="line-input"
+                                        data-id={row.id}
+                                        data-field="requestedDiscount"
+                                        value={row.requestedDiscount}
+                                        step="any"
+                                        oninput={handleLineItemChange}/>
+                                </div>
+                                <div>
+                                    <input
+                                        type="number"
+                                        class="line-input"
+                                        data-id={row.id}
+                                        data-field="discountToBeOffered"
+                                        value={row.discountToBeOffered}
+                                        step="any"
+                                        oninput={handleLineItemChange}/>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                <template if:false={hasLineItemRows}>
+                    <div class="empty-line-text">No quote line items found.</div>
+                </template>
+            </template>
+
+        </div>
+
+        <div class="modal-footer" if:false={showCreateProducts}>
+            <button type="button" class="btn-cancel" onclick={handleClose} disabled={isSaving}>Cancel</button>
+            <template if:true={showCreateNextButton}>
+                <button type="button" class="btn-save" onclick={handleNext} disabled={isSaving}>Next</button>
+            </template>
+            <template if:true={showEditSaveButton}>
+                <button type="button" class="btn-save" onclick={handleSave} disabled={isSaving}>
+                    <template if:false={isSaving}>Save</template>
+                    <template if:true={isSaving}>Saving…</template>
+                </button>
+            </template>
+        </div>
+    </div>
+</template>

@@ -1,0 +1,239 @@
+:host {
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+.export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 8px;
+    border: 1px solid #0d6b69;
+    background: #ffffff;
+    color: #0d6b69;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.export-btn:hover:not(:disabled) {
+    background: #f2faf9;
+}
+
+.export-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.export-btn-icon {
+    width: 15px;
+    height: 15px;
+}
+
+.export-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.export-modal {
+    width: min(440px, 100%);
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+    border-top: 4px solid #0d6b69;
+    overflow: hidden;
+}
+
+.export-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.export-modal-title {
+    font-size: 17px;
+    font-weight: 750;
+    color: #181818;
+}
+
+.export-close {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 6px;
+    background: #f2f2f2;
+    color: #555;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.export-close:hover {
+    background: #e5e5e5;
+}
+
+.export-modal-body {
+    padding: 18px;
+}
+
+.export-help {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.export-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 14px;
+}
+
+.export-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #e8f2f1;
+    color: #0d6b69;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.export-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.export-field-full {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.export-select {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, #666 50%),
+        linear-gradient(135deg, #666 50%, transparent 50%);
+    background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 28px;
+}
+
+.export-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.export-label {
+    font-size: 12px;
+    font-weight: 650;
+    color: #555;
+}
+
+.export-input {
+    height: 36px;
+    border: 1px solid #d8d8d8;
+    border-radius: 6px;
+    padding: 0 10px;
+    font-size: 13px;
+    color: #181818;
+    background: #fff;
+}
+
+.export-input:focus {
+    outline: none;
+    border-color: #0d6b69;
+    box-shadow: 0 0 0 2px rgba(13, 107, 105, 0.15);
+}
+
+.export-count {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #f4f8f8;
+    color: #0d6b69;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.export-count-note {
+    font-weight: 500;
+    color: #666;
+}
+
+.export-error {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fef3f2;
+    color: #b42318;
+    font-size: 13px;
+}
+
+.export-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 18px 18px;
+    border-top: 1px solid #e8e8e8;
+}
+
+.btn-secondary,
+.btn-primary {
+    height: 36px;
+    min-width: 96px;
+    padding: 0 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: #fff;
+    border: 1px solid #d0d0d0;
+    color: #333;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #f7f7f7;
+}
+
+.btn-primary {
+    background: #0d6b69;
+    border: 1px solid #0d6b69;
+    color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #0a5553;
+}
+
+.btn-secondary:disabled,
+.btn-primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+    .export-fields {
+        grid-template-columns: 1fr;
+    }
+}

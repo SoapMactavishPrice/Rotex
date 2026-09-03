@@ -39,6 +39,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     @track warrantyApprovalsMap = new Map();
     @track validityOfferApprovalsMap = new Map();
     @track totalValueApprovalsMap = new Map();
+    @track isLoading = false;
     // @track minimumOfferApprovalsMap = new Map();
 
     userId = USER_ID;
@@ -94,10 +95,6 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     error;
-
-    get isLoading() {
-        return this.isSaveDisabled;
-    }
 
     get isSubmitDisabled() {
         return this.isSaveDisabled || this.requiresNonFinalApproverComment();
@@ -180,6 +177,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         // ── Discount QLI statuses ──
         // bcheckN === false means the current user IS that approver level
         for (const item of (quote.quoteLineItems || [])) {
+            // Skip non-approval-required items
+            if (item.isDiscountApprovalRequired !== true) continue;
+            
             let status = null;
             if (item.bcheck1 === false) status = item.origSalesManagerStatus || item.salesManagerStatus;
             else if (item.bcheck2 === false) status = item.origCountryContinentSalesStatus || item.countryContinentSalesStatus;
@@ -230,6 +230,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     _isQuotePendingForCurrentUser(quote) {
         // ── Table 2: Discount QLIs ──
         for (const item of (quote.quoteLineItems || [])) {
+            // Skip non-approval-required items
+            if (item.isDiscountApprovalRequired !== true) continue;
+            
             let status = null;
             if (item.bcheck1 === false) status = item.origSalesManagerStatus || item.salesManagerStatus;
             else if (item.bcheck2 === false) status = item.origCountryContinentSalesStatus || item.countryContinentSalesStatus;
@@ -280,124 +283,181 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
     }
 
     fetchQuotes(preserveExpandedQuoteIds = []) {
+        this.isLoading = true;
+
         getAllQuotations({ recordType: this.recordType })
             .then(result => {
                 console.log('Raw result from server', result);
+
                 const newWarrantyMap = new Map();
                 const newValidityMap = new Map();
                 const newTotalValueMap = new Map();
-                // const newMinimumOfferMap  = new Map();
+
                 result.forEach(q => {
-                    if (q.warrantyApproval) newWarrantyMap.set(q.quoteId, { ...q.warrantyApproval });
-                    if (q.validityOfferApproval) newValidityMap.set(q.quoteId, { ...q.validityOfferApproval });
-                    if (q.totalValueApproval) newTotalValueMap.set(q.quoteId, { ...q.totalValueApproval });
-                    // if (q.minimumOfferApproval) newMinimumOfferMap.set(q.quoteId, { ...q.minimumOfferApproval });
+                    if (q.warrantyApproval) {
+                        newWarrantyMap.set(q.quoteId, { ...q.warrantyApproval });
+                    }
+                    if (q.validityOfferApproval) {
+                        newValidityMap.set(q.quoteId, { ...q.validityOfferApproval });
+                    }
+                    if (q.totalValueApproval) {
+                        newTotalValueMap.set(q.quoteId, { ...q.totalValueApproval });
+                    }
                 });
+
                 this.warrantyApprovalsMap = newWarrantyMap;
                 this.validityOfferApprovalsMap = newValidityMap;
                 this.totalValueApprovalsMap = newTotalValueMap;
 
-                console.log('Fetched totalValueApprovalsMap', JSON.parse(JSON.stringify(this.totalValueApprovalsMap)));
-                // this.minimumOfferApprovalsMap  = newMinimumOfferMap;
+                const isTable1FinalApproved = (data, suffix) => {
+                    if (!data) return true;
+
+                    const levelByPos = { 1: 'sm', 2: 'ch', 3: 'gs', 4: 'bm', 5: 'md' };
+                    const finalPos = data.finalApproverHierarchyPosition;
+                    if (!finalPos) return true;
+
+                    const finalLevel = levelByPos[finalPos];
+                    if (!finalLevel) return false;
+
+                    const key = `original${this.capitalize(finalLevel)}${suffix}`;
+                    const status = data[key] || '';
+
+                    return status === 'Approved' || status === 'Rejected';
+                };
 
                 this.quotes = result.map(q => {
-                    q.totalValueFormatted = q.totalValue ? Number(q.totalValue).toLocaleString('en-IN') : '0';
+                    q.totalValueFormatted = q.totalValue
+                        ? Number(q.totalValue).toLocaleString('en-IN')
+                        : '0';
+
                     const processed = this.processQuote(q);
 
-                    // ── Restore expanded state for quotes that were open ──
-                    if (preserveExpandedQuoteIds.includes(q.quoteId)) {
-                        const warrantyApproval = this.warrantyApprovalsMap.get(q.quoteId) || null;
-                        const validityOfferApproval = this.validityOfferApprovalsMap.get(q.quoteId) || null;
-                        const totalValueApproval = this.totalValueApprovalsMap.get(q.quoteId) || null;
-                        // const minimumOfferApproval  = this.minimumOfferApprovalsMap.get(q.quoteId)  || null;
-                        const approvalDashboard = this.buildApprovalDashboard({
-                            warrantyApproval, validityOfferApproval, totalValueApproval
-                        });
-                        return {
+                    const warrantyApproval =
+                        this.warrantyApprovalsMap.get(q.quoteId) || null;
+
+                    const validityOfferApproval =
+                        this.validityOfferApprovalsMap.get(q.quoteId) || null;
+
+                    const totalValueApproval =
+                        this.totalValueApprovalsMap.get(q.quoteId) || null;
+
+                    const currentPendingApprover =
+                        this.getCurrentPendingApprovers({
                             ...processed,
-                            isExpanded: true,
                             warrantyApproval,
                             validityOfferApproval,
-                            totalValueApproval,
-                            // minimumOfferApproval,
+                            totalValueApproval
+                        });
+
+                    const baseQuote = {
+                        ...processed,
+                        quoteReason: q.quoteReason || '',
+                        currentPendingApprover,
+                        warrantyApproval,
+                        validityOfferApproval,
+                        totalValueApproval
+                    };
+
+                    if (preserveExpandedQuoteIds.includes(q.quoteId)) {
+                        const approvalDashboard = this.buildApprovalDashboard({
+                            warrantyApproval,
+                            validityOfferApproval,
+                            totalValueApproval
+                        });
+
+                        return {
+                            ...baseQuote,
+                            isExpanded: true,
                             showApprovalDashboard: approvalDashboard.rows.length > 0,
                             approvalColumns: approvalDashboard.columns,
                             approvalDashboardRows: approvalDashboard.rows,
-                            isCombinedApprovalSubmitDisabled: true   // fresh data, nothing changed yet
+                            isCombinedApprovalSubmitDisabled: true
                         };
                     }
 
-                    return processed;
+                    return baseQuote;
                 }).filter(quote => {
                     quote._isFullyDecided = false;
-                    const warrantyApproval = this.warrantyApprovalsMap.get(quote.quoteId) || null;
-                    const validityOfferApproval = this.validityOfferApprovalsMap.get(quote.quoteId) || null;
-                    const totalValueApproval = this.totalValueApprovalsMap.get(quote.quoteId) || null;
-                    // const minimumOfferApproval  = this.minimumOfferApprovalsMap.get(quote.quoteId)  || null;
+
+                    const warrantyApproval =
+                        this.warrantyApprovalsMap.get(quote.quoteId) || null;
+
+                    const validityOfferApproval =
+                        this.validityOfferApprovalsMap.get(quote.quoteId) || null;
+
+                    const totalValueApproval =
+                        this.totalValueApprovalsMap.get(quote.quoteId) || null;
 
                     const dashboardRows = this.buildApprovalDashboard({
-                        warrantyApproval, validityOfferApproval, totalValueApproval
+                        warrantyApproval,
+                        validityOfferApproval,
+                        totalValueApproval
                     }).rows;
-
-                    // ── Visibility rule: hide a quote only when ALL backend approvals are 'Approved' ──
-                    // Checks original (server-persisted) statuses only — live UI changes never trigger hiding.
-                    // Table 1 (warranty / validity of offer / total value / minimum offer):
-                    const isTable1FinalApproved = (approvalData, statusSuffix) => {
-                        if (!approvalData) return true; // this approval type not applicable → don't block
-                        const levelByPos = { 1: 'sm', 2: 'ch', 3: 'gs', 4: 'bm', 5: 'md' };
-                        const finalPos = approvalData.finalApproverHierarchyPosition;
-                        if (!finalPos) return true;
-                        const finalLevel = levelByPos[finalPos];
-                        if (!finalLevel) return false;
-                        const origKey = `original${this.capitalize(finalLevel)}${statusSuffix}`;
-                        return (approvalData[origKey] || '') === 'Approved' || (approvalData[origKey] || '') === 'Rejected';
-                    };
 
                     const allTable1Approved =
                         isTable1FinalApproved(warrantyApproval, 'WarrantyStatus') &&
                         isTable1FinalApproved(validityOfferApproval, 'ValidityOfferStatus') &&
-                        isTable1FinalApproved(totalValueApproval, 'ValueStatus')
-                    // isTable1FinalApproved(minimumOfferApproval,  'MinOfferStatus');
+                        isTable1FinalApproved(totalValueApproval, 'ValueStatus');
 
-                    console.log('WarrantyStatus final approved? ', isTable1FinalApproved(warrantyApproval, 'WarrantyStatus'));
-                    console.log('ValidityOfferStatus final approved? ', isTable1FinalApproved(validityOfferApproval, 'ValidityOfferStatus'));
-                    console.log('TotalValueStatus final approved? ', isTable1FinalApproved(totalValueApproval, 'ValueStatus'));
+                    const allTable2Approved =
+                        (quote.quoteLineItems || []).every(item => {
+                            if (item.isDiscountApprovalRequired !== true) return true;
 
-                    // Table 2 (discount QLIs): every QLI's final approver original status is 'Approved'
-                    const allTable2Approved = (quote.quoteLineItems || []).every(item => {
-                        const soaLevels = this.getSoaLevels(item);
-                        const finalLevel = soaLevels.find(soa => soa.approverId === item.finalDiscountApproverId);
-                        if (!finalLevel) return true; // final approver not mapped → don't block
-                        return (finalLevel.originalStatus || '') === 'Approved' || (finalLevel.originalStatus || '') === 'Rejected';
-                    });
+                            const soaLevels = this.getSoaLevels(item);
+                            const finalLevel = soaLevels.find(
+                                soa => soa.approverId === item.finalDiscountApproverId
+                            );
 
-                    const hasContent = quote.hasLineItems || dashboardRows.length > 0;
-                    if (!hasContent) return false;          // no approvals at all → already hidden
-                    console.log(`Quote ${quote.quoteNumber} - allTable1Approved: ${allTable1Approved}, allTable2Approved: ${allTable2Approved}`);
+                            if (!finalLevel) return true;
+
+                            const status = finalLevel.originalStatus || '';
+                            return status === 'Approved' || status === 'Rejected';
+                        });
+
+                    const hasContent =
+                        quote.hasActionableApprovalItems === true ||
+                        dashboardRows.length > 0;
+
+                    if (!hasContent) return false;
+
+                    console.log(
+                        `Quote ${quote.quoteNumber} - ` +
+                        `allTable1Approved: ${allTable1Approved}, ` +
+                        `allTable2Approved: ${allTable2Approved}, ` +
+                        `pendingApprover: ${quote.currentPendingApprover}`
+                    );
+
                     if (allTable1Approved && allTable2Approved) {
                         quote._isFullyDecided = true;
-                        const userStatuses = this._getCurrentUserStatusesForQuote(quote);
-                        const hasDecidedStatus = userStatuses.some(s => s === 'Approved' || s === 'Rejected');
-                        if (!hasDecidedStatus) return false;
-                        return true;
+
+                        const userStatuses =
+                            this._getCurrentUserStatusesForQuote(quote);
+
+                        const hasDecidedStatus =
+                            userStatuses.some(
+                                s => s === 'Approved' || s === 'Rejected'
+                            );
+
+                        return hasDecidedStatus;
                     }
+
                     return true;
                 });
 
-                console.log('Processed quotes', JSON.parse(JSON.stringify(this.quotes)));
+                console.log(
+                    'Processed quotes',
+                    JSON.parse(JSON.stringify(this.quotes))
+                );
 
-                // ── Re-apply Skip SOA editable-field snapshots if the toggle is still ON ──
-                // After a submit + re-fetch, processQuote resets skipEditableCommentFields/StatusFields
-                // to {}. Re-compute them from the fresh server data so the UI stays consistent.
                 if (this.skipSoaRestrictions) {
                     this.applySkipSoaToQuotes();
                 }
+
+                this.isLoading = false;
             })
             .catch(error => {
+                this.isLoading = false;
                 console.error('Error fetching quotations', error);
-                // this.showToast('Error', error.body.message, 'error');
-                // this.redirectToHome();
-                // setTimeout(() => { window.location.reload(); }, 2500);
             });
     }
 
@@ -415,16 +475,76 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 skipEditableCommentFields: this.getSkipEditableCommentFields(item),
                 skipEditableStatusFields: this.getSkipEditableStatusFields(item)
             }));
-            return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems) };
+            return { ...quote, quoteLineItems, displayRows: this.buildDisplayRows(quoteLineItems, quote) };
         });
         this.refreshExpandedApprovalDashboards();
     }
 
+    getCurrentPendingApprovers(quote) {
+        const pendingApprovers = new Map();
+
+        const addPending = (id, name) => {
+            if (!name) return;
+            const cleanName = String(name).trim();
+            if (!cleanName) return;
+
+            const key = id || cleanName.toLowerCase();
+            if (!pendingApprovers.has(key)) {
+                pendingApprovers.set(key, cleanName);
+            }
+        };
+
+        for (const item of (quote.quoteLineItems || [])) {
+            if (item.isDiscountApprovalRequired !== true) continue;
+
+            for (const soa of this.getSoaLevels(item)) {
+                const status = soa.originalStatus || soa.status || '';
+                if (status === 'Submitted') {
+                    addPending(soa.approverId, soa.name);
+                }
+            }
+        }
+
+        const configs = [
+            { approval: quote.warrantyApproval, suffix: 'WarrantyStatus' },
+            { approval: quote.validityOfferApproval, suffix: 'ValidityOfferStatus' },
+            { approval: quote.totalValueApproval, suffix: 'ValueStatus' }
+        ];
+
+        for (const { approval, suffix } of configs) {
+            if (!approval) continue;
+
+            for (const level of ['sm', 'ch', 'gs', 'bm', 'md']) {
+                const p = this.capitalize(level);
+                const status =
+                    approval[`original${p}${suffix}`] ||
+                    approval[`${level}${suffix}`] ||
+                    '';
+
+                if (status === 'Submitted') {
+                    addPending(
+                        approval[`${level}Id`],
+                        approval[`${level}Name`]
+                    );
+                }
+            }
+        }
+
+        return Array.from(pendingApprovers.values()).join(', ');
+    }
+
     processQuote(q) {
         const quoteRecordUrl = `/lightning/r/Quote/${q.quoteId}/view`;
-        const processedLineItems = (q.quoteLineItems || []).map(item => ({
+        const processedLineItems = (q.quoteLineItems || []).map((item, originalIndex) => ({
             ...item,
-            isFinalDiscountApprover: item.finalDiscountApproverId === this.userId || item.finalDiscountApproverDelegatedId === this.userId,
+            originalIndex,
+            isOriginalFinalDiscountApprover: item.originalFinalDiscountApproverId === this.userId || item.originalFinalDiscountApproverDelegatedId === this.userId,
+            isEffectiveFinalDiscountApprover: item.finalDiscountApproverId === this.userId || item.finalDiscountApproverDelegatedId === this.userId,
+            isFinalDiscountApprover:
+                item.originalFinalDiscountApproverId === this.userId ||
+                item.originalFinalDiscountApproverDelegatedId === this.userId ||
+                item.finalDiscountApproverId === this.userId ||
+                item.finalDiscountApproverDelegatedId === this.userId,
             origApprovalStatus: item.approvalStatus,
             isEditable: item.approvalStatus === 'Submitted' || item.updated === true,
             skipSoaRestrictions: this.skipSoaRestrictions,
@@ -437,11 +557,23 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             origGlobalSalesHeadStatus: item.globalSalesHeadStatus,
             origRotexBoardMemberStatus: item.rotexBoardMemberStatus,
             origManagingDirectorStatus: item.managingDirectorStatus
-        }));
+        })).sort((a, b) => {
+            if (a.isDiscountApprovalRequired !== b.isDiscountApprovalRequired) {
+                return a.isDiscountApprovalRequired ? -1 : 1;
+            }
+            return a.originalIndex - b.originalIndex;
+        });
+
+        const currentPendingApprover = this.getCurrentPendingApprovers({
+            ...q,
+            quoteLineItems: processedLineItems
+        });
 
         return {
             ...q,
             quoteRecordUrl,
+            quoteReason: q.quoteReason || '',
+            currentPendingApprover,
             isExpanded: false,
             hasLineItems: (q.quoteLineItems || []).length > 0,
             warrantyApproval: null,
@@ -454,8 +586,9 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             isCombinedApprovalSubmitDisabled: true,
             isUnifiedSubmitDisabled: true,
             quoteValidTill: q.quoteValidTill || '',
+            hasActionableApprovalItems: q.hasActionableApprovalItems === true,
             quoteLineItems: processedLineItems,
-            displayRows: this.buildDisplayRows(processedLineItems)
+            displayRows: this.buildDisplayRows(processedLineItems, q)
         };
     }
 
@@ -549,7 +682,12 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
             // quote.minimumOfferApproval
         ].filter(approval => approval != null);
 
-        return levels.map(level => {
+        const visibleLevelKeys = new Set();
+        approvals.forEach(approval => {
+            this.getVisibleApprovalLevelKeys(approval).forEach(level => visibleLevelKeys.add(level));
+        });
+
+        return levels.filter(level => visibleLevelKeys.size === 0 || visibleLevelKeys.has(level.key)).map(level => {
             const name = approvals.map(approval => approval[`${level.key}Name`]).find(value => this.hasValue(value));
             return {
                 key: level.key,
@@ -558,11 +696,23 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         });
     }
 
+    getVisibleApprovalLevelKeys(data) {
+        const levels = ['sm', 'ch', 'gs', 'bm', 'md'];
+        if (!data) return levels;
+
+        const originalFinalPos = data.originalFinalApproverHierarchyPosition || data.finalApproverHierarchyPosition;
+        const effectiveFinalPos = data.finalApproverHierarchyPosition || originalFinalPos;
+
+        return levels.filter(level => {
+            const levelIndex = this.getApprovalLevelIndex(level);
+            if (!levelIndex) return false;
+            return !originalFinalPos || levelIndex <= originalFinalPos || levelIndex === effectiveFinalPos;
+        });
+    }
+
     buildApprovalRow(type, label, data, config, columns) {
         if (!data) return null;
 
-        // Show the row if the current user is any approver in this chain (regardless of status).
-        // If not in chain at all → don't show.
         const levels = ['sm', 'ch', 'gs', 'bm', 'md'];
         const currentUserIsInChain = levels.some(level => data[`is${this.capitalize(level)}CurrentUser`]);
         if (!currentUserIsInChain) return null;
@@ -751,7 +901,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const allLevels_ = ['sm', 'ch', 'gs', 'bm', 'md'];
         const isFinalApproverDecided = allLevels_.some(lvl => {
             const origKey = `original${this.capitalize(lvl)}${config.statusSuffix}`;
-            return this.isFinalApproverLevel(data, lvl) &&
+            return this.isEffectiveFinalApproverLevel(data, lvl) &&
                 (data[origKey] === 'Approved' || data[origKey] === 'Rejected');
         });
 
@@ -806,17 +956,28 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         if (data.finalApprover) {
             return data.finalApprover.toUpperCase() === level.toUpperCase();
         }
-        // fallback: check if the level's id matches the finalWarrantyApprover / finalValidityOfferApprover / etc.
+        // fallback: check if the level's id matches the original stream final or the effective quote final.
         const levelId = data[`${level}Id`];
         const finalId = data.finalWarrantyApprover || data.finalValidityOfferApprover ||
             data.finalTotalValueApprover || data.finalMinimumOfferValueApprover;
+        const originalFinalId = data.originalFinalWarrantyApprover || data.originalFinalValidityOfferApprover ||
+            data.originalFinalTotalValueApprover || data.originalFinalMinimumOfferValueApprover;
+        return !!levelId && ((!!finalId && levelId === finalId) || (!!originalFinalId && levelId === originalFinalId));
+    }
+
+    isEffectiveFinalApproverLevel(data, level) {
+        const levelId = data && data[`${level}Id`];
+        const finalId = data && (data.finalWarrantyApprover || data.finalValidityOfferApprover ||
+            data.finalTotalValueApprover || data.finalMinimumOfferValueApprover);
         return !!levelId && !!finalId && levelId === finalId;
     }
 
     isBeyondFinalApproverLevel(data, level) {
         const levelIndex = this.getApprovalLevelIndex(level);
-        const finalIndex = data.finalApproverHierarchyPosition;
-        return finalIndex && levelIndex && levelIndex > finalIndex;
+        const originalFinalIndex = data.originalFinalApproverHierarchyPosition || data.finalApproverHierarchyPosition;
+        const effectiveFinalIndex = data.finalApproverHierarchyPosition || originalFinalIndex;
+        return originalFinalIndex && effectiveFinalIndex && levelIndex &&
+            levelIndex > originalFinalIndex && levelIndex !== effectiveFinalIndex;
     }
 
     getApprovalLevelIndex(level) {
@@ -863,6 +1024,157 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         const disc = isNaN(d) ? 0 : d;
         const sp = lp * (1 - disc / 100);
         return this.formatCurrency(sp);
+    }
+
+    handleDownloadCsv(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const quoteId = event.currentTarget.dataset.quoteId;
+        const quote = (this.quotes || []).find(q => q.quoteId === quoteId);
+
+        const lineItemRows = quote?.quoteLineItems || [];
+
+        if (!lineItemRows.length) {
+            this.showToast('Warning', 'No discount line items available to download.', 'warning');
+            return;
+        }
+
+        const csv = this.buildDiscountApprovalCsv(quote, lineItemRows);
+
+        const fileName = `${this.sanitizeCsvFileName(quote.quoteNumber || 'quotation')}_discount_approval.csv`;
+
+        this.downloadCsvFile(csv, fileName);
+    }
+
+    buildDiscountApprovalCsv(quote, lineItemRows) {
+        const currencySuffix = quote.currencyCode ? ` (${quote.currencyCode})` : '';
+        const totalQty = this.calculateTotalQuantity(lineItemRows);
+        const warranty = quote.warrantyTermsDraft || quote.warrantyTerms || '';
+        const headers = [
+            'Material Code',
+            'Material Description',
+            `List Price${currencySuffix}`,
+            `Proposed ARC Price${currencySuffix}`,
+            'Disc.%',
+            'Req. Comments',
+            'Min Value',
+            'Max Value',
+            'MOQ',
+            'Valid From',
+            'Valid Till',
+            'Existing ARC Price',
+            'Total Business Last FY',
+            'Total Business from ARC Item last FY',
+            'Payment Terms',
+            'Warranty',
+            'Incoterms'
+        ];
+
+        const rows = (lineItemRows || []).map(item => {
+            const hasPreviousApprovedDiscount = item.isDiscountApproved &&
+                item.previousDiscount !== undefined &&
+                item.previousDiscount !== null &&
+                item.previousDiscount !== '';
+            const proposedDiscount = hasPreviousApprovedDiscount ? item.previousDiscount : item.d2;
+            const newProposedPrice = hasPreviousApprovedDiscount
+                ? this.calculateSalesPriceValue(item.listPrice, item.d2)
+                : '';
+
+            const itemValues = [
+                item.productCode,
+                item.productName,
+                item.listPrice,
+                this.calculateSalesPriceValue(item.listPrice, proposedDiscount),
+                item.d2,
+                item.requestedComments,
+                '',
+                '',
+                item.potentialQty,
+                item.validFrom,
+                item.validTill,
+                item.existingArcPrice
+            ];
+
+            return [
+                ...itemValues,
+                '',
+                '',
+                quote.paymentTerms,
+                warranty,
+                quote.incoTerms,
+            ];
+        });
+
+        return [headers, ...rows]
+            .map(row => row.map(value => this.escapeCsvValue(value)).join(','))
+            .join('\r\n');
+    }
+
+    calculateTotalQuantity(lineItemRows) {
+        return (lineItemRows || []).reduce((total, item) => {
+            const quantity = Number(item.potentialQty);
+            return total + (isNaN(quantity) ? 0 : quantity);
+        }, 0);
+    }
+
+    calculateSalesPriceValue(listPrice, discount) {
+        if (listPrice === undefined || listPrice === null || listPrice === '') return '';
+        const lp = Number(listPrice);
+        const d = Number(discount);
+        if (isNaN(lp)) return '';
+        return lp * (1 - (isNaN(d) ? 0 : d) / 100);
+    }
+
+    escapeCsvValue(value) {
+        if (value === undefined || value === null) return '';
+        let text = String(value);
+        if (/^[=+\-@\t\r]/.test(text)) {
+            text = `'${text}`;
+        }
+        if (/[",\r\n]/.test(text)) {
+            text = `"${text.replace(/"/g, '""')}"`;
+        }
+        return text;
+    }
+
+    sanitizeCsvFileName(value) {
+        return String(value)
+            .trim()
+            .replace(/[\\/:*?"<>|]+/g, '_')
+            .replace(/\s+/g, '_') || 'quotation';
+    }
+
+    downloadCsvFile(csv, fileName) {
+        try {
+            console.log('Preparing to download CSV file:', fileName);
+
+            if (!csv) {
+                console.error('CSV content is empty.');
+                return;
+            }
+
+            const link = document.createElement('a');
+
+            // Create data URI instead of Blob URL
+            const csvContent = '\uFEFF' + csv;
+            const encodedUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', fileName);
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+
+            console.log('Initiating CSV download...');
+            link.click();
+
+            document.body.removeChild(link);
+
+            console.log('CSV download completed.');
+        } catch (error) {
+            console.error('CSV Download Error:', error);
+        }
     }
 
     capitalize(value) {
@@ -1638,21 +1950,69 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
         return `${base} status-badge--default`;
     }
 
-    buildDisplayRows(lineItems) {
+    buildDisplayRows(lineItems, quoteContext) {
         const displayRows = [];
         (lineItems || []).forEach(item => {
+            if (!item.isDiscountApprovalRequired) {
+                displayRows.push({
+                    key: `${item.quoteLineItemId}_view`,
+                    isFirstRow: true,
+                    soaCount: 1,
+                    productName: item.productName,
+                    productCode: item.productCode,
+                    listPrice: item.listPrice,
+                    quantity: this.isARCRecordType ? item.potentialQty : item.quantity,
+                    d1: item.d1,
+                    previousDiscount: item.previousDiscount,
+                    d2: item.d2,
+                    quoteLineItemId: item.quoteLineItemId,
+                    parentId: item.parentId,
+                    approvalStatus: '',
+                    soaStatusField: '',
+                    soaDisplay: '',
+                    soaApproverId: '',
+                    soaApproverName: '',
+                    soaStatus: '',
+                    statusBadgeClass: this.getStatusBadgeClass(''),
+                    soaDateTime: '',
+                    prevSoaComments: '',
+                    soaComments: '',
+                    soaCommentsField: '',
+                    requestedComments: item.requestedComments || '',
+                    showDiscountInput: false,
+                    showStatusCombobox: false,
+                    showStatusText: false,
+                    showCommentInput: false,
+                    soaCommentsDisabled: true,
+                    rowStyle: '',
+                    listPriceFormatted: this.formatCurrency(item.listPrice),
+                    salesPrice: this.formatSalesPrice(item.listPrice, item.d2),
+                    validFrom: item.validFrom || '',
+                    validTill: item.validTill || '',
+                    showMoqInput: false
+                });
+                return;
+            }
+
             const allSoaLevels = this.getSoaLevels(item);
 
-            // Hide rows whose hierarchy is above the final approver
-            const finalLevel = allSoaLevels.find(soa => soa.approverId === item.finalDiscountApproverId);
-            const maxHierarchyIndex = finalLevel ? finalLevel.hierarchyIndex : null;
-            const soaLevels = maxHierarchyIndex
-                ? allSoaLevels.filter(soa => soa.hierarchyIndex <= maxHierarchyIndex)
-                : allSoaLevels;
+            const originalFinalApproverId = item.originalFinalDiscountApproverId || item.finalDiscountApproverId;
+            const effectiveFinalApproverId = item.finalDiscountApproverId || originalFinalApproverId;
+            const originalFinalLevel = allSoaLevels.find(soa => soa.approverId === originalFinalApproverId);
+            const effectiveFinalLevel = allSoaLevels.find(soa => soa.approverId === effectiveFinalApproverId);
+            const originalMaxHierarchyIndex = originalFinalLevel ? originalFinalLevel.hierarchyIndex : null;
+            const effectiveHierarchyIndex = effectiveFinalLevel ? effectiveFinalLevel.hierarchyIndex : originalMaxHierarchyIndex;
+            const soaLevels = originalMaxHierarchyIndex
+                ? allSoaLevels.filter(soa =>
+                    soa.hierarchyIndex <= originalMaxHierarchyIndex ||
+                    soa.hierarchyIndex === effectiveHierarchyIndex
+                )
+                : (effectiveHierarchyIndex
+                    ? allSoaLevels.filter(soa => soa.hierarchyIndex <= effectiveHierarchyIndex)
+                    : allSoaLevels);
 
-            // Lock all rows once the final approver has approved or rejected
-            const isFinalApproverDecided = !!(finalLevel &&
-                (finalLevel.originalStatus === 'Approved' || finalLevel.originalStatus === 'Rejected'));
+            const isFinalApproverDecided = !!(effectiveFinalLevel &&
+                (effectiveFinalLevel.originalStatus === 'Approved' || effectiveFinalLevel.originalStatus === 'Rejected'));
 
             soaLevels.forEach((soa, idx) => {
                 const formattedDateTime = soa.dateTime
@@ -1671,9 +2031,11 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                 // Case 2: current user LOWER than final  → own comments only
                 // Case 3: current user HIGHER than final → only final approver's row (status + comments)
                 const currentUserIdx_ = this.getCurrentUserHierarchyIndex(item);
-                const isFinalApproverRow = soa.approverId === item.finalDiscountApproverId;
-                const isHigherThanFinal_ = currentUserIdx_ != null && maxHierarchyIndex != null &&
-                    currentUserIdx_ > maxHierarchyIndex;
+                const isOriginalFinalApproverRow = soa.approverId === originalFinalApproverId;
+                const isEffectiveFinalApproverRow = soa.approverId === effectiveFinalApproverId;
+                const isFinalApproverRow = isOriginalFinalApproverRow || isEffectiveFinalApproverRow;
+                const isHigherThanFinal_ = currentUserIdx_ != null && effectiveHierarchyIndex != null &&
+                    currentUserIdx_ > effectiveHierarchyIndex;
 
                 // Case 3: Higher hierarchy → only the final approver's row enabled
                 const skipSoaHigherHierarchyFinalRow = this.skipSoaRestrictions &&
@@ -1708,7 +2070,7 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
 
                 const soaStatus = this.getDisplayStatus(
                     actualStatus,
-                    soa.approverId === item.finalDiscountApproverId
+                    isFinalApproverRow
                 );
 
                 displayRows.push({
@@ -1739,16 +2101,16 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     showDiscountInput: idx === 0 && !isFinalApproverDecided && (
                         (item.isFinalDiscountApprover && item.isEditable) ||
                         (this.skipSoaRestrictions &&
-                            maxHierarchyIndex != null &&
+                            effectiveHierarchyIndex != null &&
                             this.getCurrentUserHierarchyIndex(item) != null &&
-                            this.getCurrentUserHierarchyIndex(item) > maxHierarchyIndex &&
-                            finalLevel != null &&
-                            (finalLevel.originalStatus || finalLevel.status || '') !== 'Approved' &&
-                            (finalLevel.originalStatus || finalLevel.status || '') !== 'Rejected') ||
+                            this.getCurrentUserHierarchyIndex(item) > effectiveHierarchyIndex &&
+                            effectiveFinalLevel != null &&
+                            (effectiveFinalLevel.originalStatus || effectiveFinalLevel.status || '') !== 'Approved' &&
+                            (effectiveFinalLevel.originalStatus || effectiveFinalLevel.status || '') !== 'Rejected') ||
                         ((this.skipSoaRestrictions && item.isFinalDiscountApprover)
-                            && finalLevel != null &&
-                            (finalLevel.originalStatus || finalLevel.status || '') !== 'Approved' &&
-                            (finalLevel.originalStatus || finalLevel.status || '') !== 'Rejected')
+                            && effectiveFinalLevel != null &&
+                            (effectiveFinalLevel.originalStatus || effectiveFinalLevel.status || '') !== 'Approved' &&
+                            (effectiveFinalLevel.originalStatus || effectiveFinalLevel.status || '') !== 'Rejected')
 
                     ),
                     showStatusCombobox,
@@ -1757,7 +2119,10 @@ export default class QuoteSalesPriceApproval extends NavigationMixin(LightningEl
                     soaCommentsDisabled: !(soa.isCurrentUserRow && item.isEditable) && !isFinalApproverOwnRowWithSkip && !isOwnRowWithSkipSoa && !skipSoaHigherHierarchyFinalRow,
                     rowStyle: '',
                     listPriceFormatted: this.formatCurrency(item.listPrice),
-                    salesPrice: this.formatSalesPrice(item.listPrice, item.d2)
+                    salesPrice: this.formatSalesPrice(item.listPrice, item.d2),
+                    validFrom: item.validFrom || '',
+                    validTill: item.validTill || '',
+                    showMoqInput: idx === 0 && this.isARCRecordType && !isFinalApproverDecided && item.isFinalDiscountApprover
                 });
             });
         });

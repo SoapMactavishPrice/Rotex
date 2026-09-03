@@ -4,7 +4,8 @@ public without sharing class editDiscountQuantityController {
         return [
             SELECT Id, Discount_as_per_SAP__c, Discount_to_be_offered__c, Quantity, 
             UnitPrice, ListPrice, Customer_Part_No__c, Product2.Name, Product2.ProductCode, Product2Id, P_F_Charges__c, 
-            Final_Discount_Approver__c, Sales_Rep__c, Sales_Manager__c, 
+            Final_Discount_Approver__c, Effective_Final_Discount_Approver__c,
+            Sales_Rep__c, Sales_Manager__c,
             Country_Continent_Sales_Head_LOB_Head__c, Global_Sales_Head__c, Rotex_Board_Member__c, 
             Managing_Director_Country_Manage__c, Is_Discount_Approved__c, Previous_Discount__c,
             CurrencyIsoCode, Requested_Comments__c, Item_Type__c, Is_Discount_Only_Rejected__c,
@@ -27,7 +28,8 @@ public without sharing class editDiscountQuantityController {
             Managing_Director_Date_Time__c,
             New_Discount_Entered__c,
 
-            Quote.RecordType.Name
+            Quote.RecordType.Name,
+             Quote.Quote_Reason__c
 
             FROM QuoteLineItem 
             WHERE QuoteId = :qId
@@ -187,7 +189,7 @@ public without sharing class editDiscountQuantityController {
             } else {
                 actionLog.add('DML: No QuoteLineItems to update (list empty).');
             }
-
+            /*
             if (shouldUpdateQuoteStatus && String.isNotBlank(quoteId)) {
                 Quote quoteToUpdate = new Quote(
                     Id = quoteId,
@@ -199,16 +201,31 @@ public without sharing class editDiscountQuantityController {
             } else {
                 actionLog.add('Quote status update skipped. shouldUpdateQuoteStatus=' + shouldUpdateQuoteStatus + ', quoteId=' + quoteId);
             }
-
+             */
+            if (shouldUpdateQuoteStatus && String.isNotBlank(quoteId)) {
+                // Get current Quote Status before deciding whether to update it
+                Quote existingQuote = [SELECT Id, Status FROM Quote WHERE Id = :quoteId LIMIT 1];
+                if (
+                    existingQuote.Status == 'Draft' || existingQuote.Status == 'Under Review by Sales Rep'
+                ) {
+                    Quote quoteToUpdate = new Quote(Id = quoteId,Status = 'Submit for SOA Approval');
+                    update quoteToUpdate;
+                    quoteStatusUpdated = true;
+                    actionLog.add('DML: Quote Id=' + quoteId + ' Status changed from "' + existingQuote.Status + '" to "Submit for SOA Approval".');
+                } else {
+                    actionLog.add('Quote status update skipped. Current Status="' + existingQuote.Status + '". Status must be Draft or Under Review by Sales Rep.');
+                }
+            } else {
+                actionLog.add('Quote status update skipped. shouldUpdateQuoteStatus=' + shouldUpdateQuoteStatus + ', quoteId=' + quoteId);
+            }
             responseText = 'Updated QuoteLineItems: ' + String.valueOf(updatedQuoteLines) + '. ';
             if (quoteStatusUpdated) {
-                responseText += 'Quote status updated to Need Revision. ';
+                responseText += 'Quote status updated to Submit for SOA Approval. ';
             }
             if (updatedQuoteLines == 0 && !quoteStatusUpdated) {
                 responseText += 'No records were updated. ';
             }
             responseText += '\nDETAILED ACTION LOG:\n' + String.join(actionLog, '\n');
-
         } catch (Exception e) {
             status = 'Failed';
             statusCode = 500;
@@ -216,7 +233,6 @@ public without sharing class editDiscountQuantityController {
             UtilityCls.logApiCall(apiName, 'QuoteLineItem Update', requestText, responseText, status, statusCode);
             throw e;
         }
-
         UtilityCls.logApiCall(apiName, 'QuoteLineItem Update', requestText, responseText, status, statusCode);
     }
 

@@ -1,0 +1,335 @@
+:host {
+    display: block;
+    background-color: transparent;
+}
+
+.dashboard-wrapper {
+    padding: 8px 24px 24px 8px;
+    background-color: #f7faf9;
+    min-height: calc(100vh - 55px);
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.dashboard-header {
+    margin-bottom: 24px;
+}
+
+.dashboard-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #032f33;
+    margin: 0;
+}
+
+.dashboard-container {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+}
+
+.dashboard-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 12px 10px;
+    height: 90px;
+    display: flex;
+    align-items: flex-start;
+    box-shadow: 0 4px 12px rgba(3, 47, 51, 0.04);
+    border: 1px solid #eef2f0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+    /* Prevents text overflow */
+}
+
+.dashboard-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(3, 47, 51, 0.08);
+}
+
+.card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    flex-shrink: 0;
+    margin-top: 0;
+}
+
+.card-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Icon colors complementing #0d6b69 theme */
+.icon-blue {
+    background: #e8f4fd;
+    color: #1976d2;
+}
+
+.icon-green {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.icon-purple {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.icon-orange {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.icon-red {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.icon-teal {
+    background: #e0f2f1;
+    color: #0d6b69;
+}
+
+.card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    /* allows text truncation if needed */
+}
+
+.card-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #5c6b6a;
+    margin-bottom: 4px;
+    line-height: 1.2;
+    white-space: nowrap;
+    letter-spacing: -0.3px;
+}
+
+.card-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: #032f33;
+    margin-top: 6px;
+    margin-bottom: 4px;
+    margin-left: 12px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-subtitle {
+    font-size: 9px;
+    /* Reduced slightly */
+    font-weight: 600;
+    color: #7a8685;
+    display: flex;
+    align-items: center;
+}
+
+.subtitle-text {
+    background: #f4f5f2;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #e6ebe9;
+}
+
+.progress-container {
+    width: 100%;
+    height: 6px;
+    background: #e4ebe8;
+    border-radius: 3px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: #0d6b69;
+    border-radius: 3px;
+    transition: width 0.5s ease-out;
+}
+
+/* =========================================
+   Responsive Design / Media Queries 
+   ========================================= */
+
+/* For smaller desktop screens and large tablets */
+@media screen and (max-width: 1200px) {
+    .dashboard-container {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        /* 3 columns across 2 rows */
+    }
+}
+
+/* For tablets and small screens */
+@media screen and (max-width: 992px) {
+    .dashboard-wrapper {
+        padding: 24px;
+        /* Assume sidebar collapses or goes to top, so reset left offset */
+    }
+
+    .dashboard-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        /* 2 columns across 3 rows */
+    }
+}
+
+/* For mobile devices */
+@media screen and (max-width: 576px) {
+    .dashboard-wrapper {
+        padding: 16px;
+    }
+
+    .dashboard-container {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        /* 1 column */
+    }
+}
+
+/* Chart Section Styling */
+.chart-section {
+    margin-top: 24px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.chart-section-3col {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.chart-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(3, 47, 51, 0.04);
+    border: 1px solid #eef2f0;
+}
+
+.chart-header {
+    margin-bottom: 20px;
+}
+
+.chart-header h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #032f33;
+    margin: 0;
+}
+
+.chart-body {
+    position: relative;
+    height: 200px;
+    width: 100%;
+}
+
+.large-chart-body {
+    height: 320px;
+}
+
+
+/* Actual vs Budget Card Styling */
+.actual-budget-card {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    align-items: center;
+}
+
+.ab-chart-col {
+    flex: 1;
+}
+
+.ab-chart-body {
+    height: 150px;
+}
+
+.ab-achieve-col {
+    width: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 40px;
+}
+
+.ab-achieve-box {
+    background-color: #f0f7f8;
+    border-radius: 8px;
+    padding: 24px 16px;
+    text-align: center;
+    width: 100%;
+    border: 1px solid #e2ecee;
+}
+
+.ab-achieve-label {
+    font-size: 12px;
+    color: #032f33;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.ab-achieve-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #032f33;
+}
+
+/* Doughnut Chart Styling */
+.doughnut-chart-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 180px;
+}
+
+.doughnut-center-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+.doughnut-center-text .center-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #032f33;
+}
+
+.doughnut-center-text .center-label {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+/* Filter Section Styling */
+.filter-section {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    align-items: center;
+    border-radius: 8px;
+}
+
+.filter-combobox {
+    width: 250px;
+}
+
+.clear-btn {
+    --sds-c-button-brand-color-background: #032f33;
+    --sds-c-button-brand-color-background-hover: #022023;
+    --sds-c-button-brand-color-border: #032f33;
+    --sds-c-button-brand-color-border-hover: #022023;
+    --sds-c-button-text-color: white;
+    margin-top: 8px;
+}

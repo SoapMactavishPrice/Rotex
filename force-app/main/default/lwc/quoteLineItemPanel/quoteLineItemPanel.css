@@ -1,0 +1,153 @@
+.qli-list-wrap {
+    background: #fff;
+    border: 1px solid #e6e6df;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.qli-list-meta {
+    padding: 12px 20px;
+    font-size: 12px;
+    color: #6f7a7a;
+    border-bottom: 1px solid #ecece5;
+    background: #fafaf7;
+}
+
+.qli-table {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.qli-table-header,
+.qli-table-row {
+    display: grid;
+    grid-template-columns: 0.45fr 1.6fr 0.9fr 0.9fr 0.7fr 0.8fr 0.9fr 0.7fr 0.9fr;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 16px;
+    min-width: 980px;
+}
+
+.qli-table-header {
+    position: sticky;
+    top: 0;
+    background: #0d6b69;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    z-index: 1;
+}
+
+.qli-table-row {
+    border-bottom: 1px solid #f1f1ec;
+    cursor: pointer;
+    background: #fff;
+}
+
+.qli-table-row:hover {
+    background: #f6faf9;
+}
+
+.qli-cell {
+    font-size: 13px;
+    color: #3e3e3c;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.qli-cell-num {
+    font-weight: 600;
+    color: #5c6666;
+}
+
+.qli-cell-link {
+    color: #0d6b69;
+    font-weight: 600;
+}
+
+.qli-detail-topbar {
+    margin-bottom: 12px;
+}
+
+.qli-back-btn {
+    border: none;
+    background: none;
+    color: #0d6b69;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.qli-back-btn:hover {
+    text-decoration: underline;
+}
+
+.qli-card {
+    background: white;
+    border: 1px solid #e6e6df;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.info-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 22px;
+    background: #f6f7f4;
+    border-bottom: 1px solid #ecece5;
+}
+
+.info-card-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: #5c6666;
+    text-transform: uppercase;
+}
+
+.info-card-body-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 28px;
+    padding: 4px 22px 6px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid #f1f1ec;
+}
+
+.info-row-label {
+    font-size: 13px;
+    color: #6f7a7a;
+}
+
+.info-row-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #123b3a;
+    text-align: right;
+}
+
+.qli-loading,
+.qli-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #8a9494;
+    font-size: 14px;
+}
+
+@media (max-width: 900px) {
+    .info-card-body-2col {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,137 @@
+<template>
+    <div class="overlay" onclick={handleClose}>
+        <div class="modal" onclick={stopPropagation} role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <h2>Create Quote PDF</h2>
+                <button type="button" class="modal-close-btn" onclick={handleClose} disabled={isSaving}>×</button>
+            </div>
+
+            <div class="modal-body">
+                <template if:true={isLoading}>
+                    <div class="loading-wrap">
+                        <lightning-spinner alternative-text="Loading PDF" size="medium"></lightning-spinner>
+                        <div class="loading-text">Generating PDF preview…</div>
+                    </div>
+                </template>
+
+                <template if:true={hasErrors}>
+                    <div class="error-box">
+                        <template for:each={errors} for:item="err">
+                            <div key={err} class="error-line">{err}</div>
+                        </template>
+                    </div>
+                </template>
+
+                <template if:false={hasErrors}>
+                    <template if:false={isLoading}>
+                        <div class="form-grid">
+                            <label class="field">
+                                <span class="label">Email ID</span>
+                                <input
+                                    type="text"
+                                    class="input"
+                                    data-field="emailId"
+                                    value={emailId}
+                                    onchange={handleFieldChange}
+                                    disabled={isSaving} />
+                            </label>
+                            <label class="field">
+                                <span class="label">CC Addresses (Comma Separated)</span>
+                                <input
+                                    type="text"
+                                    class="input"
+                                    data-field="ccAddresses"
+                                    value={ccAddresses}
+                                    onchange={handleFieldChange}
+                                    disabled={isSaving} />
+                            </label>
+                            <label class="field field-full">
+                                <span class="label">Subject</span>
+                                <input
+                                    type="text"
+                                    class="input"
+                                    data-field="subject"
+                                    value={subject}
+                                    onchange={handleFieldChange}
+                                    disabled={isSaving} />
+                            </label>
+                            <label class="field field-full">
+                                <span class="label">Email Body</span>
+                                <textarea
+                                    class="input textarea"
+                                    data-field="body"
+                                    value={body}
+                                    onchange={handleFieldChange}
+                                    disabled={isSaving}></textarea>
+                            </label>
+                            <div class="field field-full attach-block">
+                                <span class="label">Optional email attachments</span>
+                                <input
+                                    type="file"
+                                    class="input file-input"
+                                    multiple
+                                    onchange={handleFileChange}
+                                    disabled={isSaving} />
+                                <template if:true={hasAttachments}>
+                                    <div class="attach-list">
+                                        <template for:each={attachedFiles} for:item="file" for:index="index">
+                                            <div key={file.name} class="attach-row">
+                                                <span class="attach-name">{file.name}</span>
+                                                <button
+                                                    type="button"
+                                                    class="btn-remove"
+                                                    data-index={index}
+                                                    onclick={handleRemoveFile}
+                                                    disabled={isSaving}>
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="actions">
+                            <button
+                                type="button"
+                                class="btn btn-brand"
+                                onclick={handleSave}
+                                disabled={isSaveDisabled}>
+                                Save PDF
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-brand"
+                                onclick={handleSaveAndSend}
+                                disabled={saveAndSendDisabled}>
+                                Save And Send
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-destructive"
+                                onclick={handleClose}
+                                disabled={isSaving}>
+                                Cancel
+                            </button>
+                        </div>
+
+                        <template if:true={statusMessage}>
+                            <div class={statusClass}>{statusMessage}</div>
+                        </template>
+
+                        <template if:true={pdfLoadError}>
+                            <div class="error-box">{pdfLoadError}</div>
+                        </template>
+
+                        <div class="pdf-wrap">
+                            <template if:true={hasPreview}>
+                                <div class="html-preview" lwc:dom="manual" data-preview-host></div>
+                            </template>
+                        </div>
+                    </template>
+                </template>
+            </div>
+        </div>
+    </div>
+</template>

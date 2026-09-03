@@ -1,0 +1,541 @@
+<template>
+	<template if:true={portalToastVisible}>
+		<div class={portalToastClass} role="status" aria-live="polite">
+			<div class="portal-toast__title">{portalToastTitle}</div>
+			<template if:true={portalToastMessage}>
+				<div class="portal-toast__message">{portalToastMessage}</div>
+			</template>
+		</div>
+	</template>
+
+	<template if:true={isModalOpen}>
+		<template if:true={isEmbeddedActive}>
+			<div class={embeddedRootClass}>
+				<div class="embedded-body">
+					<template if:true={isFirstPage}>
+						<div class="product-filters">
+							<div class="searchBoxWrapper slds-show">
+								<div class="filter-row">
+									<template if:true={showProductTypeFilter}>
+										<lightning-combobox name="productSource" label="Type"
+											value={selectedProductSource} placeholder="Select Type"
+											options={productTypeOptions} onchange={handleProductSourceChange}
+											class="filter-field">
+										</lightning-combobox>
+									</template>
+									<template if:true={showItemTypeFilter}>
+										<lightning-combobox name="itemType" label="Item Type"
+											value={selectedItemType} placeholder="Select Item"
+											options={itemsOptions} onchange={handleItemOptions}
+											disabled={itemTypeDisabled}
+											class="filter-field">
+										</lightning-combobox>
+									</template>
+								</div>
+								<lightning-input type="search" value={searchKey}
+									label="Search Product" variant="label-stacked"
+									placeholder="Search Product here..."
+									onkeyup={showFilteredProducts} class="searchBox search-field"
+									disabled={searchDisability}>
+								</lightning-input>
+							</div>
+						</div>
+						<template if:true={showSelectFilterHint}>
+							<div class="product-filter-hint">{selectFilterHintText}</div>
+						</template>
+						<template if:true={showProductResults}>
+						<div class="slds-grid slds-wrap product-table-scroll">
+							<div class="slds-size_3-of-3">
+								<div class="slds-col slds-box">
+									<lightning-datatable class="product-pick-datatable" data={ShowTableData} key-field="Id" columns={cols}
+										if:false={showSpinner} data-id="datatable"
+										selected-rows={selectedProductCode} onrowselection={SelectedProduct}>
+									</lightning-datatable>
+									<template if:true={showSpinner}>
+										<div class="slds-is-relative product-table-spinner">
+											<lightning-spinner alternative-text="Loading..." size="medium">
+											</lightning-spinner>
+										</div>
+									</template>
+								</div>
+							</div>
+						</div>
+						</template>
+					</template>
+					<template if:true={isSecondPage}>
+						<div class="cart-edit-wrap slds-is-relative">
+						<template if:true={showCartSaveLoader}>
+							<div class="cart-save-loader" role="status">
+								<div class="cart-save-loader__spinner" aria-hidden="true"></div>
+								<div class="cart-save-loader__text">Saving as draft...</div>
+							</div>
+						</template>
+						<template if:true={isArcQuoteRecordType}>
+						<table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_col-bordered cart-edit-table cart-edit-table--arc">
+							<thead>
+								<tr class="slds-line-height_reset">
+									<th scope="col" class="cart-col-name"><div>Product Name</div></th>
+									<th scope="col" class="cart-col-partno"><div>Customer Part No.</div></th>
+									<th scope="col" class="cart-col-listprice cart-num-cell"><div>List Price</div></th>
+									<th scope="col" class="cart-col-sellsc cart-num-cell"><div>{proposedArcPriceColumnLabel}</div></th>
+									<th scope="col" class="cart-col-reqdisc cart-num-cell"><div>Disc. %</div></th>
+									<th scope="col" class="cart-col-sales cart-num-cell"><div>Sales Price to SC</div></th>
+									<th scope="col" class="cart-col-comments"><div>Disc. Comments</div></th>
+									<th scope="col" class="cart-col-moq cart-num-cell"><div>MOQ</div></th>
+									<th scope="col" class="cart-col-valid"><div>Valid From</div></th>
+									<th scope="col" class="cart-col-valid"><div>Valid Till</div></th>
+									<th scope="col" class="cart-action-cell cart-col-actions"><div class="action-cell-center">Actions</div></th>
+								</tr>
+							</thead>
+							<tbody>
+								<template for:each={SelectedProductData} for:item="product">
+									<tr key={product.Id} data-row-id={product.Id}>
+										<th scope="row" class="cart-col-name"><div class="cart-product-name">{product.Name}&nbsp;<strong>({product.ProductCode})</strong></div></th>
+										<td class="cart-col-partno">
+											<lightning-input type="text" value={product.CustomerPartNo}
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleCustomerPartNoChange}></lightning-input>
+										</td>
+										<td class="cart-col-listprice cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.ListPrice} placeholder="0"
+												variant="label-hidden" disabled></lightning-input>
+										</td>
+										<td class="cart-col-sellsc cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.SellPriceOfSc} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleSellPriceOfScChange}></lightning-input>
+										</td>
+										<td class="cart-col-reqdisc cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.Discount}
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleDiscountChange}></lightning-input>
+										</td>
+										<td class="cart-col-sales cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.Price} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleSalesPriceChange}></lightning-input>
+										</td>
+										<td class="cart-col-comments">
+											<lightning-textarea class="cart-comments-input" value={product.RequestedComments}
+												data-target-id={product.Id} variant="label-hidden"
+												max-length="255"
+												onchange={handleRequestedCommentsChange}></lightning-textarea>
+										</td>
+										<td class="cart-col-moq cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.PotentialQty} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleMoqChange}></lightning-input>
+										</td>
+										<td class="cart-col-valid">
+											<lightning-input type="date" value={product.ValidFrom}
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleValidFromChange}></lightning-input>
+										</td>
+										<td class="cart-col-valid">
+											<lightning-input type="date" value={product.ValidTill}
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleValidTillChange}></lightning-input>
+										</td>
+										<td class="cart-action-cell cart-col-actions">
+											<div class="action-cell-center">
+												<lightning-button-icon icon-name="utility:delete" alternative-text="Delete"
+													onclick={deleteProductFromCart} data-id={product.Id}
+													variant="destructive" title="Remove Product">
+												</lightning-button-icon>
+											</div>
+										</td>
+									</tr>
+								</template>
+							</tbody>
+						</table>
+						</template>
+						<template if:false={isArcQuoteRecordType}>
+						<table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_col-bordered cart-edit-table">
+							<thead>
+								<tr id="firstRowEmbedded" class="slds-line-height_reset">
+									<th scope="col" class="cart-col-name"><div>Product Name</div></th>
+									<th scope="col" class="cart-col-partno"><div>Customer Part No</div></th>
+									<th scope="col" class="cart-col-listprice cart-num-cell"><div>List Price</div></th>
+									<th scope="col" class="cart-col-disc cart-num-cell"><div>Disc. (SAP)</div></th>
+									<th scope="col" class="cart-col-reqdisc cart-num-cell"><div>{reqDiscColumnLabel}</div></th>
+									<th scope="col" class="cart-col-net cart-num-cell"><div>Net Price</div></th>
+									<th scope="col" class="cart-col-inco cart-num-cell"><div>Inco Terms Factor</div></th>
+									<th scope="col" class="cart-col-qty cart-num-cell"><div>Quantity</div></th>
+									<th scope="col" class="cart-col-sales cart-num-cell"><div>Sales Price</div></th>
+									<th scope="col" class="cart-action-cell cart-col-actions"><div class="action-cell-center">Actions</div></th>
+								</tr>
+							</thead>
+							<tbody>
+								<template for:each={SelectedProductData} for:item="product">
+									<tr key={product.Id} data-row-id={product.Id}>
+										<th scope="row" class="cart-col-name"><div class="cart-product-name">{product.Name}&nbsp;<strong>({product.ProductCode})</strong></div></th>
+										<td class="cart-col-partno">
+											<lightning-input type="text" value={product.CustomerPartNo}
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleCustomerPartNoChange}></lightning-input>
+										</td>
+										<td class="cart-col-listprice cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.ListPrice} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden" disabled></lightning-input>
+										</td>
+										<template if:true={product.hideDiscountColumns}>
+											<td class="cart-col-disc cart-num-cell"></td>
+											<td class="cart-col-reqdisc cart-num-cell"></td>
+										</template>
+										<template if:false={product.hideDiscountColumns}>
+											<td class="cart-col-disc cart-num-cell">
+												<lightning-input class="cart-num-input" type="text" value={customerSAPdiscount}
+													variant="label-hidden" disabled></lightning-input>
+											</td>
+											<td class="cart-col-reqdisc cart-num-cell">
+												<lightning-input class="cart-num-input" type="text" value={product.Discount}
+													data-target-id={product.Id} variant="label-hidden"
+													disabled={product.reqDiscountDisabled}
+													onchange={handleDiscountChange}></lightning-input>
+											</td>
+										</template>
+										<td class="cart-col-net cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.NetPrice} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden" disabled>
+											</lightning-input>
+										</td>
+										<td class="cart-col-inco cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.IncoTerms}
+												variant="label-hidden" disabled></lightning-input>
+										</td>
+										<td class="cart-col-qty cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.Quantity} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleQuantityChange}></lightning-input>
+										</td>
+										<td class="cart-col-sales cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.Price} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleSalesPriceChange} disabled={product.salesPriceDisabled}></lightning-input>
+										</td>
+										<td class="cart-action-cell cart-col-actions">
+											<div class="action-cell-center">
+												<lightning-button-icon icon-name="utility:delete" alternative-text="Delete"
+													onclick={deleteProductFromCart} data-id={product.Id}
+													variant="destructive" title="Remove Product">
+												</lightning-button-icon>
+											</div>
+										</td>
+									</tr>
+								</template>
+							</tbody>
+						</table>
+						</template>
+						</div>
+					</template>
+				</div>
+					<footer class="embedded-footer">
+						<div class="footer-actions">
+							<template if:true={isFirstPage}>
+								<template if:true={showProductResults}>
+								<div class="footer-pagination">
+									<lightning-button disabled={bDisableFirst} icon-name="utility:jump_to_left"
+										label="First" onclick={firstPage}></lightning-button>
+									<lightning-button disabled={bDisableFirst} icon-name="utility:chevronleft"
+										label="Previous" onclick={previousHandler}></lightning-button>
+									<span class="slds-badge slds-badge_lightest">
+										Page {page} of {totalPage} | Total: {totalRecountCount}
+									</span>
+									<lightning-button disabled={bDisableLast} icon-name="utility:chevronright"
+										label="Next" onclick={nextHandler} icon-position="right"></lightning-button>
+									<lightning-button disabled={bDisableLast} icon-name="utility:jump_to_right"
+										label="Last" onclick={lastPage} icon-position="right"></lightning-button>
+								</div>
+								</template>
+							</template>
+							<template if:false={isFirstPage}>
+								<button type="button" class="footer-btn-secondary" onclick={handleback} disabled={isSavingDraft}>Back</button>
+							</template>
+							<template if:true={isFirstPage}>
+								<button type="button" class="footer-btn-secondary" onclick={handleFirstPageCancel}>{firstPageCancelLabel}</button>
+								<button type="button" class="footer-btn-primary" onclick={addToCart} disabled={DisableNext}>Add to Cart</button>
+								<template if:true={showViewCart}>
+									<button type="button" class="footer-btn-primary" onclick={viewCart}>View Cart</button>
+								</template>
+							</template>
+							<template if:false={isFirstPage}>
+								<button type="button" class="footer-btn-primary" onclick={saveDetails} disabled={isSavingDraft}>Save as draft</button>
+							</template>
+						</div>
+					</footer>
+			</div>
+		</template>
+
+		<template if:false={isEmbeddedActive}>
+		<section role="dialog" aria-labelledby="modal-heading-01" aria-modal="true"
+			aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+			<div class={overlayContainerClass}>
+				<header class="slds-modal__header">
+					<button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+						title="Close" onclick={closeModal}>
+						<lightning-icon icon-name="utility:close" alternative-text="close" variant="inverse"
+							size="small"></lightning-icon>
+						<span class="slds-assistive-text">Close</span>
+					</button>
+					<template if:true={showPageHeading}>
+						<h2 id="modal-heading-04" class="slds-text-heading_medium page-heading">{pageHeading}</h2>
+					</template>
+				</header>
+				<div class={modalContentClass} id="modal-content-id-1">
+					<template if:true={isFirstPage}>
+						<div class="product-filters">
+							<div class="searchBoxWrapper slds-show">
+								<div class="filter-row">
+									<template if:true={showProductTypeFilter}>
+										<lightning-combobox name="productSource" label="Type"
+											value={selectedProductSource} placeholder="Select Type"
+											options={productTypeOptions} onchange={handleProductSourceChange}
+											class="filter-field">
+										</lightning-combobox>
+									</template>
+									<template if:true={showItemTypeFilter}>
+										<lightning-combobox name="itemType" label="Item Type"
+											value={selectedItemType} placeholder="Select Item"
+											options={itemsOptions} onchange={handleItemOptions}
+											disabled={itemTypeDisabled}
+											class="filter-field">
+										</lightning-combobox>
+									</template>
+								</div>
+								<lightning-input type="search" value={searchKey}
+									label="Search Product" variant="label-stacked"
+									placeholder="Search Product here..."
+									onkeyup={showFilteredProducts} class="searchBox search-field"
+									disabled={searchDisability}>
+								</lightning-input>
+							</div>
+						</div>
+						<template if:true={showSelectFilterHint}>
+							<div class="product-filter-hint">{selectFilterHintText}</div>
+						</template>
+						<template if:true={showProductResults}>
+						<div class="slds-grid slds-wrap product-table-scroll">
+							<div class="slds-size_3-of-3">
+								<div class="slds-col slds-box">
+									<lightning-datatable class="product-pick-datatable" data={ShowTableData} key-field="Id" columns={cols}
+										if:false={showSpinner} data-id="datatable"
+										selected-rows={selectedProductCode} onrowselection={SelectedProduct}>
+									</lightning-datatable>
+									<template if:true={showSpinner}>
+										<div class="slds-is-relative product-table-spinner">
+											<lightning-spinner alternative-text="Loading..." size="medium">
+											</lightning-spinner>
+										</div>
+									</template>
+								</div>
+							</div>
+						</div>
+						</template>
+					</template>
+					<template if:true={isSecondPage}>
+						<div class="cart-edit-wrap slds-is-relative">
+						<template if:true={showCartSaveLoader}>
+							<div class="cart-save-loader" role="status">
+								<div class="cart-save-loader__spinner" aria-hidden="true"></div>
+								<div class="cart-save-loader__text">Saving as draft...</div>
+							</div>
+						</template>
+						<template if:true={isArcQuoteRecordType}>
+						<table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_col-bordered cart-edit-table cart-edit-table--arc">
+							<thead>
+								<tr class="slds-line-height_reset">
+									<th scope="col" class="cart-col-name"><div>Product Name</div></th>
+									<th scope="col" class="cart-col-partno"><div>Customer Part no.</div></th>
+									<th scope="col" class="cart-col-listprice cart-num-cell"><div>List Price</div></th>
+									<th scope="col" class="cart-col-sellsc cart-num-cell"><div>{proposedArcPriceColumnLabel}</div></th>
+									<th scope="col" class="cart-col-reqdisc cart-num-cell"><div>Disc. %</div></th>
+									<th scope="col" class="cart-col-sales cart-num-cell"><div>Sales Price to SC</div></th>
+									<th scope="col" class="cart-col-comments"><div>Disc. Comments</div></th>
+									<th scope="col" class="cart-col-moq cart-num-cell"><div>MOQ</div></th>
+									<th scope="col" class="cart-col-valid"><div>Valid From</div></th>
+									<th scope="col" class="cart-col-valid"><div>Valid Till</div></th>
+									<th scope="col" class="cart-action-cell cart-col-actions"><div class="action-cell-center">Actions</div></th>
+								</tr>
+							</thead>
+							<tbody>
+								<template for:each={SelectedProductData} for:item="product">
+									<tr key={product.Id} data-row-id={product.Id}>
+										<th scope="row" class="cart-col-name"><div class="cart-product-name">{product.Name}&nbsp;<strong>({product.ProductCode})</strong></div></th>
+										<td class="cart-col-partno">
+											<lightning-input type="text" value={product.CustomerPartNo}
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleCustomerPartNoChange}></lightning-input>
+										</td>
+										<td class="cart-col-listprice cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.ListPrice} placeholder="0"
+												variant="label-hidden" disabled></lightning-input>
+										</td>
+										<td class="cart-col-sellsc cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.SellPriceOfSc} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleSellPriceOfScChange}></lightning-input>
+										</td>
+										<td class="cart-col-reqdisc cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.Discount}
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleDiscountChange}></lightning-input>
+										</td>
+										<td class="cart-col-sales cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.Price} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleSalesPriceChange}></lightning-input>
+										</td>
+										<td class="cart-col-comments">
+											<lightning-textarea class="cart-comments-input" value={product.RequestedComments}
+												data-target-id={product.Id} variant="label-hidden"
+												max-length="255"
+												onchange={handleRequestedCommentsChange}></lightning-textarea>
+										</td>
+										<td class="cart-col-moq cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.PotentialQty} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleMoqChange}></lightning-input>
+										</td>
+										<td class="cart-col-valid">
+											<lightning-input type="date" value={product.ValidFrom}
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleValidFromChange}></lightning-input>
+										</td>
+										<td class="cart-col-valid">
+											<lightning-input type="date" value={product.ValidTill}
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleValidTillChange}></lightning-input>
+										</td>
+										<td class="cart-action-cell cart-col-actions">
+											<div class="action-cell-center">
+												<lightning-button-icon icon-name="utility:delete" alternative-text="Delete"
+													onclick={deleteProductFromCart} data-id={product.Id}
+													variant="destructive" title="Remove Product">
+												</lightning-button-icon>
+											</div>
+										</td>
+									</tr>
+								</template>
+							</tbody>
+						</table>
+						</template>
+						<template if:false={isArcQuoteRecordType}>
+						<table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_col-bordered cart-edit-table">
+							<thead>
+								<tr id="firstRowModal" class="slds-line-height_reset">
+									<th scope="col" class="cart-col-name"><div>Product Name</div></th>
+									<th scope="col" class="cart-col-partno"><div>Customer Part No</div></th>
+									<th scope="col" class="cart-col-listprice cart-num-cell"><div>List Price</div></th>
+									<th scope="col" class="cart-col-disc cart-num-cell"><div>Disc. (SAP)</div></th>
+									<th scope="col" class="cart-col-reqdisc cart-num-cell"><div>{reqDiscColumnLabel}</div></th>
+									<th scope="col" class="cart-col-net cart-num-cell"><div>Net Price</div></th>
+									<th scope="col" class="cart-col-inco cart-num-cell"><div>Inco Terms Factor</div></th>
+									<th scope="col" class="cart-col-qty cart-num-cell"><div>Quantity</div></th>
+									<th scope="col" class="cart-col-sales cart-num-cell"><div>Sales Price</div></th>
+									<th scope="col" class="cart-action-cell cart-col-actions"><div class="action-cell-center">Actions</div></th>
+								</tr>
+							</thead>
+							<tbody>
+								<template for:each={SelectedProductData} for:item="product">
+									<tr key={product.Id} data-row-id={product.Id}>
+										<th scope="row" class="cart-col-name"><div class="cart-product-name">{product.Name}&nbsp;<strong>({product.ProductCode})</strong></div></th>
+										<td class="cart-col-partno">
+											<lightning-input type="text" value={product.CustomerPartNo}
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleCustomerPartNoChange}></lightning-input>
+										</td>
+										<td class="cart-col-listprice cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.ListPrice} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden" disabled></lightning-input>
+										</td>
+										<template if:true={product.hideDiscountColumns}>
+											<td class="cart-col-disc cart-num-cell"></td>
+											<td class="cart-col-reqdisc cart-num-cell"></td>
+										</template>
+										<template if:false={product.hideDiscountColumns}>
+											<td class="cart-col-disc cart-num-cell">
+												<lightning-input class="cart-num-input" type="text" value={customerSAPdiscount}
+													variant="label-hidden" disabled></lightning-input>
+											</td>
+											<td class="cart-col-reqdisc cart-num-cell">
+												<lightning-input class="cart-num-input" type="text" value={product.Discount}
+													data-target-id={product.Id} variant="label-hidden"
+													disabled={product.reqDiscountDisabled}
+													onchange={handleDiscountChange}></lightning-input>
+											</td>
+										</template>
+										<td class="cart-col-net cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.NetPrice} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden" disabled>
+											</lightning-input>
+										</td>
+										<td class="cart-col-inco cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.IncoTerms}
+												variant="label-hidden" disabled></lightning-input>
+										</td>
+										<td class="cart-col-qty cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.Quantity} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleQuantityChange}></lightning-input>
+										</td>
+										<td class="cart-col-sales cart-num-cell">
+											<lightning-input class="cart-num-input" type="text" value={product.Price} placeholder="0"
+												data-target-id={product.Id} variant="label-hidden"
+												onchange={handleSalesPriceChange} disabled={product.salesPriceDisabled}></lightning-input>
+										</td>
+										<td class="cart-action-cell cart-col-actions">
+											<div class="action-cell-center">
+												<lightning-button-icon icon-name="utility:delete" alternative-text="Delete"
+													onclick={deleteProductFromCart} data-id={product.Id}
+													variant="destructive" title="Remove Product">
+												</lightning-button-icon>
+											</div>
+										</td>
+									</tr>
+								</template>
+							</tbody>
+						</table>
+						</template>
+						</div>
+					</template>
+				</div>
+				<footer class="slds-modal__footer">
+					<div class="footer-actions">
+						<template if:true={isFirstPage}>
+							<template if:true={showProductResults}>
+							<div class="footer-pagination">
+								<lightning-button disabled={bDisableFirst} icon-name="utility:jump_to_left"
+									label="First" onclick={firstPage}></lightning-button>
+								<lightning-button disabled={bDisableFirst} icon-name="utility:chevronleft"
+									label="Previous" onclick={previousHandler}></lightning-button>
+								<span class="slds-badge slds-badge_lightest">
+									Page {page} of {totalPage} | Total: {totalRecountCount}
+								</span>
+								<lightning-button disabled={bDisableLast} icon-name="utility:chevronright"
+									label="Next" onclick={nextHandler} icon-position="right"></lightning-button>
+								<lightning-button disabled={bDisableLast} icon-name="utility:jump_to_right"
+									label="Last" onclick={lastPage} icon-position="right"></lightning-button>
+							</div>
+							</template>
+						</template>
+						<template if:false={isFirstPage}>
+							<button type="button" class="footer-btn-secondary" onclick={handleback} disabled={isSavingDraft}>Back</button>
+						</template>
+						<template if:true={isFirstPage}>
+							<button type="button" class="footer-btn-secondary" onclick={handleFirstPageCancel}>{firstPageCancelLabel}</button>
+							<button type="button" class="footer-btn-primary" onclick={addToCart} disabled={DisableNext}>Add to Cart</button>
+							<template if:true={showViewCart}>
+								<button type="button" class="footer-btn-primary" onclick={viewCart}>View Cart</button>
+							</template>
+						</template>
+						<template if:false={isFirstPage}>
+							<button type="button" class="footer-btn-primary" onclick={saveDetails} disabled={isSavingDraft}>Save as draft</button>
+						</template>
+					</div>
+				</footer>
+			</div>
+		</section>
+		<div class="slds-backdrop slds-backdrop_open"></div>
+		</template>
+	</template>
+</template>

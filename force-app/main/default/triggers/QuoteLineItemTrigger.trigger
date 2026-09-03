@@ -1,6 +1,9 @@
 trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, after update, after insert, after delete) {
+    Boolean skipEffectiveApproverBackfillAutomation =
+        QuoteHighestFinalApproverBackfillBatch.isBackfillRunning() ||
+        QuoteSapApprovalCompletionBatch.isCompletionRunning();
     
-    if (Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
         System.debug('=== APPROVAL PROCESS: BEFORE TRIGGER START ===');
         System.debug('Trigger Context: ' + (Trigger.isInsert ? 'INSERT' : 'UPDATE'));
         System.debug('Number of QLIs: ' + Trigger.new.size());
@@ -28,6 +31,14 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         
         for (QuoteLineItem qli : Trigger.new) {
             System.debug('--- Processing QLI ID: ' + qli.Id);
+            System.debug('List Price: ' + qli.ListPrice);
+            
+            // Copy Standard List Price into backend field
+            if (qli.ListPrice != null &&
+                qli.List_Price_Backend__c != qli.ListPrice) {
+                    
+                    qli.List_Price_Backend__c = qli.ListPrice;
+                }
             
             // 1️⃣ Populate fields from parent Quote if blank (only for new QLI)
             if (Trigger.isInsert && quoteMap.containsKey(qli.QuoteId)) {
@@ -90,10 +101,11 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         System.debug('=== APPROVAL PROCESS: BEFORE TRIGGER END ===');
     }
     
-    if (Trigger.isAfter && Trigger.isUpdate) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isUpdate) {
         System.debug('=== APPROVAL PROCESS: AFTER UPDATE TRIGGER START ===');
         System.debug('Calling Sequential Approval Handler');
         QuoteLineItemSequentialApprovalHandler.processSequentialApprovals(Trigger.new, Trigger.oldMap);
+        QuoteHighestApprovalCoordinator.afterQliChange(Trigger.new, Trigger.oldMap);
         System.debug('=== APPROVAL PROCESS: AFTER UPDATE TRIGGER END ===');
         if (!QuoteLineItemApprovalHandler.directDiscountUpdateInProgress) {
             QuoteLineItemApprovalHandler.applyDirectDiscountIfNoApprovalNeeded(Trigger.new, Trigger.oldMap);
@@ -101,7 +113,8 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
     }
 
     // ── AFTER INSERT: Apply Discount_to_be_offered__c to UnitPrice on creation ──────
-    if (Trigger.isAfter && Trigger.isInsert) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isInsert) {
+        QuoteHighestApprovalCoordinator.afterQliChange(Trigger.new, null);
         Set<Id> insertedIds = new Set<Id>();
         for (QuoteLineItem qli : Trigger.new) {
             if (qli.Id != null) insertedIds.add(qli.Id);
@@ -137,7 +150,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
     
     Set<Id> quoteIds = new Set<Id>();
     
-    if ( Trigger.isAfter && (Trigger.isInsert || Trigger.isUpdate)) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && (Trigger.isInsert || Trigger.isUpdate)) {
         for (QuoteLineItem qli : Trigger.new) {
             if (qli.QuoteId != null) {
                 quoteIds.add(qli.QuoteId);
@@ -145,7 +158,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         }
     }
     
-    if (Trigger.isAfter && Trigger.isDelete) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isDelete) {
         for (QuoteLineItem qli : Trigger.old) {
             if (qli.QuoteId != null) {
                 quoteIds.add(qli.QuoteId);
@@ -153,11 +166,11 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         }
     }
     
-    if (!quoteIds.isEmpty()) {
+    if (!skipEffectiveApproverBackfillAutomation && !quoteIds.isEmpty()) {
         QuoteLineItemHelper.updateSmallOrderFlag(quoteIds);
     } 
     
-    if (Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
         
         Set<Id> quoteIds = new Set<Id>();
         
@@ -208,7 +221,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         
     }
 
-    if (Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
         System.debug('=== NEGATIVE DISCOUNT DIRECT PRICE UPDATE START ===');
         
         Set<Id> qliIds = new Set<Id>();
@@ -295,7 +308,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         System.debug('=== NEGATIVE DISCOUNT DIRECT PRICE UPDATE END ===');
     }
 
-    if (Trigger.isAfter && Trigger.isUpdate) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isUpdate) {
         System.debug('=== UNIT PRICE UPDATE: AFTER UPDATE TRIGGER START ===');
         
         List<QuoteLineItem> qlisToUpdatePrice = new List<QuoteLineItem>();
@@ -304,13 +317,8 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
             QuoteLineItem oldQLI = Trigger.oldMap.get(qli.Id);
             
             // Check if any approval status just changed to 'Approved'
-            Boolean approvalJustGranted = (
-                (qli.Sales_Manager_Status__c == 'Approved' && oldQLI.Sales_Manager_Status__c != 'Approved') ||
-                (qli.Country_Continent_Sales_H_LOB_Status__c == 'Approved' && oldQLI.Country_Continent_Sales_H_LOB_Status__c != 'Approved') ||
-                (qli.Global_Sales_Head_Status__c == 'Approved' && oldQLI.Global_Sales_Head_Status__c != 'Approved') ||
-                (qli.Rotex_Board_Member_Status__c == 'Approved' && oldQLI.Rotex_Board_Member_Status__c != 'Approved') ||
-                (qli.Managing_Director_Status__c == 'Approved' && oldQLI.Managing_Director_Status__c != 'Approved')
-            );
+            Boolean approvalJustGranted =
+                QuoteHighestApprovalCoordinator.isEffectiveQliApprovalJustGranted(qli, oldQLI);
             
             if (approvalJustGranted && qli.Discount_to_be_offered__c != null) {
                 qlisToUpdatePrice.add(qli);
@@ -325,7 +333,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         System.debug('=== UNIT PRICE UPDATE: AFTER UPDATE TRIGGER END ===');
     }
 
-    if (Trigger.isAfter && Trigger.isUpdate) {
+    if (!skipEffectiveApproverBackfillAutomation && Trigger.isAfter && Trigger.isUpdate) {
         QuoteFinalApprovalNotificationHandler.handleQuoteLineItemsAfterUpdate(Trigger.new, Trigger.oldMap);
         QuoteLineItemApprovalHandler.updateQLIUnitPrice(Trigger.new);
     }

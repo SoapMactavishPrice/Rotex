@@ -2,6 +2,16 @@ public class QuoteLineItemHandler {
     
     public static void updateHierarchyFromQuote(List<QuoteLineItem> newList) {
         
+        if (QuoteLineItemHandlerControl.isRunning) {
+            return;
+        }
+        
+        QuoteLineItemHandlerControl.isRunning = true;
+        
+        try {
+
+        // Existing code stays exactly the same
+        
         // 🔹 1. Collect Quote Ids
         Set<Id> quoteIds = new Set<Id>();
         for (QuoteLineItem qli : newList) {
@@ -76,5 +86,8 @@ public class QuoteLineItemHandler {
         if (!qliToUpdate.isEmpty()) {
             update qliToUpdate;
         }
+        } finally {
+            QuoteLineItemHandlerControl.isRunning = false;
+        }    
     }
 }

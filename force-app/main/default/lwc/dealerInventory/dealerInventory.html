@@ -1,0 +1,357 @@
+<template>
+    <template if:false={selectedInventory}>
+        <div class="list-view">
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="page-header">
+                <div>
+                    <div class="breadcrumb">INVENTORY · ASSIGNED TO YOU</div>
+                    <div class="page-title">Inventory</div>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+                        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6" />
+                        <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    </svg>
+                    <input type="text" class="search-input" placeholder="Search by inventory no, product, partner..."
+                        onkeyup={handleSearch} />
+                </div>
+                <div class="filter-actions">
+                    <c-dealer-data-export
+                        object-key="Inventory"
+                        button-label="Export"
+                        search-key={searchKey}
+                    ></c-dealer-data-export>
+                </div>
+            </div>
+
+            <div class="quote-table">
+                <div class="table-header">
+                    <div>INVENTORY NO</div>
+                    <div>PRODUCT NAME</div>
+                    <div>CHANNEL PARTNER</div>
+                    <div>AVAILABLE QTY</div>
+                    <div>ON HAND QTY</div>
+                    <div>STATUS</div>
+                </div>
+
+                <template if:true={hasInventories}>
+                    <template for:each={filteredInventories} for:item="inv">
+                        <div key={inv.Id} class="table-row table-row-inventory" data-id={inv.Id}
+                            onclick={openInventoryDetail}>
+                            <div>
+                                <div class="customer-name">{inv.inventoryNumberDisplay}</div>
+                            </div>
+                            <div class="contact-text">{inv.productDisplay}</div>
+                            <div class="contact-text">{inv.partnerDisplay}</div>
+                            <div class="contact-text">{inv.availableQtyDisplay}</div>
+                            <div class="contact-text">{inv.onHandQtyDisplay}</div>
+                            <div class="contact-text">
+                                <span class={inv.statusBadgeClass}>{inv.statusDisplay}</span>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+
+                <template if:false={hasInventories}>
+                    <div class="empty-state">No inventory records found.</div>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={selectedInventory}>
+        <div class="detail-view">
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="detail-header">
+                <div class="detail-topbar">
+                    <button type="button" class="back-btn" onclick={backToList}>
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        Back to Inventory
+                    </button>
+                </div>
+
+                <div class="detail-top">
+                    <div class="detail-identity">
+                        <div>
+                            <div class="detail-meta">INVENTORY · {selectedInventory.inventoryNumberDisplay}</div>
+                            <div class="detail-name">{selectedInventory.Name}</div>
+                            <div class="detail-company">
+                                <span>{selectedInventory.partnerDisplay}</span>
+                                <span class="divider-dot">·</span>
+                                <span>Created {selectedInventory.createdDate}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-actions">
+                        <button type="button" class="action-btn action-btn-primary" onclick={handleOpenEdit}>
+                            Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quote-tabs">
+                <button type="button" class={detailsTabClass} data-tab="details" onclick={handleTabClick}>
+                    Details
+                </button>
+                <button type="button" class={transactionsTabClass} data-tab="transactions" onclick={handleTabClick}>
+                    Inventory Transactions
+                </button>
+            </div>
+
+            <div class="detail-layout">
+                <!-- Details Tab -->
+                <template if:true={isDetailsTab}>
+                    <div class="detail-columns">
+                        <div class="detail-col detail-col-left" style="width: 100%; max-width: 100%;">
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="standard:product_item"
+                                            size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Inventory Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Inventory Number</div>
+                                        <div class="info-row-value">{selectedInventory.inventoryNumberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Last GRN Date</div>
+                                        <div class="info-row-value">{selectedInventory.lastGrnDateDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Channel Partner</div>
+                                        <div class="info-row-value">{selectedInventory.partnerDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Last Sale Date</div>
+                                        <div class="info-row-value">{selectedInventory.lastSaleDateDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Product</div>
+                                        <div class="info-row-value">{selectedInventory.productDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Status</div>
+                                        <div class="info-row-value">
+                                            <span
+                                                class={selectedInventory.statusBadgeClass}>{selectedInventory.statusDisplay}</span>
+                                        </div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Product Code</div>
+                                        <div class="info-row-value">{selectedInventory.productCodeDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Minimum Order Quantity</div>
+                                        <div class="info-row-value">{selectedInventory.minimumOrderQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row"></div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Minimum Stock Level</div>
+                                        <div class="info-row-value">{selectedInventory.minimumStockLevelDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="utility:metrics" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Quantity Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Total GRN Quantity</div>
+                                        <div class="info-row-value">{selectedInventory.totalGrnQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">On Hand Quantity</div>
+                                        <div class="info-row-value">{selectedInventory.onHandQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Total Reserved Quantity</div>
+                                        <div class="info-row-value">{selectedInventory.totalReservedQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Current Reserved Quantity</div>
+                                        <div class="info-row-value">{selectedInventory.currentReservedQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Total Invoice Quantity</div>
+                                        <div class="info-row-value">{selectedInventory.totalInvoiceQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Available Quantity</div>
+                                        <div class="info-row-value">{selectedInventory.availableQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Total Cancelled Quantity</div>
+                                        <div class="info-row-value">{selectedInventory.totalCancelledQtyDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Transactions Tab -->
+                <template if:true={isTransactionsTab}>
+                    <template if:true={showTransactionListView}>
+                        <template if:true={hasTransactions}>
+                            <div class="qli-list-wrap">
+                                <div class="qli-list-meta">
+                                    {transactions.length} items · Sorted by Date
+                                </div>
+                                <div class="qli-table">
+                                    <div class="qli-table-header txn-header">
+                                        <div>Transaction No</div>
+                                        <div>Transaction Type</div>
+                                        <div>Quantity</div>
+                                        <div>GRN Line Item</div>
+                                        <div>Quote Line Item</div>
+                                        <div>Secondary Invoice</div>
+                                        <div>Transaction Date/Time</div>
+                                        <div>Remarks</div>
+                                    </div>
+                                    <template for:each={transactions} for:item="txn">
+                                        <div key={txn.id} class="qli-table-row txn-row" data-id={txn.id} onclick={handleTransactionClick} role="button" tabindex="0">
+                                            <div class="qli-cell qli-cell-num">{txn.transactionNumberDisplay}</div>
+                                            <div class="qli-cell">{txn.transactionTypeDisplay}</div>
+                                            <div class="qli-cell">{txn.quantityDisplay}</div>
+                                            <div class="qli-cell">{txn.grnLineItemDisplay}</div>
+                                            <div class="qli-cell">{txn.quoteLineItemDisplay}</div>
+                                            <div class="qli-cell">{txn.secondaryInvoiceDisplay}</div>
+                                            <div class="qli-cell">{txn.transactionDateDisplay}</div>
+                                            <div class="qli-cell">{txn.remarksDisplay}</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template if:false={hasTransactions}>
+                            <div class="qli-empty">No transactions found for this inventory.</div>
+                        </template>
+                    </template>
+
+                    <template if:true={showTransactionDetailView}>
+                        <div class="detail-topbar">
+                            <button type="button" class="back-btn" onclick={handleBackToTransactions}>
+                                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                    <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                Back to Transactions
+                            </button>
+                        </div>
+
+                        <div class="info-card" style="margin-top: 16px;">
+                            <div class="info-card-header">
+                                <div class="info-card-icon">
+                                    <lightning-icon icon-name="standard:record" size="x-small"></lightning-icon>
+                                </div>
+                                <div class="info-card-title">Transaction Information</div>
+                            </div>
+                            <div class="info-card-body info-card-body-2col">
+                                <div class="info-row">
+                                    <div class="info-row-label">Transaction No</div>
+                                    <div class="info-row-value">{selectedTransaction.transactionNumberDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">GRN Line Item</div>
+                                    <div class="info-row-value">{selectedTransaction.grnLineItemDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Transaction Type</div>
+                                    <div class="info-row-value">{selectedTransaction.transactionTypeDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Quote Line Item</div>
+                                    <div class="info-row-value">{selectedTransaction.quoteLineItemDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Transaction Date/Time</div>
+                                    <div class="info-row-value">{selectedTransaction.transactionDateDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Secondary Invoice</div>
+                                    <div class="info-row-value">{selectedTransaction.secondaryInvoiceDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Quantity</div>
+                                    <div class="info-row-value">{selectedTransaction.quantityDisplay}</div>
+                                </div>
+                                <div class="info-row"></div>
+                                <div class="info-row info-row-span">
+                                    <div class="info-row-label">Remarks</div>
+                                    <div class="info-row-value">{selectedTransaction.remarksDisplay}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={showEditModal}>
+        <div class="edit-modal-overlay" onclick={handleCloseEdit}>
+            <div class="edit-modal" onclick={stopEditModalBubble}>
+                <div class="edit-modal-header">
+                    <div class="edit-modal-title">Edit Inventory</div>
+                    <button type="button" class="preview-close-btn" onclick={handleCloseEdit} aria-label="Close">
+                        ✕
+                    </button>
+                </div>
+                <div class="edit-modal-body">
+                    <div class="edit-field">
+                        <label class="edit-label" for="moq-input">Minimum Order Quantity</label>
+                        <input
+                            id="moq-input"
+                            data-field="moq"
+                            class="edit-input"
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={editMinimumOrderQty}
+                            oninput={handleEditMoqChange}
+                        />
+                    </div>
+                    <div class="edit-field">
+                        <label class="edit-label" for="msl-input">Minimum Stock Level</label>
+                        <input
+                            id="msl-input"
+                            data-field="msl"
+                            class="edit-input"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={editMinimumStockLevel}
+                            oninput={handleEditMslChange}
+                        />
+                    </div>
+                </div>
+                <div class="edit-modal-footer">
+                    <button type="button" class="action-btn action-btn-secondary" onclick={handleCloseEdit}
+                        disabled={isSavingEdit}>
+                        Cancel
+                    </button>
+                    <button type="button" class="action-btn action-btn-primary" onclick={handleSaveEdit}
+                        disabled={isSavingEdit}>
+                        {saveButtonLabel}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+</template>

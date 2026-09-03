@@ -1,0 +1,17 @@
+<template>
+    <button
+        type="button"
+        class="action-btn action-btn-secondary"
+        onclick={handleCreatePdf}
+        disabled={isDisabled}>
+        Create PDF
+    </button>
+
+    <template if:true={isOpen}>
+        <c-dealer-quote-pdf-modal
+            quote-id={quoteId}
+            onclose={handleClose}
+            onpdfsaved={handlePdfSaved}>
+        </c-dealer-quote-pdf-modal>
+    </template>
+</template>

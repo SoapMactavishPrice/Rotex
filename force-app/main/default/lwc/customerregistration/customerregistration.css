@@ -5,7 +5,7 @@
 
 /* ── Tokens ─────────────────────────────────────────── */
 :host {
-    --blue: #B8860B;
+    --blue: #0d6b69;
     --blue-light: #FFF8E7;
     --blue-dark: #8B6508;
     --green: #2E7D32;
@@ -36,6 +36,13 @@
 /* ── Page Header ─────────────────────────────────────── */
 .cm-page-header {
     padding: 28px 32px 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.cm-page-header__left {
+    text-align: left;
 }
 
 .cm-page-header__meta {
@@ -44,6 +51,8 @@
     letter-spacing: .08em;
     color: var(--grey-3);
     text-transform: uppercase;
+    margin: 0;
+    padding: 0;
 }
 
 .cm-page-header__title {
@@ -51,8 +60,11 @@
     font-weight: 700;
     color: var(--grey-5);
     margin: 4px 0 0;
-    position: relative;
-    right: 540px;
+    padding: 0;
+    padding-left: 10px;
+    line-height: 1.2;
+    text-align: left;
+    display: block;
 }
 
 /* ── Toolbar ─────────────────────────────────────────── */
@@ -63,6 +75,88 @@
     padding: 16px 32px;
     flex-wrap: nowrap;
     /* ← change from wrap to nowrap */
+}
+
+.cm-toolbar__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.cm-toolbar__btns {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+/* Business line filter tabs — match Leads status tabs (active teal, soft track bg) */
+.cm-status-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #ddddda;
+    border-radius: 8px;
+    padding: 3px;
+    background: #f8f8f5;
+    flex-shrink: 0;
+    width: fit-content;
+    box-sizing: border-box;
+}
+
+.cm-filter-tab {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    background-color: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: #123b3a;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    font-family: inherit;
+    line-height: 1.2;
+    margin: 0;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.cm-filter-tab:hover {
+    background: rgba(255, 255, 255, 0.55);
+    color: #123b3a;
+}
+
+.cm-filter-tab--active,
+.cm-filter-tab.cm-filter-tab--active {
+    background: #0d6b69;
+    background-color: #0d6b69;
+    color: #ffffff;
+}
+
+.cm-filter-tab--active:hover {
+    background: #0d6b69;
+    color: #ffffff;
+}
+
+.cm-filter-tab span {
+    color: #6f7676;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Count stays muted gray on active tab (same as Leads) */
+.cm-filter-tab--active span {
+    color: #6f7676;
 }
 
 .cm-search-wrap {
@@ -95,18 +189,11 @@
 }
 
 .cm-search-input:focus {
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(27, 110, 194, .12);
+    border-color: #0d6b69;
+    box-shadow: 0 0 0 2px rgba(13, 107, 105, 0.15);
 }
 
-.cm-status-tabs {
-    display: flex;
-    gap: 4px;
-    background: var(--grey-1);
-    border-radius: 8px;
-    padding: 3px;
-}
-
+/* Legacy tab tokens (unused by business-line filter; kept for any leftover markup) */
 .cm-tab {
     padding: 6px 14px;
     border: none;
@@ -147,13 +234,11 @@
 }
 
 .cm-btn-create {
-    margin-left: auto;
-    /* ← push to far right */
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 9px 18px;
-    background: var(--blue);
+    background: #0d6b69;
     color: #fff;
     border: none;
     border-radius: 8px;
@@ -165,7 +250,7 @@
 }
 
 .cm-btn-create:hover {
-    background: var(--blue-dark);
+    background: #0a5553;
     transform: translateY(-1px);
 }
 
@@ -335,6 +420,9 @@
 
 .cm-detail__topbar {
     padding: 18px 32px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .cm-back-btn {
@@ -362,7 +450,7 @@
 .cm-detail__hero {
     display: flex;
     align-items: flex-start;
-    gap: 20px;
+    gap: 0;
     padding: 24px 32px 20px;
     background: #fff;
     border-bottom: 1px solid var(--grey-1);
@@ -370,18 +458,9 @@
 }
 
 .cm-detail__avatar {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    background: var(--blue);
-    color: #fff;
-    font-size: 20px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+    display: none;
 }
+
 .cm-detail__hero-info {
     display: flex;
     flex-direction: column;
@@ -601,25 +680,32 @@
 ═══════════════════════════════════════════════════════ */
 .cm-backdrop {
     position: fixed;
-    inset: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 250px;
     background: rgba(10, 20, 40, .45);
     z-index: 1000;
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 32px 16px 32px;
+    padding: 24px;
     overflow-y: auto;
+    box-sizing: border-box;
 }
 
 .cm-modal {
     background: #fff;
-    border-radius: 14px;
+    border-radius: 8px;
     width: 100%;
-    max-width: 800px;
+    max-width: 900px;
+    max-height: 90vh;
     box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border-top: 4px solid #0d6b69;
+    box-sizing: border-box;
 }
 
 .cm-modal__header {
@@ -690,6 +776,120 @@
     margin-top: 22px;
 }
 
+/* Multi-contact card inside new/edit modal */
+.cm-contact-card {
+    margin-top: 22px;
+    background: #f8fafb;
+    border: 1.5px solid var(--grey-1, #e6ebf0);
+    border-radius: 10px;
+    padding: 16px 16px 8px;
+}
+
+.cm-contact-card__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.cm-contact-card__title {
+    margin-bottom: 0;
+}
+
+.cm-contact-card__hint {
+    font-size: 12px;
+    color: var(--grey-3, #8a9bb0);
+}
+
+.cm-contact-block {
+    background: #fff;
+    border: 1px solid var(--grey-1, #e6ebf0);
+    border-radius: 8px;
+    padding: 14px 14px 16px;
+    margin-bottom: 12px;
+}
+
+.cm-contact-block__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.cm-contact-block__label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--grey-4, #5a6a7a);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.cm-contact-remove {
+    border: none;
+    background: transparent;
+    color: #c0392b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 6px;
+}
+
+.cm-contact-remove:hover {
+    text-decoration: underline;
+}
+
+.cm-field--email-row {
+    grid-column: span 2;
+}
+
+.cm-email-with-action {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.cm-email-with-action .cm-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.cm-btn-add-contact {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 0 14px;
+    border-radius: 7px;
+    border: 1.5px solid var(--teal, #0d6b69);
+    background: #fff;
+    color: var(--teal, #0d6b69);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s, color .15s;
+}
+
+.cm-btn-add-contact:hover {
+    background: var(--teal, #0d6b69);
+    color: #fff;
+}
+
+.cm-btn-add-contact__plus {
+    font-size: 16px;
+    line-height: 1;
+    font-weight: 700;
+}
+
+@media (max-width: 720px) {
+    .cm-field--email-row {
+        grid-column: 1 / -1;
+    }
+}
+
 .cm-form-section__label {
     font-size: 11px;
     font-weight: 700;
@@ -718,9 +918,15 @@
 .cm-field--full {
     grid-column: 1 / -1;
 }
+
+.cm-field--name {
+    grid-column: span 2;
+}
+
 .cm-field--address {
     grid-column: span 2;
 }
+
 .cm-label {
     font-size: 12.5px;
     font-weight: 600;
@@ -754,6 +960,18 @@
     box-shadow: 0 0 0 3px rgba(27, 110, 194, .12);
 }
 
+/* Hide native number spinners (up/down) on amount fields */
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 .cm-textarea {
     resize: vertical;
     font-family: inherit;
@@ -779,6 +997,8 @@
 }
 
 .cm-error {
+    display: block;
+    margin-top: 4px;
     font-size: 12px;
     color: var(--red);
 }
@@ -1105,6 +1325,10 @@
         grid-column: 1;
     }
 
+    .cm-field--name {
+        grid-column: 1;
+    }
+
     .cm-attachment-grid {
         grid-template-columns: 1fr;
     }
@@ -1125,6 +1349,7 @@
 }
 
 /* Sr No */
+/* Sr No */
 .cm-table th:nth-child(1),
 .cm-table td:nth-child(1) {
     width: 6%;
@@ -1134,37 +1359,190 @@
 /* Customer Name */
 .cm-table th:nth-child(2),
 .cm-table td:nth-child(2) {
-    width: 22%;
+    width: 19%;
+}
+
+/* Customer Profile */
+.cm-table th:nth-child(3),
+.cm-table td:nth-child(3) {
+    width: 13%;
 }
 
 /* Customer Location */
-.cm-table th:nth-child(3),
-.cm-table td:nth-child(3) {
-    width: 18%;
+.cm-table th:nth-child(4),
+.cm-table td:nth-child(4) {
+    width: 15%;
 }
 
 /* Business Type */
-.cm-table th:nth-child(4),
-.cm-table td:nth-child(4) {
-    width: 16%;
+.cm-table th:nth-child(5),
+.cm-table td:nth-child(5) {
+    width: 13%;
 }
 
 /* Target */
-.cm-table th:nth-child(5),
-.cm-table td:nth-child(5) {
-    width: 14%;
-}
-
-/* Actual */
 .cm-table th:nth-child(6),
 .cm-table td:nth-child(6) {
     width: 12%;
 }
 
-/* Sales / Invoice */
+/* Actual */
 .cm-table th:nth-child(7),
 .cm-table td:nth-child(7) {
+    width: 11%;
+}
+
+/* Sales / Invoice */
+.cm-table th:nth-child(8),
+.cm-table td:nth-child(8) {
+    width: 11%;
+}
+
+/* Rejected filter: Rejection Date + Remark — balanced so multi-word headers don't clash */
+.cm-table--with-remark th,
+.cm-table--with-remark td {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+.cm-table--with-remark th {
+    letter-spacing: 0.03em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cm-table--with-remark th:nth-child(1),
+.cm-table--with-remark td:nth-child(1) {
+    width: 5%;
+}
+.cm-table--with-remark th:nth-child(2),
+.cm-table--with-remark td:nth-child(2) {
+    width: 15%;
+}
+.cm-table--with-remark th:nth-child(3),
+.cm-table--with-remark td:nth-child(3) {
     width: 12%;
+}
+.cm-table--with-remark th:nth-child(4),
+.cm-table--with-remark td:nth-child(4) {
+    width: 12%;
+}
+.cm-table--with-remark th:nth-child(5),
+.cm-table--with-remark td:nth-child(5) {
+    width: 10%;
+}
+.cm-table--with-remark th:nth-child(6),
+.cm-table--with-remark td:nth-child(6) {
+    width: 9%;
+}
+.cm-table--with-remark th:nth-child(7),
+.cm-table--with-remark td:nth-child(7) {
+    width: 7%;
+}
+.cm-table--with-remark th:nth-child(8),
+.cm-table--with-remark td:nth-child(8) {
+    width: 8%;
+}
+/* Rejection Date */
+.cm-table--with-remark th:nth-child(9),
+.cm-table--with-remark td:nth-child(9) {
+    width: 10%;
+}
+/* Remark — remaining width so table fills the card edge */
+.cm-table--with-remark th:nth-child(10),
+.cm-table--with-remark td:nth-child(10) {
+    width: 13%;
+}
+
+/* Approved filter: widen Customer Name so layout fills the row */
+.cm-table--with-approved-date th:nth-child(1),
+.cm-table--with-approved-date td:nth-child(1) {
+    width: 5%;
+}
+.cm-table--with-approved-date th:nth-child(2),
+.cm-table--with-approved-date td:nth-child(2) {
+    width: 26%;
+}
+.cm-table--with-approved-date th:nth-child(3),
+.cm-table--with-approved-date td:nth-child(3) {
+    width: 11%;
+}
+.cm-table--with-approved-date th:nth-child(4),
+.cm-table--with-approved-date td:nth-child(4) {
+    width: 11%;
+}
+.cm-table--with-approved-date th:nth-child(5),
+.cm-table--with-approved-date td:nth-child(5) {
+    width: 10%;
+}
+.cm-table--with-approved-date th:nth-child(6),
+.cm-table--with-approved-date td:nth-child(6) {
+    width: 10%;
+}
+.cm-table--with-approved-date th:nth-child(7),
+.cm-table--with-approved-date td:nth-child(7) {
+    width: 8%;
+}
+.cm-table--with-approved-date th:nth-child(8),
+.cm-table--with-approved-date td:nth-child(8) {
+    width: 9%;
+}
+.cm-table--with-approved-date th:nth-child(9),
+.cm-table--with-approved-date td:nth-child(9) {
+    width: 10%;
+}
+
+/* Do NOT use -webkit-box on <td> — with fixed layout it stacks letters vertically */
+.cm-cell-remark {
+    font-size: 13px;
+    color: #4a5568;
+    line-height: 1.4;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    vertical-align: middle;
+}
+
+.cm-cell-remark__text {
+    display: block;
+    max-height: 3.9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cm-detail-remark {
+    color: #c0392b;
+    font-weight: 500;
+    white-space: pre-wrap;
+    word-break: normal;
+    overflow-wrap: break-word;
+    width: 100%;
+}
+
+/* Banner on rejected customer detail */
+.cm-reject-banner {
+    margin: 0 32px 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: #fde8e8;
+    border: 1px solid #f5c6c6;
+    border-left: 4px solid #c0392b;
+}
+.cm-reject-banner__label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #a93226;
+    margin-bottom: 4px;
+}
+.cm-reject-banner__text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #6e2b24;
+    white-space: pre-wrap;
+    word-break: normal;
+    overflow-wrap: break-word;
+    line-height: 1.45;
 }
 
 /* SO expand icons */
@@ -1592,9 +1970,37 @@
 
 .cm-input-readonly {
     background: #f7f9fc;
-    color: #8A9BB0;
+    /* Darker text so prefilled State / District / locked GST fields stay readable */
+    color: #1a2b3c;
     cursor: not-allowed;
     border-color: #e0e6ed;
+    -webkit-text-fill-color: #1a2b3c;
+    opacity: 1;
+}
+
+.cm-textarea.cm-input-readonly {
+    background: #f7f9fc;
+    color: #1a2b3c;
+    -webkit-text-fill-color: #1a2b3c;
+    opacity: 1;
+    cursor: not-allowed;
+    border-color: #e0e6ed;
+    resize: none;
+}
+
+/* Ensure all form controls show prefilled values clearly */
+.cm-input,
+.cm-select,
+.cm-textarea {
+    color: #1a2b3c;
+    -webkit-text-fill-color: #1a2b3c;
+}
+
+.cm-input::placeholder,
+.cm-textarea::placeholder {
+    color: #8a9bb0;
+    -webkit-text-fill-color: #8a9bb0;
+    opacity: 1;
 }
 
 .gst-success {
@@ -1648,7 +2054,27 @@
     background: #fff3cd;
     color: #856404;
 }
-.cm-textarea--small{
-    min-height:70px;
-    height:70px;
+
+.cm-textarea--small {
+    min-height: 70px;
+    height: 70px;
+}
+@media (max-width: 900px) {
+    .cm-backdrop {
+        left: 0;
+        padding: 16px;
+    }
+}
+
+@media (max-width: 600px) {
+    .cm-backdrop {
+        padding: 12px;
+    }
+
+    .cm-modal__header,
+    .cm-modal__body,
+    .cm-modal__footer {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
 }

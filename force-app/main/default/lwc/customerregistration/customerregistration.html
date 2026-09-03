@@ -15,14 +15,17 @@
              LIST VIEW
         ══════════════════════════════════════ -->
         <template if:false={selectedCustomer}>
+            <c-dealer-user-menu></c-dealer-user-menu>
 
             <!-- Page Header -->
             <div class="cm-page-header">
-                <div class="cm-page-header__meta">CUSTOMERS · ASSIGNED TO YOU</div>
-                <h1 class="cm-page-header__title">Customers</h1>
+                <div class="cm-page-header__left">
+                    <div class="cm-page-header__meta">CUSTOMERS · ASSIGNED TO YOU</div>
+                    <h1 class="cm-page-header__title">Customers</h1>
+                </div>
             </div>
 
-            <!-- Toolbar -->
+            <!-- Toolbar: search left · business line filters + export/create right -->
             <div class="cm-toolbar">
                 <div class="cm-search-wrap cm-search-wrap--sm">
                     <svg class="cm-search-icon" viewBox="0 0 20 20" fill="none">
@@ -33,31 +36,81 @@
                         placeholder="Search by name, location..."
                         value={searchTerm} oninput={handleSearch}/>
                 </div>
-            
-                <!-- Status Filter -->
-            
-                <button class="cm-btn-create" onclick={openModal}>
-                    <svg viewBox="0 0 16 16" fill="none" class="cm-btn-icon">
-                        <path d="M8 3v10M3 8h10" stroke="currentColor"
-                            stroke-width="2.2" stroke-linecap="round"/>
-                    </svg>
-                    Create Customer
-                </button>
+
+                <div class="cm-toolbar__actions">
+                    <div class="cm-status-tabs" role="tablist" aria-label="Business Line">
+                        <button
+                            type="button"
+                            class={blAllTabClass}
+                            data-line="All"
+                            onclick={handleBusinessLineFilter}>
+                            All <span>{blAllCount}</span>
+                        </button>
+                        <button
+                            type="button"
+                            class={blRotexTabClass}
+                            data-line="ROTEX"
+                            onclick={handleBusinessLineFilter}>
+                            ROTEX <span>{blRotexCount}</span>
+                        </button>
+                        <button
+                            type="button"
+                            class={blNonRotexTabClass}
+                            data-line="Non ROTEX"
+                            onclick={handleBusinessLineFilter}>
+                            Non ROTEX <span>{blNonRotexCount}</span>
+                        </button>
+                        <button
+                            type="button"
+                            class={blBothTabClass}
+                            data-line="BOTH"
+                            onclick={handleBusinessLineFilter}>
+                            BOTH <span>{blBothCount}</span>
+                        </button>
+                    </div>
+
+                    <div class="cm-toolbar__btns">
+                        <c-dealer-data-export
+                            object-key="Customer"
+                            button-label="Export"
+                            status-filter={statusFilter}
+                            type-filter={businessLineFilter}
+                            search-key={searchTerm}
+                        ></c-dealer-data-export>
+                        <button class="cm-btn-create" onclick={openModal}>
+                            <svg viewBox="0 0 16 16" fill="none" class="cm-btn-icon">
+                                <path d="M8 3v10M3 8h10" stroke="currentColor"
+                                    stroke-width="2.2" stroke-linecap="round"/>
+                            </svg>
+                            Create Customer
+                        </button>
+                    </div>
+                </div>
             </div>
 
 
             <!-- Table -->
             <div class="cm-card">
-                <table class="cm-table">
+                <table class={customerTableClass}>
                     <thead>
                         <tr>
                             <th>Sr. No.</th>
                             <th>Customer Name</th>
+                            <th>Customer Profile</th>
                             <th>Customer Location</th>
-                            <th>Business Type</th> 
-                            <th>Target (OI)</th>
+                            <th>Business Line</th> 
+                            <th>Target</th>
                             <th>Actual (OI)</th>
                             <th>Sales/Invoice</th>
+                            <template if:true={showApprovedDateColumn}>
+                                <th>Approved Date</th>
+                            </template>
+                            <template if:true={showRejectionDateColumn}>
+                                <th>Rejection Date</th>
+                            </template>
+                            <template if:true={showRemarkColumn}>
+                                <th>Rejection Remark</th>
+                            </template>
                         </tr>
                     </thead>
                     <tbody>
@@ -85,11 +138,25 @@
                                         </span>
                                         </div>
                                     </td>
+                                    <td>
+    <span class="cm-profile-badge">{c.customerProfileDisplay}</span>
+</td>
                                     <td>{c.district}</td>
                                     <td>{c.businessType}</td>
-                                    <td>{c.target}</td>
+                                    <td>{c.targetDisplay}</td>
                                     <td>{c.actualOI}</td>
                                     <td>{c.salesInvoice}</td>
+                                    <template if:true={showApprovedDateColumn}>
+                                        <td>{c.approvedDateDisplay}</td>
+                                    </template>
+                                    <template if:true={showRejectionDateColumn}>
+                                        <td>{c.rejectionDateDisplay}</td>
+                                    </template>
+                                    <template if:true={showRemarkColumn}>
+                                        <td class="cm-cell-remark" title={c.rejectionRemarkDisplay}>
+                                            <span class="cm-cell-remark__text">{c.rejectionRemarkDisplay}</span>
+                                        </td>
+                                    </template>
                                 </tr>
                     
                                 <!-- ── Expanded SO Tree ── -->
@@ -97,7 +164,7 @@
                     
                                     <!-- SO Table Header -->
                                     <tr key={c.id} class="cm-so-thead-row">
-                                        <td colspan="7" style="padding:0">
+                                        <td colspan={tableColSpan} style="padding:0">
                                             <table class="cm-so-table">
                                                 <thead>
                                                     <tr class="cm-so-header">
@@ -192,7 +259,7 @@
                         </template>
                         <template if:false={hasRecords}>
                             <tr>
-                                <td colspan="7" class="cm-empty">
+                                <td colspan={tableColSpan} class="cm-empty">
                                     <svg viewBox="0 0 64 64" fill="none" class="cm-empty-icon">
                                         <circle cx="32" cy="32" r="28" stroke="#C8D5E3" stroke-width="2"/>
                                         <path d="M22 32h20M32 22v20" stroke="#C8D5E3" stroke-width="2.2" stroke-linecap="round"/>
@@ -213,6 +280,7 @@
         ══════════════════════════════════════ -->
         <template if:true={selectedCustomer}>
             <div class="cm-detail">
+                <c-dealer-user-menu></c-dealer-user-menu>
 
                 <!-- Top bar -->
                 <div class="cm-detail__topbar">
@@ -227,9 +295,8 @@
 
                 <!-- Hero -->
                 <div class="cm-detail__hero">
-                    <div class="cm-detail__avatar">{selectedCustomerInitials}</div>
                     <div class="cm-detail__hero-info">
-                        <div class="cm-detail__eyebrow">Customer · {selectedCustomer.customerProfile}</div>
+                        <div class="cm-detail__eyebrow">Customer · {selectedCustomer.customerProfileDisplay}</div>
                         <h1 class="cm-detail__name">{selectedCustomer.customerName}</h1>
                         <div class="cm-detail__meta-row">
                             <span class="cm-dealer-tag">
@@ -242,6 +309,14 @@
                             </span>
                             <span class="cm-divider">|</span>
                             <span class="cm-created-label">Created {selectedCustomer.createdDate}</span>
+                            <template if:true={showDetailApprovedDate}>
+                                <span class="cm-divider">|</span>
+                                <span class="cm-created-label">Approved {selectedCustomer.approvedDateDisplay}</span>
+                            </template>
+                            <template if:true={showDetailRejectionDate}>
+                                <span class="cm-divider">|</span>
+                                <span class="cm-created-label">Rejected {selectedCustomer.rejectionDateDisplay}</span>
+                            </template>
                         </div>
                         
                     </div>
@@ -286,27 +361,49 @@
                             <div class="cm-detail-row">
                                 <span class="cm-detail-row__lbl">Customer Profile</span>
                                 <span class="cm-detail-row__val">
-                                    <span class="cm-profile-badge">{selectedCustomer.customerProfile}</span>
+                                    <span class="cm-profile-badge">{selectedCustomer.customerProfileDisplay}</span>
                                 </span>
                             </div>
                             <template if:true={selectedCustomer.oemDetails}>
                                 <div class="cm-detail-row cm-detail-row--block">
-                                    <span class="cm-detail-row__lbl">OEM Details</span>
+                                    <span class="cm-detail-row__lbl">Product Manufactured By (OEM)</span>
                                     <span class="cm-detail-row__val">{selectedCustomer.oemDetails}</span>
                                 </div>
                             </template>
                             <div class="cm-detail-row">
-                                <span class="cm-detail-row__lbl">Business Type</span>
+                                <span class="cm-detail-row__lbl">Business Line</span>
                                 <span class="cm-detail-row__val">
                                     {selectedCustomer.businessTypeDisplay}
                                 </span>
                             </div>
+                            <template if:true={showDetailRejectionRemark}>
+                                <div class="cm-detail-row cm-detail-row--block">
+                                    <span class="cm-detail-row__lbl">Rejection Remark</span>
+                                    <span class="cm-detail-row__val cm-detail-remark">{selectedCustomer.rejectionRemarkDisplay}</span>
+                                </div>
+                            </template>
+                            <template if:true={showDetailApprovedDate}>
+                                <div class="cm-detail-row">
+                                    <span class="cm-detail-row__lbl">Approved Date</span>
+                                    <span class="cm-detail-row__val">{selectedCustomer.approvedDateDisplay}</span>
+                                </div>
+                            </template>
+                            <template if:true={showDetailRejectionDate}>
+                                <div class="cm-detail-row">
+                                    <span class="cm-detail-row__lbl">Rejection Date</span>
+                                    <span class="cm-detail-row__val">{selectedCustomer.rejectionDateDisplay}</span>
+                                </div>
+                            </template>
                             <div class="cm-detail-row">
                                 <span class="cm-detail-row__lbl">Timestamp</span>
                             
                                 <span class="cm-detail-row__val">
                                     {selectedCustomer.timestampDisplay}
                                 </span>
+                            </div>
+                            <div class="cm-detail-row">
+                                <span class="cm-detail-row__lbl">Last Modified Date</span>
+                                <span class="cm-detail-row__val">{selectedCustomer.lastModifiedDisplay}</span>
                             </div>
                             <div class="cm-detail-row">
                                 <span class="cm-detail-row__lbl">
@@ -374,18 +471,23 @@
                         </div>
                         <div class="cm-detail-rows">
                             <div class="cm-detail-row">
-                                <span class="cm-detail-row__lbl">Annual Business Potential</span>
+                                <span class="cm-detail-row__lbl">
+                                    Annual Business Potential
+                                </span>
                                 <span class="cm-detail-row__val cm-currency">{selectedCustomer.annualPotentialFormatted}</span>
                             </div>
-                            
-                            <div class="cm-detail-row">
-                                <span class="cm-detail-row__lbl">
-                                    Target
-                                </span>
-                                <span class="cm-detail-row__val">
-                                    {selectedCustomer.targetDisplay}
-                                </span>
-                            </div>
+                            <template if:true={selectedCustomer.showTargetRotexDetail}>
+                                <div class="cm-detail-row">
+                                    <span class="cm-detail-row__lbl">Target (Rotex)</span>
+                                    <span class="cm-detail-row__val">{selectedCustomer.targetRotexDisplay}</span>
+                                </div>
+                            </template>
+                            <template if:true={selectedCustomer.showTargetNonRotexDetail}>
+                                <div class="cm-detail-row">
+                                    <span class="cm-detail-row__lbl">Target (Non-Rotex)</span>
+                                    <span class="cm-detail-row__val">{selectedCustomer.targetNonRotexDisplay}</span>
+                                </div>
+                            </template>
                         </div>
                     </div>
                     
@@ -582,11 +684,12 @@
                         <div class="cm-form-section">
                             <div class="cm-form-section__label">Customer Information</div>
                             <div class="cm-form-grid">
-                                <div class="cm-field">
+                                <div class="cm-field cm-field--name">
                                     <label class="cm-label">Customer Name <span class="cm-req">*</span></label>
-                                    <input class="cm-input" type="text" data-field="customerName"
+                                    <input class={customerNameClass} type="text" data-field="customerName"
                                         value={form.customerName} oninput={handleInput}
-                                        placeholder="Enter customer name"/>
+                                        placeholder="Enter customer name"
+                                        readonly={gstNameLocked}/>
                                     <template if:true={errors.customerName}>
                                         <span class="cm-error">{errors.customerName}</span>
                                     </template>
@@ -605,48 +708,41 @@
                                             <span class="cm-error">{errors.gstNo}</span>
                                         </template>
                                 </div>
-                                <div class="cm-field">
 
-                                    <label class="cm-label">Customer Website <span class="cm-req">*</span></label>
-                                
+                                <div class="cm-field">
+                                    <label class="cm-label">Customer Website <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template></label>
                                     <input
                                         class="cm-input"
                                         type="url"
                                         data-field="customerWebsite"
                                         value={form.customerWebsite}
                                         oninput={handleInput}
-                                        placeholder="https://">
+                                        placeholder="https://"/>
                                     <template if:true={errors.customerWebsite}>
                                         <span class="cm-error">{errors.customerWebsite}</span>
                                     </template>
-                                
                                 </div>
-                                
+
                                 <div class="cm-field">
                                     <label class="cm-label">Business Line <span class="cm-req">*</span></label>
-                                
                                     <div class="cm-select-wrap">
-                                
                                         <select
                                             class="cm-select"
                                             data-field="businessType"
-                                             value={form.businessType}
+                                            value={form.businessType}
                                             onchange={handleInput}>
-                                
-                                            <option value="">-- Select Business Type --</option>
-                                            <option value="ROTEX">ROTEX</option>
-                                            <option value="Non ROTEX">Non ROTEX</option>
-                                            <option value="BOTH">BOTH</option>
-                                
+                                            <template for:each={businessTypeOptions} for:item="opt">
+                                                <option key={opt.key} value={opt.value} selected={opt.selected}>
+                                                    {opt.label}
+                                                </option>
+                                            </template>
                                         </select>
-                                
                                         <svg class="cm-select-arrow" viewBox="0 0 12 8" fill="none">
                                             <path d="M1 1l5 5 5-5"
                                                 stroke="currentColor"
                                                 stroke-width="1.6"
                                                 stroke-linecap="round"/>
                                         </svg>
-                                
                                     </div>
                                     <template if:true={errors.businessType}>
                                         <span class="cm-error">{errors.businessType}</span>
@@ -655,17 +751,18 @@
                                 
                                 
                                 <div class="cm-field">
-                                    <label class="cm-label">Customer Profile <span class="cm-req">*</span></label>
+                                    <label class="cm-label">Customer Profile <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template></label>
                                     <div class="cm-select-wrap">
-                                        <select class="cm-select" data-field="customerProfile"  value={form.customerProfile} onchange={handleInput}>
-                                            <option value="">-- Select Profile --</option>
-                                            <option value="OEM">Project OEM</option>
-                                            <option value="VAC">VAC</option>
-                                            <option value="Trader">Trader</option>
-                                            <option value="Machine OEM">Machine OEM</option>
-                                            <option value="User">End User</option>
-                                            <option value="User">User</option>
-                                            <option value="User">System Integrator / EPC</option>
+                                        <select
+                                            class="cm-select"
+                                            data-field="customerProfile"
+                                            value={form.customerProfile}
+                                            onchange={handleInput}>
+                                            <template for:each={customerProfileOptions} for:item="opt">
+                                                <option key={opt.key} value={opt.value} selected={opt.selected}>
+                                                    {opt.label}
+                                                </option>
+                                            </template>
                                         </select>
                                         <svg class="cm-select-arrow" viewBox="0 0 12 8" fill="none">
                                             <path d="M1 1l5 5 5-5" stroke="currentColor"
@@ -678,10 +775,13 @@
                                 </div>
                                 <template if:true={showOemDetails}>
                                     <div class="cm-field cm-field--full">
-                                        <label class="cm-label">Additional Details (OEM)</label>
+                                        <label class="cm-label">Product Manufactured By (OEM) <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template></label>
                                         <textarea class="cm-textarea" data-field="oemDetails"
                                             oninput={handleInput} rows="3"
-                                            placeholder="Provide additional OEM details...">{form.oemDetails}</textarea>
+                                            placeholder="Enter products manufactured by OEM...">{form.oemDetails}</textarea>
+                                        <template if:true={errors.oemDetails}>
+                                            <span class="cm-error">{errors.oemDetails}</span>
+                                        </template>
                                     </div>
                                 </template>
                             </div>
@@ -696,13 +796,15 @@
         <!-- Address -->
         <div class="cm-field cm-field--address">
             <label class="cm-label">
-                Address <span class="cm-req">*</span>
+                Address <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template>
             </label>
 
             <textarea
-                class="cm-textarea cm-textarea--small"
+                class={addressClass}
                 data-field="address"
-                oninput={handleInput}>{form.address}</textarea>
+                oninput={handleInput}
+                readonly={gstAddressLocked}
+                value={form.address}></textarea>
 
             <template if:true={errors.address}>
                 <span class="cm-error">{errors.address}</span>
@@ -712,7 +814,7 @@
         <!-- Pin Code -->
         <div class="cm-field">
             <label class="cm-label">
-                Pin Code <span class="cm-req">*</span>
+                Pin Code <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template>
             </label>
 
             <input
@@ -734,10 +836,13 @@
             <label class="cm-label">District</label>
 
             <input
-                class="cm-input cm-input-readonly"
+                class={districtClass}
                 type="text"
+                data-field="district"
                 value={form.district}
-                readonly/>
+                oninput={handleInput}
+                readonly={districtLocked}
+                placeholder="District"/>
         </div>
 
         <!-- State -->
@@ -745,16 +850,19 @@
             <label class="cm-label">State</label>
 
             <input
-                class="cm-input cm-input-readonly"
+                class={stateClass}
                 type="text"
+                data-field="state"
                 value={form.state}
-                readonly/>
+                oninput={handleInput}
+                readonly={stateLocked}
+                placeholder="State"/>
         </div>
 
         <!-- Country -->
         <div class="cm-field">
             <label class="cm-label">
-                Country <span class="cm-req">*</span>
+                Country <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template>
             </label>
 
             <input
@@ -776,83 +884,133 @@
                             <div class="cm-form-section__label">Business Details</div>
                             <div class="cm-form-grid">
                                 <div class="cm-field">
-                                    <label class="cm-label">Annual Business Potential (₹) <span class="cm-req">*</span></label>
+                                    <label class="cm-label">Annual Business Potential (₹) <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template></label>
                                     <input class="cm-input" type="number" data-field="annualPotential"
-                                        value={form.annualPotential} oninput={handleInput} placeholder="0.00"/>
+                                        value={form.annualPotential} oninput={handleInput} placeholder="0"/>
                                         <template if:true={errors.annualPotential}>
                                             <span class="cm-error">{errors.annualPotential}</span>
                                         </template>
                                 </div>
-                                <div class="cm-field">
-
-                                    <label class="cm-label">Target <span class="cm-req">*</span></label>
-                                
-                                    <input
-                                        class="cm-input"
-                                        type="number"
-                                        data-field="target"
-                                        value={form.target}
-                                        oninput={handleInput}>
+                                <template if:true={showTargetRotexField}>
+                                    <div class="cm-field">
+                                        <label class="cm-label">Target (Rotex) <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template></label>
+                                        <input
+                                            class="cm-input"
+                                            type="text"
+                                            data-field="target"
+                                            value={form.target}
+                                            oninput={handleInput}
+                                            placeholder="0"/>
                                         <template if:true={errors.target}>
                                             <span class="cm-error">{errors.target}</span>
                                         </template>
-                                
-                                </div>
-
+                                    </div>
+                                </template>
+                                <template if:true={showTargetNonRotexField}>
+                                    <div class="cm-field">
+                                        <label class="cm-label">Target (Non-Rotex) <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template></label>
+                                        <input
+                                            class="cm-input"
+                                            type="number"
+                                            data-field="targetNonRotex"
+                                            value={form.targetNonRotex}
+                                            oninput={handleInput}
+                                            placeholder="0"/>
+                                        <template if:true={errors.targetNonRotex}>
+                                            <span class="cm-error">{errors.targetNonRotex}</span>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     
-                        <!-- Contact -->
-                        <div class="cm-form-section">
-                            <div class="cm-form-section__label">Contact Information</div>
-                            <div class="cm-form-grid">
-                                <div class="cm-field">
-                                    <label class="cm-label">Contact Person First Name <span class="cm-req">*</span></label>
-                                    <input class="cm-input" type="text" data-field="contactFirstName"
-
-value={form.contactFirstName} oninput={handleInput} placeholder="First name"/>
-                                   <template if:true={errors.contactFirstName}>
-    <span class="cm-error">{errors.contactFirstName}</span>
-</template>
-                                </div>
-                                <div class="cm-field">
-    <label class="cm-label">
-    Contact Person Last Name <span class="cm-req">*</span>
-</label>
-
-    <input
-        class="cm-input"
-        type="text"
-        data-field="contactLastName"
-        placeholder="Last name"
-        value={form.contactLastName}
-        oninput={handleInput}/>
-</div>
-<template if:true={errors.contactLastName}>
-    <span class="cm-error">{errors.contactLastName}</span>
-</template>
-                                <div class="cm-field">
-                                    <label class="cm-label">Designation</label>
-                                    <input class="cm-input" type="text" data-field="contactDesignation"
-                                        value={form.contactDesignation} oninput={handleInput} placeholder="e.g. Manager"/>
-                                </div>
-                                <div class="cm-field">
-                                    <label class="cm-label">Telephone No. <span class="cm-req">*</span></label>
-                                    <input class="cm-input" type="tel" data-field="contactPhone"
-                                        value={form.contactPhone} oninput={handleInput} placeholder="+91 XXXXX XXXXX" maxlength="10"/>
-                                        <template if:true={errors.contactPhone}>
-                                            <span class="cm-error">{errors.contactPhone}</span>
-                                        </template>
-                                </div>
-                                <div class="cm-field">
-                                    <label class="cm-label">Email ID <span class="cm-req">*</span></label>
-                                    <input class="cm-input" type="email" data-field="contactEmail"
-                                        value={form.contactEmail} oninput={handleInput} placeholder="email@example.com"/>
-                                        <template if:true={errors.contactEmail}>
-                                            <span class="cm-error">{errors.contactEmail}</span>
-                                        </template>
-                                </div>
+                        <!-- Contact Information (separate card, multi-contact) -->
+                        <div class="cm-contact-card">
+                            <div class="cm-contact-card__header">
+                                <div class="cm-form-section__label cm-contact-card__title">Contact Information</div>
+                                <span class="cm-contact-card__hint">Add multiple contacts for this customer</span>
                             </div>
+
+                            <template for:each={contactsView} for:item="c">
+                                <div key={c.key} class="cm-contact-block">
+                                    <div class="cm-contact-block__bar">
+                                        <span class="cm-contact-block__label">Contact {c.indexLabel}</span>
+                                        <template if:true={c.canRemove}>
+                                            <button type="button"
+                                                class="cm-contact-remove"
+                                                data-key={c.key}
+                                                onclick={handleRemoveContact}
+                                                title="Remove contact">
+                                                Remove
+                                            </button>
+                                        </template>
+                                    </div>
+
+                                    <div class="cm-form-grid">
+                                        <div class="cm-field">
+                                            <label class="cm-label">Contact Person First Name <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template></label>
+                                            <input class="cm-input" type="text"
+                                                data-key={c.key} data-field="firstName"
+                                                value={c.firstName} oninput={handleContactInput}
+                                                placeholder="First name"/>
+                                            <template if:true={c.errFirstName}>
+                                                <span class="cm-error">{c.errFirstName}</span>
+                                            </template>
+                                        </div>
+                                        <div class="cm-field">
+                                            <label class="cm-label">Contact Person Last Name <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template></label>
+                                            <input class="cm-input" type="text"
+                                                data-key={c.key} data-field="lastName"
+                                                value={c.lastName} oninput={handleContactInput}
+                                                placeholder="Last name"/>
+                                            <template if:true={c.errLastName}>
+                                                <span class="cm-error">{c.errLastName}</span>
+                                            </template>
+                                        </div>
+                                        <div class="cm-field">
+                                            <label class="cm-label">Designation <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template></label>
+                                            <input class="cm-input" type="text"
+                                                data-key={c.key} data-field="designation"
+                                                value={c.designation} oninput={handleContactInput}
+                                                placeholder="e.g. Manager"/>
+                                            <template if:true={c.errDesignation}>
+                                                <span class="cm-error">{c.errDesignation}</span>
+                                            </template>
+                                        </div>
+                                        <div class="cm-field">
+                                            <label class="cm-label">Telephone No. <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template></label>
+                                            <input class="cm-input" type="tel"
+                                                data-key={c.key} data-field="phone"
+                                                value={c.phone} oninput={handleContactInput}
+                                                placeholder="+91 XXXXX XXXXX" maxlength="10"/>
+                                            <template if:true={c.errPhone}>
+                                                <span class="cm-error">{c.errPhone}</span>
+                                            </template>
+                                        </div>
+                                        <div class="cm-field cm-field--email-row">
+                                            <label class="cm-label">Email ID <template if:true={showFullFieldRequired}><span class="cm-req">*</span></template></label>
+                                            <div class="cm-email-with-action">
+                                                <input class="cm-input" type="email"
+                                                    data-key={c.key} data-field="email"
+                                                    value={c.email} oninput={handleContactInput}
+                                                    placeholder="email@example.com"/>
+                                                <template if:true={c.showAddButton}>
+                                                    <button type="button"
+                                                        class="cm-btn-add-contact"
+                                                        onclick={handleAddContact}
+                                                        title="Add another contact">
+                                                        <span class="cm-btn-add-contact__plus">+</span>
+                                                        Add
+                                                    </button>
+                                                </template>
+                                            </div>
+                                            <template if:true={c.errEmail}>
+                                                <span class="cm-error">{c.errEmail}</span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
 
                         <!-- Attachments -->
@@ -865,7 +1023,7 @@ value={form.contactFirstName} oninput={handleInput} placeholder="First name"/>
                                         <path d="M7 4v4M7 9.5v.5" stroke="currentColor"
                                             stroke-width="1.3" stroke-linecap="round"/>
                                     </svg>
-                                    Business Development Plan is mandatory
+                                    {bdPlanMandatoryNote}
                                 </span>
                             </div>
                             <template if:true={errors.bdPlan}>
@@ -955,7 +1113,7 @@ value={form.contactFirstName} oninput={handleInput} placeholder="First name"/>
 
                                 <!-- BD Plan -->
                                 <div class="cm-attach-slot">
-                                    <div class="cm-attach-slot__title">Business Development Plan <span class="cm-req">*</span></div>
+                                    <div class="cm-attach-slot__title">Business Development Plan <template if:true={showBdPlanRequired}><span class="cm-req">*</span></template></div>
                                     <div class="cm-attach-slot__sub">&nbsp;</div>
                                     <template if:false={attach.bdPlan}>
                                         <label class="cm-dropzone" for="file-bd">

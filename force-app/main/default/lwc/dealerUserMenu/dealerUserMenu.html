@@ -1,0 +1,288 @@
+<template>
+    <div class="top-header-bar">
+        <button
+            type="button"
+            class="user-manual-btn"
+            onclick={handleOpenUserManual}
+            title="User Manual"
+            aria-label="Open User Manual">
+            <svg class="user-manual-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/>
+            </svg>
+            <span class="user-manual-label">User Manual</span>
+        </button>
+        <div class="top-notification-menu" onclick={stopPropagation}>
+            <button
+                type="button"
+                class="notification-menu-trigger"
+                onclick={toggleNotificationMenu}
+                aria-haspopup="true"
+                aria-expanded={isNotificationMenuOpen}>
+                <svg viewBox="0 0 24 24" class="bell-icon" fill="currentColor">
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>
+                </svg>
+                <template if:true={hasUnreadNotifications}>
+                    <span class="notification-badge">{unreadCount}</span>
+                </template>
+            </button>
+            <template if:true={isNotificationMenuOpen}>
+                <div class="notification-dropdown">
+                    <div class="notification-header">
+                        <span class="notification-title">Notifications</span>
+                        <div class="notification-header-actions">
+                            <button class="mark-all-read" onclick={markAllAsRead}>Mark all as read</button>
+                            <button class="close-notification" onclick={toggleNotificationMenu}>
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="notification-list">
+                        <template for:each={formattedNotifications} for:item="notif">
+                            <div
+                                key={notif.id}
+                                class={notif.containerClass}
+                                data-id={notif.id}
+                                data-target-id={notif.targetRecordId}
+                                data-is-lead={notif.isLead}
+                                data-is-customer={notif.isCustomer}
+                                data-is-quote={notif.isQuote}
+                                data-is-order={notif.isOrder}
+                                data-is-invoice={notif.isInvoice}
+                                data-is-inventory={notif.isInventory}
+                                data-is-task={notif.isTask}
+                                data-is-meeting={notif.isMeeting}
+                                onclick={handleNotificationClick}
+                                role="button"
+                                tabindex="0">
+                                <div class="notif-icon-wrapper" style={notif.iconStyle}>
+                                    <template if:true={notif.isLead}>
+                                        <svg class="notif-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                        </svg>
+                                    </template>
+                                    <template if:true={notif.isCustomer}>
+                                        <svg class="notif-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                                        </svg>
+                                    </template>
+                                    <template if:true={notif.isTask}>
+                                        <svg class="notif-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 9h-2V7h-2v5H6v2h2v5h2v-5h2v-2z"/>
+                                        </svg>
+                                    </template>
+                                    <template if:true={notif.isInventory}>
+                                        <svg class="notif-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/>
+                                        </svg>
+                                    </template>
+                                    <template if:true={notif.isQuote}>
+                                        <svg class="notif-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                                        </svg>
+                                    </template>
+                                    <template if:true={notif.isOrder}>
+                                        <svg class="notif-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 9h-2V7h-2v5H6v2h2v5h2v-5h2v-2z"/>
+                                        </svg>
+                                    </template>
+                                    <template if:true={notif.isInvoice}>
+                                        <svg class="notif-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                                        </svg>
+                                    </template>
+                                    <template if:true={notif.isApproval}>
+                                        <svg class="notif-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                        </svg>
+                                    </template>
+                                    <template if:true={notif.isMeeting}>
+                                        <svg class="notif-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/>
+                                        </svg>
+                                    </template>
+                                </div>
+                                <div class="notif-content">
+                                    <div class={notif.titleClass}>{notif.title}</div>
+                                    <div class="notif-message">
+                                        <lightning-formatted-rich-text value={notif.message}></lightning-formatted-rich-text>
+                                    </div>
+                                    <div class="notif-time">{notif.time}
+                                        <template if:false={notif.isRead}>
+                                            <span class="notif-unread-dot"></span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+        <div class="top-user-menu" onclick={stopPropagation}>
+            <button type="button" class="user-menu-trigger" onclick={toggleUserMenu} aria-haspopup="true"
+                aria-expanded={isUserMenuOpen}>
+                <template if:true={hasProfilePhoto}>
+                    <span class="top-avatar top-avatar-photo" style={profilePhotoBgStyle} role="img" aria-label="Profile photo"></span>
+                </template>
+                <template if:false={hasProfilePhoto}>
+                    <div class="top-avatar">{currentUserInitials}</div>
+                </template>
+                <div class="top-user-text">
+                    <div class="top-user-name">{currentUserName}</div>
+                    <template if:true={currentAccountName}>
+                        <div class="top-user-role">{currentAccountName}</div>
+                    </template>
+                </div>
+                <svg class={chevronClass} viewBox="0 0 12 8" aria-hidden="true">
+                    <path d="M1 1.5L6 6.5L11 1.5" fill="none" stroke="currentColor" stroke-width="1.8"
+                        stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+            </button>
+
+            <template if:true={isUserMenuOpen}>
+                <div class="user-menu-dropdown" role="menu">
+                    <button type="button" class="user-menu-item" onclick={handleMyProfile} role="menuitem">
+                        <svg class="user-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="currentColor"
+                                d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v1.2h19.2v-1.2c0-3.2-6.4-4.8-9.6-4.8z">
+                            </path>
+                        </svg>
+                        <span>My Profile</span>
+                    </button>
+                    <button type="button" class="user-menu-item user-menu-item-logout" onclick={handleLogout}
+                        role="menuitem">
+                        <svg class="user-menu-icon user-menu-icon-logout" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="currentColor"
+                                d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z">
+                            </path>
+                        </svg>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <template if:true={showProfileDetail}>
+        <div class="profile-overlay" onclick={stopPropagation} role="dialog" aria-modal="true" aria-label="My Profile">
+            <div class="profile-shell">
+                <div class="detail-header">
+                    <div class="detail-topbar">
+                        <button type="button" class="back-btn" onclick={closeProfileDetail}>
+                            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8"
+                                    stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Back
+                        </button>
+                        <button type="button" class="close-btn" onclick={closeProfileDetail}>Close</button>
+                    </div>
+                    <div class="detail-top">
+                        <div class="detail-identity-row">
+                            <div class="profile-photo-block">
+                                <div class={profilePhotoRingClass} style={profilePhotoBgStyle}>
+                                    <template if:false={hasProfilePhoto}>
+                                        <div class="profile-photo-placeholder">{currentUserInitials}</div>
+                                    </template>
+                                </div>
+                                <input
+                                    type="file"
+                                    class="profile-file-input"
+                                    accept="image/*"
+                                    onchange={handlePhotoSelected}
+                                />
+                                <div class="profile-photo-actions">
+                                    <button
+                                        type="button"
+                                        class="profile-photo-btn"
+                                        onclick={handleAddProfileClick}
+                                        disabled={isPhotoSaving}>
+                                        {addProfileButtonLabel}
+                                    </button>
+                                    <template if:true={showSavePhotoButton}>
+                                        <button
+                                            type="button"
+                                            class="profile-photo-btn profile-photo-btn--primary"
+                                            onclick={handleSaveProfilePhoto}
+                                            disabled={isPhotoSaving}>
+                                            {savePhotoButtonLabel}
+                                        </button>
+                                    </template>
+                                </div>
+                                <template if:true={photoError}>
+                                    <div class="profile-photo-error">{photoError}</div>
+                                </template>
+                            </div>
+                            <div class="detail-identity">
+                                <div class="detail-meta">USER PROFILE</div>
+                                <div class="detail-name">{currentUserName}</div>
+                                <template if:true={accountHeaderDisplay}>
+                                    <div class="detail-company">{accountHeaderDisplay}</div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-layout">
+                    <div class="detail-col">
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <svg class="info-card-svg" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path fill="currentColor"
+                                        d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v1.2h19.2v-1.2c0-3.2-6.4-4.8-9.6-4.8z"/>
+                                </svg>
+                                <div class="info-card-title">User Information</div>
+                            </div>
+                            <div class="info-card-body">
+                                <div class="info-row">
+                                    <div class="info-row-label">First Name</div>
+                                    <div class={firstNameClass}>{firstNameDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Last Name</div>
+                                    <div class={lastNameClass}>{lastNameDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Designation</div>
+                                    <div class={designationClass}>{designationDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Account</div>
+                                    <div class={accountClass}>{accountDisplay}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <svg class="info-card-svg" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path fill="currentColor"
+                                        d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
+                                </svg>
+                                <div class="info-card-title">Contact Information</div>
+                            </div>
+                            <div class="info-card-body">
+                                <div class="info-row">
+                                    <div class="info-row-label">Email</div>
+                                    <div class={emailClass}>{emailDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Mobile</div>
+                                    <div class={mobileClass}>{mobileDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Address</div>
+                                    <div class={addressClass}>{addressDisplay}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</template>

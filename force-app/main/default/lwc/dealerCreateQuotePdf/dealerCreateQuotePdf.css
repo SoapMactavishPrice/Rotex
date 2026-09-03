@@ -1,0 +1,34 @@
+:host {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+.action-btn {
+    appearance: none;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1.2;
+    font-family: inherit;
+}
+
+.action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Match Add Product / Submit for approval */
+.action-btn-secondary {
+    border: 1px solid #c8d4d4;
+    background: #fff;
+    color: #032f33;
+}
+
+.action-btn-secondary:hover:not(:disabled) {
+    background: #f4f7f7;
+}

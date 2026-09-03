@@ -1,0 +1,240 @@
+<template>
+    <div class="modal-container" onclick={stopPropagation}>
+        <div class="modal-header">
+            <div class="modal-title">New Ticket</div>
+            <button type="button" class="modal-close-btn" onclick={closeModal} disabled={isSaving}>✕</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="section-label">TICKET INFORMATION</div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Ticket Number</label>
+                    <input type="text" class="form-input form-input-readonly" value="Auto Generated" disabled />
+                </div>
+                <div class="form-field">
+                    <label class="form-label"><abbr title="required"
+                            style="color:red; text-decoration:none; margin-right:2px;">*</abbr>Ticket Type</label>
+                    <select class="form-select" data-field="Ticket_Type__c" onchange={handleChange}>
+                        <option value="">--None--</option>
+                        <template for:each={ticketTypeOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                    <template if:true={fieldErrors.Ticket_Type__c}>
+                        <div class="field-error-text">{fieldErrors.Ticket_Type__c}</div>
+                    </template>
+                </div>
+                <div class="form-field">
+                    <label class="form-label"><abbr title="required"
+                            style="color:red; text-decoration:none; margin-right:2px;">*</abbr>Channel Partner</label>
+                    <select class="form-select form-input-readonly" data-field="AccountId" onchange={handleChange}
+                        disabled style="appearance: none; -webkit-appearance: none; background-image: none;">
+                        <template for:each={accountOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                    <template if:true={fieldErrors.AccountId}>
+                        <div class="field-error-text">{fieldErrors.AccountId}</div>
+                    </template>
+                </div>
+                <div class="form-field">
+                    <label class="form-label"><abbr title="required"
+                            style="color:red; text-decoration:none; margin-right:2px;">*</abbr>Category</label>
+                    <select class="form-select" data-field="Category__c" onchange={handleCategoryChange}>
+                        <option value="">--None--</option>
+                        <template for:each={categoryOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                    <template if:true={fieldErrors.Category__c}>
+                        <div class="field-error-text">{fieldErrors.Category__c}</div>
+                    </template>
+                </div>
+                <div class="form-field">
+                    <label class="form-label"><abbr title="required"
+                            style="color:red; text-decoration:none; margin-right:2px;">*</abbr>Contact</label>
+                    <select class="form-select" data-field="ContactId" onchange={handleChange}>
+                        <option value="">-- Select Contact --</option>
+                        <template for:each={contactOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                    <template if:true={fieldErrors.ContactId}>
+                        <div class="field-error-text">{fieldErrors.ContactId}</div>
+                    </template>
+                </div>
+                <div class={statusClass}>
+                    <label class="form-label"><abbr title="required"
+                            style="color:red; text-decoration:none; margin-right:2px;">*</abbr>Status</label>
+                    <select class="form-select" data-field="Status" onchange={handleChange}>
+                        <option value="">--None--</option>
+                        <template for:each={statusOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                    <template if:true={fieldErrors.Status}>
+                        <div class="field-error-text">{fieldErrors.Status}</div>
+                    </template>
+                </div>
+                <template if:true={showCustomerLookup}>
+                    <div class="form-field">
+                        <label class="form-label">Customer</label>
+                        <select class="form-select" data-field="Customer__c" onchange={handleChange}>
+                            <option value="">-- Select Customer --</option>
+                            <template for:each={customerLookupOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            </template>
+                        </select>
+                    </div>
+                </template>
+                <template if:true={showQuoteLookup}>
+                    <div class="form-field">
+                        <label class="form-label">Quote</label>
+                        <select class="form-select" data-field="Quote__c" onchange={handleChange}>
+                            <option value="">-- Select Quote --</option>
+                            <template for:each={quoteLookupOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            </template>
+                        </select>
+                    </div>
+                </template>
+                <template if:true={showOrderLookup}>
+                    <div class="form-field">
+                        <label class="form-label">Order</label>
+                        <select class="form-select" data-field="Order__c" onchange={handleChange}>
+                            <option value="">-- Select Order --</option>
+                            <template for:each={orderLookupOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            </template>
+                        </select>
+                    </div>
+                </template>
+                <template if:true={showInvoiceLookup}>
+                    <div class="form-field">
+                        <label class="form-label">Invoice</label>
+                        <select class="form-select" data-field="Invoice__c" onchange={handleChange}>
+                            <option value="">-- Select Invoice --</option>
+                            <template for:each={invoiceLookupOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            </template>
+                        </select>
+                    </div>
+                </template>
+                <template if:true={showGrnLookup}>
+                    <div class="form-field">
+                        <label class="form-label">GRN</label>
+                        <select class="form-select" data-field="GRN__c" onchange={handleChange}>
+                            <option value="">-- Select GRN --</option>
+                            <template for:each={grnLookupOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            </template>
+                        </select>
+                    </div>
+                </template>
+                <template if:true={showProductLookup}>
+                    <div class="form-field">
+                        <label class="form-label">Product</label>
+                        <select class="form-select" data-field="Product__c" onchange={handleChange}>
+                            <option value="">-- Select Product --</option>
+                            <template for:each={productLookupOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            </template>
+                        </select>
+                    </div>
+                </template>
+                <template if:true={showOtherLookup}>
+                    <div class="form-field">
+                        <label class="form-label">Other Details</label>
+                        <input type="text" class="form-input" data-field="Other_Reference__c" onchange={handleChange} />
+                    </div>
+                </template>
+                <div class="form-field" style="grid-column: 1;">
+                    <label class="form-label"><abbr title="required"
+                            style="color:red; text-decoration:none; margin-right:2px;">*</abbr>Priority</label>
+                    <select class="form-select" data-field="Priority" onchange={handleChange}>
+                        <option value="">--None--</option>
+                        <template for:each={priorityOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                    <template if:true={fieldErrors.Priority}>
+                        <div class="field-error-text">{fieldErrors.Priority}</div>
+                    </template>
+                </div>
+
+
+
+
+            </div>
+
+            <div class="section-divider"></div>
+            <div class="section-label">DESCRIPTION INFORMATION</div>
+            <div class="form-grid">
+                <div class="form-field form-field-full">
+                    <label class="form-label"><abbr title="required"
+                            style="color:red; text-decoration:none; margin-right:2px;">*</abbr>Subject</label>
+                    <input type="text" class="form-input" data-field="Subject" onchange={handleChange}
+                        maxlength="255" />
+                    <template if:true={fieldErrors.Subject}>
+                        <div class="field-error-text">{fieldErrors.Subject}</div>
+                    </template>
+                </div>
+                <div class="form-field form-field-full">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" data-field="Description" onchange={handleChange} rows="3"
+                        maxlength="32000"></textarea>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+            <div class="section-label">RESOLUTION INFORMATION</div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Resolution</label>
+                    <textarea class="form-textarea" data-field="Resolution__c" onchange={handleChange} rows="1"
+                        style="min-height: auto;" maxlength="32000"></textarea>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Opened Date</label>
+                    <input type="date" class="form-input form-input-readonly" value={todayDate} disabled />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Root Cause</label>
+                    <select class="form-select" data-field="Root_Cause__c" onchange={handleChange}>
+                        <option value="">--None--</option>
+                        <template for:each={rootCauseOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Closed Date</label>
+                    <input type="date" class="form-input form-input-readonly" disabled />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Remarks</label>
+                    <textarea class="form-textarea" data-field="Remarks__c" onchange={handleChange} rows="1"
+                        style="min-height: auto;" maxlength="32000"></textarea>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Customer Satisfaction</label>
+                    <select class="form-select" data-field="Customer_Satisfaction__c" onchange={handleChange}>
+                        <option value="">--None--</option>
+                        <template for:each={csatOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick={closeModal} disabled={isSaving}>Cancel</button>
+            <button type="button" class="btn-save" onclick={saveRecord} disabled={isSaving}>
+                <template if:true={isSaving}>Saving...</template>
+                <template if:false={isSaving}>Save</template>
+            </button>
+        </div>
+    </div>
+</template>

@@ -1,0 +1,9 @@
+<apex:page standardController="QuoteLineItem"
+           extensions="QuoteLineItemEditController"
+           action="{!blockEdit}"
+           showHeader="true"
+           sidebar="false">
+    
+    <apex:pageMessages />
+    
+</apex:page>

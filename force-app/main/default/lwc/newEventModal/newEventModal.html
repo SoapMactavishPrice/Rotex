@@ -1,0 +1,459 @@
+<template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
+    <div class="task-overlay" onclick={handleClose}>
+        <div class="task-modal" onclick={stopPropagation}>
+
+            <div class="task-header">
+                <div class="task-title">{modalTitle}</div>
+                <button type="button" class="task-close-btn" onclick={handleClose}>✕</button>
+            </div>
+
+            <div class="task-body">
+
+                <div class="task-section-label">EVENT DETAILS</div>
+
+                <!-- SUBJECT / ASSIGNED TO -->
+                <div class="task-row">
+
+                    <div class="task-field">
+                        <label class="task-label task-required">Subject</label>
+                        <div class="task-lookup-wrap">
+                            <input
+                                type="text"
+                                class="task-input task-input-search"
+                                data-field="subject"
+                                placeholder="Search or type a subject..."
+                                value={form.subject}
+                                oninput={handleSubjectInput}
+                                onfocus={handleSubjectFocus}
+                                onblur={handleSubjectBlur}
+                                autocomplete="off"/>
+                            <lightning-icon icon-name="utility:search" size="x-small" class="task-search-icon"></lightning-icon>
+                        </div>
+                        <template if:true={showSubjectDropdown}>
+                            <div class="task-result-list">
+                                <template if:true={hasFilteredSubjects}>
+                                    <template for:each={filteredSubjectOptions} for:item="opt">
+                                        <div
+                                            key={opt.value}
+                                            class="task-result-item"
+                                            data-value={opt.value}
+                                            onmousedown={selectSubject}>
+                                            {opt.label}
+                                        </div>
+                                    </template>
+                                </template>
+                                <template if:true={showUseCustomSubject}>
+                                    <div
+                                        class="task-result-item task-result-item--custom"
+                                        data-value={customSubjectValue}
+                                        onmousedown={selectSubject}>
+                                        Use “{customSubjectValue}”
+                                    </div>
+                                </template>
+                                <template if:true={showNoSubjectMatches}>
+                                    <div class="task-result-empty">Type to enter a custom subject</div>
+                                </template>
+                            </div>
+                        </template>
+                        <template if:true={errors.subject}>
+                            <div class="task-error">{errors.subject}</div>
+                        </template>
+                    </div>
+
+                    <div class="task-field">
+                        <label class="task-label task-required">Assigned To</label>
+
+                        <template if:false={hasSelectedAssignedTo}>
+                            <div class="task-lookup-wrap">
+                                <input
+                                    type="text"
+                                    class="task-input task-input-search"
+                                    placeholder="Search Channel Partner contacts..."
+                                    value={assignedToSearch}
+                                    onfocus={handleAssignedToFocus}
+                                    oninput={handleAssignedToSearch}
+                                    autocomplete="off"/>
+                                <lightning-icon icon-name="utility:search" size="x-small" class="task-search-icon"></lightning-icon>
+                            </div>
+
+                            <template if:true={showAssignedToDropdown}>
+                                <div class="task-result-list">
+                                    <template if:true={hasAssignedToResults}>
+                                        <template for:each={assignedToResults} for:item="row">
+                                            <div
+                                                key={row.id}
+                                                class="task-result-item"
+                                                data-id={row.id}
+                                                data-label={row.label}
+                                                onmousedown={selectAssignedTo}>
+                                                {row.label}
+                                                <template if:true={row.subtitle}>
+                                                    <span class="task-result-sub">({row.subtitle})</span>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </template>
+                                    <template if:false={hasAssignedToResults}>
+                                        <div class="task-result-empty">No contacts found on your Channel Partner account</div>
+                                    </template>
+                                </div>
+                            </template>
+                        </template>
+
+                        <template if:true={hasSelectedAssignedTo}>
+                            <div class="task-chip">
+                                <lightning-icon icon-name="standard:contact" size="x-small" class="task-chip-icon"></lightning-icon>
+                                <span class="task-chip-label">{form.ownerName}</span>
+                                <button type="button" class="task-chip-clear" onclick={clearAssignedTo}>✕</button>
+                            </div>
+                        </template>
+                        <template if:true={errors.ownerId}>
+                            <div class="task-error">{errors.ownerId}</div>
+                        </template>
+                    </div>
+
+                </div>
+
+                <!-- START / END -->
+                <div class="task-row">
+
+                    <div class="task-field">
+                        <label class="task-label task-required">Start</label>
+                        <input
+                            type="datetime-local"
+                            class="task-input"
+                            data-field="startDateTime"
+                            value={form.startDateTime}
+                            oninput={handleInput}/>
+                        <template if:true={errors.startDateTime}>
+                            <div class="task-error">{errors.startDateTime}</div>
+                        </template>
+                    </div>
+
+                    <div class="task-field">
+                        <label class="task-label task-required">End</label>
+                        <input
+                            type="datetime-local"
+                            class="task-input"
+                            data-field="endDateTime"
+                            value={form.endDateTime}
+                            oninput={handleInput}/>
+                        <template if:true={errors.endDateTime}>
+                            <div class="task-error">{errors.endDateTime}</div>
+                        </template>
+                    </div>
+
+                </div>
+
+                <!-- LOCATION / VISIT STATUS -->
+                <div class="task-row">
+
+                    <div class="task-field">
+                        <label class="task-label task-required">Location</label>
+                        <input
+                            type="text"
+                            class="task-input"
+                            data-field="location"
+                            value={form.location}
+                            oninput={handleInput}/>
+                        <template if:true={errors.location}>
+                            <div class="task-error">{errors.location}</div>
+                        </template>
+                    </div>
+
+                    <div class="task-field">
+                        <label class="task-label task-required">Visit Status</label>
+                        <select
+                            class="task-input"
+                            data-field="visitStatus"
+                            onchange={handleInput}>
+                            <!-- Create only: Completed is disabled (native disabled attr must NOT be rendered as false). -->
+                            <template for:each={visitStatusSelectOptions} for:item="opt">
+                                <template if:true={opt.isDisabled}>
+                                    <option
+                                        key={opt.value}
+                                        value={opt.value}
+                                        selected={opt.selected}
+                                        disabled>
+                                        {opt.label}
+                                    </option>
+                                </template>
+                                <template if:true={opt.isEnabled}>
+                                    <option
+                                        key={opt.value}
+                                        value={opt.value}
+                                        selected={opt.selected}>
+                                        {opt.label}
+                                    </option>
+                                </template>
+                            </template>
+                        </select>
+                        <template if:true={errors.visitStatus}>
+                            <div class="task-error">{errors.visitStatus}</div>
+                        </template>
+                    </div>
+
+                </div>
+
+                <!-- VISIT TYPE -->
+                <div class="task-row">
+
+                    <div class="task-field">
+                        <label class="task-label task-required">Visit Type</label>
+                        <select
+                            class="task-input"
+                            data-field="visitType"
+                            onchange={handleInput}>
+                            <template for:each={visitTypeSelectOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value} selected={opt.selected}>
+                                    {opt.label}
+                                </option>
+                            </template>
+                        </select>
+                        <template if:true={errors.visitType}>
+                            <div class="task-error">{errors.visitType}</div>
+                        </template>
+                    </div>
+
+                    <div class="task-field"></div>
+
+                </div>
+
+                <!-- VISIT DESCRIPTION (always enabled) -->
+                <div class="task-field">
+                    <label class="task-label task-required">Visit Description</label>
+                    <textarea
+                        class="task-textarea"
+                        data-field="description"
+                        oninput={handleInput}>{form.description}</textarea>
+                    <template if:true={errors.description}>
+                        <div class="task-error">{errors.description}</div>
+                    </template>
+                </div>
+
+                <template if:true={isVisitCompleted}>
+                    <div class="task-section-label task-section-spacer">STATUS &amp; DESCRIPTION</div>
+
+                    <div class="task-field">
+                        <label class="task-label task-required">MOM</label>
+                        <textarea
+                            class="task-textarea"
+                            data-field="mom"
+                            oninput={handleInput}>{form.mom}</textarea>
+                        <template if:true={errors.mom}>
+                            <div class="task-error">{errors.mom}</div>
+                        </template>
+                    </div>
+
+                    <div class="task-field">
+                        <label class="task-label task-required">Next Action Applicable</label>
+                        <select
+                            class="task-input"
+                            data-field="nextActionApplicable"
+                            onchange={handleInput}>
+                            <option value="">--None--</option>
+                            <template for:each={nextActionApplicableSelectOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value} selected={opt.selected}>
+                                    {opt.label}
+                                </option>
+                            </template>
+                        </select>
+                        <template if:true={errors.nextActionApplicable}>
+                            <div class="task-error">{errors.nextActionApplicable}</div>
+                        </template>
+                    </div>
+
+                    <template if:true={showNextActionPoints}>
+                        <div class="task-field">
+                            <label class="task-label task-required">Next Action Points</label>
+                            <textarea
+                                class="task-textarea"
+                                data-field="nextActionPoints"
+                                oninput={handleInput}>{form.nextActionPoints}</textarea>
+                            <template if:true={errors.nextActionPoints}>
+                                <div class="task-error">{errors.nextActionPoints}</div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <template if:true={showNextActionDate}>
+                        <div class="task-field">
+                            <label class="task-label task-required">Next Action Date</label>
+                            <input
+                                type="date"
+                                class="task-input"
+                                data-field="nextActionDate"
+                                value={form.nextActionDate}
+                                oninput={handleInput}/>
+                            <template if:true={errors.nextActionDate}>
+                                <div class="task-error">{errors.nextActionDate}</div>
+                            </template>
+                        </div>
+                    </template>
+                </template>
+
+                <div class="task-section-label task-section-spacer">RELATED TO</div>
+
+                <!-- RELATED TO -->
+                <div class="task-field">
+                    <label class="task-label task-required">Related To</label>
+
+                    <template if:false={hasSelectedWhat}>
+                        <div class="task-lookup-wrap">
+                            <input
+                                type="text"
+                                class="task-input task-input-search"
+                                placeholder="Search your Customer accounts..."
+                                value={whatSearch}
+                                onfocus={handleWhatFocus}
+                                oninput={handleWhatSearch}
+                                autocomplete="off"/>
+                            <lightning-icon icon-name="utility:search" size="x-small" class="task-search-icon"></lightning-icon>
+                        </div>
+
+                        <template if:true={showWhatDropdown}>
+                            <div class="task-result-list">
+                                <template if:true={hasWhatResults}>
+                                    <template for:each={whatResults} for:item="row">
+                                        <div
+                                            key={row.id}
+                                            class="task-result-item"
+                                            data-id={row.id}
+                                            data-label={row.label}
+                                            onmousedown={selectWhat}>
+                                            {row.label}
+                                            <template if:true={row.subtitle}>
+                                                <span class="task-result-sub">({row.subtitle})</span>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </template>
+                                <template if:false={hasWhatResults}>
+                                    <div class="task-result-empty">No Customer accounts found for your Channel Partner</div>
+                                </template>
+                            </div>
+                        </template>
+                    </template>
+
+                    <template if:true={hasSelectedWhat}>
+                        <div class="task-chip">
+                            <lightning-icon icon-name="standard:account" size="x-small" class="task-chip-icon"></lightning-icon>
+                            <span class="task-chip-label">{form.whatName}</span>
+                            <button type="button" class="task-chip-clear" onclick={clearWhat}>✕</button>
+                        </div>
+                    </template>
+                    <template if:true={errors.whatId}>
+                        <div class="task-error">{errors.whatId}</div>
+                    </template>
+                </div>
+
+                <!-- NAME -->
+                <div class="task-field">
+                    <label class="task-label task-required">Name</label>
+
+                    <template if:true={nameDisabled}>
+                        <div class="task-hint">{nameHint}</div>
+                    </template>
+
+                    <template if:false={nameDisabled}>
+                        <template if:false={hasSelectedWho}>
+                            <div class="task-lookup-wrap">
+                                <input
+                                    type="text"
+                                    class="task-input task-input-search"
+                                    placeholder="Search contacts for this Customer..."
+                                    value={whoSearch}
+                                    onfocus={handleWhoFocus}
+                                    oninput={handleWhoSearch}
+                                    autocomplete="off"/>
+                                <lightning-icon icon-name="utility:search" size="x-small" class="task-search-icon"></lightning-icon>
+                            </div>
+
+                            <template if:true={showWhoDropdown}>
+                                <div class="task-result-list">
+                                    <template if:true={hasWhoResults}>
+                                        <template for:each={whoResults} for:item="row">
+                                            <div
+                                                key={row.id}
+                                                class="task-result-item"
+                                                data-id={row.id}
+                                                data-label={row.label}
+                                                data-type={row.objectType}
+                                                onmousedown={selectWho}>
+                                                {row.label}
+                                                <template if:true={row.subtitle}>
+                                                    <span class="task-result-sub">({row.subtitle})</span>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </template>
+                                    <template if:false={hasWhoResults}>
+                                        <div class="task-result-empty">No contacts found for this Customer</div>
+                                    </template>
+                                </div>
+                            </template>
+                        </template>
+
+                        <template if:true={hasSelectedWho}>
+                            <div class="task-chip">
+                                <lightning-icon icon-name="standard:contact" size="x-small" class="task-chip-icon"></lightning-icon>
+                                <span class="task-chip-label">{form.whoName}</span>
+                                <button type="button" class="task-chip-clear" onclick={clearWho}>✕</button>
+                            </div>
+                        </template>
+                    </template>
+                    <template if:true={errors.whoId}>
+                        <div class="task-error">{errors.whoId}</div>
+                    </template>
+                </div>
+
+                <div class="task-section-label task-section-spacer">ADDITIONAL INFORMATION</div>
+
+                <div class="task-field task-field-checkbox">
+                    <label class="task-checkbox">
+                        <input
+                            type="checkbox"
+                            data-field="reminder"
+                            checked={form.reminder}
+                            onchange={handleInput}/>
+                        <span>Reminder Set</span>
+                    </label>
+                </div>
+
+                <template if:true={form.reminder}>
+                    <div class="task-field">
+                        <label class="task-label">Time Before Event</label>
+                        <select
+                            class="task-input"
+                            data-field="reminderMinutes"
+                            onchange={handleInput}>
+                            <template for:each={reminderMinuteSelectOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value} selected={opt.selected}>
+                                    {opt.label}
+                                </option>
+                            </template>
+                        </select>
+                    </div>
+                </template>
+
+            </div>
+
+            <div class="task-footer">
+                <button type="button" class="task-cancel-btn" onclick={handleClose}>Cancel</button>
+                <button type="button" class="task-save-btn" onclick={handleSave} disabled={isSaving}>
+                    <template if:false={isSaving}>Save</template>
+                    <template if:true={isSaving}>Saving…</template>
+                </button>
+            </div>
+
+        </div>
+    </div>
+</template>

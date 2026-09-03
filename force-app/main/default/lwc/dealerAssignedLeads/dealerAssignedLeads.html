@@ -1,95 +1,91 @@
 <template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
 
     <!-- =========================
         LIST VIEW
     ========================== -->
 
     <template if:false={selectedLead}>
-
+         <div class="list-view">
+        <c-dealer-user-menu></c-dealer-user-menu>
         <div class="page-header">
-
             <div>
-
-                <div class="breadcrumb">
-                    LEADS · ASSIGNED TO YOU
-                </div>
-
-                <div class="page-title">
-                    Leads
-                </div>
-
+                <div class="breadcrumb">LEADS · ASSIGNED TO YOU</div>
+                <h1 class="page-title">Leads</h1>
+            </div>
             </div>
 
-        </div>
-
-        <!-- FILTER -->
-
+        <!-- TOOLBAR: search left · status filters + create right -->
         <div class="filter-bar">
-
             <div class="search-box">
-
-                <lightning-icon
-                    icon-name="utility:search"
-                    size="x-small">
-                </lightning-icon>
-
+                <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+                    <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
                 <input
                     type="text"
                     class="search-input"
-                    placeholder="Search by name, company, location, product..."
+                    placeholder="Search by name, location, designation..."
                     onkeyup={handleSearch}/>
-
             </div>
 
-            <div class="status-tabs">
+            <div class="filter-bar-right">
+                <div class="status-tabs">
+                    <button
+                        class={allTabClass}
+                        data-status="All"
+                        onclick={handleStatusFilter}>
+                        All <span>{totalCount}</span>
+                    </button>
+                    <button
+                        class={newTabClass}
+                        data-status="New"
+                        onclick={handleStatusFilter}>
+                        New <span>{newCount}</span>
+                    </button>
+                    <button
+                        class={progressTabClass}
+                        data-status="Work In Progress"
+                        onclick={handleStatusFilter}>
+                        In Progress <span>{progressCount}</span>
+                    </button>
+                    <button
+                        class={qualifiedTabClass}
+                        data-status="Qualified"
+                        onclick={handleStatusFilter}>
+                        Qualified <span>{qualifiedCount}</span>
+                    </button>
+                    <button
+                        class={disqualifiedTabClass}
+                        data-status="Regret"
+                        onclick={handleStatusFilter}>
+                        Regret <span>{disqualifiedCount}</span>
+                    </button>
+                </div>
 
-    <button
-        class={allTabClass}
-        data-status="All"
-        onclick={handleStatusFilter}>
-
-        All <span>{totalCount}</span>
-
-    </button>
-
-    <button
-        class={newTabClass}
-        data-status="New"
-        onclick={handleStatusFilter}>
-
-        New <span>{newCount}</span>
-
-    </button>
-
-    <button
-        class={progressTabClass}
-        data-status="Work In Progress"
-        onclick={handleStatusFilter}>
-
-        In Progress <span>{progressCount}</span>
-
-    </button>
-
-    <button
-        class={qualifiedTabClass}
-        data-status="Qualified"
-        onclick={handleStatusFilter}>
-
-        Qualified <span>{qualifiedCount}</span>
-
-    </button>
-
-    <button
-        class={disqualifiedTabClass}
-        data-status="Regret"
-        onclick={handleStatusFilter}>
-
-        Regret <span>{disqualifiedCount}</span>
-
-    </button>
-
-</div>
-
+                <div class="filter-actions">
+                    <c-dealer-data-export
+                        object-key="Lead"
+                        button-label="Export"
+                        status-filter={selectedStatus}
+                        search-key={searchKey}
+                    ></c-dealer-data-export>
+                    <button type="button" class="btn-create-lead" onclick={handleCreateLead}>
+                        <svg viewBox="0 0 16 16" fill="none" class="btn-create-icon">
+                            <path d="M8 3v10M3 8h10" stroke="currentColor"
+                                stroke-width="2.2" stroke-linecap="round"/>
+                        </svg>
+                        Create Lead
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- TABLE -->
@@ -101,7 +97,7 @@
                 <div>CUSTOMER</div>
                 <div>CONTACT</div>
                 <div>SOURCE</div>
-                <div>PRODUCT INTEREST</div>
+                <div>DESIGNATION</div>
                 <div>LOCATION</div>
                 <div>STATUS</div>
                 <div>CREATED</div>
@@ -125,20 +121,12 @@
                             {lead.Name}
                         </div>
 
-                        <div class="sub-text">
-                            {lead.Company}
-                        </div>
-
                     </div>
 
                     <div class="contact-text">
 
                         <div>
                             {lead.Phone}
-                        </div>
-
-                        <div class="sub-text">
-                            {lead.Email}
                         </div>
 
                     </div>
@@ -149,20 +137,12 @@
                             {lead.LeadSource}
                         </div>
 
-                        <div class="sub-text">
-                            {lead.Industry}
-                        </div>
-
                     </div>
 
                     <div class="contact-text">
 
                         <div>
-                            {lead.Product_Interested__c}
-                        </div>
-
-                        <div class="sub-text">
-                            {lead.Product_Category__c}
+                            {lead.Title}
                         </div>
 
                     </div>
@@ -172,11 +152,6 @@
                         <div>
                             {lead.City}
                         </div>
-
-                        <div class="sub-text">
-                            {lead.State}
-                        </div>
-
                     </div>
 
                     <div>
@@ -196,7 +171,20 @@
             </template>
 
         </div>
+ </div>
+    </template>
 
+    <!-- ============ NEW LEAD MODAL (root — not inside list/detail) ============ -->
+    <template if:true={showLeadModal}>
+        <div class="lead-modal-host" onclick={closeLeadModal}>
+            <div class="lead-modal-stop" onclick={stopLeadModalBubble}>
+                <c-new-lead-modal
+                    lead-to-edit={leadModalEditRecord}
+                    onclose={closeLeadModal}
+                    onsave={handleLeadSaved}
+                ></c-new-lead-modal>
+            </div>
+        </div>
     </template>
 
     <!-- =========================
@@ -204,370 +192,426 @@
     ========================== -->
 
     <template if:true={selectedLead}>
+    <div class="detail-view">
+        <c-dealer-user-menu></c-dealer-user-menu>
+
+        <!-- ============ STICKY HEADER ============ -->
 
         <div class="detail-header">
 
-            <button
-                class="back-btn"
-                onclick={backToList}>
-
-                ← Back to leads
-
-            </button>
-
-            <div class="detail-meta">
-
-                CREATED {selectedLead.createdDate}
-
-            </div>
+            <div class="detail-topbar">
+                <button
+                    type="button"
+                    class="back-btn"
+                    onclick={backToList}>
+                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8"
+                            stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Back to Leads
+                </button>
+                </div>
 
             <div class="detail-top">
 
-                <div>
-
-                    <div class="detail-name">
-                        {selectedLead.Name}
-                    </div>
-
-                    <div class="detail-company">
-
-                        {selectedLead.Company}
-                        ·
-                        {selectedLead.City},
-                        {selectedLead.State}
-
-                    </div>
-
-                </div>
-
-              <div class="detail-actions">
-
-    <div class={selectedLead.statusClass}>
-        {selectedLead.Status}
-    </div>
-
-    <div class="status-dropdown-wrapper">
-
-        <button
-            class="status-update-btn"
-            onclick={toggleDropdown}>
-
-            Update status
-
-            <lightning-icon
-                icon-name="utility:chevrondown"
-                size="xx-small"
-                class="dropdown-icon">
-            </lightning-icon>
-
-        </button>
-
-        <template if:true={showDropdown}>
-
-          <div class="status-dropdown">
-
-    <div
-        class="dropdown-item"
-        data-status="New"
-        onclick={updateStatus}>
-
-        <span class="status-badge new">
-            New
-        </span>
-
-    </div>
-
-    <div
-        class="dropdown-item"
-        data-status="Contacted"
-        onclick={updateStatus}>
-
-        <span class="status-badge progress">
-            Contacted
-        </span>
-
-    </div>
-
-    <div
-        class="dropdown-item"
-        data-status="Work In Progress"
-        onclick={updateStatus}>
-
-        <span class="status-badge progress">
-            Work In Progress
-        </span>
-
-    </div>
-
-    <div
-        class="dropdown-item"
-        data-status="Forward to Dealer"
-        onclick={updateStatus}>
-
-        <span class="status-badge progress">
-            Forward to Dealer
-        </span>
-
-    </div>
-
-    <div
-        class="dropdown-item"
-        data-status="Future Prospect"
-        onclick={updateStatus}>
-
-        <span class="status-badge progress">
-            Future Prospect
-        </span>
-
-    </div>
-
-    <div
-        class="dropdown-item"
-        data-status="Qualified"
-        onclick={updateStatus}>
-
-        <span class="status-badge qualified">
-            Qualified
-        </span>
-
-    </div>
-
-    <div
-        class="dropdown-item"
-        data-status="Regret"
-        onclick={updateStatus}>
-
-        <span class="status-badge disqualified">
-            Regret
-        </span>
-
-    </div>
-
-</div>
-
-        </template>
-
-    </div>
-
-</div>
-
-            </div>
-
-        </div>
-
-        <!-- DETAIL LAYOUT -->
-
-        <div class="detail-layout">
-
-            <!-- LEFT CARD -->
-
-            <div class="detail-card">
-
-                <div class="section-title">
-                    CUSTOMER
-                </div>
-
-                <div class="detail-grid">
+                <div class="detail-identity">
 
                     <div>
 
-                        <div class="label">
-                            NAME
+                        <div class="detail-meta">
+                            LEAD · {selectedLead.Status}
                         </div>
 
-                        <div class="value">
+                        <div class="detail-name">
                             {selectedLead.Name}
                         </div>
 
-                    </div>
+                        <div class="detail-company">
 
-                    <div>
+                            <span>{selectedLead.Company}</span>
 
-                        <div class="label">
-                            COMPANY
-                        </div>
+                            <template if:true={selectedLead.City}>
+                                <span class="divider-dot">·</span>
+                                <span>{selectedLead.City}, {selectedLead.State}</span>
+                            </template>
 
-                        <div class="value">
-                            {selectedLead.Company}
-                        </div>
+                            <span class="divider-dot">·</span>
+                            <span>Created {selectedLead.createdDate}</span>
 
-                    </div>
-
-                    <div>
-
-                        <div class="label">
-                            PHONE
-                        </div>
-
-                        <div class="value">
-                            {selectedLead.Phone}
-                        </div>
-
-                    </div>
-
-                    <div>
-
-                        <div class="label">
-                            EMAIL
-                        </div>
-
-                        <div class="value">
-                            {selectedLead.Email}
                         </div>
 
                     </div>
 
                 </div>
-
-                <div class="section-divider"></div>
-
-                <!-- LEAD INFO -->
-
-                <div class="section-title">
-                    LEAD INFORMATION
-                </div>
-
-                <div class="detail-grid">
-
-                    <div>
-                        <div class="label">LEAD SOURCE</div>
-                        <div class="value">{selectedLead.LeadSource}</div>
-                    </div>
-                
-                    <div>
-                        <div class="label">ESTIMATED VALUE</div>
-                        <div class="value">₹ {selectedLead.Sales_Turnover__c}</div>
-                    </div>
-                
-                    <div>
-                        <div class="label">PRODUCT INTEREST</div>
-                        <div class="value">{selectedLead.Product_Interested__c}</div>
-                    </div>
-                
-                    <div>
-                        <div class="label">LOCATION</div>
-                        <div class="value">
-                            {selectedLead.Street}<br/>
-                            {selectedLead.City},
-                            {selectedLead.State}
-                            {selectedLead.PostalCode}<br/>
-                            {selectedLead.Country}
-                        </div>
-                    </div>
-                
-                </div>
-
-                <div class="section-divider"></div>
-
-                <!-- NOTES -->
-
-                <div class="section-title">
-                    NOTES
-                </div>
-
-                <div class="notes-box">
-
-                    <template if:true={selectedLead.Requirement__c}>
-                        {selectedLead.Requirement__c}
-                    </template>
-
-                    <template if:false={selectedLead.Requirement__c}>
-                        No notes available
-                    </template>
-
-                </div>
-
-                <div class="note-input-wrap">
-
-                    <input
-                        type="text"
-                        class="note-input"
-                        placeholder="Add a note or activity update..."
-                        value={noteText}
-                        onchange={handleNoteChange}/>
+               <div class="detail-actions">
 
                     <button
-                        class="add-note-btn"
-                        onclick={handleAddNote}>
-
-                        Add note
-
+                        type="button"
+                        class="edit-lead-btn"
+                        onclick={handleEditLead}>
+                        <svg class="edit-lead-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path
+                                d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"/>
+                        </svg>
+                        Edit
                     </button>
 
+                    <template if:true={showConvertLeadButton}>
+                        <button
+                            type="button"
+                            class="convert-btn"
+                            onclick={handleConvertLead}>
+                            <svg class="convert-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                <path
+                                    d="M3 5h8.5M9.5 2.5L12.5 5 9.5 7.5"
+                                    stroke="currentColor"
+                                    stroke-width="1.6"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"/>
+                                <path
+                                    d="M13 11H4.5M6.5 8.5L3.5 11 6.5 13.5"
+                                    stroke="currentColor"
+                                    stroke-width="1.6"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"/>
+                            </svg>
+                            Convert Lead
+                        </button>
+                    </template>
+
                 </div>
+               <!-- STATUS PATH -->
+            <div class="path-bar">
 
-            </div>
-            <!-- RIGHT SIDE -->
+                <template for:each={statusPathItems} for:item="item">
+                    <div
+                        key={item.value}
+                        class={item.itemClass}
+                        data-status={item.value}
+                        onclick={updateStatus}>
 
-            <div class="side-card">
+                        <template if:true={item.isComplete}>
+                            <lightning-icon
+                                icon-name="utility:check"
+                                size="xx-small"
+                                class="path-check">
+                            </lightning-icon>
+                        </template>
 
-                <!-- ACTIVITY -->
+                        <span>{item.label}</span>
 
-             <div class="activity-card">
-
-    <div class="section-title">
-        ACTIVITY
-    </div>
-
-    <template
-        for:each={activityList}
-        for:item="activity"
-        for:index="index">
-
-        <div
-            key={activity.id}
-            class="activity-row">
-
-            <div class="timeline">
-
-                <div class="timeline-dot"></div>
-
-                <template if:false={activity.isLast}>
-                    <div class="timeline-line"></div>
+                    </div>
                 </template>
 
             </div>
 
-            <div class="activity-content">
-
-                <div class="activity-text">
-                    {activity.message}
-                </div>
-
-                <div class="activity-date">
-                    {activity.date}
-                </div>
-
             </div>
 
         </div>
 
-    </template>
+        <!-- ============ SCROLLABLE BODY ============ -->
 
-</div>
-                <div class="section-divider"></div>
+        <div class="detail-layout">
 
-                <!-- ASSIGNED -->
+          <div class="detail-columns">
 
-                <div class="section-title">
-                    ASSIGNED TO
+            <!-- ================= LEFT COLUMN ================= -->
+
+            <div class="detail-col detail-col-left">
+
+            <!-- LEAD INFORMATION -->
+
+            <div class="info-card">
+
+                <div class="info-card-header">
+                    <div class="info-card-icon">
+                        <lightning-icon icon-name="utility:contact" size="x-small"></lightning-icon>
+                    </div>
+                    <div class="info-card-title">Lead Information</div>
                 </div>
 
-                <div class="assignee-box">
+                <div class="info-card-body">
 
-                    <div class="avatar">
-                        {ownerInitials}
+                    <div class="info-row">
+                        <div class="info-row-label">Name</div>
+                        <div class="info-row-value">{selectedLead.Name}</div>
                     </div>
 
-                    <div>
+                    <div class="info-row">
+                        <div class="info-row-label">Customer</div>
+                        <div class="info-row-value">{selectedLead.Company}</div>
+                    </div>
 
-                        <div class="assignee-name">
-                            {selectedLead.Owner.Name}
-                        </div>
+                    <div class="info-row">
+                        <div class="info-row-label">Designation</div>
+                        <template if:true={selectedLead.Title}>
+                            <div class="info-row-value">{selectedLead.Title}</div>
+                        </template>
+                        <template if:false={selectedLead.Title}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
 
-                        <div class="sub-text">
-                            {selectedLead.Dealer_Name__c}
+                    <div class="info-row">
+                        <div class="info-row-label">Phone</div>
+                        <template if:true={selectedLead.Phone}>
+                            <div class="info-row-value">{selectedLead.Phone}</div>
+                        </template>
+                        <template if:false={selectedLead.Phone}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-row-label">Email</div>
+                        <template if:true={selectedLead.Email}>
+                            <div class="info-row-value">{selectedLead.Email}</div>
+                        </template>
+                        <template if:false={selectedLead.Email}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-row-label">Website</div>
+                        <template if:true={selectedLead.Website}>
+                            <div class="info-row-value">{selectedLead.Website}</div>
+                        </template>
+                        <template if:false={selectedLead.Website}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-row-label">Lead Source</div>
+                        <template if:true={selectedLead.LeadSource}>
+                            <div class="info-row-value">{selectedLead.LeadSource}</div>
+                        </template>
+                        <template if:false={selectedLead.LeadSource}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-row-label">Requirement</div>
+                        <template if:true={selectedLead.Requirement__c}>
+                            <div class="info-row-value info-row-value--requirement">{selectedLead.Requirement__c}</div>
+                        </template>
+                        <template if:false={selectedLead.Requirement__c}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
+
+                    <template if:true={showRegretFieldsInLeadInfo}>
+                        <div class="info-row">
+                            <div class="info-row-label">Regret Reason</div>
+                            <template if:true={selectedLead.Regret_Reason1__c}>
+                                <div class="info-row-value">{regretInfo.regretReason}</div>
+                            </template>
+                            <template if:false={selectedLead.Regret_Reason1__c}>
+                                <div class="info-row-value value-empty">Not set</div>
+                            </template>
                         </div>
+                        <template if:true={regretInfo.showOther}>
+                            <div class="info-row">
+                                <div class="info-row-label">Other Regret Reason</div>
+                                <div class="info-row-value">{regretInfo.otherRegretReason}</div>
+                            </div>
+                        </template>
+                    </template>
+
+                    <div class="info-row">
+                        <div class="info-row-label">GST Number</div>
+                        <template if:true={selectedLead.GST_Number__c}>
+                            <div class="info-row-value">{selectedLead.GST_Number__c}</div>
+                        </template>
+                        <template if:false={selectedLead.GST_Number__c}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- LOCATION (moved to left column, last) -->
+
+            <div class="info-card">
+
+                <div class="info-card-header">
+                    <div class="info-card-icon">
+                        <lightning-icon icon-name="utility:location" size="x-small"></lightning-icon>
+                    </div>
+                    <div class="info-card-title">Location</div>
+                </div>
+
+                <div class="info-card-body">
+
+                    <div class="info-row">
+                        <div class="info-row-label">Street</div>
+                        <template if:true={selectedLead.Street}>
+                            <div class="info-row-value">{selectedLead.Street}</div>
+                        </template>
+                        <template if:false={selectedLead.Street}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-row-label">City</div>
+                        <template if:true={selectedLead.City}>
+                            <div class="info-row-value">{selectedLead.City}</div>
+                        </template>
+                        <template if:false={selectedLead.City}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-row-label">State</div>
+                        <template if:true={selectedLead.State}>
+                            <div class="info-row-value">{selectedLead.State}</div>
+                        </template>
+                        <template if:false={selectedLead.State}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-row-label">Postal Code</div>
+                        <template if:true={selectedLead.PostalCode}>
+                            <div class="info-row-value">{selectedLead.PostalCode}</div>
+                        </template>
+                        <template if:false={selectedLead.PostalCode}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-row-label">Country</div>
+                        <template if:true={selectedLead.Country}>
+                            <div class="info-row-value">{selectedLead.Country}</div>
+                        </template>
+                        <template if:false={selectedLead.Country}>
+                            <div class="info-row-value value-empty">Not set</div>
+                        </template>
+                    </div>
+
+                </div>
+
+            </div>
+
+            </div>
+
+            <!-- ================= RIGHT COLUMN (sidebar) ================= -->
+
+            <div class="detail-col detail-col-right">
+
+            <!-- ACTIVITY: Tasks & Events -->
+
+            <div class="info-card activity-card">
+
+                <div class="info-card-header">
+                    <div class="info-card-icon">
+                        <lightning-icon icon-name="utility:clock" size="x-small"></lightning-icon>
+                    </div>
+                    <div class="info-card-title">Activity</div>
+                </div>
+
+                <!-- quick action buttons: New Task / New Event -->
+                <div class="activity-actions">
+
+                    <button type="button" class="activity-action-btn" onclick={handleNewTask}>
+                        <lightning-icon icon-name="utility:task" size="xx-small"></lightning-icon>
+                        New Task
+                    </button>
+
+                    <button type="button" class="activity-action-btn" onclick={handleNewEvent}>
+                        <lightning-icon icon-name="utility:event" size="xx-small"></lightning-icon>
+                        New Event
+                    </button>
+
+                </div>
+
+                <!-- Upcoming & Overdue: loaded via getUpcomingActivities Apex call,
+                     each item shaped like { id, subject, type, dueDate, isOverdue, isClosed } -->
+                <div class="activity-subheader">Upcoming &amp; Overdue</div>
+
+                <div class="info-card-body activity-scroll">
+
+                    <template if:true={hasUpcomingActivities}>
+                        <template for:each={upcomingActivities} for:item="item">
+                            <div key={item.id} class="activity-row">
+                                <div class="timeline">
+                                    <div class="timeline-dot"></div>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-text">{item.subject}</div>
+                                    <div class="activity-date">{item.type} · {item.dueDate}</div>
+                                </div>
+                            </div>
+                        </template>
+                    </template>
+
+                    <template if:false={hasUpcomingActivities}>
+                        <div class="activity-empty">
+                            No activities to show.
+                            <div class="activity-empty-sub">Get started by logging a task or event.</div>
+                        </div>
+                    </template>
+
+                </div>
+
+            </div>
+
+            <!-- NOTES -->
+
+            <div class="info-card">
+
+                <div class="info-card-header">
+                    <div class="info-card-icon">
+                        <lightning-icon icon-name="utility:note" size="x-small"></lightning-icon>
+                    </div>
+                    <div class="info-card-title">Notes</div>
+                </div>
+
+                <div class="info-card-body">
+
+                    <div class="notes-box notes-scroll">
+
+                        <template if:true={hasNotes}>
+                            <template for:each={leadNotes} for:item="note">
+                                <div key={note.id} class="note-item">
+                                    <div class="note-body">{note.body}</div>
+                                    <div class="note-meta">
+                                        {note.createdDate} · {note.author}
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
+
+                        <template if:false={hasNotes}>
+                            <div class="no-notes-text">No notes available</div>
+                        </template>
+
+                    </div>
+
+                    <div class="note-input-wrap">
+
+                        <input
+                            type="text"
+                            class="note-input"
+                            placeholder="Add a note or activity update..."
+                            value={noteText}
+                            oninput={handleNoteChange}/>
+
+                        <button type="button" class="add-note-btn" onclick={handleAddNote}>
+                            Add note
+                        </button>
 
                     </div>
 
@@ -575,8 +619,641 @@
 
             </div>
 
+            <!-- FILES: real Salesforce Files, uploaded via manual base64
+                 Apex upload (saveLeadAttachment) and listed via {leadFiles}
+                 from JS/Apex. Click a file to open the standard preview. -->
+
+            <div class="info-card">
+
+                <div class="info-card-header">
+                    <div class="info-card-icon">
+                        <lightning-icon icon-name="utility:file" size="x-small"></lightning-icon>
+                    </div>
+                    <div class="info-card-title">Files</div>
+                </div>
+
+                <div class="info-card-body files-scroll">
+
+                    <template if:true={hasFiles}>
+                        <template for:each={leadFiles} for:item="file">
+                            <div
+                                key={file.id}
+                                class="file-item"
+                                data-id={file.id}
+                                onclick={handleFilePreview}>
+                                <div class="file-icon">
+                                    <lightning-icon icon-name="doctype:attachment" size="small"></lightning-icon>
+                                </div>
+                                <div>
+                                    <div class="file-name">{file.title}</div>
+                                    <div class="file-meta">{file.uploadedDate} · {file.size}</div>
+                                </div>
+                            </div>
+                        </template>
+                    </template>
+
+                    <template if:false={hasFiles}>
+                        <div class="activity-empty">No files yet.</div>
+                    </template>
+
+                </div>
+
+                <div class="file-upload-wrap">
+
+                    <label class="upload-btn" for="leadFileInput">
+                        <lightning-icon icon-name="utility:upload" size="xx-small"></lightning-icon>
+                        Upload Files
+                    </label>
+
+                    <input
+                        type="file"
+                        id="leadFileInput"
+                        class="file-input-hidden"
+                        multiple
+                        onchange={handleFileInputChange}/>
+
+                </div>
+
+            </div>
+
+            <!-- CONTACTED DETAILS (saved from Contacted path modal) -->
+            <template if:true={hasContactedInfo}>
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <div class="info-card-icon">
+                            <lightning-icon icon-name="utility:call" size="x-small"></lightning-icon>
+                        </div>
+                        <div class="info-card-title">Contacted Details</div>
+                    </div>
+                    <div class="info-card-body">
+                        <div class="info-row">
+                            <div class="info-row-label">Contact Person Name</div>
+                            <div class="info-row-value">{contactedInfo.contactPersonName}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Designation</div>
+                            <div class="info-row-value">{contactedInfo.designation}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Email ID</div>
+                            <div class="info-row-value">{contactedInfo.emailId}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">MOM</div>
+                            <div class="info-row-value">{contactedInfo.mom}</div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            </div>
+
+          </div>
+
         </div>
 
+
+        <template if:true={hasFilePreview}>
+
+            <div class="preview-overlay" onclick={closeFilePreview}>
+
+                <div class="preview-modal" onclick={stopPropagation}>
+
+                    <div class="preview-header">
+
+                        <div class="preview-title">{previewFile.title}</div>
+
+                        <button
+                            type="button"
+                            class="preview-close-btn"
+                            onclick={closeFilePreview}>
+                            ✕
+                        </button>
+
+                    </div>
+
+                    <div class="preview-body">
+
+                        <template if:true={previewFile.isImage}>
+                            <img
+                                src={previewFile.url}
+                                alt={previewFile.title}
+                                class="preview-image"/>
+                        </template>
+
+                        <template if:true={previewFile.isPdf}>
+                            <iframe
+                                src={previewFile.url}
+                                class="preview-iframe"
+                                title={previewFile.title}>
+                            </iframe>
+                        </template>
+
+                        <template if:false={previewFile.isImage}>
+                            <template if:false={previewFile.isPdf}>
+                                <div class="preview-fallback">
+                                    Preview isn't available for this file type.
+                                    <a
+                                        href={previewFile.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="preview-download-link">
+                                        Download {previewFile.title}
+                                    </a>
+                                </div>
+                            </template>
+                        </template>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </template>
+
+        <!-- ============ CONTACTED PATH MODAL ============ -->
+        <template if:true={showContactedModal}>
+            <div class="contacted-overlay" onclick={closeContactedModal}>
+                <div class="contacted-modal" onclick={stopPropagation}>
+                    <div class="contacted-header">
+                        <div class="contacted-title">Mark as Contacted</div>
+                        <button type="button" class="preview-close-btn" onclick={closeContactedModal}>✕</button>
+                    </div>
+                    <div class="contacted-body">
+                        <div class="contacted-field">
+                            <label class="contacted-label">Contact Person Name <span class="req">*</span></label>
+                            <input
+                                class="contacted-input"
+                                type="text"
+                                data-field="contactPersonName"
+                                value={contactedForm.contactPersonName}
+                                oninput={handleContactedInput}
+                                placeholder="Enter contact person name"/>
+                            <template if:true={contactedErrors.contactPersonName}>
+                                <span class="contacted-error">{contactedErrors.contactPersonName}</span>
+                            </template>
+                        </div>
+                        <div class="contacted-field">
+                            <label class="contacted-label">Designation <span class="req">*</span></label>
+                            <input
+                                class="contacted-input"
+                                type="text"
+                                data-field="designation"
+                                value={contactedForm.designation}
+                                oninput={handleContactedInput}
+                                placeholder="e.g. Manager"/>
+                            <template if:true={contactedErrors.designation}>
+                                <span class="contacted-error">{contactedErrors.designation}</span>
+                            </template>
+                        </div>
+                        <div class="contacted-field">
+                            <label class="contacted-label">Email ID <span class="req">*</span></label>
+                            <input
+                                class="contacted-input"
+                                type="email"
+                                data-field="emailId"
+                                value={contactedForm.emailId}
+                                oninput={handleContactedInput}
+                                placeholder="email@example.com"/>
+                            <template if:true={contactedErrors.emailId}>
+                                <span class="contacted-error">{contactedErrors.emailId}</span>
+                            </template>
+                        </div>
+                        <div class="contacted-field">
+                            <label class="contacted-label">MOM <span class="req">*</span></label>
+                            <textarea
+                                class="contacted-textarea"
+                                data-field="mom"
+                                oninput={handleContactedInput}
+                                rows="3"
+                                placeholder="Enter minutes of meeting...">{contactedForm.mom}</textarea>
+                            <template if:true={contactedErrors.mom}>
+                                <span class="contacted-error">{contactedErrors.mom}</span>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="contacted-footer">
+                        <button type="button" class="contacted-btn-cancel" onclick={closeContactedModal}>Cancel</button>
+                        <button
+                            type="button"
+                            class="contacted-btn-save"
+                            onclick={handleSaveContacted}
+                            disabled={isSavingContacted}>
+                            {contactedSaveLabel}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- ============ REGRET PATH MODAL ============ -->
+        <template if:true={showRegretModal}>
+            <div class="contacted-overlay" onclick={closeRegretModal}>
+                <div class="contacted-modal" onclick={stopPropagation}>
+                    <div class="contacted-header">
+                        <div class="contacted-title">Mark as Regret</div>
+                        <button type="button" class="preview-close-btn" onclick={closeRegretModal}>✕</button>
+                    </div>
+                    <div class="contacted-body">
+                        <div class="contacted-field">
+                            <label class="contacted-label">Regret Reason <span class="req">*</span></label>
+                            <select
+                                class="contacted-input"
+                                data-field="regretReason"
+                                value={regretForm.regretReason}
+                                onchange={handleRegretInput}>
+                                <template for:each={regretReasonSelectOptions} for:item="opt">
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                </template>
+                            </select>
+                            <template if:true={regretErrors.regretReason}>
+                                <span class="contacted-error">{regretErrors.regretReason}</span>
+                            </template>
+                        </div>
+                        <template if:true={showOtherRegretReason}>
+                            <div class="contacted-field">
+                                <label class="contacted-label">Other Regret Reason <span class="req">*</span></label>
+                                <textarea
+                                    class="contacted-textarea"
+                                    data-field="otherRegretReason"
+                                    oninput={handleRegretInput}
+                                    rows="3"
+                                    placeholder="Enter other regret reason...">{regretForm.otherRegretReason}</textarea>
+                                <template if:true={regretErrors.otherRegretReason}>
+                                    <span class="contacted-error">{regretErrors.otherRegretReason}</span>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="contacted-footer">
+                        <button type="button" class="contacted-btn-cancel" onclick={closeRegretModal}>Cancel</button>
+                        <button
+                            type="button"
+                            class="contacted-btn-save"
+                            onclick={handleSaveRegret}
+                            disabled={isSavingRegret}>
+                            {regretSaveLabel}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- ============ NEW EVENT MODAL ============ -->
+        <template if:true={showEventModal}>
+            <c-new-event-modal
+                lead-id={selectedLead.Id}
+                lead-name={selectedLead.Name}
+                partner-account-id={selectedLead.Dealer__c}
+                onclose={closeEventModal}
+                onsave={handleEventSaved}
+            ></c-new-event-modal>
+        </template>
+<template if:true={showTaskModal}>
+    <c-newtaskmodal
+        lead-id={selectedLead.Id}
+        lead-name={selectedLead.Name}
+        partner-account-id={selectedLead.Dealer__c}
+        onclose={closeTaskModal}
+        onsave={handleTaskSaved}
+    ></c-newtaskmodal>
+</template>
+       
+        <template if:true={showConvertModal}>
+
+            <div class="convert-overlay" onclick={closeConvertModal}>
+
+                <div class="convert-modal" onclick={stopPropagation}>
+
+                    <div class="convert-header">
+                        <div class="convert-title">Convert Lead</div>
+                        <button
+                            type="button"
+                            class="preview-close-btn"
+                            onclick={closeConvertModal}>
+                            ✕
+                        </button>
+                    </div>
+
+                    <div class="convert-body">
+
+                        <!-- ACCOUNT -->
+                        <div class="convert-section">
+                            <div class="convert-dual">
+
+                                <div class={accountNewPaneClass}>
+                                    <label class="convert-radio">
+                                        <input
+                                            type="radio"
+                                            name="accountOption"
+                                            value="new"
+                                            checked={isNewAccount}
+                                            onchange={handleAccountOptionChange}/>
+                                        <span>Create New Account</span>
+                                    </label>
+                                    <div class="convert-pane-box">
+                                        <div class="convert-fields-row">
+                                            <div class="convert-field">
+                                                <label class="convert-label">Account Name</label>
+                                                <input
+                                                    type="text"
+                                                    class="convert-input"
+                                                    value={newAccountName}
+                                                    disabled={isExistingAccount}
+                                                    oninput={handleNewAccountNameChange}/>
+                                            </div>
+                                            <div class="convert-field">
+                                                <label class="convert-label">Record Type</label>
+                                                <input
+                                                    type="text"
+                                                    class="convert-input convert-input-readonly"
+                                                    value="Customer"
+                                                    readonly
+                                                    disabled={isExistingAccount}/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="convert-divider" aria-hidden="true">
+                                    <span class="convert-or">- OR -</span>
+                                </div>
+
+                                <div class={accountExistingPaneClass}>
+                                    <label class="convert-radio">
+                                        <input
+                                            type="radio"
+                                            name="accountOption"
+                                            value="existing"
+                                            checked={isExistingAccount}
+                                            onchange={handleAccountOptionChange}/>
+                                        <span>Choose Existing Account</span>
+                                    </label>
+                                    <div class="convert-pane-box">
+                                        <div class="convert-field">
+                                            <label class="convert-label">Account Search</label>
+                                            <div class="convert-search-wrap">
+                                                <lightning-icon icon-name="utility:search" size="x-small" class="convert-search-icon"></lightning-icon>
+                                                <input
+                                                    type="text"
+                                                    class="convert-input convert-input-search"
+                                                    placeholder="Search for matching accounts"
+                                                    value={accountSearchTerm}
+                                                    disabled={isNewAccount}
+                                                    oninput={handleAccountSearch}/>
+                                            </div>
+                                        </div>
+
+                                        <template if:true={selectedAccountName}>
+                                            <div class="convert-selected-chip">
+                                                Selected: {selectedAccountName}
+                                            </div>
+                                        </template>
+
+                                        <div class="convert-matches-panel">
+                                            <template if:true={hasAccountResults}>
+                                                <div class="convert-result-list">
+                                                    <template for:each={accountSearchResults} for:item="acc">
+                                                        <div
+                                                            key={acc.Id}
+                                                            class="convert-result-item"
+                                                            data-id={acc.Id}
+                                                            data-name={acc.Name}
+                                                            onclick={selectAccount}>
+                                                            <lightning-icon icon-name="standard:account" size="small" class="convert-result-icon"></lightning-icon>
+                                                            <div class="convert-result-text">
+                                                                <div class="convert-result-name">{acc.Name}</div>
+                                                                <div class="convert-result-sub">({acc.subtitle})</div>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                            <div class="convert-matches-label">{accountMatchesLabel}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- CONTACT -->
+                        <div class="convert-section">
+                            <div class="convert-dual">
+
+                                <div class={contactNewPaneClass}>
+                                    <label class="convert-radio">
+                                        <input
+                                            type="radio"
+                                            name="contactOption"
+                                            value="new"
+                                            checked={isNewContact}
+                                            onchange={handleContactOptionChange}/>
+                                        <span>Create New Contact</span>
+                                    </label>
+                                    <div class="convert-pane-box">
+                                        <div class="convert-fields-row">
+                                            <div class="convert-field">
+                                                <label class="convert-label">First Name</label>
+                                                <input
+                                                    type="text"
+                                                    class="convert-input"
+                                                    value={contactFirstName}
+                                                    disabled={isExistingContact}
+                                                    oninput={handleContactFirstNameChange}/>
+                                            </div>
+                                            <div class="convert-field">
+                                                <label class="convert-label convert-required">Last Name</label>
+                                                <input
+                                                    type="text"
+                                                    class="convert-input"
+                                                    value={contactLastName}
+                                                    disabled={isExistingContact}
+                                                    oninput={handleContactLastNameChange}/>
+                                            </div>
+                                            <div class="convert-field">
+                                                <label class="convert-label">Contact Person Designation</label>
+                                                <input
+                                                    type="text"
+                                                    class="convert-input"
+                                                    value={contactDesignation}
+                                                    disabled={isExistingContact}
+                                                    oninput={handleContactDesignationChange}/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="convert-divider" aria-hidden="true">
+                                    <span class="convert-or">- OR -</span>
+                                </div>
+
+                                <div class={contactExistingPaneClass}>
+                                    <label class="convert-radio">
+                                        <input
+                                            type="radio"
+                                            name="contactOption"
+                                            value="existing"
+                                            checked={isExistingContact}
+                                            onchange={handleContactOptionChange}/>
+                                        <span>Choose Existing Contact</span>
+                                    </label>
+                                    <div class="convert-pane-box">
+                                        <template if:true={isExistingContact}>
+                                            <div class="convert-field">
+                                                <label class="convert-label">Contact Search</label>
+                                                <input
+                                                    type="text"
+                                                    class="convert-input"
+                                                    placeholder="Search for matching contacts"
+                                                    value={contactSearchTerm}
+                                                    oninput={handleContactSearch}/>
+                                            </div>
+                                            <template if:true={selectedContactName}>
+                                                <div class="convert-selected-chip">
+                                                    Selected: {selectedContactName}
+                                                </div>
+                                            </template>
+                                            <template if:true={hasContactResults}>
+                                                <div class="convert-result-list">
+                                                    <template for:each={contactSearchResults} for:item="con">
+                                                        <div
+                                                            key={con.Id}
+                                                            class="convert-result-item"
+                                                            data-id={con.Id}
+                                                            data-name={con.Name}
+                                                            onclick={selectContact}>
+                                                            {con.Name}
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </template>
+                                        <template if:false={isExistingContact}>
+                                            <input
+                                                type="text"
+                                                class="convert-input convert-input-readonly"
+                                                value="No active duplicate rule"
+                                                disabled/>
+                                        </template>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- OPPORTUNITY -->
+                        <div class="convert-section">
+                            <div class="convert-dual">
+
+                                <div class={opportunityCreatePaneClass}>
+                                    <label class="convert-radio">
+                                        <input
+                                            type="radio"
+                                            name="opportunityOption"
+                                            value="create"
+                                            checked={createOpportunity}
+                                            onchange={handleOpportunityOptionChange}/>
+                                        <span>Create New Opportunity</span>
+                                    </label>
+                                    <div class="convert-pane-box">
+                                        <div class="convert-field">
+                                            <label class="convert-label">Opportunity Name</label>
+                                            <input
+                                                type="text"
+                                                class="convert-input"
+                                                value={opportunityName}
+                                                disabled={opportunityCreateFieldsDisabled}
+                                                oninput={handleOpportunityNameChange}/>
+                                        </div>
+                                        <div class="convert-field">
+                                            <label class="convert-label">Close Date</label>
+                                            <input
+                                                type="date"
+                                                class="convert-input"
+                                                value={opportunityCloseDate}
+                                                disabled={opportunityCreateFieldsDisabled}
+                                                onchange={handleOpportunityCloseDateChange}/>
+                                        </div>
+                                        <label class="convert-checkbox">
+                                            <input
+                                                type="checkbox"
+                                                checked={doNotCreateOpportunity}
+                                                disabled={existingOpportunity}
+                                                onchange={handleDoNotCreateOpportunityChange}/>
+                                            <span>Don't create an opportunity upon conversion</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="convert-divider" aria-hidden="true">
+                                    <span class="convert-or">- OR -</span>
+                                </div>
+
+                                <div class={opportunityExistingPaneClass}>
+                                    <label class="convert-radio">
+                                        <input
+                                            type="radio"
+                                            name="opportunityOption"
+                                            value="existing"
+                                            checked={existingOpportunity}
+                                            onchange={handleOpportunityOptionChange}/>
+                                        <span>Choose Existing Opportunity</span>
+                                    </label>
+                                    <div class="convert-pane-box">
+                                        <div class="convert-field">
+                                            <label class="convert-label">Opportunity Search</label>
+                                            <input
+                                                type="text"
+                                                class="convert-input"
+                                                placeholder={opportunitySearchPlaceholder}
+                                                value={opportunitySearchTerm}
+                                                disabled={opportunityExistingSearchDisabled}
+                                                oninput={handleOpportunitySearch}/>
+                                        </div>
+                                        <template if:true={selectedOpportunityName}>
+                                            <div class="convert-selected-chip">
+                                                Selected: {selectedOpportunityName}
+                                            </div>
+                                        </template>
+                                        <template if:true={hasOpportunityResults}>
+                                            <div class="convert-result-list">
+                                                <template for:each={opportunitySearchResults} for:item="opp">
+                                                    <div
+                                                        key={opp.Id}
+                                                        class="convert-result-item"
+                                                        data-id={opp.Id}
+                                                        data-name={opp.Name}
+                                                        onclick={selectOpportunity}>
+                                                        {opp.Name}
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="convert-footer">
+                        <button type="button" class="convert-cancel-btn" onclick={closeConvertModal}>Cancel</button>
+                        <button type="button" class="convert-confirm-btn" onclick={handleConfirmConvert} disabled={isConverting}>
+                            <template if:false={isConverting}>Convert</template>
+                            <template if:true={isConverting}>Converting…</template>
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </template>
+
+    </div>
     </template>
 
 </template>

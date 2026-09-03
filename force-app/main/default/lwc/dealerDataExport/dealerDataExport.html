@@ -1,0 +1,85 @@
+<template>
+    <button type="button" class="export-btn" onclick={openModal} disabled={isBusy}>
+        <svg class="export-btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M10 3v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M6.5 8.5L10 12l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 15h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        {buttonLabel}
+    </button>
+
+    <template if:true={showModal}>
+        <div class="export-backdrop" onclick={closeModal}>
+            <div class="export-modal" onclick={stopBubble} role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+                <div class="export-modal-header">
+                    <div id="export-modal-title" class="export-modal-title">Export {objectLabel}</div>
+                    <button type="button" class="export-close" onclick={closeModal} aria-label="Close">✕</button>
+                </div>
+
+                <div class="export-modal-body">
+                    <p class="export-help">
+                        Export uses the filters currently selected on this page, plus the date range below.
+                    </p>
+
+                    <template if:true={hasActivePageFilters}>
+                        <div class="export-chips">
+                            <template for:each={filterChips} for:item="chip">
+                                <span key={chip.key} class="export-chip">{chip.label}</span>
+                            </template>
+                        </div>
+                    </template>
+
+                    <div class="export-fields">
+                        <label class="export-field">
+                            <span class="export-label">From Date</span>
+                            <input type="date" class="export-input" value={fromDate} onchange={handleFromChange}/>
+                        </label>
+                        <label class="export-field">
+                            <span class="export-label">To Date</span>
+                            <input type="date" class="export-input" value={toDate} onchange={handleToChange}/>
+                        </label>
+                    </div>
+
+                    <template if:true={showAccountFilter}>
+                        <label class="export-field export-field-full">
+                            <span class="export-label">Account Name</span>
+                            <select class="export-input export-select" value={selectedAccountId} onchange={handleAccountChange}>
+                                <template for:each={accountOptions} for:item="opt">
+                                    <option key={opt.value} value={opt.value} selected={opt.selected}>
+                                        {opt.label}
+                                    </option>
+                                </template>
+                            </select>
+                        </label>
+                    </template>
+
+                    <template if:true={previewLoaded}>
+                        <div class="export-count">
+                            <template if:true={hasRecords}>
+                                <span>{recordCount} record(s) found</span>
+                                <template if:true={truncated}>
+                                    <span class="export-count-note"> (max {maxRows} will be exported)</span>
+                                </template>
+                            </template>
+                            <template if:false={hasRecords}>
+                                <span>No records found for this date range.</span>
+                            </template>
+                        </div>
+                    </template>
+
+                    <template if:true={errorMessage}>
+                        <div class="export-error" role="alert">{errorMessage}</div>
+                    </template>
+                </div>
+
+                <div class="export-modal-footer">
+                    <button type="button" class="btn-secondary" onclick={closeModal} disabled={isBusy}>Cancel</button>
+                    <button type="button" class="btn-primary" onclick={handleExport} disabled={exportDisabled}>
+                        <template if:true={isExporting}>Exporting…</template>
+                        <template if:false={isExporting}>Export to Excel</template>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+</template>

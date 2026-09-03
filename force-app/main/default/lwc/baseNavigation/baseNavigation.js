@@ -1,12 +1,5 @@
 import { LightningElement, api, track, wire } from 'lwc';
 
-import USER_ID from '@salesforce/user/Id';
-
-import { getRecord } from 'lightning/uiRecordApi';
-
-import NAME_FIELD from '@salesforce/schema/User.Name';
-import ACCOUNT_NAME_FIELD from '@salesforce/schema/User.Contact.Account.Name';
-
 import getMenuItems
     from '@salesforce/apex/RotexNavigationController.getMenuItems';
 
@@ -15,9 +8,6 @@ import logo
 import {
     NavigationMixin
 } from 'lightning/navigation';
-
-import basePath
-from '@salesforce/community/basePath';
 
 export default class BaseNavigation
 extends NavigationMixin(
@@ -28,19 +18,9 @@ extends NavigationMixin(
 
     logoUrl = logo;
 
-    userId = USER_ID;
-
     @track menuItems = [];
 
     @track activeItemId;
-
-    @track currentUserName = '';
-
-    @track currentUserInitials = '';
-
-    @track currentAccountName = '';
-
-    @track dealerCode = '';
 
     error;
 
@@ -52,37 +32,6 @@ extends NavigationMixin(
     get processedMenuItems() {
 
         return this.menuItems;
-    }
-
-    @wire(getRecord, {
-        recordId: '$userId',
-        fields: [NAME_FIELD, ACCOUNT_NAME_FIELD]
-    })
-    wiredUser({ error, data }) {
-
-        if (data) {
-
-            this.currentUserName =
-                data.fields.Name.value;
-
-            this.currentUserInitials =
-                this.getInitials(
-                    this.currentUserName
-                );
-
-            this.currentAccountName =
-                data.fields.Contact?.value?.fields?.Account?.value?.fields?.Name?.value || '';
-
-            this.dealerCode =
-                this.userId.substring(0, 8);
-
-        } else if (error) {
-
-            console.error(
-                'User Error:',
-                error
-            );
-        }
     }
 
     @wire(getMenuItems, {
@@ -132,29 +81,5 @@ extends NavigationMixin(
 
         this.activeItemId =
             event.detail.item.id;
-    }
-
-    handleLogout() {
-
-        window.location.href =
-            basePath +
-            '/secur/logout.jsp';
-    }
-
-    getInitials(name) {
-
-        if (!name) {
-            return '';
-        }
-
-        return name
-            .split(' ')
-            .map(
-                word =>
-                    word.charAt(0)
-            )
-            .join('')
-            .toUpperCase()
-            .substring(0, 2);
     }
 }

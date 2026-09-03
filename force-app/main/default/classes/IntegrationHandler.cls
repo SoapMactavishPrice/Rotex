@@ -51,7 +51,7 @@ public class IntegrationHandler {
                 // for (IntegrationRequestBuilder.customersList c : parentWrappers) {
                 //     accCodes.add(c.customer_number);
                 // }
-
+                
                 String responseBody = resp.getBody();
                 responseBody = responseBody.replace('"Currency":', '"currencyCode":');
                 
@@ -500,7 +500,7 @@ public class IntegrationHandler {
                 List < Pricebook2 > pbList = [
                     SELECT Id, Name, Distribution_Channel__c
                     FROM Pricebook2
-                    WHERE Distribution_Channel__c != null
+                    WHERE Distribution_Channel__c != null AND Channel_Partner__c = null
                 ];
                 
                 Map < String, Object > pbMap = new Map < String, Object > ();
@@ -568,7 +568,7 @@ public class IntegrationHandler {
                 
                 System.debug(parentNameToIdMap);
                 System.debug(parentCurrency);
-
+                
                 // ---- Bulk fetch existing OrderItems to avoid duplicate inserts on re-run ----
                 Map<String, Id> existingChildMap = new Map<String, Id>(); // key: OrderId/Item_No__c
                 if (!parentNameToIdMap.isEmpty()) {
@@ -580,11 +580,11 @@ public class IntegrationHandler {
                         existingChildMap.put(existingOi.OrderId + '/' + existingOi.Item_No__c, existingOi.Id);
                     }
                 }
-
+                
                 Set<Id> neededPricebookIds = new Set<Id>();
                 Set<Id> neededProductIds = new Set<Id>();
                 Set<String> neededCurrencies = new Set<String>();
-
+                
                 for (IntegrationRequestBuilder.salesordersList pw : parentWrappers) {
                     if (pw.to_item_details != null && pw.to_item_details.results != null) {
                         Id pbId = (Id) pbMap.get(pw.distribution_channel);
@@ -598,7 +598,7 @@ public class IntegrationHandler {
                         }
                     }
                 }
-
+                
                 Map<String, Id> pbeMap = new Map<String, Id>();
                 if (!neededPricebookIds.isEmpty() && !neededProductIds.isEmpty()) {
                     for (PricebookEntry pbeRow : [
@@ -612,7 +612,7 @@ public class IntegrationHandler {
                         pbeMap.put(pbeRow.Pricebook2Id + '_' + pbeRow.Product2Id + '_' + pbeRow.CurrencyIsoCode, pbeRow.Id);
                     }
                 }
-
+                
                 Set<String> missingPricingCodes = new Set<String>();
                 
                 // Process Children
@@ -628,14 +628,14 @@ public class IntegrationHandler {
                                         String prodId = String.valueOf(productIdMap.get(childWrapper.item_code));
                                         String pbeKey = pbId + '_' + prodId + '_' + curr;
                                         Id pbeId = pbeMap.get(pbeKey);
-
+                                        
                                         if (pbeId == null) {
                                             missingPricingCodes.add(childWrapper.item_code);
                                             continue;
                                         }
-
+                                        
                                         String childKey = parentId + '/' + childWrapper.item_no;
-
+                                        
                                         OrderItem cRecord = new OrderItem();
                                         if (existingChildMap.containsKey(childKey)) {
                                             cRecord.Id = existingChildMap.get(childKey); // reuse -> update via upsert
@@ -662,7 +662,7 @@ public class IntegrationHandler {
                         }
                     }
                 }
-
+                
                 if (!missingPricingCodes.isEmpty()) {
                     Integer futureCallCount = 0;
                     for (String missingCode : missingPricingCodes) {
@@ -751,8 +751,53 @@ public class IntegrationHandler {
                 List < IntegrationRequestBuilder.invoiceList > parentWrappers = respWrapper.d.results;
                 
                 Set < String > billDocSet = new Set < String > ();
-                for (IntegrationRequestBuilder.invoiceList parent: parentWrappers) {
-                    billDocSet.add((String) parent.bill_docnum);
+                
+                // Collect Sold To codes
+                Set<String> soldToSet = new Set<String>();
+                
+                // Collect Item Codes
+                Set<String> itemCodeSet = new Set<String>();
+
+                for (IntegrationRequestBuilder.invoiceList parent : parentWrappers) {
+                    
+                    if (String.isNotBlank(parent.bill_docnum)) {
+                        billDocSet.add(parent.bill_docnum);
+                    }
+                    
+                    if (String.isNotBlank(parent.sold_to)) {
+                        soldToSet.add(parent.sold_to);
+                    }
+                    
+                    if (parent.to_item_details != null) {
+                        
+                        for (IntegrationRequestBuilder.invItemDetailsList child :
+                             parent.to_item_details.results) {
+                                 
+                                 if (String.isNotBlank(child.item_code)) {
+                                     itemCodeSet.add(child.item_code);
+                                 }
+                             }
+                    }
+                }
+                
+                Map<String, Id> accountMap = new Map<String, Id>();
+                
+                for (Account acc : [
+                    SELECT Id, SAP_Customer_Code__c
+                    FROM Account
+                    WHERE SAP_Customer_Code__c IN :soldToSet
+                ]) {
+                    accountMap.put(acc.SAP_Customer_Code__c, acc.Id);
+                }
+                
+                Map<String, Id> productMap = new Map<String, Id>();
+                
+                for (Product2 prod : [
+                    SELECT Id, ProductCode
+                    FROM Product2
+                    WHERE ProductCode IN :itemCodeSet
+                ]) {
+                    productMap.put(prod.ProductCode, prod.Id);
                 }
                 
                 // Lists for bulk DML
@@ -776,11 +821,15 @@ public class IntegrationHandler {
                 
                 for (IntegrationRequestBuilder.invoiceList parent: parentWrappers) {
                     System.debug('parent.bill_docnum : ' + parent.bill_docnum);
+                    System.debug('Bill Date from API: ' + parent.bill_date);
                     SO_Invoice__c pRecord = new SO_Invoice__c();
+                    pRecord.Name = (String) parent.bill_docnum;
                     pRecord.Bill_Doc_No__c = (String) parent.bill_docnum;
                     pRecord.Bill_Doc_Type__c = (String) parent.bill_doctype;
-                    //pRecord.Bill_Date__c = Date.ValueOf(parent.bill_date);// need to format
+                    pRecord.Bill_Date__c = Date.ValueOf(parent.bill_date);// need to format
                     pRecord.Acc_Doc_No__c = (String) parent.acc_docnum;
+                    pRecord.Account__c = accountMap.get(parent.sold_to);
+                    pRecord.Sold_To__c = (String) parent.sold_to;
                     pRecord.Zyear__c = (String) parent.zyear;
                     pRecord.SO_No__c = (String) parent.so_num;
                     pRecord.Terms_Of_Payment__c = (String) parent.terms_of_payment;
@@ -788,7 +837,6 @@ public class IntegrationHandler {
                     pRecord.Incoterms_Location__c = (String) parent.incoterms_location;
                     pRecord.Company__c = (String) parent.company;
                     pRecord.CurrencyIsoCode = (String) parent.curr;
-                    pRecord.Sold_To__c = (String) parent.sold_to;
                     pRecord.Payer__c = (String) parent.payer;
                     pRecord.Bill_To__c = (String) parent.bill_to;
                     pRecord.Sales_Org__c = (String) parent.sales_org;
@@ -812,14 +860,20 @@ public class IntegrationHandler {
                     }
                 }
                 
+                for (SO_Invoice__c inv : existingParentList) {
+                    parentNameToIdMap.put(inv.Bill_Doc_No__c, inv.Id);
+                }
+                
                 // Process Children
                 for (IntegrationRequestBuilder.invoiceList parentWrapper: parentWrappers) {
                     String parentId = parentNameToIdMap.get(parentWrapper.bill_docnum);
                     if (parentWrapper.to_item_details != null) {
                         for (IntegrationRequestBuilder.invItemDetailsList childWrapper: parentWrapper.to_item_details.results) {
                             Invoice_Line_item__c cRecord = new Invoice_Line_item__c();
+                            cRecord.Name = childWrapper.item_no;
                             cRecord.Item_No__c = childWrapper.item_no;
                             cRecord.Item_Code__c = childWrapper.item_code;
+                            cRecord.Product__c = productMap.get(childWrapper.item_code);
                             cRecord.Product_Description__c = childWrapper.item_desc;
                             cRecord.QTY__c = Decimal.ValueOf(childWrapper.item_qty);
                             cRecord.UOM__c = childWrapper.uom;
@@ -838,8 +892,11 @@ public class IntegrationHandler {
                 if (!childList.isEmpty()) {
                     insert childList;
                     system.debug('child created');
-                    for (Invoice_Line_item__c child: childList) {
-                        childNameToIdMap.put(child.Item_No__c, child.Id);
+                    for (Invoice_Line_item__c child : childList) {
+                        
+                        String key = child.SO_Invoice__c + '_' + child.Item_No__c;
+                        
+                        childNameToIdMap.put(key, child.Id);
                     }
                 }
                 
@@ -847,7 +904,11 @@ public class IntegrationHandler {
                 for (IntegrationRequestBuilder.invoiceList parentWrapper: parentWrappers) {
                     if (parentWrapper.to_item_details != null) {
                         for (IntegrationRequestBuilder.invItemDetailsList childWrapper: parentWrapper.to_item_details.results) {
-                            String childId = childNameToIdMap.get(childWrapper.item_no);
+                            String parentId = parentNameToIdMap.get(parentWrapper.bill_docnum);
+                            
+                            String key = parentId + '_' + childWrapper.item_no;
+                            
+                            String childId = childNameToIdMap.get(key);
                             if (childWrapper.to_price_details != null) {
                                 for (IntegrationRequestBuilder.invPriceDetailsList grandchildWrapper: childWrapper.to_price_details.results) {
                                     Price_Details__c gcRecord = new Price_Details__c(
@@ -1175,7 +1236,8 @@ system.debug('grandchild created');
                 
                 System.debug(productIdMap);
                 
-                List < Pricebook2 > pricebookList = [SELECT Id, Name, Distribution_Channel__c FROM Pricebook2 WHERE Distribution_Channel__c != null];
+                List < Pricebook2 > pricebookList = [SELECT Id, Name, Distribution_Channel__c,Channel_Partner__c 
+                                                     FROM Pricebook2 WHERE Distribution_Channel__c != null AND Channel_Partner__c=null];
                 
                 Map < String, String > pbMap = new Map < String, String > ();
                 for (Pricebook2 pb: pricebookList) {
@@ -1246,7 +1308,7 @@ system.debug('grandchild created');
             }
         }
     }
-
+    
     @future(callout=true)
     public static void PricingMaster(String pCode, Boolean overload) {
         HttpResponse resp;
@@ -1282,7 +1344,8 @@ system.debug('grandchild created');
                 
                 System.debug(productIdMap);
                 
-                List < Pricebook2 > pricebookList = [SELECT Id, Name, Distribution_Channel__c FROM Pricebook2 WHERE Distribution_Channel__c != null];
+                List < Pricebook2 > pricebookList = [SELECT Id, Name, Distribution_Channel__c,Channel_Partner__c 
+                                                     FROM Pricebook2 WHERE Distribution_Channel__c != null AND Channel_Partner__c=null];
                 
                 Map < String, String > pbMap = new Map < String, String > ();
                 for (Pricebook2 pb: pricebookList) {
@@ -1592,102 +1655,247 @@ system.debug('grandchild created');
         
     }
     
-    @AuraEnabled
-    public static string salesOrderCreation(String parentId, String bpFuncId, String shFuncId, String caFuncId, String salesQuotationType) {
+@AuraEnabled
+public static string salesOrderCreation(String parentId, String bpFuncId, String shFuncId, String caFuncId, String salesQuotationType, List<String> fileNames) {
+    
+    String jsonPayload = '';
+    HttpResponse resp;
+    HttpResponse response;
+    String errorMessage = '';
+    Boolean sapSuccess = false;
+    String quotationNumber = '';
+    
+    try {
+        jsonPayload = getQuotePayload(parentId, bpFuncId, shFuncId, caFuncId, salesQuotationType, fileNames);
+        System.debug('JSON Payload length: ' + (String.isNotBlank(jsonPayload) ? jsonPayload.length() : 0));
+        System.debug('Files being sent to SAP: ' + fileNames);
         
-        String jsonPayload = '';
-        HttpResponse resp;
-        HttpResponse response;
-        try {
+        if (String.isBlank(jsonPayload)) {
+            return '{"error": "Failed to generate payload"}';
+        }
+        
+        resp = UtilityCls.doGetWithBasicAuth('Get_Session_API', 'Bulk', Null, Null, '');
+        
+        if (resp != null && resp.getStatusCode() == 200) {
+            System.debug('Get_Session_API resp: ' + resp.getBody());
+            String csrfToken = resp.getHeader('x-csrf-token');
+            String cookies = resp.getHeader('set-cookie');
+            System.debug('x-csrf-token csrfToken : ' + csrfToken);
             
-            jsonPayload = getQuotePayload(parentId, bpFuncId, shFuncId, caFuncId, salesQuotationType);
-            System.debug('JSON Payload: ' + jsonPayload);
+            Http http = new Http();
+            HttpRequest request = new HttpRequest();
+            request.setEndpoint(System.Label.Push_Quote_to_SAP);
+            request.setMethod('POST');
+            request.setHeader('Content-Type', 'application/json');
+            request.setHeader('Accept', 'application/json');
+            request.setBody(jsonPayload);
             
-            // If no valid payload, return error
-            if (String.isBlank(jsonPayload)) {
-                return '{"error": "Failed to generate payload"}';
-            }
+            String username = System.Label.Push_Quote_Username;
+            String password = System.Label.Push_Quote_Password;
+            String authHeader = 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(username + ':' + password));
+            request.setHeader('Authorization', authHeader);
+            request.setHeader('x-csrf-token', csrfToken);
+            request.setHeader('cookie', cookies);
+            request.setTimeOut(120000);
             
-            //Get SAP CSRF token using get method
-            resp = UtilityCls.doGetWithBasicAuth('Get_Session_API', 'Bulk', Null, Null, '');
-            
-            if (resp.getStatusCode() == 200) {
-                system.debug('Get_Session_API resp: ' + resp.getBody());
-                String csrfToken = resp.getHeader('x-csrf-token');
-                String cookies = resp.getHeader('set-cookie');
-                system.debug('x-csrf-token csrfToken : ' + csrfToken);
-                
-                // Make the POST API call
-                Http http = new Http();
-                HttpRequest request = new HttpRequest();
-                request.setEndpoint(System.Label.Push_Quote_to_SAP);
-                request.setMethod('POST');
-                request.setHeader('Content-Type', 'application/json');
-                request.setHeader('Accept', 'application/json');
-                request.setBody(jsonPayload);
-                
-                String username = System.Label.Push_Quote_Username;
-                String password = System.Label.Push_Quote_Password;
-                String authHeader = 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(username + ':' + password));
-                request.setHeader('Authorization', authHeader);
-                request.setHeader('x-csrf-token', csrfToken);
-                request.setHeader('cookie', cookies);
-                request.setTimeOut(120000);
-                
+            try {
                 response = http.send(request);
-                
-                // Log response
-                if (response.getStatusCode() == 200 || response.getStatusCode() == 201) {
-                    String responseBody = response.getBody();
-                    System.debug('Response Status Code: ' + response.getStatusCode());
-                    System.debug('Response Body: ' + responseBody);
-                    
-                    // Try to extract SAP number from response
-                    String quotationNumber = null;
-                    
-                    if (String.isNotBlank(responseBody)) {
-                        try {
-                            List<Object> respList = (List<Object>) JSON.deserializeUntyped(responseBody);
-                            if (respList != null && !respList.isEmpty()) {
-                                Map<String, Object> firstResp = (Map<String, Object>) respList[0];
-                                quotationNumber = String.valueOf(firstResp.get('SalesQuotationNum'));
-                            }
-                        } catch (Exception e) {
-                            System.debug('Parse error: ' + e.getMessage());
-                        }
-                    }
-                    
-                    // Also check Location header
-                    if (String.isBlank(quotationNumber)) {
-                        String locationHeader = response.getHeader('Location');
-                        if (String.isNotBlank(locationHeader) && locationHeader.contains('SalesQuotation(')) {
-                            String temp = locationHeader.substring(locationHeader.indexOf('SalesQuotation(') + 16);
-                            quotationNumber = temp.substring(0, temp.indexOf('\''));
-                        }
-                    }
-                    
-                    if (String.isNotBlank(quotationNumber)) {
-                        Quote q = new Quote(Id = parentId, SAP_Quotation_Number__c = quotationNumber);
-                        update q;
-                        System.debug('✅ Quote updated with SAP Number: ' + quotationNumber);
-                    }
-                } else {
-                    System.debug('API call failed: ' + response.getStatusCode() + ' ' + response.getBody());
-                }
+                System.debug('POST request sent successfully');
+            } catch (Exception e) {
+                errorMessage = 'HTTP Request failed: ' + e.getMessage();
+                System.debug(errorMessage);
+                response = null;
             }
-        } catch (Exception e) {
-            System.debug('Exception: ' + e.getMessage());
-        } finally {
+            
+            if (response != null && (response.getStatusCode() == 200 || response.getStatusCode() == 201)) {
+                String responseBody = response.getBody();
+                System.debug('Response Status Code: ' + response.getStatusCode());
+                System.debug('Response Body: ' + responseBody);
+                
+                if (String.isNotBlank(responseBody)) {
+                    try {
+                        List<Object> respList = (List<Object>) JSON.deserializeUntyped(responseBody);
+                        if (respList != null && !respList.isEmpty()) {
+                            Map<String, Object> firstResp = (Map<String, Object>) respList[0];
+                            quotationNumber = String.valueOf(firstResp.get('SalesQuotationNum'));
+                            
+                            if (firstResp.containsKey('Message')) {
+                                Object messageObj = firstResp.get('Message');
+                                if (messageObj instanceof List<Object>) {
+                                    List<Object> messages = (List<Object>) messageObj;
+                                    Boolean hasError = false;
+                                    for (Object msg : messages) {
+                                        Map<String, Object> msgMap = (Map<String, Object>) msg;
+                                        if ('E'.equals(msgMap.get('MType'))) {
+                                            String sapError = String.valueOf(msgMap.get('Message1'));
+                                            System.debug('SAP Error: ' + sapError);
+                                            errorMessage = sapError;
+                                            hasError = true;
+                                        }
+                                    }
+                                    if (!hasError && String.isNotBlank(quotationNumber)) {
+                                        sapSuccess = true;
+                                    }
+                                }
+                            } else if (String.isNotBlank(quotationNumber)) {
+                                sapSuccess = true;
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.debug('Parse error: ' + e.getMessage());
+                    }
+                }
+                
+                if (String.isBlank(quotationNumber)) {
+                    String locationHeader = response.getHeader('Location');
+                    if (String.isNotBlank(locationHeader) && locationHeader.contains('SalesQuotation(')) {
+                        String temp = locationHeader.substring(locationHeader.indexOf('SalesQuotation(') + 16);
+                        quotationNumber = temp.substring(0, temp.indexOf('\''));
+                        if (String.isNotBlank(quotationNumber)) {
+                            sapSuccess = true;
+                        }
+                    }
+                }
+                
+                if (sapSuccess && String.isNotBlank(quotationNumber)) {
+                    Quote q = new Quote(Id = parentId, SAP_Quotation_Number__c = quotationNumber);
+                    update q;
+                    System.debug('Quote updated with SAP Number: ' + quotationNumber);
+                }
+            } else if (response != null) {
+                errorMessage = 'SAP API Error: ' + response.getStatusCode() + ' - ' + response.getBody();
+                System.debug(errorMessage);
+            } else {
+                errorMessage = 'No response from SAP (connection timeout or network error)';
+                System.debug(errorMessage);
+            }
+        } else {
+            errorMessage = 'Failed to get CSRF token from SAP';
+            System.debug(errorMessage);
+        }
+    } catch (Exception e) {
+        errorMessage = 'Exception: ' + e.getMessage();
+        System.debug(errorMessage);
+    } finally {
+        try {
             Quote quoteToBeUpdate = new Quote();
             quoteToBeUpdate.Id = parentId;
             quoteToBeUpdate.Sales_Quotation_Type__c = salesQuotationType;
             update quoteToBeUpdate;
+            System.debug('Quote updated with Sales Quotation Type: ' + salesQuotationType);
+        } catch (Exception e) {
+            System.debug('Failed to update Quote: ' + e.getMessage());
+        }
+        
+        // LOG API CALL - SKIP ONLY LARGE FILES
+        try {
+            String logPayload = '';
+            String logResponse = '';
+            String logStatus = '';
+            Integer statusCode = 0;
+            
+            Integer maxLogSize = 131072;
+            
+            if (String.isNotBlank(jsonPayload)) {
+                try {
+                    Map<String, Object> payloadMap = (Map<String, Object>) JSON.deserializeUntyped(jsonPayload);
+                    
+                    if (payloadMap.containsKey('Attachments')) {
+                        Object attachmentsObj = payloadMap.get('Attachments');
+                        if (attachmentsObj instanceof List<Object>) {
+                            List<Object> attachments = (List<Object>) attachmentsObj;
+                            
+                            List<Object> attachmentsToKeep = new List<Object>();
+                            Integer totalSize = 0;
+                            Integer individualFileLimit = 5000;
+                            Integer totalLogLimit = 10000;
+                            
+                            for (Object att : attachments) {
+                                String attJson = JSON.serialize(att);
+                                Integer attSize = attJson.length();
+                                
+                                if (attSize < individualFileLimit) {
+                                    attachmentsToKeep.add(att);
+                                    totalSize += attSize;
+                                    System.debug('Keeping file in log: ' + attSize + ' chars');
+                                } else {
+                                    System.debug('Removing large file from log: ' + attSize + ' chars');
+                                }
+                            }
+                            
+                            if (totalSize > totalLogLimit) {
+                                payloadMap.remove('Attachments');
+                                System.debug('Total attachments too large (' + totalSize + '), removed all');
+                            } else if (attachmentsToKeep.isEmpty()) {
+                                payloadMap.remove('Attachments');
+                                System.debug('No attachments to keep in log');
+                            } else {
+                                payloadMap.put('Attachments', attachmentsToKeep);
+                                System.debug('Kept ' + attachmentsToKeep.size() + ' files in log, total: ' + totalSize + ' chars');
+                            }
+                        }
+                    }
+                    
+                    payloadMap.remove('Attachment1');
+                    payloadMap.remove('Attachment2');
+                    payloadMap.remove('Attachment3');
+                    payloadMap.remove('Attachment4');
+                    payloadMap.remove('Attachment5');
+                    
+                    logPayload = JSON.serialize(payloadMap);
+                    System.debug('Log Payload size: ' + logPayload.length() + ' chars');
+                    
+                } catch (Exception e) {
+                    System.debug('Error parsing payload for logging: ' + e.getMessage());
+                    logPayload = jsonPayload.length() > 1000 ? jsonPayload.substring(0, 1000) + '... (truncated)' : jsonPayload;
+                }
+                
+                if (logPayload.length() > maxLogSize) {
+                    logPayload = logPayload.substring(0, maxLogSize) + '... (truncated)';
+                    System.debug('Final truncation applied - size: ' + logPayload.length());
+                }
+            } else {
+                logPayload = 'No payload generated';
+            }
+            
             if (response != null) {
-                UtilityCls.logApiCall('QuotationCreation', '', jsonPayload, response.getBody(), '', response.getStatusCode(),parentId);
+                statusCode = response.getStatusCode();
+                logStatus = String.valueOf(statusCode);
+                if (String.isNotBlank(response.getBody())) {
+                    logResponse = response.getBody();
+                    if (logResponse.length() > 5000) {
+                        logResponse = logResponse.substring(0, 5000) + '... (truncated)';
+                    }
+                } else {
+                    logResponse = 'Empty response body';
+                }
+            } else {
+                logResponse = String.isNotBlank(errorMessage) ? errorMessage : 'No response from SAP';
+                logStatus = '0';
+                statusCode = 0;
+            }
+            
+            UtilityCls.logApiCall('QuotationCreation', '', logPayload, logResponse, logStatus, statusCode, parentId);
+            System.debug('API log created successfully');
+            
+        } catch (Exception e) {
+            System.debug('Failed to create API log: ' + e.getMessage());
+            try {
+                UtilityCls.logApiCall('QuotationCreation', '', 'Logging failed - payload too large', e.getMessage(), 'ERROR', 0, parentId);
+            } catch (Exception ex) {
+                System.debug('Even simple log failed: ' + ex.getMessage());
             }
         }
-        return response != null ? response.getBody() : '';
-    }    
+    }
+    
+    Map<String, Object> responseMap = new Map<String, Object>();
+    responseMap.put('success', sapSuccess);
+    responseMap.put('quotationNumber', quotationNumber);
+    responseMap.put('error', errorMessage);
+    
+    return JSON.serialize(responseMap);
+}
+    
     public static String getSalesOrderPayload(String parentId) {
         String jsonPayload = '';
         try {
@@ -1803,246 +2011,210 @@ itemWrapper.to_PricingElement.add(pricingWrapper);
         return jsonPayload;
     }
     
-    //New Format
-    public static String getQuotePayload(String quoteId, String bpId, String shId, String caId, String salesQuotationType) {
-        String jsonPayload = '';
-        try {
-            // Initialize collections
-            List < Quote > quoteList = new List < Quote > ();
-            List < QuoteLineItem > quoteLineItemList = new List < QuoteLineItem > ();
-            List < Partner_Details__c > partnerDetailsList = new List < Partner_Details__c > ();
-            Set < Id > quoteIds = new Set < Id > ();
-            Set < Id > accountIds = new Set < Id > ();
+   public static String getQuotePayload(String quoteId, String bpId, String shId, String caId, String salesQuotationType, List<String> specificFileNames) {
+    String jsonPayload = '';
+    try {
+        List<Quote> quoteList = new List<Quote>();
+        List<QuoteLineItem> quoteLineItemList = new List<QuoteLineItem>();
+        List<Partner_Details__c> partnerDetailsList = new List<Partner_Details__c>();
+        Set<Id> quoteIds = new Set<Id>();
+        Set<Id> accountIds = new Set<Id>();
+        
+        quoteList = [SELECT Id, Name, QuoteNumber, OpportunityId, AccountId, BillingCity, BillingState, BillingCountry, BillingPostalCode,
+                     ShippingCity, ShippingState, ShippingCountry, ShippingPostalCode, Status, TotalPrice, Subtotal, Discount,
+                     Quote_Type__c, SalesOrganization__c, DistributionChannel__c, OrganizationDivision__c, CurrencyISOCode,
+                     SoldToParty__c, PurchaseOrderByCustomer__c, CustomerPurchaseOrderDate__c, Account.Discount__c, Opportunity.Pricebook2.Distribution_Channel__c,
+                     RequestedDeliveryDate__c, Quote_Date__c, Quote_Valid_Till__c, Account.SAP_Customer_Code__c, Customer_Reference_Date__c,Delivery_Period__c,Warranty_Terms__c,Liquidate_Terms__c,SAP_Quotation_Number__c,OwnerId,Owner.Name,Rev_No__c,Rev_Date__c,
+                     PBG_or_BG_required__c, PBG_or_BG_comments__c, LD_Clause_Applicable__c, LD_Clause_comments__c,Customer_Reference_No__c,Special_Remarks__c,Quote__c  
+                     FROM Quote
+                     WHERE Id =: quoteId
+                    ];
+        for (Quote q: quoteList) {
+            quoteIds.add(q.Id);
+            accountIds.add(q.AccountId);
+        }
+        
+        quoteLineItemList = [
+            SELECT Id, QuoteId, Quantity, UnitPrice, TotalPrice, Discount, Product2Id, Product2.Name, Plant__c, LineNumber,
+            Product2.ProductCode, Discount_to_be_offered__c, Quote.CurrencyISOCode,Round_Off__c, Customer_Part_No__c, P_F_Charges__c
+            FROM QuoteLineItem
+            WHERE QuoteId IN: quoteIds
+        ];
+        
+        Sales_Area_Item__c saItem = [
+            SELECT Id, Name, Sales_Org__c, Distribution_Channel__c, Division__c
+            FROM Sales_Area_Item__c
+            WHERE Sales_Org__c = '1100'
+            AND Division__c != '50'
+            AND Division__c != '20'
+            AND Division__c != '00'
+            AND Distribution_Channel__c = :quoteList[0].Opportunity.Pricebook2.Distribution_Channel__c
+            AND Account__c =: quoteList[0].AccountId
+            LIMIT 1
+        ];
+        
+        Set<String> pdIdsSet = new Set<String>();
+        pdIdsSet.add(bpId);
+        pdIdsSet.add(shId);
+        pdIdsSet.add(caId);
+        
+        partnerDetailsList = [SELECT Id, Partner_Function__c, Customer__c, Partner_No__c
+                              FROM Partner_Details__c
+                              WHERE Id IN: pdIdsSet
+                             ];
+        
+        List<QuoteWrapper> quoteWrapperList = new List<QuoteWrapper>();
+        for (Quote q: quoteList) {
+            QuoteWrapper quoteWrapper = new QuoteWrapper();
+            quoteWrapper.SalesQuotationNum = q.SAP_Quotation_Number__c;
+            quoteWrapper.Assigned_To = q.Owner.Name;
+            quoteWrapper.revision_no = String.valueOf(q.Rev_No__c);
+            quoteWrapper.revision_date = q.Rev_Date__c != null ? Datetime.newInstance(q.Rev_Date__c , Time.newInstance(0,0,0,0)).format('dd.MM.yyyy'): null;
             
-            // Query Parent Quote
-            quoteList = [SELECT Id, Name, QuoteNumber, OpportunityId, AccountId, BillingCity, BillingState, BillingCountry, BillingPostalCode,
-                         ShippingCity, ShippingState, ShippingCountry, ShippingPostalCode, Status, TotalPrice, Subtotal, Discount,
-                         Quote_Type__c, SalesOrganization__c, DistributionChannel__c, OrganizationDivision__c, CurrencyISOCode,
-                         SoldToParty__c, PurchaseOrderByCustomer__c, CustomerPurchaseOrderDate__c, Account.Discount__c, Opportunity.Pricebook2.Distribution_Channel__c,
-                         RequestedDeliveryDate__c, Quote_Date__c, Quote_Valid_Till__c, Account.SAP_Customer_Code__c, Customer_Reference_Date__c,Delivery_Period__c,Warranty_Terms__c,Liquidate_Terms__c,SAP_Quotation_Number__c,OwnerId,Owner.Name,Rev_No__c,Rev_Date__c,
-                         PBG_or_BG_required__c, PBG_or_BG_comments__c, LD_Clause_Applicable__c, LD_Clause_comments__c,Customer_Reference_No__c,Special_Remarks__c,Quote__c  FROM Quote
-                         WHERE Id =: quoteId
-                        ];
-            for (Quote q: quoteList) {
-                quoteIds.add(q.Id);
-                accountIds.add(q.AccountId);
+            quoteWrapper.Delivery_Period = String.valueOf(q.Delivery_Period__c);
+            quoteWrapper.Warranty_Terms = q.Warranty_Terms__c;
+            quoteWrapper.Liquidity_Terms = q.Liquidate_Terms__c;
+            quoteWrapper.SalesQuotationType = String.isNotBlank(salesQuotationType) ? salesQuotationType : 'ZQT';
+            quoteWrapper.SalesOrganization = saItem.Sales_Org__c;
+            quoteWrapper.DistributionChannel = saItem.Distribution_Channel__c;
+            quoteWrapper.OrganizationDivision = saItem.Division__c;
+            quoteWrapper.SoldToParty = q.Account.SAP_Customer_Code__c;
+            quoteWrapper.PurchaseOrderByCustomer = q.Customer_Reference_No__c;
+            Date todayDate = Date.today();
+            Date endDate = q.Quote_Valid_Till__c;
+            quoteWrapper.CustomerPurchaseOrderDate = q.Customer_Reference_Date__c != null ?DateTime.newInstance(q.Customer_Reference_Date__c,Time.newInstance(0,0,0,0)).format('dd.MM.yyyy'): null;
+            quoteWrapper.RequestedDeliveryDate = q.RequestedDeliveryDate__c != null ?DateTime.newInstance(q.RequestedDeliveryDate__c, Time.newInstance(0,0,0,0)).format('dd.MM.yyyy'): null;
+            
+            DateTime startDt = DateTime.newInstance(todayDate, Time.newInstance(0,0,0,0));
+            DateTime endDt = DateTime.newInstance(endDate, Time.newInstance(0,0,0,0));
+            
+            quoteWrapper.BindingPeriodValidityStartDate = startDt.format('dd.MM.yyyy');
+            quoteWrapper.BindingPeriodValidityEndDate = endDt.format('dd.MM.yyyy');
+            
+            quoteWrapper.Pbg_Or_Bg_Required = q.PBG_or_BG_required__c;
+            quoteWrapper.Pbg_Or_Bg_Comments = (q.PBG_or_BG_required__c == 'Yes') ? q.PBG_or_BG_comments__c : '';
+            quoteWrapper.LD_Clause_Applicable = q.LD_Clause_Applicable__c;
+            quoteWrapper.LD_Clause_Comments = (q.LD_Clause_Applicable__c == 'Yes') ? q.LD_Clause_comments__c : '';
+            
+            quoteWrapper.Remarks = 'This quotation has been approved after completing Rotex SOA Process for further action';
+            quoteWrapper.Special_Remarks = q.Special_Remarks__c ?? '';
+            
+            quoteWrapper.to_Partner = new List<PartnerWrapper>();
+            for (Partner_Details__c pd: partnerDetailsList) {
+                PartnerWrapper partnerWrapper = new PartnerWrapper();
+                partnerWrapper.PartnerFunction = pd.Partner_Function__c;
+                partnerWrapper.Customer = pd.Partner_No__c;
+                quoteWrapper.to_Partner.add(partnerWrapper);
             }
             
-            // Query Quote Line Items related to Parent Quote
-            quoteLineItemList = [
-                SELECT Id, QuoteId, Quantity, UnitPrice, TotalPrice, Discount, Product2Id, Product2.Name, Plant__c, LineNumber,
-                Product2.ProductCode, Discount_to_be_offered__c, Quote.CurrencyISOCode
-                FROM QuoteLineItem
-                WHERE QuoteId IN: quoteIds
-            ];
-            
-            Sales_Area_Item__c saItem = [
-                SELECT Id, Name, Sales_Org__c, Distribution_Channel__c, Division__c
-                FROM Sales_Area_Item__c
-                WHERE Sales_Org__c = '1100'
-                AND Division__c != '50'
-                AND Division__c != '20'
-                AND Division__c != '00'
-                AND Distribution_Channel__c = :quoteList[0].Opportunity.Pricebook2.Distribution_Channel__c
-                AND Account__c =: quoteList[0].AccountId
-                LIMIT 1
-            ];
-            
-            Set < String > pdIdsSet = new Set < String > ();
-            pdIdsSet.add(bpId);
-            pdIdsSet.add(shId);
-            pdIdsSet.add(caId);
-            
-            // Query Partner Details related to Parent Quote
-            partnerDetailsList = [SELECT Id, Partner_Function__c, Customer__c, Partner_No__c
-                                  FROM Partner_Details__c
-                                  // WHERE Sales_Area_Item__c = : saItem.Id
-                                  // AND Partner_Function__c = 'BP'
-                                  // AND Partner_No__c = :quoteList[0].Account.SAP_Customer_Code__c
-                                  // LIMIT 1
-                                  WHERE Id IN: pdIdsSet
-                                 ];
-            
-            // Build the nested wrapper structure
-            List < QuoteWrapper > quoteWrapperList = new List < QuoteWrapper > ();
-            for (Quote q: quoteList) {
-                QuoteWrapper quoteWrapper = new QuoteWrapper();
-                // quoteWrapper.SalesQuotationType = q.Quote_Type__c;
-                quoteWrapper.SalesQuotationNum = q.SAP_Quotation_Number__c;
-                quoteWrapper.Assigned_To = q.Owner.Name;
-                quoteWrapper.revision_no = String.valueOf(q.Rev_No__c);
-                quoteWrapper.revision_date = q.Rev_Date__c != null ? Datetime.newInstance(q.Rev_Date__c , Time.newInstance(0,0,0,0)).format('dd.MM.yyyy'): null;
-                
-                
-                //quoteWrapper.revision_date = q.Rev_Date__c;
-                quoteWrapper.Delivery_Period = String.valueOf(q.Delivery_Period__c);
-                quoteWrapper.Warranty_Terms = q.Warranty_Terms__c;
-                quoteWrapper.Liquidity_Terms = q.Liquidate_Terms__c;
-                quoteWrapper.SalesQuotationType = String.isNotBlank(salesQuotationType) ? salesQuotationType : 'ZQT';
-                // quoteWrapper.SalesOrganization = q.SalesOrganization__c;
-                quoteWrapper.SalesOrganization = saItem.Sales_Org__c;
-                // quoteWrapper.DistributionChannel = q.DistributionChannel__c;
-                quoteWrapper.DistributionChannel = saItem.Distribution_Channel__c;
-                // quoteWrapper.OrganizationDivision = q.OrganizationDivision__c;
-                quoteWrapper.OrganizationDivision = saItem.Division__c;
-                quoteWrapper.SoldToParty = q.Account.SAP_Customer_Code__c;
-                //quoteWrapper.PurchaseOrderByCustomer = q.PurchaseOrderByCustomer__c;
-                quoteWrapper.PurchaseOrderByCustomer = q.Customer_Reference_No__c;
-                Date todayDate = Date.today();
-                Date endDate = q.Quote_Valid_Till__c;
-                quoteWrapper.CustomerPurchaseOrderDate = q.Customer_Reference_Date__c != null ?DateTime.newInstance(q.Customer_Reference_Date__c,Time.newInstance(0,0,0,0)).format('dd.MM.yyyy'): null;
-                //quoteWrapper.RequestedDeliveryDate = q.RequestedDeliveryDate__c != null ? convertDateToMicrosoftJsonFormat(q.RequestedDeliveryDate__c) : null;
-                quoteWrapper.RequestedDeliveryDate = q.RequestedDeliveryDate__c != null ?DateTime.newInstance(q.RequestedDeliveryDate__c, Time.newInstance(0,0,0,0)).format('dd.MM.yyyy'): null;
-                //Date todayDate = Date.today();
-                
-                DateTime startDt = DateTime.newInstance(todayDate, Time.newInstance(0,0,0,0));
-                DateTime endDt = DateTime.newInstance(endDate, Time.newInstance(0,0,0,0));
-                
-                quoteWrapper.Quote_c = q.Id;
-                
-                quoteWrapper.BindingPeriodValidityStartDate = startDt.format('dd.MM.yyyy');
-                quoteWrapper.BindingPeriodValidityEndDate = endDt.format('dd.MM.yyyy');
-                // quoteWrapper.BindingPeriodValidityStartDate = q.Quote_Date__c != null ? convertDateToMicrosoftJsonFormat(q.Quote_Date__c) : null;
-                // quoteWrapper.BindingPeriodValidityEndDate = q.Quote_Valid_Till__c != null ? convertDateToMicrosoftJsonFormat(q.Quote_Valid_Till__c) : null;
-                
-                
-                quoteWrapper.Pbg_Or_Bg_Required = q.PBG_or_BG_required__c;
-                // Send comments only if Yes, otherwise send blank
-                quoteWrapper.Pbg_Or_Bg_Comments = (q.PBG_or_BG_required__c == 'Yes') ? q.PBG_or_BG_comments__c : '';
-                quoteWrapper.LD_Clause_Applicable = q.LD_Clause_Applicable__c;
-                // Send comments only if Yes, otherwise send blank
-                quoteWrapper.LD_Clause_Comments = (q.LD_Clause_Applicable__c == 'Yes') ? q.LD_Clause_comments__c : '';
-                
-                quoteWrapper.Remarks = 'This quotation has been approved after completing Rotex SOA Process for further action';
-                quoteWrapper.Special_Remarks = q.Special_Remarks__c ?? '';
-                
-                // Add Partner Details
-                quoteWrapper.to_Partner = new List < PartnerWrapper > ();
-                for (Partner_Details__c pd: partnerDetailsList) {
-                    PartnerWrapper partnerWrapper = new PartnerWrapper();
-                    partnerWrapper.PartnerFunction = pd.Partner_Function__c;
-                    partnerWrapper.Customer = pd.Partner_No__c;
-                    quoteWrapper.to_Partner.add(partnerWrapper);
-                }
-                
-                // Add Quote Line Items
-                quoteWrapper.to_Item = new List < QuoteLineItemWrapper > ();
-                Integer ind = 10;
-                for (QuoteLineItem qli: quoteLineItemList) {
-                    if (qli.QuoteId == q.Id) {
-                        QuoteLineItemWrapper lineItemWrapper = new QuoteLineItemWrapper();
-                        // lineItemWrapper.SalesQuotationItem = qli.LineNumber;
-                        lineItemWrapper.SalesQuotationItem = String.valueOf(ind);
-                        lineItemWrapper.Material = qli.Product2.ProductCode;
-                        lineItemWrapper.RequestedQuantity = String.valueOf(qli.Quantity);
-                        // lineItemWrapper.Plant = qli.Plant__c;
-                        lineItemWrapper.Plant = saItem.Sales_Org__c;
-                        if (qli.Discount_to_be_offered__c != null && qli.Discount_to_be_offered__c < 0) {
-                            lineItemWrapper.Cond_type = 'ZLPA';
-                            lineItemWrapper.Cond_Value = String.valueOf(qli.Discount_to_be_offered__c * -1);
-                        } else {
-                            lineItemWrapper.Cond_type = 'ZDIS';
-                            lineItemWrapper.Cond_Value = String.valueOf(qli.Discount_to_be_offered__c);
-                        }
-                        
-                        /*if (qli.Discount_to_be_offered__c > 0) {
-lineItemWrapper.to_PricingElement = new List < PricingElementWrapper > ();
-PricingElementWrapper pricingElementWrapper = new PricingElementWrapper();
-
-// if discount availble in Account then pass ZDFX
-if(q.Account.Discount__c !=null){
-pricingElementWrapper.PricingProcedureStep = '40';
-pricingElementWrapper.PricingProcedureCounter = '1';
-pricingElementWrapper.ConditionType = 'ZDFX';
-}else{
-pricingElementWrapper.PricingProcedureStep = '41';
-pricingElementWrapper.PricingProcedureCounter = '1';
-pricingElementWrapper.ConditionType = 'ZDIS';
-}
-
-pricingElementWrapper.ConditionRateValue = String.valueOf(qli.Discount_to_be_offered__c);
-pricingElementWrapper.ConditionCurrency = qli.Quote.CurrencyISOCode;
-//lineItemWrapper.to_PricingElement.add(pricingElementWrapper);
-}*/
-                        
-                        quoteWrapper.to_Item.add(lineItemWrapper);
-                        ind = ind + 10;
-                    }
-                }
-                
-                // Get attachment URLs (max 5 separate fields) - Use PUBLIC URLs
-                List<String> attachmentUrls = new List<String>();
-                
-                List<ContentDocumentLink> docLinks = [
-                    SELECT ContentDocumentId, ContentDocument.Title
-                    FROM ContentDocumentLink
-                    WHERE LinkedEntityId = :q.Id
-                    ORDER BY SystemModstamp DESC
-                    LIMIT 5
-                ];
-                
-                if (!docLinks.isEmpty()) {
-                    Set<Id> contentDocIds = new Set<Id>();
-                    for (ContentDocumentLink cdl : docLinks) {
-                        contentDocIds.add(cdl.ContentDocumentId);
-                    }
+            quoteWrapper.to_Item = new List<QuoteLineItemWrapper>();
+            Integer ind = 10;
+            for (QuoteLineItem qli: quoteLineItemList) {
+                if (qli.QuoteId == q.Id) {
+                    QuoteLineItemWrapper lineItemWrapper = new QuoteLineItemWrapper();
+                    lineItemWrapper.SalesQuotationItem = String.valueOf(ind);
+                    lineItemWrapper.Material = qli.Product2.ProductCode;
+                    lineItemWrapper.RequestedQuantity = String.valueOf(qli.Quantity);
+                    lineItemWrapper.Plant = saItem.Sales_Org__c;
+                    lineItemWrapper.Customer_Material = qli.Customer_Part_No__c != null ? qli.Customer_Part_No__c : '';
                     
-                    List<ContentDistribution> distributions = [
-                        SELECT DistributionPublicUrl,
-                        ContentDownloadUrl,
-                        ContentDocumentId
-                        FROM ContentDistribution
-                        WHERE ContentDocumentId IN :contentDocIds
+                    List<ConditionWrapper> conditions = new List<ConditionWrapper>();
+                    
+                    ConditionWrapper cond1 = new ConditionWrapper();
+                    if (qli.Discount_to_be_offered__c != null && qli.Discount_to_be_offered__c < 0) {
+                        cond1.Cond_type = 'ZLPA';
+                        cond1.Cond_Value = String.valueOf(qli.Discount_to_be_offered__c * -1);
+                    } else {
+                        cond1.Cond_type = 'ZDIS';
+                        if (qli.Discount_to_be_offered__c != null && qli.Discount_to_be_offered__c > 0.0) {
+                            cond1.Cond_Value = String.valueOf( qli.Discount_to_be_offered__c); 
+                        } else {
+                            cond1.Cond_Value = '0';
+                        }
+                    }
+                    conditions.add(cond1);
+                    
+                    ConditionWrapper cond2 = new ConditionWrapper();
+                    cond2.Cond_type = 'ZROF';
+                    cond2.Cond_Value = qli.Round_Off__c != null ? String.valueOf(qli.Round_Off__c) : '0.00';
+                    conditions.add(cond2);
+                    
+                    ConditionWrapper cond3 = new ConditionWrapper();
+                    cond3.Cond_type = 'ZPFC';
+                    cond3.Cond_Value = qli.P_F_Charges__c != null ? String.valueOf(qli.P_F_Charges__c) : '0.00';
+                    conditions.add(cond3);
+                    
+                    lineItemWrapper.CONDITIONS = conditions;
+                    
+                    quoteWrapper.to_Item.add(lineItemWrapper);
+                    ind = ind + 10;
+                }
+            }
+            
+            // ✅ FIX: Only include the MOST RECENT attachment for each filename
+            List<AttachmentWrapper> attachments = new List<AttachmentWrapper>();
+            
+            if (specificFileNames != null && !specificFileNames.isEmpty()) {
+                // ✅ ONLY get the most recent file for each specified filename
+                Set<String> fileNameSet = new Set<String>(specificFileNames);
+                System.debug('🔍 Looking for specific files: ' + fileNameSet);
+                
+                // For each filename, get only the most recent version
+                for (String fileName : specificFileNames) {
+                    List<ContentDocumentLink> docLinks = [
+                        SELECT ContentDocumentId, ContentDocument.Title, Id
+                        FROM ContentDocumentLink
+                        WHERE LinkedEntityId = :q.Id
+                        AND ContentDocument.Title = :fileName
+                        ORDER BY SystemModstamp DESC
+                        LIMIT 1
                     ];
                     
-                    Map<Id, String> docIdToPublicUrl = new Map<Id, String>();
-                    
-                    for (ContentDistribution cd : distributions) {
+                    if (!docLinks.isEmpty()) {
+                        ContentDocumentLink cdl = docLinks[0];
                         
-                        if (String.isNotBlank(cd.ContentDownloadUrl)) {
-                            
-                            docIdToPublicUrl.put(
-                                cd.ContentDocumentId,
-                                cd.ContentDownloadUrl
-                            );
-                            
-                        } else if (String.isNotBlank(cd.DistributionPublicUrl)) {
-                            
-                            docIdToPublicUrl.put(
-                                cd.ContentDocumentId,
-                                cd.DistributionPublicUrl
-                            );
-                        }
-                    }
-                    
-                    for (ContentDocumentLink cdl : docLinks) {
-                        String publicUrl = docIdToPublicUrl.get(cdl.ContentDocumentId);
-                        if (String.isNotBlank(publicUrl)) {
-                            attachmentUrls.add(publicUrl);
+                        // Get the latest version of this document
+                        List<ContentVersion> cvList = [
+                            SELECT Id, ContentDocumentId, VersionData, FileType, Title
+                            FROM ContentVersion
+                            WHERE ContentDocumentId = :cdl.ContentDocumentId
+                            AND IsLatest = true
+                            ORDER BY SystemModstamp DESC
+                            LIMIT 1
+                        ];
+                        
+                        if (!cvList.isEmpty()) {
+                            ContentVersion cv = cvList[0];
+                            if (cv != null && cv.VersionData != null) {
+                                String base64Data = EncodingUtil.base64Encode(cv.VersionData);
+                                AttachmentWrapper wrapper = new AttachmentWrapper();
+                                wrapper.Name = cv.Title;
+                                wrapper.Data = base64Data;
+                                attachments.add(wrapper);
+                                System.debug('✅ Added file to payload (latest version): ' + cv.Title + ', Size: ' + base64Data.length() + ' chars');
+                            }
                         }
                     }
                 }
-                
-                // Assign to 5 separate fields
-                quoteWrapper.Attachment1 = attachmentUrls.size() > 0 ? attachmentUrls[0] : '';
-                quoteWrapper.Attachment2 = attachmentUrls.size() > 1 ? attachmentUrls[1] : '';
-                quoteWrapper.Attachment3 = attachmentUrls.size() > 2 ? attachmentUrls[2] : '';
-                quoteWrapper.Attachment4 = attachmentUrls.size() > 3 ? attachmentUrls[3] : '';
-                quoteWrapper.Attachment5 = attachmentUrls.size() > 4 ? attachmentUrls[4] : '';
-                
-                quoteWrapperList.add(quoteWrapper);
+            } else {
+                System.debug('ℹ️ No specific files to include in payload');
             }
             
-            // Convert the nested structure to JSON
-            jsonPayload = JSON.serialize(quoteWrapperList[0], FALSE);
-            System.debug('JSON Payload: ' + jsonPayload);
-        } catch (Exception e) {
-            jsonPayload = '';
-            System.debug('Exception: ' + e.getMessage() + ' at line ' + e.getLineNumber());
+            quoteWrapper.Attachments = attachments;
+            System.debug('📤 Total files added to payload: ' + attachments.size());
+            
+            quoteWrapperList.add(quoteWrapper);
         }
-        return jsonPayload;
+        
+        jsonPayload = JSON.serialize(quoteWrapperList[0], FALSE);
+        System.debug('JSON Payload: ' + jsonPayload);
+        
+    } catch (Exception e) {
+        jsonPayload = '';
+        System.debug('❌ Exception: ' + e.getMessage() + ' at line ' + e.getLineNumber());
     }
-    
+    return jsonPayload;
+}
     // public static String convertDateToMicrosoftJsonFormat(Date inputDate) {
     //     // Step 1: Convert Date to DateTime (start of the day)
     //     DateTime dt = DateTime.newInstance(inputDate, Time.newInstance(0, 0, 0, 0));
@@ -2084,17 +2256,17 @@ pricingElementWrapper.ConditionCurrency = qli.Quote.CurrencyISOCode;
                 retResData.put('status', 'false');
                 retResData.put('sync', 'false');
                 retResData.put('message', 'Quote status is not Accepted');
-            } else
+            } 
                 //     if(q.CustomerPurchaseOrderDate__c == null || q.RequestedDeliveryDate__c == null || q.Quote_Date__c == null || q.Quote_Valid_Till__c == null){
                 //         retResData.put('status', 'false');
                 //         retResData.put('sync', 'false');
                 //         retResData.put('message', 'Customer Purchase Order Date, Requested Delivery Date, Quote Date, Quote Valid Till Date cannot be blank');
                 //     } else
-                if (q.SAP_Quotation_Number__c != null) {
+             /*  else if (q.SAP_Quotation_Number__c != null) {
                     retResData.put('status', 'false');
                     retResData.put('sync', 'false');
                     retResData.put('message', 'Quotation already sent to SAP');
-                }
+                } */
             
             return JSON.serialize(retResData);
             
@@ -2219,13 +2391,14 @@ pricingElementWrapper.ConditionCurrency = qli.Quote.CurrencyISOCode;
         public String LD_Clause_Comments; // LD_Clause_Comments - LD_Clause_comments
         public String Remarks;
         public String Special_Remarks;
-        public String Quote_c;
+       // public String Quote_c;
         
-        public String Attachment1;
-        public String Attachment2;
-        public String Attachment3;
-        public String Attachment4;
-        public String Attachment5;
+        public List<AttachmentWrapper> Attachments;
+    }
+    
+    public class AttachmentWrapper {
+        public String Name;
+        public String Data;
     }
     
     public class PartnerWrapper {
@@ -2238,9 +2411,16 @@ pricingElementWrapper.ConditionCurrency = qli.Quote.CurrencyISOCode;
         public String Material;
         public String RequestedQuantity;
         public String Plant;
+        public String Customer_Material;
+        //    public String Cond_type;
+        //    public String Cond_Value;
+        public List < PricingElementWrapper > to_PricingElement;
+        public List<ConditionWrapper> CONDITIONS;
+    }
+    
+    public class ConditionWrapper {
         public String Cond_type;
         public String Cond_Value;
-        public List < PricingElementWrapper > to_PricingElement;
     }
     
     public class PricingElementWrapper {
@@ -2411,15 +2591,16 @@ UPSERT prodList;
                 return result;
             }
             
-            // Create ContentVersion
             ContentVersion cv = new ContentVersion();
             cv.Title = fileName;
             cv.PathOnClient = fileName;
             cv.VersionData = EncodingUtil.base64Decode(base64Data);
             cv.FirstPublishLocationId = quoteId;
+            // ✅ Mark this as a newly uploaded file with timestamp
+            cv.Description = 'LWC_UPLOAD_' + String.valueOf(System.now().getTime());
             insert cv;
             
-            // ✅ ADD THIS - Create ContentDistribution for public access
+            // Create ContentDistribution for public access
             ContentDistribution cd = new ContentDistribution();
             cd.Name = fileName;
             cd.ContentVersionId = cv.Id;
@@ -2428,7 +2609,6 @@ UPSERT prodList;
             cd.PreferencesLinkLatestVersion = true;
             insert cd;
             
-            // Get the public URL
             cd = [SELECT DistributionPublicUrl FROM ContentDistribution WHERE Id = :cd.Id];
             String publicUrl = cd.DistributionPublicUrl;
             
@@ -2436,6 +2616,8 @@ UPSERT prodList;
             result.put('contentVersionId', cv.Id);
             result.put('fileUrl', publicUrl);
             result.put('message', 'File uploaded successfully');
+            result.put('fileName', fileName);
+            result.put('uploadTime', System.now().getTime());
             
         } catch (Exception e) {
             result.put('message', 'Error uploading file: ' + e.getMessage());
@@ -2503,6 +2685,115 @@ UPSERT prodList;
             result.put('error', e.getMessage());
         }
         return result;
+    }
+    
+    // ✅ NEW METHOD: Get only specific attachments by filename
+    public static List<String> getQuoteAttachmentsAsBase64(Id quoteId, List<String> specificFileNames) {
+        List<String> base64Attachments = new List<String>();
+        
+        try {
+            System.debug('🔍 getQuoteAttachmentsAsBase64 called for Quote ID: ' + quoteId);
+            
+            List<ContentDocumentLink> docLinks = new List<ContentDocumentLink>();
+            
+            if (specificFileNames != null && !specificFileNames.isEmpty()) {
+                // ✅ Get only files with specific filenames
+                Set<String> fileNameSet = new Set<String>(specificFileNames);
+                docLinks = [
+                    SELECT ContentDocumentId, ContentDocument.Title, Id
+                    FROM ContentDocumentLink
+                    WHERE LinkedEntityId = :quoteId
+                    AND ContentDocument.Title IN :fileNameSet
+                    ORDER BY SystemModstamp DESC
+                ];
+            } else {
+                // Fallback: get all PO attachments
+                docLinks = [
+                    SELECT ContentDocumentId, ContentDocument.Title, Id
+                    FROM ContentDocumentLink
+                    WHERE LinkedEntityId = :quoteId
+                    AND ContentDocument.Title LIKE 'PO_ATTACHMENT_%'
+                    ORDER BY SystemModstamp DESC
+                ];
+            }
+            
+            System.debug('📎 Found ' + docLinks.size() + ' attachments for Quote');
+            
+            if (docLinks.isEmpty()) {
+                return base64Attachments;
+            }
+            
+            // Deduplicate
+            Map<Id, ContentDocumentLink> uniqueDocMap = new Map<Id, ContentDocumentLink>();
+            for (ContentDocumentLink cdl : docLinks) {
+                if (!uniqueDocMap.containsKey(cdl.ContentDocumentId)) {
+                    uniqueDocMap.put(cdl.ContentDocumentId, cdl);
+                }
+            }
+            
+            // Get ContentVersion for each unique document
+            Set<Id> uniqueContentDocIds = uniqueDocMap.keySet();
+            Map<Id, ContentVersion> latestVersionMap = new Map<Id, ContentVersion>();
+            for (ContentVersion cv : [
+                SELECT Id, ContentDocumentId, VersionData, FileType, Title
+                FROM ContentVersion
+                WHERE ContentDocumentId IN :uniqueContentDocIds
+                AND IsLatest = true
+            ]) {
+                if (!latestVersionMap.containsKey(cv.ContentDocumentId)) {
+                    latestVersionMap.put(cv.ContentDocumentId, cv);
+                }
+            }
+            
+            // Convert each file to base64
+            for (ContentDocumentLink cdl : uniqueDocMap.values()) {
+                ContentVersion cv = latestVersionMap.get(cdl.ContentDocumentId);
+                if (cv != null && cv.VersionData != null) {
+                    String base64Data = EncodingUtil.base64Encode(cv.VersionData);
+                    base64Attachments.add(base64Data);
+                    System.debug('✅ Added: ' + cv.Title + ', Length: ' + base64Data.length() + ' chars');
+                }
+            }
+            
+        } catch (Exception e) {
+            System.debug('❌ Error: ' + e.getMessage());
+        }
+        
+        return base64Attachments;
+    }
+    
+    // ✅ Keep original method for backward compatibility
+    public static List<String> getQuoteAttachmentsAsBase64(Id quoteId) {
+        return getQuoteAttachmentsAsBase64(quoteId, null);
+    }
+    
+    // ✅ Helper class to track attachment info with sorting
+    public class AttachmentInfo implements Comparable {
+        public String title;
+        public String base64Data;
+        public Integer base64Length;
+        public Integer fileSize;
+        public Id contentDocumentId;
+        
+        // Sort by base64Length (ascending for smallest first)
+        public Integer compareTo(Object obj) {
+            AttachmentInfo other = (AttachmentInfo) obj;
+            if (this.base64Length < other.base64Length) return -1;
+            if (this.base64Length > other.base64Length) return 1;
+            return 0;
+        }
+    }
+    
+    @AuraEnabled
+    public static String updateRoundOffValues(List<QuoteLineItem> lineItems) {
+        try {
+            if (!lineItems.isEmpty()) {
+                update lineItems;
+            }
+            return 'Success';
+        } catch (Exception e) {
+            throw new AuraHandledException('Error updating Round Off values: ' + e.getMessage());
+        }
     }
     
 }

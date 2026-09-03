@@ -1,0 +1,199 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+.modal-container {
+    background: #ffffff;
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    border-top: 4px solid #0d6b69;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e5e5;
+    flex-shrink: 0;
+}
+
+.modal-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #181818;
+    letter-spacing: 0.01em;
+}
+
+.modal-close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: #f2f2f2;
+    color: #555;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close-btn:hover {
+    background: #e5e5e5;
+}
+
+.modal-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    position: relative;
+}
+
+.section-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #8a8a8a;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+}
+
+.section-divider {
+    height: 1px;
+    background: #eee;
+    margin: 20px 0;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 4px;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+    position: relative;
+}
+
+.form-field-full {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+/* Custom styles for lightning-input-field inside the modal */
+lightning-input-field {
+    --lwc-colorBorderInput: #d8dde6;
+    --lwc-colorBackgroundInput: #fff;
+    --lwc-spacingSmall: 0.5rem;
+    --lwc-heightInput: 40px;
+}
+
+.form-input, .form-select, .form-textarea {
+    border: 1px solid #d8d8d8;
+    border-radius: 6px;
+    padding: 9px 10px;
+    font-size: 14px;
+    color: #181818;
+    background: #fff;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: #0d6b69;
+    box-shadow: 0 0 0 2px rgba(13, 107, 105, 0.15);
+}
+
+.form-input-readonly {
+    background: #f5f5f5;
+    color: #6f6f6f;
+    cursor: not-allowed;
+}
+
+.form-textarea {
+    min-height: 72px;
+    resize: vertical;
+}
+
+.modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid #e5e5e5;
+    background: #ffffff;
+    border-radius: 0 0 8px 8px;
+    flex-shrink: 0;
+}
+
+.btn-cancel {
+    padding: 10px 20px;
+    background: #fff;
+    border: 1px solid #ccc;
+    color: #333;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-cancel:hover {
+    background: #f8f8f8;
+}
+
+.btn-save {
+    padding: 10px 24px;
+    background: #0d6b69;
+    color: #fff;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-save:hover:not(:disabled) {
+    background: #0a5553;
+}
+
+.btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.input-error {
+    border-color: #ea001e !important;
+    box-shadow: 0 0 3px rgba(234, 0, 30, 0.4) !important;
+}
+
+.field-error-text {
+    color: #ea001e;
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+}
+
+.order-last {
+    order: 99;
+}

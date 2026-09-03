@@ -1,0 +1,286 @@
+<template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
+    <div class="modal-container" onclick={stopPropagation}>
+
+            <div class="modal-header">
+                <div class="modal-title">{modalTitle}</div>
+                <button
+                    type="button"
+                    class="modal-close-btn"
+                    onclick={handleClose}
+                    disabled={isSaving}>
+                    ✕
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="section-label">LEAD DETAILS</div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label">Salutation</label>
+                        <select
+                            class="form-input"
+                            data-field="salutation"
+                            value={salutation}
+                            onchange={handleSalutationChange}>
+                            <template for:each={salutationOptionsView} for:item="opt">
+                                <option key={opt.key} value={opt.value} selected={opt.selected}>
+                                    {opt.label}
+                                </option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label form-required">Customer Name</label>
+                        <input
+                            type="text"
+                            class={companyInputClass}
+                            data-field="company"
+                            value={company}
+                            oninput={handleCompanyChange}/>
+                        <template if:true={errors.company}>
+                            <div class="form-error">{errors.company}</div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label form-required">First Name</label>
+                        <input
+                            type="text"
+                            class={firstNameInputClass}
+                            data-field="firstName"
+                            value={firstName}
+                            oninput={handleFirstNameChange}/>
+                        <template if:true={errors.firstName}>
+                            <div class="form-error">{errors.firstName}</div>
+                        </template>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label">Website</label>
+                        <input
+                            type="url"
+                            class="form-input"
+                            data-field="website"
+                            value={website}
+                            oninput={handleWebsiteChange}
+                            placeholder="https://"/>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label form-required">Last Name</label>
+                        <input
+                            type="text"
+                            class={lastNameInputClass}
+                            data-field="lastName"
+                            value={lastName}
+                            oninput={handleLastNameChange}/>
+                        <template if:true={errors.lastName}>
+                            <div class="form-error">{errors.lastName}</div>
+                        </template>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label form-required">Lead Status</label>
+                        <select
+                            class={statusInputClass}
+                            data-field="status"
+                            value={status}
+                            onchange={handleStatusChange}>
+                            <template for:each={statusOptionsView} for:item="opt">
+                                <option key={opt.value} value={opt.value} selected={opt.selected}>
+                                    {opt.value}
+                                </option>
+                            </template>
+                        </select>
+                        <template if:true={errors.status}>
+                            <div class="form-error">{errors.status}</div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label">Email Id</label>
+                        <input
+                            type="email"
+                            class="form-input"
+                            data-field="email"
+                            value={email}
+                            oninput={handleEmailChange}/>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label form-required">Lead Source</label>
+                        <select
+                            class={leadSourceInputClass}
+                            data-field="leadSource"
+                            value={leadSource}
+                            onchange={handleLeadSourceChange}>
+                            <option value="">--None--</option>
+                            <template for:each={leadSourceOptionsView} for:item="opt">
+                                <option key={opt.value} value={opt.value} selected={opt.selected}>
+                                    {opt.value}
+                                </option>
+                            </template>
+                        </select>
+                        <template if:true={errors.leadSource}>
+                            <div class="form-error">{errors.leadSource}</div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label">Mobile No</label>
+                        <input
+                            type="tel"
+                            class="form-input"
+                            data-field="phone"
+                            value={phone}
+                            oninput={handlePhoneChange}/>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label">Designation</label>
+                        <input
+                            type="text"
+                            class="form-input"
+                            data-field="title"
+                            value={title}
+                            oninput={handleTitleChange}
+                            placeholder="e.g. Manager"/>
+                    </div>
+                </div>
+
+                <div class="form-field form-field-full">
+                    <label class="form-label form-required">Requirement</label>
+                    <textarea
+                        class={requirementInputClass}
+                        data-field="requirement"
+                        value={requirement}
+                        oninput={handleRequirementChange}></textarea>
+                    <template if:true={errors.requirement}>
+                        <div class="form-error">{errors.requirement}</div>
+                    </template>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label">GST Number</label>
+                        <input
+                            type="text"
+                            class={gstNumberInputClass}
+                            data-field="gstNumber"
+                            value={gstNumber}
+                            oninput={handleGstNumberChange}
+                            placeholder="e.g. 27AAPFU0939F1ZV"
+                            maxlength="15"/>
+                        <template if:true={gstMessage}>
+                            <div class={gstClass}>{gstMessage}</div>
+                        </template>
+                        <template if:true={errors.gstNumber}>
+                            <div class="form-error">{errors.gstNumber}</div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+                <div class="section-label">LOCATION</div>
+
+                <div class="form-field form-field-full">
+                    <label class="form-label">Street</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        data-field="street"
+                        value={street}
+                        oninput={handleStreetChange}/>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label">Postal Code</label>
+                        <input
+                            type="text"
+                            class={postalCodeInputClass}
+                            data-field="postalCode"
+                            value={postalCode}
+                            oninput={handlePostalCodeChange}
+                            placeholder="6-digit pincode"
+                            maxlength="6"/>
+                        <template if:true={errors.postalCode}>
+                            <div class="form-error">{errors.postalCode}</div>
+                        </template>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label">City</label>
+                        <input
+                            type="text"
+                            class="form-input form-input-readonly"
+                            data-field="city"
+                            value={city}
+                            readonly/>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label">State</label>
+                        <input
+                            type="text"
+                            class="form-input form-input-readonly"
+                            data-field="state"
+                            value={state}
+                            readonly/>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label">Country</label>
+                        <input
+                            type="text"
+                            class="form-input"
+                            data-field="country"
+                            value={country}
+                            oninput={handleCountryChange}/>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn-cancel"
+                    onclick={handleClose}
+                    disabled={isSaving}>
+                    Cancel
+                </button>
+
+                <button
+                    type="button"
+                    class="btn-save"
+                    onclick={handleSave}
+                    disabled={isSaving}>
+                    <template if:false={isSaving}>Save</template>
+                    <template if:true={isSaving}>Saving…</template>
+                </button>
+            </div>
+
+    </div>
+</template>

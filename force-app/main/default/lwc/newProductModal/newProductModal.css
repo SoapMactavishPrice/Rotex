@@ -1,0 +1,366 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+.modal-container {
+    background: #ffffff;
+    width: 100%;
+    max-height: 94vh;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-top: 4px solid #0d6b69;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid #e5e5e5;
+    flex-shrink: 0;
+}
+
+.modal-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #181818;
+}
+
+.modal-close-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: #f2f2f2;
+    color: #555;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close-btn:hover {
+    background: #e5e5e5;
+}
+
+.modal-body {
+    padding: 16px 18px 14px;
+    overflow: visible;
+    flex: 1 1 auto;
+}
+
+.section-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #8a8a8a;
+    margin-bottom: 10px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 14px;
+    margin-bottom: 10px;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+    position: relative;
+}
+
+.form-field-full {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.form-required::after {
+    content: ' *';
+    color: #d1393e;
+}
+
+.form-input {
+    border: 1px solid #d8d8d8;
+    border-radius: 6px;
+    padding: 0 10px;
+    font-size: 12px;
+    color: #181818;
+    background: #fff;
+    width: 100%;
+    height: 34px;
+    min-height: 34px;
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #0d6b69;
+    box-shadow: 0 0 0 2px rgba(13, 107, 105, 0.15);
+}
+
+.form-input-error {
+    border-color: #d1393e !important;
+}
+
+.form-textarea {
+    height: 56px;
+    min-height: 56px;
+    max-height: 56px;
+    padding: 8px 10px;
+    resize: none;
+    line-height: 1.35;
+}
+
+.form-error {
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #d1393e;
+}
+
+.section-divider {
+    height: 1px;
+    background: #eee;
+    margin: 8px 0 12px;
+}
+
+.price-table {
+    border: 1px solid #e6e6df;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.price-table-body {
+    /* Show ~2 price rows; scroll when more are added */
+    max-height: 98px;
+    overflow-y: auto;
+}
+
+.price-table-header,
+.price-table-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 72px;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+}
+
+.price-table-header {
+    background: #f6f7f4;
+    border-bottom: 1px solid #ecece5;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #6f7a7a;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.price-table-row {
+    border-bottom: 1px solid #f1f1ec;
+}
+
+.price-table-row:last-child {
+    border-bottom: none;
+}
+
+.price-table-row .form-input {
+    height: 32px;
+    min-height: 32px;
+}
+
+.price-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid #d8d8d8;
+    background: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-add {
+    color: #0d6b69;
+    border-color: #0d6b69;
+    background: #f2f8f8;
+}
+
+.btn-add:hover {
+    background: #e4f1f0;
+}
+
+.btn-remove {
+    color: #b42318;
+    border-color: #f0d0cc;
+    background: #fff7f6;
+}
+
+.btn-remove:hover {
+    background: #fdecec;
+}
+
+.btn-icon:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 18px;
+    border-top: 1px solid #e5e5e5;
+    flex-shrink: 0;
+}
+
+.btn-cancel {
+    background: #fff;
+    border: 1px solid #d8d8d8;
+    color: #333;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.btn-cancel:hover {
+    background: #f5f5f5;
+}
+
+.btn-save {
+    background: #0d6b69;
+    border: 1px solid #0d6b69;
+    color: #fff;
+    font-weight: 600;
+    padding: 7px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.btn-save:hover {
+    background: #0a5553;
+}
+
+.btn-save:disabled,
+.btn-cancel:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.portal-toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 280px;
+    max-width: min(520px, calc(100vw - 32px));
+    padding: 14px 18px;
+    border-radius: 10px;
+    color: #ffffff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+    z-index: 10050;
+    animation: portalToastIn 0.25s ease;
+}
+
+.portal-toast__title {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.portal-toast__message {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    opacity: 0.95;
+}
+
+.portal-toast--error {
+    background: #ba0517;
+}
+
+.portal-toast--success {
+    background: #2e844a;
+}
+
+.portal-toast--warning {
+    background: #fe9339;
+    color: #181818;
+}
+
+.portal-toast--info {
+    background: #032d60;
+}
+
+@keyframes portalToastIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@media (max-width: 900px) {
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: 14px 16px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: 12px 14px;
+    }
+
+    .modal-title {
+        font-size: 16px;
+    }
+
+    .modal-body {
+        overflow-y: auto;
+        max-height: calc(92vh - 110px);
+    }
+}

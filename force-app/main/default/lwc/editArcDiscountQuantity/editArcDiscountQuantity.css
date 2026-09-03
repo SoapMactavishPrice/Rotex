@@ -164,17 +164,18 @@
     background-color: #f9fbfd;
 }
 
-/* Column widths matching 11 columns */
-.col-matcode    { width: 9%; }
-.col-matdesc    { width: 11%; }
+/* Column widths matching 13 columns */
+.col-matcode    { width: 8%; }
+.col-matdesc    { width: 10%; }
 .col-listprice  { width: 6%; text-align: right; }
 .col-arcprice   { width: 8%; }
 .col-newdisc    { width: 8%; }
 .col-disc       { width: 5%; }
-.col-potval     { width: 9%; }
-.col-potqty     { width: 8%; }
-.col-validfrom  { width: 10%; }
-.col-validtill  { width: 10%; }
+.col-comments   { width: 10%; }
+.col-potval     { width: 7%; }
+.col-potqty     { width: 7%; }
+.col-validfrom  { width: 8%; }
+.col-validtill  { width: 8%; }
 .col-existarc   { width: 8%; text-align: right; }
 
 .cell-wrap {
@@ -201,6 +202,15 @@
     padding: 2px 4px !important;
     min-height: 0 !important;
     height: 28px !important;
+}
+
+.textarea-field .slds-textarea,
+.textarea-field textarea {
+    font-size: 11px !important;
+    padding: 2px 4px !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    resize: none;
 }
 
 .slds-text-color_weak {

@@ -1,0 +1,169 @@
+<template>
+    <div class="modal-container" onclick={stopPropagation}>
+        <div class="modal-header">
+            <div class="modal-title">New Order</div>
+            <button type="button" class="modal-close-btn" onclick={handleClose} disabled={isSaving}>
+                ✕
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <template if:true={errorMsg}>
+                <div class="form-error"
+                    style="margin-bottom: 16px; font-size: 14px; padding: 10px; background: #fee; color: #c00; border-radius: 4px;">
+                    {errorMsg}</div>
+            </template>
+
+            <!-- Order Information -->
+            <div class="section-label">ORDER INFORMATION</div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Order Number</label>
+                    <input type="text" class="form-input form-input-readonly" value="Auto-generated" disabled />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Rotex Order Number</label>
+                    <input type="text" class="form-input" data-field="soNo" value={formData.soNo}
+                        oninput={handleFieldChange} />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Owner Name</label>
+                    <input type="text" class="form-input form-input-readonly" value={ownerName} disabled />
+                </div>
+                <div class="form-field lookup-field" onmouseleave={hideAccountDropdown}>
+                    <label class="form-label form-required">Account Name</label>
+                    <template if:false={hasSelectedAccount}>
+                        <div class="lookup-wrap">
+                            <input
+                                type="text"
+                                class={accountInputClass}
+                                placeholder="Search your Customer accounts..."
+                                value={accountSearch}
+                                onfocus={handleAccountFocus}
+                                oninput={handleAccountSearch}
+                                autocomplete="off"/>
+                            <template if:true={showAccountDropdown}>
+                                <div class="lookup-results">
+                                    <template if:true={hasAccountResults}>
+                                        <template for:each={accountResults} for:item="row">
+                                            <div
+                                                key={row.id}
+                                                class="lookup-item"
+                                                data-id={row.id}
+                                                data-label={row.label}
+                                                onmousedown={selectAccount}>
+                                                <div class="lookup-item-label">{row.label}</div>
+                                                <template if:true={row.subtitle}>
+                                                    <div class="lookup-item-sub">{row.subtitle}</div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </template>
+                                    <template if:false={hasAccountResults}>
+                                        <div class="lookup-empty">No matching customers</div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template if:true={hasSelectedAccount}>
+                        <div class="lookup-chip">
+                            <span>{accountName}</span>
+                            <button type="button" class="chip-clear" onclick={clearAccount}>✕</button>
+                        </div>
+                    </template>
+                    <template if:true={errors.accountId}>
+                        <div class="form-error">{errors.accountId}</div>
+                    </template>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Order Type</label>
+                    <input type="text" class="form-input" data-field="type" value={formData.type}
+                        oninput={handleFieldChange} />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Order Date</label>
+                    <input type="date" class="form-input" data-field="effectiveDate" value={formData.effectiveDate}
+                        oninput={handleFieldChange} />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Order Currency</label>
+                    <select class="form-input" data-field="currencyIsoCode" value={formData.currencyIsoCode}
+                        onchange={handleFieldChange}>
+                        <option value="INR">INR</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Net Value</label>
+                    <input type="number" step="0.01" class="form-input" data-field="netValue" value={formData.netValue}
+                        oninput={handleFieldChange} />
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- Additional Information -->
+            <div class="section-label">ADDITIONAL INFORMATION</div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Bill To</label>
+                    <input type="text" class="form-input" data-field="billTo" value={formData.billTo}
+                        oninput={handleFieldChange} />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Ship To</label>
+                    <input type="text" class="form-input" data-field="shipTo" value={formData.shipTo}
+                        oninput={handleFieldChange} />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Bill To Customer Name</label>
+                    <input type="text" class="form-input" data-field="billToCustomerName"
+                        value={formData.billToCustomerName} oninput={handleFieldChange} />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Sold To</label>
+                    <input type="text" class="form-input" data-field="soldTo" value={formData.soldTo}
+                        oninput={handleFieldChange} />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Cust Ref Number</label>
+                    <input type="text" class="form-input" data-field="custRef" value={formData.custRef}
+                        oninput={handleFieldChange} />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Terms Of Payment</label>
+                    <input type="text" class="form-input" data-field="termsOfPayment" value={formData.termsOfPayment}
+                        oninput={handleFieldChange} />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Cust Ref Date</label>
+                    <input type="date" class="form-input" data-field="custRefDate" value={formData.custRefDate}
+                        oninput={handleFieldChange} />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Incoterms</label>
+                    <input type="text" class="form-input" data-field="incoterms" value={formData.incoterms}
+                        oninput={handleFieldChange} />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Req Del Date</label>
+                    <input type="date" class="form-input" data-field="reqDelDate" value={formData.reqDelDate}
+                        oninput={handleFieldChange} />
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick={handleClose} disabled={isSaving}>
+                Cancel
+            </button>
+            <button type="button" class="btn-save" onclick={handleSave} disabled={isSaving}>
+                {saveLabel}
+            </button>
+        </div>
+
+    </div>
+</template>

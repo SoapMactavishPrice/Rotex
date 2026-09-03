@@ -1,0 +1,791 @@
+<template>
+    <template if:false={selectedQuote}>
+        <div class="list-view">
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="page-header">
+                <div>
+                    <div class="breadcrumb">QUOTATIONS · ASSIGNED TO YOU</div>
+                    <div class="page-title">Quotations</div>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <div class="status-tabs">
+                    <button
+                        type="button"
+                        class={allStatusTabClass}
+                        data-status="All"
+                        onclick={handleStatusFilter}>
+                        All <span>{totalQuoteCount}</span>
+                    </button>
+                    <template for:each={statusTabItems} for:item="tab">
+                        <button
+                            key={tab.value}
+                            type="button"
+                            class={tab.tabClass}
+                            data-status={tab.value}
+                            onclick={handleStatusFilter}>
+                            {tab.label} <span>{tab.count}</span>
+                        </button>
+                    </template>
+                </div>
+
+                <div class="filter-bar-bottom">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+                            <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+                            <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                        </svg>
+                        <input
+                            type="text"
+                            class="search-input"
+                            placeholder="Search by quote no, name, account, status..."
+                            onkeyup={handleSearch}/>
+                    </div>
+
+                    <div class="filter-actions">
+                        <select
+                            class="filter-select"
+                            data-filter="quoteType"
+                            onchange={handleListFilterChange}>
+                            <template for:each={quoteTypeFilterOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value} selected={opt.selected}>
+                                    {opt.label}
+                                </option>
+                            </template>
+                        </select>
+
+                        <c-dealer-data-export
+                            object-key="Quote"
+                            button-label="Export"
+                            status-filter={selectedStatus}
+                            type-filter={selectedQuoteType}
+                            search-key={searchKey}
+                        ></c-dealer-data-export>
+
+                        <button type="button" class="btn-create" onclick={handleCreateQuote}>
+                            <svg viewBox="0 0 16 16" fill="none" class="btn-create-icon">
+                                <path d="M8 3v10M3 8h10" stroke="currentColor"
+                                    stroke-width="2.2" stroke-linecap="round"/>
+                            </svg>
+                            Create Quote
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quote-table">
+                <div class="table-header">
+                    <div>QUOTE NO</div>
+                    <div>QUOTE NAME</div>
+                    <div>ACCOUNT</div>
+                    <div>STATUS</div>
+                    <div>QUOTE DATE</div>
+                    <div>VALID TILL</div>
+                    <div>OWNER</div>
+                </div>
+
+                <template if:true={hasQuotes}>
+                    <template for:each={filteredQuotes} for:item="quote">
+                        <div
+                            key={quote.Id}
+                            class="table-row"
+                            data-id={quote.Id}
+                            onclick={openQuoteDetail}>
+                            <div>
+                                <div class="customer-name">{quote.QuoteNumber}</div>
+                            </div>
+                            <div class="contact-text">{quote.Name}</div>
+                            <div class="contact-text">{quote.accountName}</div>
+                            <div class="contact-text">{quote.Status}</div>
+                            <div class="contact-text">{quote.quoteDateDisplay}</div>
+                            <div class="contact-text">{quote.validTillDisplay}</div>
+                            <div class="contact-text">{quote.ownerName}</div>
+                        </div>
+                    </template>
+                </template>
+
+                <template if:false={hasQuotes}>
+                    <div class="empty-state">No quotations found for your Channel Partner customers.</div>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={selectedQuote}>
+        <div class="detail-view">
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="detail-header">
+                <div class="detail-topbar">
+                    <button type="button" class="back-btn" onclick={backToList}>
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8"
+                                stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Back to Quotations
+                    </button>
+                </div>
+
+                <div class="detail-top">
+                    <div class="detail-identity">
+                        <div>
+                            <div class="detail-meta">QUOTE · {selectedQuote.QuoteNumber}</div>
+                            <div class="detail-name">{selectedQuote.Name}</div>
+                            <div class="detail-company">
+                                <span>{selectedQuote.accountName}</span>
+                                <span class="divider-dot">·</span>
+                                <span>{selectedQuote.statusDisplay}</span>
+                                <span class="divider-dot">·</span>
+                                <span>Created {selectedQuote.createdDate}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-actions">
+                        <template if:true={showAddProductButton}>
+                            <button type="button" class="action-btn action-btn-secondary" onclick={handleAddProduct}
+                                disabled={showAddProductModal}>
+                                Add Product
+                            </button>
+                        </template>
+                        <template if:true={showArcDiscountApproval}>
+                            <button
+                                type="button"
+                                class="action-btn action-btn-secondary"
+                                onclick={handleArcDiscountApproval}
+                                disabled={showArcDiscountModal}>
+                                ARC Discount Approval
+                            </button>
+                        </template>
+                        <c-dealer-create-quote-pdf
+                            quote-id={selectedQuote.Id}
+                            onpdfsaved={handleQuotePdfSaved}
+                        ></c-dealer-create-quote-pdf>
+                        <template if:true={showSubmitForApproval}>
+                            <button type="button" class="action-btn action-btn-secondary" onclick={handleEditDiscountQty}>
+                                Submit for Approval
+                            </button>
+                        </template>
+                        <template if:true={showPushQuoteToSap}>
+                            <button
+                                type="button"
+                                class="action-btn action-btn-secondary"
+                                onclick={handlePushQuoteToSap}
+                                disabled={showSapModal}>
+                                Push Quote to SAP
+                            </button>
+                        </template>
+                        <template if:true={showPushArcToSap}>
+                            <button
+                                type="button"
+                                class="action-btn action-btn-secondary"
+                                onclick={handlePushArcToSap}
+                                disabled={showArcSapModal}>
+                                Push ARC to SAP
+                            </button>
+                        </template>
+                        <button type="button" class="action-btn action-btn-primary" onclick={handleEditQuote}>
+                            Edit
+                        </button>
+                    </div>
+                </div>
+
+                <div class="status-path-wrap" aria-label="Quote status path">
+                    <template for:each={statusPathSteps} for:item="step">
+                        <button
+                            type="button"
+                            key={step.key}
+                            class={step.className}
+                            data-status={step.value}
+                            title={step.title}
+                            onclick={handleStatusPathClick}>
+                            {step.label}
+                        </button>
+                    </template>
+                </div>
+            </div>
+            <div class="quote-tabs">
+    <button type="button" class={detailsTabClass} data-tab="details" onclick={handleTabClick}>
+        Details
+    </button>
+    <button type="button" class={lineItemTabClass} data-tab="lineItem" onclick={handleTabClick}>
+        Quote Line Item
+    </button>
+</div>
+<template if:true={isLineItemTab}>
+    <div class="detail-layout">
+        <c-quote-line-item-panel key={lineItemPanelKey} quote-id={selectedQuote.Id}></c-quote-line-item-panel>
+    </div>
+</template>
+  <template if:true={isDetailsTab}>
+            <div class="detail-layout">
+                <div class="detail-columns">
+                    <div class="detail-col detail-col-left">
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon">
+                                    <lightning-icon icon-name="utility:moneybag" size="x-small"></lightning-icon>
+                                </div>
+                                <div class="info-card-title">Quote Information</div>
+                            </div>
+                            <div class="info-card-body info-card-body-2col">
+                                <div class="info-row">
+                                    <div class="info-row-label">Quote Number</div>
+                                    <div class="info-row-value">{selectedQuote.quoteNumberDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Owner Name</div>
+                                    <div class="info-row-value">{selectedQuote.ownerName}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Quote Name</div>
+                                    <div class="info-row-value">{selectedQuote.Name}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Quote For</div>
+                                    <div class={selectedQuote.quoteTypeClass}>{selectedQuote.quoteTypeDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Quote Type</div>
+                                    <div class={selectedQuote.recordTypeClass}>{selectedQuote.recordTypeDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Quote Currency</div>
+                                    <div class={selectedQuote.currencyClass}>{selectedQuote.currencyDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Account Name</div>
+                                    <div class="info-row-value">{selectedQuote.accountName}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Status</div>
+                                    <div class={selectedQuote.statusClass}>{selectedQuote.statusDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Quote Date</div>
+                                    <div class={selectedQuote.quoteDateClass}>{selectedQuote.quoteDateDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Rev. No.</div>
+                                    <div class={selectedQuote.revNoClass}>{selectedQuote.revNoDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Quote Valid Till</div>
+                                    <div class={selectedQuote.validTillClass}>{selectedQuote.validTillDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Rev. Date</div>
+                                    <div class={selectedQuote.revDateClass}>{selectedQuote.revDateDisplay}</div>
+                                </div>
+                                <template if:true={selectedQuote.isMtaQuote}>
+                                    <div class="info-row"></div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">MTA Quote</div>
+                                        <div class="info-row-value">
+                                            <input type="checkbox" class="mta-quote-checkbox" checked disabled />
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon">
+                                    <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                                </div>
+                                <div class="info-card-title">Additional Information</div>
+                            </div>
+                            <div class="info-card-body info-card-body-2col">
+                                <div class="info-row">
+                                    <div class="info-row-label">Customer PO Number</div>
+                                    <div class={selectedQuote.poNumberClass}>{selectedQuote.poNumberDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">SAP Quotation Number</div>
+                                    <div class={selectedQuote.sapClass}>{selectedQuote.sapNumberDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Customer PO Date</div>
+                                    <div class={selectedQuote.poDateClass}>{selectedQuote.poDateDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">PBG or BG required?</div>
+                                    <div class={selectedQuote.pbgRequiredClass}>{selectedQuote.pbgRequiredDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Requested Delivery Date</div>
+                                    <div class={selectedQuote.deliveryDateClass}>{selectedQuote.deliveryDateDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">LD Clause Applicable?</div>
+                                    <div class={selectedQuote.ldApplicableClass}>{selectedQuote.ldApplicableDisplay}</div>
+                                </div>
+                                <template if:true={selectedQuote.showPbgComments}>
+                                    <div class="info-row info-row-span">
+                                        <div class="info-row-label">PBG or BG comments</div>
+                                        <div class={selectedQuote.pbgCommentsClass}>{selectedQuote.pbgCommentsDisplay}</div>
+                                    </div>
+                                </template>
+                                <template if:true={selectedQuote.showLdComments}>
+                                    <div class="info-row info-row-span">
+                                        <div class="info-row-label">LD Clause comments</div>
+                                        <div class={selectedQuote.ldCommentsClass}>{selectedQuote.ldCommentsDisplay}</div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon">
+                                    <lightning-icon icon-name="utility:contract_doc" size="x-small"></lightning-icon>
+                                </div>
+                                <div class="info-card-title">Special Terms &amp; Conditions</div>
+                            </div>
+                            <div class="info-card-body info-card-body-2col">
+                                <div class="info-row">
+                                    <div class="info-row-label">Validity of Offer</div>
+                                    <div class={selectedQuote.validityClass}>{selectedQuote.validityDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Requested Validity Of Offer</div>
+                                    <div class={selectedQuote.requestedValidityClass}>{selectedQuote.requestedValidityDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Delivery Period</div>
+                                    <div class={selectedQuote.deliveryPeriodClass}>{selectedQuote.deliveryPeriodDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Inco Terms</div>
+                                    <div class={selectedQuote.incoClass}>{selectedQuote.incoDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Payment Terms</div>
+                                    <div class={selectedQuote.paymentClass}>{selectedQuote.paymentDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Prices</div>
+                                    <div class={selectedQuote.pricesClass}>{selectedQuote.pricesDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Warranty Terms</div>
+                                    <div class={selectedQuote.warrantyClass}>{selectedQuote.warrantyDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Requested Warranty Terms</div>
+                                    <div class={selectedQuote.requestedWarrantyClass}>{selectedQuote.requestedWarrantyDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Liquidate Terms</div>
+                                    <div class={selectedQuote.liquidateClass}>{selectedQuote.liquidateDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Transport Details</div>
+                                    <div class={selectedQuote.transportClass}>{selectedQuote.transportDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Delivery Location</div>
+                                    <div class={selectedQuote.deliveryLocationClass}>{selectedQuote.deliveryLocationDisplay}</div>
+                                </div>
+                                <div class="info-row info-row-span">
+                                    <div class="info-row-label">Special Remarks</div>
+                                    <div class={selectedQuote.remarksClass}>{selectedQuote.remarksDisplay}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon">
+                                    <lightning-icon icon-name="utility:contact" size="x-small"></lightning-icon>
+                                </div>
+                                <div class="info-card-title">Prepared For</div>
+                            </div>
+                            <div class="info-card-body info-card-body-2col">
+                                <div class="info-row">
+                                    <div class="info-row-label">Contact Name</div>
+                                    <div class={selectedQuote.contactClass}>{selectedQuote.contactDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Phone</div>
+                                    <div class={selectedQuote.phoneClass}>{selectedQuote.phoneDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Email</div>
+                                    <div class={selectedQuote.emailClass}>{selectedQuote.emailDisplay}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon">
+                                    <lightning-icon icon-name="utility:checkin" size="x-small"></lightning-icon>
+                                </div>
+                                <div class="info-card-title">Address Information</div>
+                            </div>
+                            <div class="info-card-body info-card-body-2col">
+                                <div class="info-row">
+                                    <div class="info-row-label">Bill To Party Code</div>
+                                    <div class={selectedQuote.billPartyClass}>{selectedQuote.billPartyDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Ship To Party Code</div>
+                                    <div class={selectedQuote.shipPartyClass}>{selectedQuote.shipPartyDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Bill To Street</div>
+                                    <div class={selectedQuote.billStreetClass}>{selectedQuote.billStreetDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Ship To Street</div>
+                                    <div class={selectedQuote.shipStreetClass}>{selectedQuote.shipStreetDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Bill To City</div>
+                                    <div class={selectedQuote.billCityClass}>{selectedQuote.billCityDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Ship To City</div>
+                                    <div class={selectedQuote.shipCityClass}>{selectedQuote.shipCityDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Bill To Postal Code</div>
+                                    <div class={selectedQuote.billPostalClass}>{selectedQuote.billPostalDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Ship To Postal Code</div>
+                                    <div class={selectedQuote.shipPostalClass}>{selectedQuote.shipPostalDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Bill To State</div>
+                                    <div class={selectedQuote.billStateClass}>{selectedQuote.billStateDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Ship To State</div>
+                                    <div class={selectedQuote.shipStateClass}>{selectedQuote.shipStateDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Bill To Country</div>
+                                    <div class={selectedQuote.billCountryClass}>{selectedQuote.billCountryDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Ship To Country</div>
+                                    <div class={selectedQuote.shipCountryClass}>{selectedQuote.shipCountryDisplay}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-col detail-col-right">
+
+                        <div class="info-card activity-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon">
+                                    <lightning-icon icon-name="utility:clock" size="x-small"></lightning-icon>
+                                </div>
+                                <div class="info-card-title">Activity</div>
+                            </div>
+
+                            <div class="activity-actions">
+                                <button type="button" class="activity-action-btn" onclick={handleNewTask}>
+                                    <lightning-icon icon-name="utility:task" size="xx-small"></lightning-icon>
+                                    New Task
+                                </button>
+                                <button type="button" class="activity-action-btn" onclick={handleNewEvent}>
+                                    <lightning-icon icon-name="utility:event" size="xx-small"></lightning-icon>
+                                    New Event
+                                </button>
+                            </div>
+
+                            <div class="activity-subheader">Upcoming &amp; Overdue</div>
+
+                            <div class="info-card-body activity-scroll">
+                                <template if:true={hasUpcomingActivities}>
+                                    <template for:each={upcomingActivities} for:item="item">
+                                        <div key={item.id} class="activity-row">
+                                            <div class="timeline">
+                                                <div class="timeline-dot"></div>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="activity-text">{item.subject}</div>
+                                                <div class="activity-date">{item.type} · {item.dueDate}</div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </template>
+                                <template if:false={hasUpcomingActivities}>
+                                    <div class="activity-empty">
+                                        No activities to show.
+                                        <div class="activity-empty-sub">Get started by logging a task or event.</div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon">
+                                    <lightning-icon icon-name="utility:note" size="x-small"></lightning-icon>
+                                </div>
+                                <div class="info-card-title">Notes</div>
+                            </div>
+                            <div class="info-card-body">
+                                <div class="notes-box notes-scroll">
+                                    <template if:true={hasNotes}>
+                                        <template for:each={quoteNotes} for:item="note">
+                                            <div key={note.id} class="note-item">
+                                                <div class="note-body">{note.body}</div>
+                                                <div class="note-meta">{note.createdDate} · {note.author}</div>
+                                            </div>
+                                        </template>
+                                    </template>
+                                    <template if:false={hasNotes}>
+                                        <div class="no-notes-text">No notes available</div>
+                                    </template>
+                                </div>
+                                <div class="note-input-wrap">
+                                    <input
+                                        type="text"
+                                        class="note-input"
+                                        placeholder="Add a note or activity update..."
+                                        value={noteText}
+                                        oninput={handleNoteChange}/>
+                                    <button type="button" class="add-note-btn" onclick={handleAddNote}>
+                                        Add note
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon">
+                                    <lightning-icon icon-name="utility:file" size="x-small"></lightning-icon>
+                                </div>
+                                <div class="info-card-title">Files</div>
+                            </div>
+                            <div class="info-card-body files-scroll">
+                                <template if:true={hasFiles}>
+                                    <template for:each={quoteFiles} for:item="file">
+                                        <div
+                                            key={file.id}
+                                            class="file-item"
+                                            data-id={file.id}
+                                            onclick={handleFilePreview}>
+                                            <div class="file-icon">
+                                                <lightning-icon icon-name="doctype:attachment" size="small"></lightning-icon>
+                                            </div>
+                                            <div>
+                                                <div class="file-name">{file.title}</div>
+                                                <div class="file-meta">{file.uploadedDate} · {file.size}</div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </template>
+                                <template if:false={hasFiles}>
+                                    <div class="activity-empty">No files yet.</div>
+                                </template>
+                            </div>
+                            <div class="file-upload-wrap">
+                                <label class="upload-btn" for="quoteFileInput">
+                                    <lightning-icon icon-name="utility:upload" size="xx-small"></lightning-icon>
+                                    Upload Files
+                                </label>
+                                <input
+                                    type="file"
+                                    id="quoteFileInput"
+                                    class="file-input-hidden"
+                                    multiple
+                                    onchange={handleFileInputChange}/>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+</template>
+            <template if:true={hasFilePreview}>
+                <div class="preview-overlay" onclick={closeFilePreview}>
+                    <div class="preview-modal" onclick={stopPropagation}>
+                        <div class="preview-header">
+                            <div class="preview-title">{previewFile.title}</div>
+                            <button type="button" class="preview-close-btn" onclick={closeFilePreview}>✕</button>
+                        </div>
+                        <div class="preview-body">
+                            <template if:true={previewFile.isImage}>
+                                <img src={previewFile.url} alt={previewFile.title} class="preview-image"/>
+                            </template>
+                            <template if:true={previewFile.isPdf}>
+                                <iframe src={previewFile.url} class="preview-iframe" title={previewFile.title}></iframe>
+                            </template>
+                            <template if:false={previewFile.isImage}>
+                                <template if:false={previewFile.isPdf}>
+                                    <div class="preview-fallback">
+                                        Preview isn't available for this file type.
+                                        <a
+                                            href={previewFile.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="preview-download-link">
+                                            Download {previewFile.title}
+                                        </a>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <template if:true={showEventModal}>
+                <c-new-event-modal
+                    quote-id={selectedQuote.Id}
+                    quote-name={selectedQuote.quoteLabel}
+                    related-contact-id={selectedQuote.ContactId}
+                    related-contact-name={selectedQuote.contactName}
+                    partner-account-id={partnerAccountId}
+                    onclose={closeEventModal}
+                    onsave={handleEventSaved}
+                ></c-new-event-modal>
+            </template>
+
+            <template if:true={showTaskModal}>
+                <c-newtaskmodal
+                    quote-id={selectedQuote.Id}
+                    quote-name={selectedQuote.quoteLabel}
+                    related-contact-id={selectedQuote.ContactId}
+                    related-contact-name={selectedQuote.contactName}
+                    partner-account-id={partnerAccountId}
+                    onclose={closeTaskModal}
+                    onsave={handleTaskSaved}
+                ></c-newtaskmodal>
+            </template>
+        </div>
+    </template>
+
+    <template if:true={showQuoteModal}>
+        <div class={quoteModalHostClass} onclick={closeQuoteModal}>
+            <div class={quoteModalStopClass} onclick={stopQuoteModalBubble}>
+                <c-new-quote-modal
+                    key={quoteModalKey}
+                    quote-id={editingQuoteId}
+                    discount-qty-mode={discountQtyMode}
+                    partner-account-id={partnerAccountId}
+                    onclose={closeQuoteModal}
+                    onsave={handleQuoteSaved}
+                    oncartviewchange={handleQuoteCartViewChange}
+                ></c-new-quote-modal>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={showQuoteCreatedDialog}>
+        <div class="quote-created-toast" role="status" aria-live="polite">
+            <div class="quote-created-toast__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="12" fill="#ffffff"/>
+                    <path d="M7 12.2l3.2 3.2L17 8.5" stroke="#2e844a" stroke-width="2.2"
+                        stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="quote-created-toast__body">
+                <template if:true={hasCreatedQuoteNumber}>
+                    <span>Quote "</span>
+                    <button type="button" class="quote-created-toast__link" onclick={openCreatedQuote}>{createdQuoteNumber}</button>
+                    <span>" was created.</span>
+                </template>
+                <template if:false={hasCreatedQuoteNumber}>
+                    <span>Quote was created.</span>
+                </template>
+            </div>
+            <button type="button" class="quote-created-toast__close" onclick={closeQuoteCreatedDialog} title="Close" aria-label="Close">
+                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+    </template>
+
+    <template if:true={showSapModal}>
+        <div class="quote-modal-host quote-modal-host--sap" onclick={closeSapModal}>
+            <div class="quote-modal-stop quote-modal-stop--sap" onclick={stopQuoteModalBubble}>
+                <c-dealer-quote-sap-modal
+                    quote-id={selectedQuote.Id}
+                    onclose={closeSapModal}
+                    onsave={handleSapQuoteSaved}
+                ></c-dealer-quote-sap-modal>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={showArcSapModal}>
+        <div class="quote-modal-host quote-modal-host--sap" onclick={closeArcSapModal}>
+            <div class="quote-modal-stop quote-modal-stop--sap" onclick={stopQuoteModalBubble}>
+                <c-dealer-push-arc-to-sap-modal
+                    quote-id={selectedQuote.Id}
+                    onclose={closeArcSapModal}
+                    onsave={handleArcSapSaved}
+                ></c-dealer-push-arc-to-sap-modal>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={showEditDiscountModal}>
+        <div class="quote-modal-host quote-modal-host--discount" onclick={closeEditDiscountModal}>
+            <div class="quote-modal-stop quote-modal-stop--discount" onclick={stopQuoteModalBubble}>
+                <c-dealer-edit-discount-quantity
+                    quote-id={selectedQuote.Id}
+                    business-line={selectedQuote.businessLine}
+                    quote-type={selectedQuote.Quote_Type__c}
+                    partner-account-id={partnerAccountId}
+                    onclose={closeEditDiscountModal}
+                    onsave={handleEditDiscountSaved}
+                ></c-dealer-edit-discount-quantity>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={showArcDiscountModal}>
+        <div class="quote-modal-host quote-modal-host--discount" onclick={closeArcDiscountModal}>
+            <div class="quote-modal-stop quote-modal-stop--discount" onclick={stopQuoteModalBubble}>
+                <c-dealer-edit-arc-discount-modal
+                    quote-id={selectedQuote.Id}
+                    partner-account-id={partnerAccountId}
+                    onclose={closeArcDiscountModal}
+                    onsave={handleArcDiscountSaved}
+                ></c-dealer-edit-arc-discount-modal>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={showAddProductModal}>
+        <div class={addProductModalHostClass} onclick={closeAddProductModal}>
+            <div class={addProductModalStopClass} onclick={stopQuoteModalBubble}>
+                <div class={addProductShellClass}>
+                    <div class="add-product-shell-header">
+                        <div class="add-product-shell-title">{addProductModalTitle}</div>
+                        <button type="button" class="add-product-shell-close" onclick={closeAddProductModal}>✕</button>
+                    </div>
+                    <div class="add-product-shell-body">
+                        <c-dealer-add-product-modal
+                            key={addProductModalKey}
+                            quote-id={selectedQuote.Id}
+                            account-id={addProductAccountId}
+                            partner-account-id={partnerAccountId}
+                            quote-type={addProductQuoteType}
+                            quote-record-type-name={addProductQuoteRecordTypeName}
+                            business-line={addProductBusinessLine}
+                            product-mode={addProductProductMode}
+                            use-partner-products={addProductUsePartnerProducts}
+                            embedded
+                            onclose={closeAddProductModal}
+                            onsave={handleAddProductSaved}
+                            oncartviewchange={handleAddProductCartViewChange}
+                        ></c-dealer-add-product-modal>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</template>

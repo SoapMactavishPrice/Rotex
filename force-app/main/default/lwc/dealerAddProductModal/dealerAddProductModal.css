@@ -1,0 +1,622 @@
+.slds-modal {
+    /* Sit in the content area to the right of Experience Cloud left nav (250px) */
+    left: 250px;
+    right: 0;
+    width: auto;
+    display: flex !important;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 16px 20px;
+    box-sizing: border-box;
+}
+
+.slds-modal__container {
+    max-width: 1220px !important;
+    width: min(1220px, 100%) !important;
+    max-height: 92vh !important;
+    height: 92vh !important;
+    margin: 0 auto !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.slds-modal__container--cart {
+    max-width: 1280px !important;
+    width: min(1280px, 100%) !important;
+    height: auto !important;
+    margin: 0 auto !important;
+}
+
+.slds-backdrop {
+    left: 250px;
+    right: 0;
+    width: auto;
+}
+
+.slds-modal__header {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem !important;
+}
+
+.slds-modal__content {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.slds-modal__content--cart {
+    overflow: hidden;
+}
+
+.slds-modal__content--products {
+    overflow: hidden !important;
+    padding: 0.5rem 1rem 0.5rem !important;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.slds-modal__content:not(.slds-modal__content--cart):not(.slds-modal__content--products) {
+    overflow: hidden;
+    max-height: calc(92vh - 7.5rem);
+    display: flex;
+    flex-direction: column;
+}
+
+.slds-modal__footer {
+    flex-shrink: 0;
+}
+
+.product-filters {
+    flex-shrink: 0;
+    width: 100%;
+    margin: 0 0 0.5rem;
+}
+
+.product-filter-hint {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 12rem;
+    padding: 1.5rem;
+    color: #706e6b;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    background: #fafaf9;
+    border: 1px dashed #dddbda;
+    border-radius: 8px;
+}
+
+.product-table-scroll {
+    /* Fill remaining modal height; ~10 rows visible, no outer scroll */
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    max-height: none;
+    width: 100%;
+    overflow: hidden;
+}
+
+.product-table-scroll .slds-box {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.product-table-spinner {
+    min-height: 16rem;
+}
+
+.product-pick-datatable {
+    width: 100%;
+    display: block;
+}
+
+.product-table-scroll lightning-datatable {
+    width: 100%;
+    --lwc-tableCellSpacing: 0.4rem 0.5rem;
+    --lwc-fontSize3: 14px;
+    --slds-c-datatable-header-font-size: 14px;
+    font-size: 14px;
+}
+
+.product-table-scroll lightning-datatable td,
+.product-table-scroll lightning-datatable th,
+.product-table-scroll .slds-truncate {
+    font-size: 14px !important;
+}
+
+:host {
+    display: block;
+    height: 100%;
+    min-height: 0;
+}
+
+.embedded-add-product {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.embedded-add-product--cart {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.embedded-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.embedded-header {
+    margin-bottom: 0.75rem;
+}
+
+.embedded-footer {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e5e5e5;
+    flex-shrink: 0;
+    background: #ffffff;
+}
+
+.embedded-footer lightning-button,
+.slds-modal__footer lightning-button {
+    visibility: visible;
+}
+
+.footer-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+}
+
+.footer-pagination {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+/* Match Create Quote Cancel / Next button look exactly */
+.footer-btn-secondary,
+.footer-btn-primary {
+    height: 38px;
+    min-width: 110px;
+    padding: 0 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.footer-btn-secondary {
+    background: #fff;
+    border: 1px solid #d8d8d8;
+    color: #333;
+}
+
+.footer-btn-secondary:hover {
+    background: #f5f5f5;
+}
+
+.footer-btn-primary {
+    background: #0d6b69;
+    border: 1px solid #0d6b69;
+    color: #fff;
+}
+
+.footer-btn-primary:hover {
+    background: #0a5553;
+    border-color: #0a5553;
+}
+
+.footer-btn-primary:disabled,
+.footer-btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.cart-edit-wrap {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: calc(90vh - 14rem);
+    overflow: auto;
+    position: relative;
+}
+
+.cart-save-loader {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(1px);
+}
+
+.cart-save-loader__spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #c9c7c5;
+    border-top-color: #0d6b69;
+    border-radius: 50%;
+    animation: cartSaveSpin 0.8s linear infinite;
+}
+
+@keyframes cartSaveSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.cart-save-loader__text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #0d6b69;
+}
+
+.cart-edit-table {
+    width: 100%;
+    table-layout: fixed;
+    font-size: 12px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.cart-edit-table.slds-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #0d6b69 !important;
+    background-color: #0d6b69 !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.cart-edit-table.slds-table thead th div {
+    color: #ffffff;
+}
+
+.cart-edit-table.slds-table thead th .slds-required {
+    color: #ffb4b4;
+}
+
+.cart-edit-table .cart-col-name {
+    width: 22%;
+}
+
+.cart-edit-table .cart-col-partno {
+    width: 12%;
+}
+
+.cart-edit-table .cart-col-listprice {
+    width: 8%;
+}
+
+.cart-edit-table .cart-col-disc,
+.cart-edit-table .cart-col-reqdisc,
+.cart-edit-table .cart-col-qty {
+    width: 7%;
+}
+
+.cart-edit-table .cart-col-net,
+.cart-edit-table .cart-col-sales {
+    width: 10%;
+}
+
+.cart-edit-table .cart-col-sellsc {
+   width:10%;
+}
+
+.cart-edit-table .cart-col-comments {
+    width: 12%;
+    min-width: 125px;
+    vertical-align: top;
+}
+
+.cart-edit-table .cart-col-comments lightning-textarea.cart-comments-input,
+.cart-edit-table .cart-comments-input {
+    --slds-c-textarea-sizing-min-height: 52px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    display: block;
+}
+
+.cart-edit-table .cart-col-moq {
+    width: 8%;
+}
+
+.cart-edit-table .cart-col-valid {
+    width: 10%;
+}
+
+.cart-edit-table .cart-col-inco {
+    width: 8%;
+}
+
+.cart-edit-table .cart-col-actions {
+    width: 6%;
+}
+
+.cart-edit-table .cart-product-name {
+    white-space: normal;
+    word-break: break-word;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.35;
+    font-size: 12px;
+}
+
+.cart-edit-table .cart-product-name strong {
+    font-weight: 700;
+}
+
+.cart-edit-table .cart-action-cell {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.cart-edit-table .action-cell-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.cart-edit-table .cart-action-cell lightning-button-icon {
+    display: inline-flex;
+    margin: 0 auto;
+    visibility: visible;
+}
+
+.cart-edit-table th,
+.cart-edit-table td {
+    padding: 4px 3px;
+    vertical-align: middle;
+    word-break: break-word;
+    white-space: normal;
+}
+
+.cart-edit-table .slds-truncate {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.cart-edit-table lightning-input {
+    --slds-c-input-spacing-horizontal-start: 0.25rem;
+    --slds-c-input-spacing-horizontal-end: 0.25rem;
+    --slds-c-input-font-size: 12px;
+    --slds-c-input-line-height: 1.25rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    display: block;
+}
+
+.cart-edit-table .cart-num-cell {
+    text-align: center;
+}
+
+.cart-edit-table .cart-num-value {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    width: 100%;
+    font-size: 12px;
+    line-height: 1.25rem;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    color: #080707;
+}
+
+.cart-edit-table lightning-input.cart-num-input {
+    --slds-c-input-font-size: 12px;
+    --slds-g-font-size-base: 12px;
+    --slds-c-input-line-height: 1.25rem;
+    --slds-c-input-sizing-min-height: 2rem;
+    --slds-c-input-spacing-block-start: 0;
+    --slds-c-input-spacing-block-end: 0;
+    --slds-c-input-spacing-horizontal-start: 0.25rem;
+    --slds-c-input-spacing-horizontal-end: 0.25rem;
+    --slds-c-input-text-align: center;
+    --lwc-heightInput: 2rem;
+    --lwc-fontSize3: 12px;
+    font-size: 12px;
+}
+
+.page-heading {
+    font-weight: 800;
+}
+
+.searchBoxWrapper {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+    width: 100%;
+    flex-shrink: 0;
+}
+
+.searchBoxWrapper .search-field {
+    flex: 1 1 0;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.75rem;
+    align-items: flex-end;
+    flex: 1 1 0;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+}
+
+.filter-row .filter-field {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+}
+
+/* Match label + control spacing so Search and Item Type sit on one baseline */
+.searchBoxWrapper .search-field,
+.searchBoxWrapper .filter-field {
+    --slds-c-input-spacing-block-start: 0;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    border: none;
+    background-color: transparent;
+}
+
+input[type=number]:focus {
+    outline: none;
+}
+
+.icon:hover {
+    --slds-c-icon-color-foreground: rgb(255, 255, 255);
+}
+
+table:not(.cart-edit-table) {
+    border-collapse: collapse;
+}
+
+table:not(.cart-edit-table) thead tr th {
+    background-color: aliceblue;
+}
+
+th,
+td {
+    padding: 5px;
+    border-bottom: 1px solid #ddd;
+}
+
+table tbody tr:hover {
+    background-color: aliceblue;
+}
+
+.divclas {
+    position: absolute;
+    z-index: 99;
+    margin-left: 65%;
+    background: white;
+    border: 1px solid;
+    padding: 1%;
+    width: 30%;
+}
+
+@media (max-width: 900px) {
+    .slds-modal {
+        left: 0;
+        padding: 24px 12px;
+    }
+
+    .slds-backdrop {
+        left: 0;
+    }
+
+    .slds-modal__container,
+    .slds-modal__container--cart {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 88vh !important;
+    }
+}
+
+.portal-toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 280px;
+    max-width: min(520px, calc(100vw - 32px));
+    padding: 14px 18px;
+    border-radius: 10px;
+    color: #ffffff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+    z-index: 10050;
+    animation: portalToastIn 0.25s ease;
+}
+
+.portal-toast__title {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.portal-toast__message {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    opacity: 0.95;
+}
+
+.portal-toast--error {
+    background: #ba0517;
+}
+
+.portal-toast--success {
+    background: #2e844a;
+}
+
+.portal-toast--warning {
+    background: #fe9339;
+    color: #181818;
+}
+
+.portal-toast--info {
+    background: #032d60;
+}
+
+@keyframes portalToastIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}

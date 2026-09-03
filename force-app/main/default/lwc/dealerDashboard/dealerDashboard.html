@@ -1,0 +1,247 @@
+<template>
+    <c-dealer-user-menu></c-dealer-user-menu>
+
+    <div class="dashboard-wrapper">
+        <template if:true={fiscalYearOptions.length}>
+            <div class="filter-section" style="background-color: #e9ebeb; padding: 1rem;">
+                <lightning-combobox name="fiscalYear" label="Financial Year" value={selectedYear}
+                    placeholder="Select Year" options={fiscalYearOptions} onchange={handleYearChange}
+                    class="filter-combobox">
+                </lightning-combobox>
+                <lightning-combobox name="quarter" label="Financial Quarter" value={selectedQuarter}
+                    placeholder="All Quarters" options={quarterOptions} onchange={handleQuarterChange}
+                    class="filter-combobox">
+                </lightning-combobox>
+                <lightning-combobox name="month" label="Financial Month" value={selectedMonth} placeholder="All Months"
+                    options={monthOptions} onchange={handleMonthChange} class="filter-combobox">
+                </lightning-combobox>
+                <lightning-button label="Clear Filters" variant="brand" onclick={handleClear}
+                    class="clear-btn">
+                </lightning-button>
+            </div>
+        </template>
+
+        <div class="dashboard-container">
+            <!-- Card 1: Total Invoice Qty -->
+            <div class="dashboard-card">
+                <div class="card-icon icon-blue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Total Invoice Qty</div>
+                    <div class="card-value">{invoiceQty}</div>
+                </div>
+            </div>
+
+            <!-- Card 2: Total Approved Customer -->
+            <div class="dashboard-card">
+                <div class="card-icon icon-green">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Approved Customer</div>
+                    <div class="card-value">{approvedCustomers}</div>
+                </div>
+            </div>
+
+            <!-- Card 3: Total Open Leads -->
+            <div class="dashboard-card">
+                <div class="card-icon icon-purple">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Total Open Leads</div>
+                    <div class="card-value">{openLeads}</div>
+                </div>
+            </div>
+
+            <!-- Card 4: Quote Pending Approval -->
+            <div class="dashboard-card">
+                <div class="card-icon icon-orange">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Quote Submitted</div>
+                    <div class="card-value">{pendingQuotes}</div>
+                </div>
+            </div>
+
+            <!-- Card 5: Low Stock Products -->
+            <div class="dashboard-card">
+                <div class="card-icon icon-red">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path
+                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                        </path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Low Stock Products</div>
+                    <div class="card-value">{lowStockProducts}</div>
+                </div>
+            </div>
+
+            <!-- Card 6: Target Achievement -->
+            <div class="dashboard-card">
+                <div class="card-icon icon-teal">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="6"></circle>
+                        <circle cx="12" cy="12" r="2"></circle>
+                    </svg>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Target Achievement</div>
+                    <div class="card-value">{targetAchievement}%</div>
+                    <div class="progress-container">
+                        <div class="progress-bar" style={targetAchievementStyle}></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Chart Section -->
+        <div class="chart-section">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>{salesTrendTitle}</h2>
+                </div>
+                <div class="chart-body large-chart-body">
+                    <canvas class="salesChart" lwc:dom="manual" width="400" height="150"></canvas>
+                </div>
+            </div>
+
+            <!-- Actual vs Budget Chart -->
+            <div class="chart-card actual-budget-card">
+                <div class="ab-chart-col">
+                    <div class="chart-header">
+                        <h2>Actual vs Target</h2>
+                    </div>
+                    <div class="chart-body ab-chart-body">
+                        <canvas class="actualBudgetChart" lwc:dom="manual" width="300" height="150"></canvas>
+                    </div>
+                </div>
+                <div class="ab-achieve-col">
+                    <div class="ab-achieve-box">
+                        <div class="ab-achieve-label">Achievement</div>
+                        <div class="ab-achieve-value">{targetAchievement}%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Second Chart Section (3 Columns for the 3 new charts) -->
+        <div class="chart-section chart-section-3col">
+            <!-- Quote By Status Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>Quote By Status</h2>
+                </div>
+                <div class="chart-body doughnut-chart-body"
+                    style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <div style="flex: 1 1 0%; position: relative; height: 100%; min-width: 0;">
+                        <canvas class="quoteStatusChart" lwc:dom="manual"></canvas>
+                    </div>
+                    <div style="flex: 0 0 130px; display: flex; flex-direction: column; gap: 8px;">
+                        <template for:each={quoteLegendItems} for:item="item">
+                            <div key={item.id}
+                                style="display: flex; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style={item.colorStyle}></span>
+                                    <div style="font-size: 11px; color: #5c6b6a; line-height: 1.2;">
+                                        <div>{item.line1}</div>
+                                        <template if:true={item.hasLine2}>
+                                            <div>{item.line2}</div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <div style="font-size: 11px; color: #5c6b6a; margin-left: 4px;">({item.count})</div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leads By Status Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>Leads By Status</h2>
+                </div>
+                <div class="chart-body doughnut-chart-body"
+                    style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <div style="flex: 1 1 0%; position: relative; height: 100%; min-width: 0;">
+                        <canvas class="leadStatusChart" lwc:dom="manual"></canvas>
+                    </div>
+                    <div style="flex: 0 0 130px; display: flex; flex-direction: column; gap: 8px;">
+                        <template for:each={leadLegendItems} for:item="item">
+                            <div key={item.id}
+                                style="display: flex; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style={item.colorStyle}></span>
+                                    <div style="font-size: 11px; color: #5c6b6a; line-height: 1.2;">
+                                        <div>{item.line1}</div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 11px; color: #5c6b6a; margin-left: 4px;">({item.count})</div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory By Status Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>Inventory By Status (Qty)</h2>
+                </div>
+                <div class="chart-body">
+                    <canvas class="inventoryStatusChart" lwc:dom="manual" width="400" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Third Chart Section (Top Orders) -->
+        <div class="chart-section">
+            <div class="chart-card">
+                <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>Top Orders (Net Value)</h2>
+                    <select class="slds-select"
+                        style="width: auto; padding: 2px 24px 2px 8px; font-size: 12px; height: auto;"
+                        onchange={handleTopCountChange}>
+                        <option value="5">Top 5</option>
+                        <option value="10">Top 10</option>
+                    </select>
+                </div>
+                <div class="chart-body">
+                    <canvas class="topOrdersChart" lwc:dom="manual"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</template>

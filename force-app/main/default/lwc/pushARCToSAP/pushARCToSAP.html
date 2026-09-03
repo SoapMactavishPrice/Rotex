@@ -1,0 +1,110 @@
+<template>
+    <div if:true={showSpinner} class="slds-is-relative">
+        <lightning-spinner alternative-text="Loading..." variant="brand" size="medium"></lightning-spinner>
+    </div>
+
+    <template if:false={showSpinner}>
+        <div class="slds-p-around_medium">
+            <!-- Header - Centered -->
+            <div class="slds-grid slds-grid_align_center slds-m-bottom_medium">
+                <h2 class="slds-text-heading_medium">Quote Line Items</h2>
+            </div>
+
+            <!-- Error Message -->
+            <div if:true={errorMessage} class="slds-p-around_small">
+                <lightning-alert variant="error" icon-name="utility:error">
+                    {errorMessage}
+                </lightning-alert>
+            </div>
+
+            <!-- Success Message -->
+            <div if:true={successMessage} class="slds-p-around_small">
+                <lightning-alert variant="success" icon-name="utility:success">
+                    {successMessage}
+                </lightning-alert>
+            </div>
+
+            <!-- Line Items Table -->
+            <div if:true={hasLineItems} class="slds-scrollable_x">
+                <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th scope="col" style="background-color: #066afe; color: #fff; width: 30%;">
+                                <div class="slds-truncate">Product</div>
+                            </th>
+                            <th scope="col" style="background-color: #066afe; color: #fff; width: 14%;">
+                                <div class="slds-truncate">List Price</div>
+                            </th>
+                            <th scope="col" style="background-color: #066afe; color: #fff; width: 14%;">
+                                <div class="slds-truncate">Sales Price</div>
+                            </th>
+                            <th scope="col" style="background-color: #066afe; color: #fff; width: 14%;">
+                                <div class="slds-truncate">Discount %</div>
+                            </th>
+                            <th scope="col" style="background-color: #066afe; color: #fff; width: 10%;">
+                                <div class="slds-truncate">Quantity</div>
+                            </th>
+                            <th scope="col" style="background-color: #066afe; color: #fff; width: 18%;">
+                                <div class="slds-truncate">Total Price</div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template for:each={lineItems} for:item="item" for:index="index">
+                            <tr key={item.id}>
+                                <td>
+                                    <div class="slds-truncate" title={item.productName}>
+                                        {item.productName}
+                                    </div>
+                                    <div class="slds-text-body_small slds-text-color_weak">
+                                        {item.productCode}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="slds-text-body_regular">
+                                        {item.formattedListPrice}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="slds-text-body_regular">
+                                        {item.formattedSalesPrice}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="slds-text-body_regular">
+                                        {item.formattedDiscount}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="slds-text-body_regular">
+                                        {item.quantity}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="slds-text-body_regular slds-text-color_strong">
+                                        {item.formattedTotalPrice}
+                                    </span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- No Items Message -->
+            <div if:true={hasNoLineItems} class="slds-text-align_center slds-p-around_large">
+                <lightning-icon icon-name="utility:info" alternative-text="No items" size="medium"></lightning-icon>
+                <p class="slds-text-body_regular">No line items found for this quote</p>
+            </div>
+
+            <!-- Actions - Centered (Only show when items exist) -->
+            <div if:true={hasLineItems} class="slds-m-top_medium slds-grid slds-grid_align_center">
+                <lightning-button label="Submit" variant="brand" onclick={handleSave} disabled={isSaving}
+                    class="slds-m-right_x-small">
+                </lightning-button>
+                <lightning-button label="Cancel" variant="neutral" onclick={handleCancel} disabled={isSaving}>
+                </lightning-button>
+            </div>
+        </div>
+    </template>
+</template>

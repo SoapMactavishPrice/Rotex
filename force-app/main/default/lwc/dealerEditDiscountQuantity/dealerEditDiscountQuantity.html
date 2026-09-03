@@ -1,0 +1,478 @@
+<template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
+
+    <div class="modal-container" onclick={stopPropagation}>
+        <template if:true={showSpinner}>
+            <lightning-spinner alternative-text="Loading" size="large"></lightning-spinner>
+        </template>
+
+        <div class="modal-header">
+            <div class="modal-title">Submit for Approval</div>
+            <button type="button" class="modal-close-btn" onclick={closeModal} disabled={showSpinner}>✕</button>
+        </div>
+
+        <div class="table-wrapper">
+            <template if:true={headerReady}>
+            <!-- Quote Information -->
+            <div class="section-label">QUOTE INFORMATION</div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Quote Number</label>
+                    <input type="text" class="form-input form-input-readonly" value={quoteNumber} disabled/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Quote Name</label>
+                    <input type="text" class="form-input form-input-readonly" value={quoteName} disabled/>
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Account Name</label>
+                    <input type="text" class="form-input form-input-readonly" value={accountName} disabled/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Quote Date</label>
+                    <input type="date" class="form-input form-input-readonly" value={quoteDate} disabled/>
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Quote Valid Till</label>
+                    <input type="date" class="form-input form-input-readonly" value={quoteValidTill} disabled/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Owner Name</label>
+                    <input type="text" class="form-input form-input-readonly" value={ownerName} disabled/>
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Quote Currency</label>
+                    <input type="text" class="form-input form-input-readonly" value={currencyIsoCode} disabled/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Status</label>
+                    <input type="text" class="form-input form-input-readonly" value={status} disabled/>
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Rev. No.</label>
+                    <input type="text" class="form-input form-input-readonly" value={revNo} disabled/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Rev. Date</label>
+                    <input type="date" class="form-input form-input-readonly" value={revDate} disabled/>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+            <div class="section-label">SPECIAL TERMS &amp; CONDITIONS</div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Validity of Offer</label>
+                    <input type="text" class="form-input form-input-readonly" value={validityOfOffer} disabled/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Requested Validity Of Offer</label>
+                    <select class="form-input" data-field="requestedValidityOfOffer" onchange={handleHeaderFieldChange}>
+                        <option value="">--None--</option>
+                        <template for:each={requestedValidityOptionsView} for:item="opt">
+                            <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label form-required">Delivery Period</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        data-field="deliveryPeriod"
+                        value={deliveryPeriod}
+                        oninput={handleHeaderFieldChange}
+                        placeholder="e.g. 10 days"/>
+                    <template if:true={errors.deliveryPeriod}>
+                        <div class="form-error">{errors.deliveryPeriod}</div>
+                    </template>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Inco Terms</label>
+                    <input type="text" class="form-input form-input-readonly" value={incoTerms} disabled/>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Payment Terms</label>
+                    <input type="text" class="form-input form-input-readonly" value={paymentTerms} disabled/>
+                </div>
+                <div class="form-field"></div>
+            </div>
+
+            <div class="form-field form-field-full">
+                <label class="form-label">Prices</label>
+                <textarea class="form-input form-textarea form-input-readonly" disabled>{prices}</textarea>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Warranty Terms</label>
+                    <input type="text" class="form-input form-input-readonly" value={warrantyTerms} disabled/>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Requested Warranty Terms</label>
+                    <select class="form-input" data-field="requestedWarrantyTerms" onchange={handleHeaderFieldChange}>
+                        <option value="">--None--</option>
+                        <template for:each={requestedWarrantyOptionsView} for:item="opt">
+                            <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label form-required">Liquidate Terms</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        data-field="liquidateTerms"
+                        value={liquidateTerms}
+                        oninput={handleHeaderFieldChange}/>
+                    <template if:true={errors.liquidateTerms}>
+                        <div class="form-error">{errors.liquidateTerms}</div>
+                    </template>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Delivery Location</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        data-field="deliveryLocation"
+                        value={deliveryLocation}
+                        oninput={handleHeaderFieldChange}/>
+                </div>
+            </div>
+
+            <div class="form-field form-field-full">
+                <label class="form-label">Transport Details</label>
+                <textarea
+                    class="form-input form-textarea"
+                    data-field="transportDetails"
+                    oninput={handleHeaderFieldChange}>{transportDetails}</textarea>
+            </div>
+
+            <div class="form-field form-field-full">
+                <label class="form-label">Special Remarks</label>
+                <textarea
+                    class="form-input form-textarea"
+                    data-field="specialRemarks"
+                    oninput={handleHeaderFieldChange}>{specialRemarks}</textarea>
+            </div>
+
+            <div class="section-divider"></div>
+            <div class="section-label">PREPARED FOR</div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Contact Name</label>
+                    <template if:false={hasSelectedContact}>
+                        <div class="lookup-wrap">
+                            <input
+                                type="text"
+                                class="form-input"
+                                placeholder="Search contacts for selected Account..."
+                                value={contactSearch}
+                                onfocus={handleContactFocus}
+                                oninput={handleContactSearch}
+                                autocomplete="off"/>
+                            <template if:true={showContactDropdown}>
+                                <div class="lookup-results">
+                                    <template if:true={hasContactResults}>
+                                        <template for:each={contactResults} for:item="row">
+                                            <div
+                                                key={row.id}
+                                                class="lookup-item"
+                                                data-id={row.id}
+                                                data-label={row.label}
+                                                data-email={row.email}
+                                                data-phone={row.phone}
+                                                onmousedown={selectContact}>
+                                                <div class="lookup-item-label">{row.label}</div>
+                                                <template if:true={row.subtitle}>
+                                                    <div class="lookup-item-sub">{row.subtitle}</div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </template>
+                                    <template if:false={hasContactResults}>
+                                        <div class="lookup-empty">No matching contacts</div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template if:true={hasSelectedContact}>
+                        <div class="lookup-chip">
+                            <span>{contactName}</span>
+                            <button type="button" class="chip-clear" onclick={clearContact}>✕</button>
+                        </div>
+                    </template>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Phone</label>
+                    <input
+                        type="tel"
+                        class="form-input"
+                        data-field="phone"
+                        value={phone}
+                        oninput={handleHeaderFieldChange}/>
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">Email</label>
+                    <input
+                        type="email"
+                        class="form-input"
+                        data-field="email"
+                        value={email}
+                        oninput={handleHeaderFieldChange}/>
+                </div>
+                <div class="form-field"></div>
+            </div>
+
+            <div class="section-divider"></div>
+            <div class="section-label">QUOTE LINE ITEMS</div>
+            </template>
+
+            <template if:true={hasRows}>
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th class="col-product">Product Name</th>
+                            <th class="col-partno">Customer Part No.</th>
+                            <th class="col-num">List Price ({currencyCode})</th>
+                            <th class="col-sap">Disc. SAP (%)</th>
+                            <th class="col-input">Disc. Offered (%)</th>
+                            <th class="col-input">Desired Price ({currencyCode})</th>
+                            <th class="col-num">Sales Price ({currencyCode})</th>
+                            <th class="col-input">New Disc. (%)</th>
+                            <th class="col-comments">Req. Comments</th>
+                            <th class="col-input">P&amp;F (%)</th>
+                            <th class="col-input">Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template for:each={quoteLineItemList} for:item="item">
+                            <tr key={item.Id}>
+                                <td class="col-product cell-wrap">
+                                    <div class="product-name">{item.Product2.Name}</div>
+                                    <div class="product-code">({item.Product2.ProductCode})</div>
+                                </td>
+                                <td class="col-partno">
+                                    <lightning-input
+                                        type="text"
+                                        data-id={item.Id}
+                                        variant="label-hidden"
+                                        value={item.Customer_Part_No__c}
+                                        class="input-field"
+                                        onchange={handleCustomerPartNoChange}>
+                                    </lightning-input>
+                                </td>
+                                <td class="col-num">
+                                    <lightning-input
+                                        type="text"
+                                        variant="label-hidden"
+                                        value={item.ListPrice}
+                                        class="input-field num-field"
+                                        disabled>
+                                    </lightning-input>
+                                </td>
+                                <td class="col-sap">
+                                    <lightning-input
+                                        type="text"
+                                        variant="label-hidden"
+                                        value={item.sapDiscountDisplay}
+                                        class="input-field num-field num-field-sap"
+                                        disabled>
+                                    </lightning-input>
+                                </td>
+                                <td class="col-input">
+                                    <template if:true={item.isDiscountOfferedDisabled}>
+                                        <lightning-input
+                                            type="text"
+                                            data-id={item.Id}
+                                            variant="label-hidden"
+                                            value={item.Discount_to_be_offered__c}
+                                            class="input-field num-field"
+                                            disabled>
+                                        </lightning-input>
+                                    </template>
+                                    <template if:false={item.isDiscountOfferedDisabled}>
+                                        <lightning-input
+                                            type="text"
+                                            data-id={item.Id}
+                                            variant="label-hidden"
+                                            value={item.Discount_to_be_offered__c}
+                                            class="input-field num-field"
+                                            onchange={handleDiscountChange}>
+                                        </lightning-input>
+                                    </template>
+                                </td>
+                                <td class="col-input">
+                                    <template if:true={item.isDesiredPriceDisabled}>
+                                        <lightning-input
+                                            type="text"
+                                            data-id={item.Id}
+                                            variant="label-hidden"
+                                            value={item.desiredPriceValue}
+                                            class="input-field num-field"
+                                            disabled>
+                                        </lightning-input>
+                                    </template>
+                                    <template if:false={item.isDesiredPriceDisabled}>
+                                        <lightning-input
+                                            type="text"
+                                            data-id={item.Id}
+                                            variant="label-hidden"
+                                            value={item.desiredPriceValue}
+                                            class="input-field num-field"
+                                            onchange={handleDesiredPriceChange}>
+                                        </lightning-input>
+                                    </template>
+                                </td>
+                                <td class="col-num">
+                                    <template if:true={item.isSalesPriceDisabled}>
+                                        <lightning-input
+                                            type="text"
+                                            data-id={item.Id}
+                                            variant="label-hidden"
+                                            value={item.UnitPrice}
+                                            class="input-field num-field"
+                                            disabled>
+                                        </lightning-input>
+                                    </template>
+                                    <template if:false={item.isSalesPriceDisabled}>
+                                        <lightning-input
+                                            type="text"
+                                            data-id={item.Id}
+                                            variant="label-hidden"
+                                            value={item.UnitPrice}
+                                            class="input-field num-field"
+                                            onchange={handleSalesPriceChange}>
+                                        </lightning-input>
+                                    </template>
+                                </td>
+                                <td class="col-input">
+                                    <template if:true={item.Is_Discount_Approved__c}>
+                                        <lightning-input
+                                            type="text"
+                                            data-id={item.Id}
+                                            variant="label-hidden"
+                                            value={item.newDiscountValue}
+                                            class="input-field num-field"
+                                            disabled={item.isNewDiscountDisabled}
+                                            onchange={handleNewDiscountChange}>
+                                        </lightning-input>
+                                    </template>
+                                    <template if:false={item.Is_Discount_Approved__c}>
+                                        <span class="muted-dash">-</span>
+                                    </template>
+                                </td>
+                                <td class="col-comments">
+                                    <lightning-textarea
+                                        data-id={item.Id}
+                                        variant="label-hidden"
+                                        value={item.Requested_Comments__c}
+                                        class="input-field textarea-field"
+                                        disabled={item.isRequestedCommentsDisabled}
+                                        placeholder={item.requestedCommentsPlaceholder}
+                                        max-length="255"
+                                        onchange={handleRequestedCommentsChange}>
+                                    </lightning-textarea>
+                                </td>
+                                <td class="col-input">
+                                    <lightning-input
+                                        type="text"
+                                        data-id={item.Id}
+                                        variant="label-hidden"
+                                        value={item.P_F_Charges__c}
+                                        class="input-field num-field"
+                                        onchange={handlePFChargeChanges}>
+                                    </lightning-input>
+                                </td>
+                                <td class="col-input">
+                                    <lightning-input
+                                        type="text"
+                                        data-id={item.Id}
+                                        variant="label-hidden"
+                                        value={item.Quantity}
+                                        class="input-field num-field"
+                                        onchange={handleQuantityChange}>
+                                    </lightning-input>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </template>
+            <template if:false={hasRows}>
+                <template if:false={showSpinner}>
+                    <div class="empty-text">No quote line items found.</div>
+                </template>
+            </template>
+        </div>
+
+        <template if:true={showFooterActions}>
+            <div class="footer-actions">
+                <button
+                    type="button"
+                    class="footer-btn footer-btn-cancel"
+                    onclick={closeModal}
+                    disabled={isActionDisabled}>
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="footer-btn footer-btn-submit"
+                    onclick={handleSubmitClick}
+                    disabled={isActionDisabled}>
+                    Submit for Approval
+                </button>
+            </div>
+        </template>
+
+        <template if:true={showConfirmSubmit}>
+            <div class="confirm-overlay" role="dialog" aria-modal="true">
+                <div class="confirm-dialog" onclick={stopPropagation}>
+                    <div class="confirm-title">Confirm submission</div>
+                    <div class="confirm-message">
+                        Please confirm that you have reviewed all quote details. Once submitted, the quote will be sent to Rotex for approval and editing may be restricted until the approval process is completed.
+                    </div>
+                    <div class="confirm-actions">
+                        <button type="button" class="confirm-btn confirm-btn-cancel" onclick={handleConfirmCancel}
+                            disabled={isConfirmDisabled}>
+                            Cancel
+                        </button>
+                        <button type="button" class="confirm-btn confirm-btn-ok" onclick={handleConfirmOk}
+                            disabled={isConfirmDisabled}>
+                            OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+</template>

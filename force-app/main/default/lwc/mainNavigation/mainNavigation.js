@@ -86,10 +86,80 @@ export default class MainNavigation extends NavigationMixin(LightningElement) {
     }
 
     get isOnTargetPage() {
-        const currentPath = window.location.pathname.toLowerCase();
-        const target = (this.item.target || '').toLowerCase();
-        if (!target) return false;
-        return currentPath.split('/').pop() === target.split('/').pop();
+        try {
+            const path = (window.location.pathname || '')
+                .toLowerCase()
+                .replace(/\/+$/, '');
+            const target = (this.item?.target || '')
+                .toLowerCase()
+                .replace(/\/+$/, '');
+            const label = (this.item?.publicLabel || this.item?.label || '')
+                .toLowerCase()
+                .trim();
+            const isHomeItem = label === 'home page' || label === 'home';
+            const base = String(basePath || '')
+                .toLowerCase()
+                .replace(/\/+$/, '');
+
+            // Login lands on portal home — mark Home Page tab active by default
+            if (isHomeItem) {
+                if (this._isAtPortalHome(path, base)) {
+                    return true;
+                }
+                if (target && target !== '/') {
+                    const targetSeg = target.split('/').filter(Boolean).pop();
+                    if (targetSeg) {
+                        const pathSegs = path.split('/').filter(Boolean);
+                        return pathSegs.includes(targetSeg);
+                    }
+                }
+                return false;
+            }
+
+            if (!target || target === '/') {
+                return false;
+            }
+            const targetSeg = target.split('/').filter(Boolean).pop();
+            if (!targetSeg) {
+                return false;
+            }
+            const pathSegs = path.split('/').filter(Boolean);
+            return pathSegs.includes(targetSeg);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * True when the URL is the Experience Cloud site home (no module page slug).
+     * Covers base path only and optional home page names.
+     */
+    _isAtPortalHome(path, base) {
+        const p = (path || '').toLowerCase().replace(/\/+$/, '');
+        const b = (base || '').toLowerCase().replace(/\/+$/, '');
+
+        if (!p || p === b) {
+            return true;
+        }
+
+        if (b && p.startsWith(b + '/')) {
+            const rest = p.slice(b.length + 1).replace(/\/+$/, '');
+            if (!rest) {
+                return true;
+            }
+            const homeOnly = ['home', 'home-page', 'homepage'];
+            return !rest.includes('/') && homeOnly.includes(rest);
+        }
+
+        const segs = p.split('/').filter(Boolean);
+        if (segs.length === 0) {
+            return true;
+        }
+        if (segs.length === 1 && segs[0] === 's') {
+            return true;
+        }
+        const last = segs[segs.length - 1];
+        return ['home', 'home-page', 'homepage'].includes(last) && segs.length <= 3;
     }
 
     get childrenList() {
@@ -117,9 +187,19 @@ export default class MainNavigation extends NavigationMixin(LightningElement) {
     get menuIcon() {
         const label = (this.item.publicLabel || this.item.label || '').toLowerCase();
         const ICON_MAP = {
-            dashboard: 'utility:apps',
+            'home page': 'utility:home',
             leads: 'utility:user',
-            customer: 'utility:groups'
+            contacts: 'utility:contact',
+            quotation: 'utility:quotation_marks', 
+            customer: 'utility:groups',
+            activity: 'utility:event',
+            order: 'utility:orders',
+           invoice: 'utility:moneybag',   // or 'utility:file'
+           product: 'utility:package',
+           inventory: 'utility:archive',
+           complaint:'utility:case',
+           picklist: 'utility:list',
+          'pick list': 'utility:list'
         };
         return ICON_MAP[label] || 'utility:chevronright';
     }
@@ -130,6 +210,12 @@ export default class MainNavigation extends NavigationMixin(LightningElement) {
 
         if (this.hasChildren) {
             this.isExpanded = !this.isExpanded;
+            this.dispatchEvent(new CustomEvent('itemselected', {
+                detail: { item: this.item },
+                bubbles: true,
+                composed: true
+            }));
+            return;
         }
 
         this.dispatchEvent(new CustomEvent('itemselected', {
@@ -138,7 +224,13 @@ export default class MainNavigation extends NavigationMixin(LightningElement) {
             composed: true
         }));
 
-        if (this.pageReference && !this.hasChildren) {
+        // Already on this module: force list view (detail → list).
+        if (this.isOnTargetPage) {
+            window.dispatchEvent(new CustomEvent('portalshowlist'));
+            return;
+        }
+
+        if (this.pageReference) {
             this[NavigationMixin.Navigate](this.pageReference);
         }
     }

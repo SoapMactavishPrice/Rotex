@@ -1,0 +1,159 @@
+<template>
+    <lightning-card icon-name="standard:quote">
+        <lightning-record-view-form
+            object-api-name="QuoteLineItem"
+            record-id={recordId}
+            onload={handleLoad}
+            onerror={handleError}>
+            
+            <div class="slds-m-around_small">
+                <!-- ===================================================== -->
+                <!-- Details Section -->
+                <!-- ===================================================== -->
+                <section class="section" >
+                    <h2 class="sectionHeader" style="margin-top: -25px;">Details</h2>
+                    <lightning-layout multiple-rows>
+                        <template for:each={detailsFields} for:item="field">
+                            <lightning-layout-item 
+                                key={field.apiName}
+                                size="6" 
+                                padding="horizontal-small"
+                                class="slds-p-vertical_xx-small">
+                                <lightning-output-field field-name={field.apiName}>
+                                </lightning-output-field>
+                            </lightning-layout-item>
+                        </template>
+                    </lightning-layout>
+                </section>
+
+                <!-- ===================================================== -->
+                <!-- Quantity & Sales Price Section -->
+                <!-- ===================================================== -->
+                <section class="section">
+                    <h2 class="sectionHeader">Quantity &amp; Sales Price</h2>
+                    <lightning-layout multiple-rows>
+                        <template for:each={priceFields} for:item="field">
+                            <lightning-layout-item 
+                                key={field.apiName}
+                                size="6" 
+                                padding="horizontal-small"
+                                class="slds-p-vertical_xx-small">
+                                <lightning-output-field field-name={field.apiName}>
+                                </lightning-output-field>
+                            </lightning-layout-item>
+                        </template>
+                    </lightning-layout>
+                </section>
+
+                <!-- ===================================================== -->
+                <!-- GST Information Section -->
+                <!-- ===================================================== -->
+                <section class="section">
+                    <h2 class="sectionHeader">GST Information</h2>
+                    <lightning-layout multiple-rows>
+                        <template for:each={gstFields} for:item="field">
+                            <lightning-layout-item 
+                                key={field.apiName}
+                                size="6" 
+                                padding="horizontal-small"
+                                class="slds-p-vertical_xx-small">
+                                <lightning-output-field field-name={field.apiName}>
+                                </lightning-output-field>
+                            </lightning-layout-item>
+                        </template>
+                    </lightning-layout>
+                </section>
+
+                <!-- ===================================================== -->
+                <!-- SOA Profile Section -->
+                <!-- ===================================================== -->
+                <section class="section">
+                    <h2 class="sectionHeader">SOA Profile</h2>
+                    <lightning-layout multiple-rows>
+                        <template for:each={soaFields} for:item="field">
+                            <lightning-layout-item 
+                                key={field.apiName}
+                                size="6" 
+                                padding="horizontal-small"
+                                class="slds-p-vertical_xx-small">
+                                <lightning-output-field field-name={field.apiName}>
+                                </lightning-output-field>
+                            </lightning-layout-item>
+                        </template>
+                    </lightning-layout>
+                </section>
+
+                <!-- ===================================================== -->
+                <!-- Comments Section -->
+                <!-- ===================================================== -->
+                <section class="section">
+                    <h2 class="sectionHeader">Comments</h2>
+                    <lightning-layout multiple-rows>
+                        <template for:each={commentsFields} for:item="field">
+                            <lightning-layout-item 
+                                key={field.apiName}
+                                size="6" 
+                                padding="horizontal-small"
+                                class="slds-p-vertical_xx-small">
+                                <lightning-output-field field-name={field.apiName}>
+                                </lightning-output-field>
+                            </lightning-layout-item>
+                        </template>
+                    </lightning-layout>
+                </section>
+
+                <!-- ===================================================== -->
+                <!-- Previous Comments Section -->
+                <!-- ===================================================== -->
+                <section class="section">
+                    <h2 class="sectionHeader">Previous Comments</h2>
+                    <lightning-layout multiple-rows>
+                        <template for:each={prevCommentsFields} for:item="field">
+                            <lightning-layout-item 
+                                key={field.apiName}
+                                size="6" 
+                                padding="horizontal-small"
+                                class="slds-p-vertical_xx-small">
+                                <lightning-output-field field-name={field.apiName}>
+                                </lightning-output-field>
+                            </lightning-layout-item>
+                        </template>
+                    </lightning-layout>
+                </section>
+
+                <!-- ===================================================== -->
+                <!-- System Information Section -->
+                <!-- ===================================================== -->
+                <section class="section">
+                    <h2 class="sectionHeader">System Information</h2>
+                    <lightning-layout multiple-rows>
+                        <template for:each={systemFields} for:item="field">
+                            <lightning-layout-item 
+                                key={field.apiName}
+                                size="6" 
+                                padding="horizontal-small"
+                                class="slds-p-vertical_xx-small">
+                                <lightning-output-field field-name={field.apiName}>
+                                </lightning-output-field>
+                            </lightning-layout-item>
+                        </template>
+                    </lightning-layout>
+                </section>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div if:true={isLoading} class="slds-is-relative">
+                <lightning-spinner alternative-text="Loading..." variant="brand">
+                </lightning-spinner>
+            </div>
+
+            <!-- Error Message -->
+            <div if:true={errorMessage} class="slds-p-around_small">
+                <lightning-card>
+                    <p class="slds-text-color_error">{errorMessage}</p>
+                </lightning-card>
+            </div>
+
+        </lightning-record-view-form>
+    </lightning-card>
+</template>

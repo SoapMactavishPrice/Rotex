@@ -1,0 +1,147 @@
+<template>
+    <template if:true={isLoading}>
+        <div class="qli-loading">Loading line items…</div>
+    </template>
+
+    <template if:false={isLoading}>
+        <!-- LIST VIEW -->
+        <template if:true={showListView}>
+            <template if:true={hasLineItems}>
+                <div class="qli-list-wrap">
+                    <div class="qli-list-meta">{listMetaText}</div>
+                    <div class="qli-table">
+                        <div class="qli-table-header">
+                            <div>Sr No.</div>
+                            <div>Product</div>
+                            <div>Product Code</div>
+                            <div>List Price</div>
+                            <div>Disc. SAP</div>
+                            <div>Disc. Offered</div>
+                            <div>Sales Price</div>
+                            <div>Quantity</div>
+                            <div>Total Value</div>
+                        </div>
+                        <template for:each={lineItems} for:item="line">
+                            <div
+                                key={line.id}
+                                class="qli-table-row"
+                                data-id={line.id}
+                                onclick={handleRowClick}
+                                role="button"
+                                tabindex="0"
+                                onkeydown={handleRowKeydown}>
+                                <div class="qli-cell qli-cell-num">{line.srNo}</div>
+                                <div class="qli-cell qli-cell-link" title={line.productName}>{line.productName}</div>
+                                <div class="qli-cell qli-cell-link">{line.productCode}</div>
+                                <div class="qli-cell">{line.listPriceDisplay}</div>
+                                <div class="qli-cell">{line.discountAsPerSapDisplay}</div>
+                                <div class="qli-cell">{line.discountToBeOfferedDisplay}</div>
+                                <div class="qli-cell">{line.salesPriceDisplay}</div>
+                                <div class="qli-cell">{line.quantityDisplay}</div>
+                                <div class="qli-cell">{line.totalValueDisplay}</div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+            <template if:false={hasLineItems}>
+                <div class="qli-empty">No line items found for this quote.</div>
+            </template>
+        </template>
+
+        <!-- DETAIL VIEW -->
+        <template if:true={showDetailView}>
+            <div class="qli-detail">
+                <div class="qli-detail-topbar">
+                    <button type="button" class="qli-back-btn" onclick={handleBackToList}>
+                        ← Back to Line Items
+                    </button>
+                </div>
+
+                <div class="info-card qli-card">
+                    <div class="info-card-header">
+                        <div class="info-card-title">Quote Line Item Information</div>
+                    </div>
+                    <div class="info-card-body info-card-body-2col">
+                        <div class="info-row">
+                            <div class="info-row-label">Sr No.</div>
+                            <div class="info-row-value">{selectedLine.srNo}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Customer Part No.</div>
+                            <div class="info-row-value">{selectedLine.customerPartNo}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Product</div>
+                            <div class="info-row-value">{selectedLine.productName}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Product Code</div>
+                            <div class="info-row-value">{selectedLine.productCode}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">HSN Code</div>
+                            <div class="info-row-value">{selectedLine.hsnCode}</div>
+                        </div>
+                    </div>
+
+                    <div class="info-card-header">
+                        <div class="info-card-title">Discount &amp; Price Information</div>
+                    </div>
+                    <div class="info-card-body info-card-body-2col">
+                        <div class="info-row">
+                            <div class="info-row-label">List Price</div>
+                            <div class="info-row-value">{selectedLine.listPriceDisplay}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Discount as per SAP</div>
+                            <div class="info-row-value">{selectedLine.discountAsPerSapDisplay}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Sales Price</div>
+                            <div class="info-row-value">{selectedLine.salesPriceDisplay}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Requested Discount</div>
+                            <div class="info-row-value">{selectedLine.requestedDiscountDisplay}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Quantity</div>
+                            <div class="info-row-value">{selectedLine.quantityDisplay}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Discount to be offered</div>
+                            <div class="info-row-value">{selectedLine.discountToBeOfferedDisplay}</div>
+                        </div>
+                    </div>
+
+                    <div class="info-card-header">
+                        <div class="info-card-title">GST &amp; Grand Total Information</div>
+                    </div>
+                    <div class="info-card-body info-card-body-2col">
+                        <div class="info-row">
+                            <div class="info-row-label">CGST Amount</div>
+                            <div class="info-row-value">{selectedLine.cgstAmountDisplay}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">SGST Amount</div>
+                            <div class="info-row-value">{selectedLine.sgstAmountDisplay}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">IGST Amount</div>
+                            <div class="info-row-value">{selectedLine.igstAmountDisplay}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Total Value</div>
+                            <div class="info-row-value">{selectedLine.totalValueDisplay}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-row-label">Grand Total</div>
+                            <div class="info-row-value">{selectedLine.grandTotalDisplay}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </template>
+</template>

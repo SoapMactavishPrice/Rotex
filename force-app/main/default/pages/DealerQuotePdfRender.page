@@ -1,0 +1,14 @@
+<apex:page controller="DealerQuotePdfRenderController"
+    renderAs="pdf"
+    applyHtmlTag="false"
+    applyBodyTag="false"
+    showHeader="false"
+    standardStylesheets="false"
+    docType="html-5.0"
+    cache="false">
+    <!--
+      htmlContent already includes running header (Rotex_Header via /resource URL),
+      footer with CSS page counters, quotation body, and T&C with natural page breaks.
+    -->
+    <apex:outputText value="{!htmlContent}" escape="false"/>
+</apex:page>

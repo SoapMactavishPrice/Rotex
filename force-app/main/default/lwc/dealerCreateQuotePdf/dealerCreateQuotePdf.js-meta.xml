@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Dealer Create Quote PDF</masterLabel>
+    <description>Dealer portal Create PDF button; opens LWC modal for preview, save, and email</description>
+    <targets>
+        <target>lightning__RecordPage</target>
+        <target>lightningCommunity__Page</target>
+        <target>lightningCommunity__Default</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__RecordPage,lightningCommunity__Default">
+            <property name="quoteId" type="String" label="Quote Id" description="Quote record Id used to generate the PDF"/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

@@ -1,0 +1,778 @@
+<apex:page controller="ViewQuotationController" standardStylesheets="false" renderAs="pdf" applyHtmlTag="false" applyBodyTag="false" showHeader="false" docType="html-5.0"> 
+    <head>
+        <style>
+            .keepTogether{
+            page-break-inside:avoid;
+            }
+            @page {
+    size: A4;
+
+    margin-top: 120px;
+    margin-bottom: 100px;
+
+    @top-center {
+        content: element(header);
+    }
+
+    @bottom-left {
+        content: element(footer);
+    }
+}
+
+            div.header {
+            padding-top: 10px;
+            position: running(header);
+            display: block;
+            text-align: center;
+            margin-bottom: 100px;
+            }
+            div.footer {
+            line-height: 8px;
+            position: running(footer);
+            display: block;
+            }
+            
+            div.pageNumber {
+            position: running(footer);
+            text-align: right;
+            font-size: 12px;
+            <!-- margin-bottom: 40px; -->
+            }
+            .pagenumber:before {
+            content: "Page " counter(page) " of " counter(pages);
+            }
+            .pagecount:before {
+            content: counter(pages);
+            }
+            
+            img.logo {
+            width: 100px; 
+            height: auto;
+            }
+            .quotation-heading {<!--
+font-family: 'Impact', sans-serif;
+font-size: 24px;
+text-align: center;
+color: #008080; -->
+            text-align: center;
+            margin-top: 20px; 
+            }
+            .table1 {
+            font-size: 12px;
+            <!-- border-collapse: collapse;-->
+            width: 100%;
+            text-align: center;
+            }
+            .row1{
+            width:100%;
+            text-align: center;
+            line-height: 0px;
+            }            
+        </style>
+        <style>
+    .tot-label { 
+        text-align: right; 
+        white-space: nowrap; 
+        padding-right: 10px; 
+        font-weight: bold;
+    }
+    .tot-value { 
+        text-align: right; 
+        white-space: nowrap; 
+        font-weight: bold;
+    }
+    .blank-cells {
+        height: 4px;
+    }
+</style>
+
+<style>
+    .num {
+        text-align: right;
+        white-space: nowrap;
+        padding-right: 6px;
+    }
+    .label-right {
+        text-align: right;
+        white-space: nowrap;
+        padding-right: 6px;
+    }
+</style>
+<style>
+    .terms-label span,
+    .terms-value span {
+        line-height: 1.4;       
+        display: block;
+        margin-bottom: 4px;      
+    }
+</style>
+        
+    </head>
+    
+    <body style="width: 100%">
+        <div class="header" style="height: 85px;">
+            <apex:image alt="Logo_Rotex" url="{!$Resource.Rotex_Header}" height="85px" /><br/>
+        </div>
+        
+        <div class="footer" style="font-size:12px">
+            <p class="pageNumber" style="text-align: right; font-size: 10px;">
+                <strong>  <span class="pagenumber"></span></strong>
+            </p>
+            <hr style="color: #e1e300; border: 1px solid;"/>
+            <table style="width: 100%">
+                <tr>
+                    <td><strong>Reg Office</strong></td>
+                    <td>: 987/11, GIDC, Makarpura, Vadodara 390 010, India.</td>
+                    <td><strong>Phone </strong></td>
+                    <td>: +91 265 617 4100</td>
+                </tr>
+                <tr>
+                    <td><strong>Jurisdiction </strong></td>
+                    <td>: Vadodara, Gujarat, India.</td>
+                    <td></td>
+                    <td> : +91 265 263 8136</td>
+                </tr>
+                <tr>
+                    <td><strong>CIN No. </strong></td>
+                    <td>: U29259GJ1983PLC005831 <strong>GST NO. </strong> 24AABCR0011J1Z0</td>
+                    <td><strong>Fax </strong></td>
+                    <td>: +91 265 263 1352</td>
+                </tr>
+                
+            </table>
+        </div>
+        
+        
+        <div class="quotation-heading">
+            <h3>QUOTATION</h3>
+        </div>
+        
+        
+        <table style="width:100%; font-size:12px; border-collapse:collapse;">
+            <tr>
+                <!-- LEFT SIDE -->
+                <td style="width:60%; vertical-align:top;">
+                    <div class="normalText" style="line-height:14px;">
+                        <strong>{!quData.Account.SAP_Customer_Code__c}</strong><br/>
+                        <strong>{!quData.Account.Name}</strong><br/>
+                        {!quData.Bill_To_Street__c}<br/>
+                        {!quData.Bill_To_City__c} {!quData.Bill_To_District__c} {!quData.Bill_To_Postal_Code__c}
+                        {!quData.Bill_To_State__c} {!quData.Bill_To_Country__c}<br/>
+                        Email: {!quData.Email}<br/>
+                        <strong>GST No : {!quData.Account.GSTIN_No__c}</strong>
+                    </div>
+                </td>
+                
+                <!-- RIGHT SIDE -->
+                <td style="width:40%; vertical-align:top; text-align:left;">
+                    <table style="border-collapse:collapse; font-size:12px; width:100%;">
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">Quotation No &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td style="white-space:nowrap;">{!quData.QuoteNumber}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">Rev. No. &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>{!quData.Rev_No__c}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">Rev. Date &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>
+                                <apex:outputText value=" {!quData.Rev_Date__c}"><apex:param value="dd/MM/yyyy" /></apex:outputText>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">Valid Till &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>
+                                <apex:outputText value=" {!quData.Quote_Valid_Till__c}"><apex:param value="dd/MM/yyyy" /></apex:outputText>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">RFQ No &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>{!quData.RFQ_No__c}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">RFQ Date &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>
+                                <apex:outputText value=" {!quData.RFQ_Date__c}"><apex:param value="dd/MM/yyyy" /></apex:outputText>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-weight:bold; white-space:nowrap;text-align:right;">RFQ Due Date &nbsp;&nbsp;</td>
+                            <td style="padding:0 4px;">:</td>
+                            <td>
+                                <apex:outputText value=" {!quData.RFQ_Due_Date__c}"><apex:param value="dd/MM/yyyy" /></apex:outputText>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                
+            </tr>
+            
+            <!-- EXTRA DETAILS -->
+            <tr>
+                <td colspan="2" style="padding-top:8px;">
+                    <strong>Customer Reference No :</strong>&nbsp;{!quData.Customer_Reference_No__c}
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="padding-top:8px;">
+                    <strong>Project Details :</strong>&nbsp;{!quData.Project_Details__c}
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="padding-top:10px;">
+                    <strong>
+                        Kind Attn:<br/>
+                    </strong>
+                        {!quData.Opportunity.Project_Contact__r.Name}
+                        <br/><br/>
+                    <strong>
+                        We thank you for your inquiry and have the pleasure to submit our
+                        techno-commercial offer in accordance with our standard terms and
+                        conditions of sales.
+                    </strong>
+                </td>
+            </tr>
+        </table>
+
+        
+    
+
+
+
+
+<!-- Use margins for left-right space -->
+<div style="margin-left:1px; margin-right:1px;">
+
+<table class="table1" style="width:100%;">
+
+    <tr>
+        <th style="width: 10%; font-size: 12px; text-align: left;">Sr. No.</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">Item Code</th>
+        <th style="width: 25%; font-size: 12px; text-align: left;">Description</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">HSN Code</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">Quantity</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">UoM</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">Unit Price ({!quData.CurrencyIsoCode})</th>
+        <th style="width: 15%; font-size: 12px; text-align: left;">Total ({!quData.CurrencyIsoCode})</th>
+    </tr>
+
+    <apex:variable var="rows" value="{!0}"/>
+    <apex:repeat value="{!quoteRecord.lineItems}" var="lineItem"> 
+        <tr>
+            <apex:variable var="rows" value="{!rows+1}"/>
+            <td style="text-align: left;">{!rows}</td>
+
+            <td style="text-align: left;">{!lineItem.ItemCode}</td>
+
+            <td style="white-space: normal;word-wrap: break-word;word-break: break-all;width: 250px;text-align: left">
+                <apex:outputText value="{!lineItem.wrappedDescription}" escape="false"/>
+                <br/>
+                <apex:outputPanel rendered="{!NOT(ISBLANK(lineItem.CustomerPartNo))}">
+                    Cust Part No.: {!lineItem.CustomerPartNo}
+                </apex:outputPanel>
+            </td>
+            <td style="text-align: left;">{!lineItem.HSNCODE}</td>
+            <td style="text-align: left;">{!lineItem.Quantity}</td>
+            <td style="text-align: left;">{!lineItem.UoM}</td>
+
+            <td style="text-align: left;" class="num">{!lineItem.Rate}</td>
+            <td style="text-align: left;" class="num">{!lineItem.Totalvalue}</td>
+        </tr>
+    </apex:repeat>
+
+    <!-- TOTALS -->
+    <tr>
+        <td></td><td></td><td></td><td></td><td></td><td></td>
+        <td style="text-align: left;" class="label-right"><strong>Gross Price ({!quData.CurrencyIsoCode})</strong></td>
+        <td style="text-align: left;" class="num"><strong>{!totalValueINR}</strong></td>
+    </tr>
+
+    <tr>
+        <td></td><td></td><td></td><td></td><td></td><td></td>
+        <td style="text-align: left;" class="label-right"><strong>{!IF(quData.Total_IGST_Amount__c>0,'IGST','')}</strong></td>
+        <td style="text-align: left;" class="num">{!IF(quData.Total_IGST_Amount__c>0,TEXT(quData.Total_IGST_Amount__c),'')}</td>
+    </tr>
+
+    <tr>
+        <td></td><td></td><td></td><td></td><td></td><td></td>
+        <td style="text-align: left;" class="label-right"><strong>{!IF(quData.Total_CGST_Amount__c>0,'CGST','')}</strong></td>
+        <td style="text-align: left;" class="num">{!IF(quData.Total_CGST_Amount__c>0,TEXT(quData.Total_CGST_Amount__c),'')}</td>
+    </tr>
+
+    <tr>
+        <td></td><td></td><td></td><td></td><td></td><td></td>
+        <td style="text-align: left;" class="label-right"><strong>{!IF(quData.Total_SGST_Amount__c>0,'SGST','')}</strong></td>
+        <td style="text-align: left;" class="num">{!IF(quData.Total_SGST_Amount__c>0,TEXT(quData.Total_SGST_Amount__c),'')}</td>
+    </tr>
+
+    <tr><td colspan="7"><br/></td></tr>
+
+    <tr>
+        <td></td><td></td><td></td><td></td><td></td><td></td>
+        <td style="text-align: left;" class="label-right"><strong>Total Amount ({!quData.CurrencyIsoCode})</strong></td>
+        <td style="text-align: left;" class="num"><strong>{!quData.Grand_Total__c}</strong></td>
+    </tr>
+
+    <tr><td colspan="8"><br/><br/></td></tr>
+
+    <tr>
+        <td style="text-align: right;" colspan="8">{!no2words}</td>
+    </tr>
+
+    <tr><td colspan="9"></td></tr>
+
+    <tr>
+        <td style="text-align: right;" colspan="8"><strong>Taxes, duties and transport costs excluded unless explicitly mentioned.</strong></td>
+    </tr>
+
+</table>
+
+</div>
+
+
+
+        <hr/>
+        
+        <table style="width:100%; border-collapse:collapse;">
+
+    <tr>
+        <td colspan="2" style="font-size:13px; padding-bottom:5px;">
+            <strong>Special Terms and Conditions</strong>
+        </td>
+    </tr>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Period__c))}" layout="none">
+        <tr>
+            <td style="width:20%; font-size:12px; vertical-align:top;"><strong>Delivery Period</strong></td>
+            <td style="width:80%; font-size:12px; vertical-align:top;">:&nbsp;{!quData.Delivery_Period__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(INCOTerms))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Incoterm</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!INCOTerms}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(PaymentTerms))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Payment Terms</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!PaymentTerms}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Prices__c))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Prices</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!quData.Prices__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Warranty_Terms__c))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Warranty Terms</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!quData.Warranty_Terms__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Liquidate_Terms__c))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Liquidate Terms</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!quData.Liquidate_Terms__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!LEN(shipToAddress) > 0}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Ship to Address</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!shipToAddress}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Transport_Details__c))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Transport Details</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!quData.Transport_Details__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Location__c))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Delivery Location</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!quData.Delivery_Location__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Special_Remarks__c))}" layout="none">
+<tr style="page-break-inside:avoid;">
+
+    <td style="width:20%; font-size:12px; vertical-align:top; padding-top:0px;">
+        <strong>Special Remarks</strong>
+    </td>
+
+    <td style="width:80%; font-size:12px; vertical-align:top; padding-top:0px; line-height:14px;">
+        : {!quData.Special_Remarks__c}
+    </td>
+
+</tr>
+</apex:outputPanel>
+
+    <tr>
+        <td colspan="2" style="padding-top:10px; font-size:12px;">
+            <strong>
+                For faster order processing, please send your Purchase Order (PO) to
+                <span style="color:#0000FF;">po@rotexautomation.com</span>
+                and mark a copy (CC) to your SE
+                <span style="color:#0000FF;">{!quData.Owner.Email}</span>.
+            </strong>
+        </td>
+    </tr>
+
+</table>
+
+        <hr/>
+        
+        <div style="page-break-before:always;width:100%;margin-top:20px;size:legal landscape">
+            
+            <table width="100%" cellspacing="0" cellpadding="0" style="width:98%;margin:auto;border-collapse:collapse;table-layout:fixed;font-family:Arial,Helvetica,sans-serif;font-size:8px;line-height:1.3;">
+                
+                <tr style="background:#00695C;color:#fff;font-weight:bold;text-align:center;">
+                    
+                    <th style="border:1px solid #000;width:13%;padding:3px;font-size:8px;">Product Name</th>
+                    
+                    <th style="border:1px solid #000;width:6%;padding:3px;font-size:8px;">List<br/>Price</th>
+                    
+                    <th style="border:1px solid #000;width:4%;padding:3px;font-size:8px;">Qty</th>
+                    
+                    <th style="border:1px solid #000;width:5%;padding:3px;font-size:8px;">Disc<br/>SAP%</th>
+                    
+                    <th style="border:1px solid #000;width:5%;padding:3px;font-size:8px;">Pr.<br/>Disc.%</th>
+                    
+                    <th style="border:1px solid #000;width:5%;padding:3px;font-size:8px;">Disc.%</th>
+                    
+                    <th style="border:1px solid #000;width:6%;padding:3px;font-size:8px;">Sales<br/>Price</th>
+                    
+                    <th style="border:1px solid #000;width:11%;padding:3px;font-size:8px;">SOA User</th>
+                    
+                    <th style="border:1px solid #000;width:6%;padding:3px;font-size:8px;">Status</th>
+                    
+                    <th style="border:1px solid #000;width:10%;padding:3px;font-size:8px;">Requestor<br/>Comments</th>
+                    
+                    <th style="border:1px solid #000;width:9%;padding:3px;font-size:8px;">Previous<br/>Approver<br/>Comments</th>
+                    
+                    <th style="border-left:1px solid #000;border-top:1px solid #000;border-bottom:1px solid #000;border-right:2px solid #000;width:8%;padding:3px;font-size:8px;">Approver<br/>Comments</th>
+                    
+                </tr>
+                
+                <apex:variable var="rows" value="{!0}"/>
+                <apex:repeat value="{!quoteRecord.lineItems}" var="lineItem"> 
+                    <tbody class="keepTogether">
+                    <tr>
+                        <apex:variable var="rows" value="{!rows+1}"/>
+                       <!-- <td style="text-align: left;">{!rows}</td>-->
+                    
+                        <td rowspan="5" style="border:1px solid #000;padding:3px;vertical-align:top;font-size:8px;line-height:1.2;">
+                            <apex:outputText value="{!lineItem.wrappedProductName}" escape="false"/><br/>
+                            ({!lineItem.productCode})
+                        </td>
+                    
+                    <td rowspan="5" style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">{!lineItem.ListPrice}</td>
+                    
+                    <td rowspan="5" style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">{!lineItem.quantity}</td>
+                    
+                        <td rowspan="5" style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">
+                            <apex:outputText value="{0,number,0.00}">
+                                <apex:param value="{!lineItem.Discount_as_per_SAP}" />
+                            </apex:outputText>
+                        </td>
+                    
+                        <td rowspan="5" style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">
+                            <apex:outputText value="{0,number,0.00}">
+                                <apex:param value="{!lineItem.Previous_Discount}" />
+                            </apex:outputText>
+                        </td>
+                        
+                        <td rowspan="5" style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">
+                            <apex:outputText value="{0,number,0.00}">
+                                <apex:param value="{!lineItem.Discount_to_be_offered}" />
+                            </apex:outputText>
+                        </td>
+                    
+                    
+                    <td rowspan="5" style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">{!lineItem.UnitPrice}</td>
+                    
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;vertical-align:middle;white-space:normal;word-wrap:break-word;">SM<br/>{!lineItem.Sales_Manager}</td>
+                    
+                        <td style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">
+                            
+                           <!-- <span style="color:#0B8B45;font-weight:bold;">
+                                {!lineItem.Sales_Manager_Status}
+                            </span> -->
+                            
+                            <apex:outputPanel rendered="{!lineItem.Sales_Manager_Status='Approved'}">
+                            <span style="color:#0B8B45;font-weight:bold;">
+                                {!lineItem.Sales_Manager_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Sales_Manager_Status='Submitted'}">
+                            <span style="color:#E67E22;font-weight:bold;">
+                                {!lineItem.Sales_Manager_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Sales_Manager_Status='Pending'}">
+                            <span style="color:#E67E22;font-weight:bold;">
+                                {!lineItem.Sales_Manager_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Sales_Manager_Status='Rejected'}">
+                            <span style="color:#FF0000;font-weight:bold;">
+                                {!lineItem.Sales_Manager_Status}
+                            </span>
+                        </apex:outputPanel>
+                            
+                            <br/>
+                            
+                            <span style="font-size:7px;color:#555555;">
+                                <apex:outputText value="{0,date,dd/MM/yyyy, HH:mm}">
+                                    <apex:param value="{!lineItem.Sales_Manager_Date_Time}"/>
+                                </apex:outputText>
+                            </span>
+                            
+                        </td>
+                    
+                    <td rowspan="5" style="border:1px solid #000;padding:3px;font-size:8px;vertical-align:top;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;">{!lineItem.Requested_Comments}</td>
+                    
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;vertical-align:top;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;">{!lineItem.Prev_Sales_Manager_Comments}</td>
+                    
+                    <td style="border-left:1px solid #000;border-top:1px solid #000;border-bottom:1px solid #000;border-right:2px solid #000;padding:3px;font-size:8px;vertical-align:top;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;">{!lineItem.Sales_Manager_Comments}</td>
+                    
+                </tr>
+                
+                <tr>
+                    
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;vertical-align:middle;white-space:normal;word-wrap:break-word;">CH<br/>{!lineItem.Country_Continent_Sales_Head_LOB_Head}</td>
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">
+                        
+                       <!-- <span style="color:#0B8B45;font-weight:bold;">
+                            {!lineItem.Country_Continent_Sales_H_LOB_Status}
+                        </span> -->
+                        <apex:outputPanel rendered="{!lineItem.Country_Continent_Sales_H_LOB_Status='Approved'}">
+                            <span style="color:#0B8B45;font-weight:bold;">
+                                {!lineItem.Country_Continent_Sales_H_LOB_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Country_Continent_Sales_H_LOB_Status='Submitted'}">
+                            <span style="color:#E67E22;font-weight:bold;">
+                                {!lineItem.Country_Continent_Sales_H_LOB_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Country_Continent_Sales_H_LOB_Status='Pending'}">
+                            <span style="color:#E67E22;font-weight:bold;">
+                                {!lineItem.Country_Continent_Sales_H_LOB_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Country_Continent_Sales_H_LOB_Status='Rejected'}">
+                            <span style="color:#FF0000;font-weight:bold;">
+                                {!lineItem.Country_Continent_Sales_H_LOB_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <br/>
+                        
+                        <span style="font-size:7px;color:#555555;">
+                            <apex:outputText value="{0,date,dd/MM/yyyy, HH:mm}">
+                                <apex:param value="{!lineItem.Country_Head_Date_Time}"/>
+                            </apex:outputText>
+                        </span>
+                        
+                    </td>
+                    
+                   <!-- <td style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;color:#E67E22;font-weight:bold;">{!lineItem.Country_Continent_Sales_H_LOB_Status}</td>-->
+                    
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;vertical-align:top;white-space:normal;word-wrap:break-word;">{!lineItem.Prev_Country_Continent_Sales_Comments}</td>
+                    
+                    <td style="border-left:1px solid #000;border-top:1px solid #000;border-bottom:1px solid #000;border-right:2px solid #000;padding:3px;font-size:8px;vertical-align:top;white-space:normal;word-wrap:break-word;">{!lineItem.Country_Continent_Sales_LOB_Comments}</td>
+                    
+                </tr>
+                
+                <tr>
+                    
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;vertical-align:middle;white-space:normal;word-wrap:break-word;">GS<br/>{!lineItem.Global_Sales_Head}</td>
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">
+                        
+                       <!-- <span style="color:#0B8B45;font-weight:bold;">
+                            {!lineItem.Global_Sales_Head_Status}
+                        </span>-->
+                        
+                        <apex:outputPanel rendered="{!lineItem.Global_Sales_Head_Status='Approved'}">
+                            <span style="color:#0B8B45;font-weight:bold;">
+                                {!lineItem.Global_Sales_Head_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Global_Sales_Head_Status='Submitted'}">
+                            <span style="color:#E67E22;font-weight:bold;">
+                                {!lineItem.Global_Sales_Head_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Global_Sales_Head_Status='Pending'}">
+                            <span style="color:#E67E22;font-weight:bold;">
+                                {!lineItem.Global_Sales_Head_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Global_Sales_Head_Status='Rejected'}">
+                            <span style="color:#FF0000;font-weight:bold;">
+                                {!lineItem.Global_Sales_Head_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <br/>
+                        
+                        <span style="font-size:7px;color:#555555;">
+                            <apex:outputText value="{0,date,dd/MM/yyyy, HH:mm}">
+                                <apex:param value="{!lineItem.Global_Sales_Head_Date_Time}"/>
+                            </apex:outputText>
+                        </span>
+                        
+                    </td>
+                    
+                  <!--  <td style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">{!lineItem.Global_Sales_Head_Status}</td> -->
+                    
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;vertical-align:top;">{!lineItem.Prev_Global_Sales_Head_Comments}</td>
+                    
+                    <td style="border-left:1px solid #000;border-top:1px solid #000;border-bottom:1px solid #000;border-right:2px solid #000;padding:3px;font-size:8px;vertical-align:top;">{!lineItem.Global_Sales_Head_Comments}</td>
+                    
+                </tr>
+                
+                <tr>
+                    
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;vertical-align:middle;white-space:normal;word-wrap:break-word;">BM<br/>{!lineItem.Rotex_Board_Member}</td>
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">
+                        
+                       <!-- <span style="color:#0B8B45;font-weight:bold;">
+                            {!lineItem.Rotex_Board_Member_Status}
+                        </span> -->
+                        
+                        <apex:outputPanel rendered="{!lineItem.Rotex_Board_Member_Status='Approved'}">
+                            <span style="color:#0B8B45;font-weight:bold;">
+                                {!lineItem.Rotex_Board_Member_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Rotex_Board_Member_Status='Submitted'}">
+                            <span style="color:#E67E22;font-weight:bold;">
+                                {!lineItem.Rotex_Board_Member_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Rotex_Board_Member_Status='Pending'}">
+                            <span style="color:#E67E22;font-weight:bold;">
+                                {!lineItem.Rotex_Board_Member_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Rotex_Board_Member_Status='Rejected'}">
+                            <span style="color:#FF0000;font-weight:bold;">
+                                {!lineItem.Rotex_Board_Member_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <br/>
+                        
+                        <span style="font-size:7px;color:#555555;">
+                            <apex:outputText value="{0,date,dd/MM/yyyy, HH:mm}">
+                                <apex:param value="{!lineItem.Rotex_Board_Member_Date_Time}"/>
+                            </apex:outputText>
+                        </span>
+                        
+                    </td>
+                    
+                   <!-- <td style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;color:#0B8B45;font-weight:bold;">{!lineItem.Rotex_Board_Member_Status}</td> -->
+                    
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;vertical-align:top;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;">{!lineItem.Prev_Rotex_Board_Member_Comments}</td>
+                    
+                    <td style="border-left:1px solid #000;border-top:1px solid #000;border-bottom:1px solid #000;border-right:2px solid #000;padding:3px;font-size:8px;vertical-align:top;white-space:normal;word-wrap:break-word;">{!lineItem.Rotex_Board_Member_Comments}</td>
+                    
+                </tr>
+                
+                <tr>
+                    
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;vertical-align:middle;white-space:normal;word-wrap:break-word;">MD<br/>{!lineItem.Managing_Director_Country_Manage}</td>
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">
+                        
+                       <!-- <span style="color:#0B8B45;font-weight:bold;">
+                            {!lineItem.Managing_Director_Status}
+                        </span> -->
+                        
+                        <apex:outputPanel rendered="{!lineItem.Managing_Director_Status='Approved'}">
+                            <span style="color:#0B8B45;font-weight:bold;">
+                                {!lineItem.Managing_Director_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Managing_Director_Status='Submitted'}">
+                            <span style="color:#E67E22;font-weight:bold;">
+                                {!lineItem.Managing_Director_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Managing_Director_Status='Pending'}">
+                            <span style="color:#E67E22;font-weight:bold;">
+                                {!lineItem.Managing_Director_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <apex:outputPanel rendered="{!lineItem.Managing_Director_Status='Rejected'}">
+                            <span style="color:#FF0000;font-weight:bold;">
+                                {!lineItem.Managing_Director_Status}
+                            </span>
+                        </apex:outputPanel>
+                        
+                        <br/>
+                        
+                        <span style="font-size:7px;color:#555555;">
+                            <apex:outputText value="{0,date,dd/MM/yyyy, HH:mm}">
+                                <apex:param value="{!lineItem.Managing_Director_Date_Time}"/>
+                            </apex:outputText>
+                        </span>
+                        
+                    </td>
+                    
+                   <!-- <td style="border:1px solid #000;padding:3px;font-size:8px;text-align:center;vertical-align:middle;">{!lineItem.Managing_Director_Status}</td> -->
+                    
+                    <td style="border:1px solid #000;padding:3px;font-size:8px;vertical-align:top;">{!lineItem.Prev_Managing_Director_Comments}</td>
+                    
+                    <td style="border-left:1px solid #000;border-top:1px solid #000;border-bottom:1px solid #000;border-right:2px solid #000;padding:3px;font-size:8px;vertical-align:top;">{!lineItem.Managing_Director_Comments}</td>
+                    
+                </tr>
+                        </tbody>
+                    </apex:repeat>
+
+            </table>
+            
+        </div>
+        
+    </body>
+</apex:page>

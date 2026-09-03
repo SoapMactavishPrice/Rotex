@@ -1,0 +1,416 @@
+<template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
+    <template if:false={selectedCase}>
+        <div class="list-view">
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="page-header">
+                <div>
+                    <div class="breadcrumb">COMPLAINTS · ASSIGNED TO YOU</div>
+                    <div class="page-title">Complaints</div>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <template if:true={showComplaintListUi}>
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+                            <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6" />
+                            <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        </svg>
+                        <input type="text" class="search-input" placeholder="Search by case number, subject, partner..."
+                            onkeyup={handleSearch} />
+                    </div>
+                </template>
+
+                <div class="filter-actions">
+                    <template if:true={showComplaintListUi}>
+                        <c-dealer-data-export
+                            object-key="Case"
+                            button-label="Export"
+                            search-key={searchKey}
+                        ></c-dealer-data-export>
+                    </template>
+                    <button type="button" class="btn-create" onclick={handleAddComplaint}>
+                        <svg viewBox="0 0 16 16" fill="none" class="btn-create-icon">
+                            <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+                        </svg>
+                        Add Complaint
+                    </button>
+                </div>
+            </div>
+
+            <template if:true={showComplaintListUi}>
+                <div class="quote-table">
+                    <div class="table-header">
+                        <div>TICKET NUMBER</div>
+                        <div>SUBJECT</div>
+                        <div>CONTACT NAME</div>
+                        <div>CHANNEL PARTNER</div>
+                        <div>PRIORITY</div>
+                        <div>STATUS</div>
+                        <div>CREATED DATE</div>
+                    </div>
+
+                    <template if:true={hasCases}>
+                        <template for:each={filteredCases} for:item="c">
+                            <div key={c.Id} class="table-row table-row-inventory" data-id={c.Id} onclick={openCaseDetail}>
+                                <div>
+                                    <div class="customer-name">{c.caseNumberDisplay}</div>
+                                </div>
+                                <div class="contact-text">{c.subjectDisplay}</div>
+                                <div class="contact-text">{c.contactDisplay}</div>
+                                <div class="contact-text">{c.accountDisplay}</div>
+                                <div class="contact-text">{c.priorityDisplay}</div>
+                                <div class="contact-text">
+                                    <span class={c.statusBadgeClass}>{c.statusDisplay}</span>
+                                </div>
+                                <div class="contact-text">{c.createdDate}</div>
+                            </div>
+                        </template>
+                    </template>
+
+                    <template if:false={hasCases}>
+                        <div class="empty-state">No cases found.</div>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </template>
+
+    <template if:true={selectedCase}>
+        <div class="detail-view">
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="detail-header">
+                <div class="detail-topbar">
+                    <button type="button" class="back-btn" onclick={backToList}>
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        Back to Complaints
+                    </button>
+                </div>
+
+                <div class="detail-top">
+                    <div class="detail-identity">
+                        <div>
+                            <div class="detail-meta">COMPLAINT · {selectedCase.caseNumberDisplay}</div>
+                            <div class="detail-name">{selectedCase.subjectDisplay}</div>
+                            <div class="detail-company">
+                                <span>{selectedCase.accountDisplay}</span>
+                                <span class="divider-dot">·</span>
+                                <span>Created {selectedCase.createdDate}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quote-tabs">
+                <button type="button" class={detailsTabClass} data-tab="details" onclick={handleTabClick}>
+                    Details
+                </button>
+            </div>
+
+            <div class="detail-layout">
+                <!-- Details Tab -->
+                <template if:true={isDetailsTab}>
+                    <div class="detail-columns">
+                        <div class="detail-col detail-col-left">
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="standard:case" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Ticket Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Ticket Number</div>
+                                        <div class="info-row-value">{selectedCase.caseNumberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Ticket Type</div>
+                                        <div class="info-row-value">{selectedCase.ticketTypeDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Channel Partner</div>
+                                        <div class="info-row-value">{selectedCase.accountDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Category</div>
+                                        <div class="info-row-value">{selectedCase.categoryDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Contact</div>
+                                        <div class="info-row-value">{selectedCase.contactDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">{selectedCase.lookupLabelDisplay}</div>
+                                        <div class="info-row-value">{selectedCase.lookupDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Priority</div>
+                                        <div class="info-row-value">{selectedCase.priorityDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Status</div>
+                                        <div class="info-row-value">
+                                            <span class={selectedCase.statusBadgeClass}>{selectedCase.statusDisplay}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Description Information Card -->
+                            <div class="info-card" style="margin-top: 16px;">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="standard:text" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Description Information</div>
+                                </div>
+                                <div class="info-card-body">
+                                    <div class="info-row" style="margin-bottom: 12px;">
+                                        <div class="info-row-label">Subject</div>
+                                        <div class="info-row-value">{selectedCase.subjectDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Description</div>
+                                        <div class="info-row-value" style="white-space: pre-wrap;">{selectedCase.descriptionDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Resolution Information Card -->
+                            <div class="info-card" style="margin-top: 16px;">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="standard:task" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Resolution Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Resolution</div>
+                                        <div class="info-row-value" style="white-space: pre-wrap;">{selectedCase.resolutionDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Opened Date</div>
+                                        <div class="info-row-value">{selectedCase.openedDateDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Root Cause</div>
+                                        <div class="info-row-value">{selectedCase.rootCauseDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Closed Date</div>
+                                        <div class="info-row-value">{selectedCase.closedDateDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Remarks</div>
+                                        <div class="info-row-value" style="white-space: pre-wrap;">{selectedCase.remarksDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Customer Satisfaction</div>
+                                        <div class="info-row-value">{selectedCase.csatDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-col detail-col-right">
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="utility:note" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Notes</div>
+                                </div>
+                                <div class="info-card-body">
+                                    <div class="notes-box notes-scroll">
+                                        <template if:true={hasNotes}>
+                                            <template for:each={caseNotes} for:item="note">
+                                                <div key={note.id} class="note-item">
+                                                    <div class="note-body">{note.body}</div>
+                                                    <div class="note-meta">{note.createdDate} · {note.author}</div>
+                                                </div>
+                                            </template>
+                                        </template>
+                                        <template if:false={hasNotes}>
+                                            <div class="no-notes-text">No notes available</div>
+                                        </template>
+                                    </div>
+                                    <div class="note-input-wrap">
+                                        <input type="text" class="note-input"
+                                            placeholder="Add a note..." value={noteText}
+                                            oninput={handleNoteChange} />
+                                        <button type="button" class="add-note-btn" onclick={handleAddNote}>
+                                            Add note
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="utility:file" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Files</div>
+                                </div>
+                                <div class="info-card-body files-scroll">
+                                    <template if:true={hasFiles}>
+                                        <template for:each={caseFiles} for:item="file">
+                                            <div key={file.id} class="file-item" data-id={file.id}
+                                                onclick={handleFilePreview}>
+                                                <div class="file-icon">
+                                                    <lightning-icon icon-name="doctype:attachment"
+                                                        size="small"></lightning-icon>
+                                                </div>
+                                                <div>
+                                                    <div class="file-name">{file.title}</div>
+                                                    <div class="file-meta">{file.uploadedDate} · {file.size}</div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </template>
+                                    <template if:false={hasFiles}>
+                                        <div class="activity-empty">No files yet.</div>
+                                    </template>
+                                </div>
+                                <div class="file-upload-wrap">
+                                    <label class="upload-btn" for="complaintFileInput">
+                                        <lightning-icon icon-name="utility:upload" size="xx-small"></lightning-icon>
+                                        Upload Files
+                                    </label>
+                                    <input type="file" id="complaintFileInput" class="file-input-hidden" multiple
+                                        onchange={handleFileInputChange} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Comments Tab -->
+                <template if:true={isCommentsTab}>
+                    <template if:true={showCommentListView}>
+                        <template if:true={hasComments}>
+                            <div class="qli-list-wrap">
+                                <div class="qli-list-meta">
+                                    {caseComments.length} items · Sorted by Date
+                                </div>
+                                <div class="qli-table">
+                                    <div class="qli-table-header txn-header"
+                                        style="grid-template-columns: 2fr 1fr 1fr;">
+                                        <div>Comment</div>
+                                        <div>Created By</div>
+                                        <div>Created Date</div>
+                                    </div>
+                                    <template for:each={caseComments} for:item="com">
+                                        <div key={com.id} class="qli-table-row txn-row" data-id={com.id}
+                                            onclick={handleCommentClick} role="button" tabindex="0"
+                                            style="grid-template-columns: 2fr 1fr 1fr;">
+                                            <div class="qli-cell"
+                                                style="white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                                {com.commentBodyDisplay}</div>
+                                            <div class="qli-cell">{com.createdByNameDisplay}</div>
+                                            <div class="qli-cell">{com.createdDateDisplay}</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template if:false={hasComments}>
+                            <div class="qli-empty" style="padding: 20px;">No comments found for this case.</div>
+                        </template>
+                    </template>
+
+                    <template if:true={showCommentDetailView}>
+                        <div class="detail-topbar">
+                            <button type="button" class="back-btn" onclick={handleBackToComments}>
+                                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                    <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                Back to Comments
+                            </button>
+                        </div>
+
+                        <div class="info-card" style="margin-top: 16px;">
+                            <div class="info-card-header">
+                                <div class="info-card-icon">
+                                    <lightning-icon icon-name="standard:case_comment" size="x-small"></lightning-icon>
+                                </div>
+                                <div class="info-card-title">Comment Details</div>
+                            </div>
+                            <div class="info-card-body info-card-body-2col">
+                                <div class="info-row">
+                                    <div class="info-row-label">Created By</div>
+                                    <div class="info-row-value">{selectedComment.createdByNameDisplay}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-row-label">Created Date/Time</div>
+                                    <div class="info-row-value">{selectedComment.createdDateDisplay}</div>
+                                </div>
+                                <div class="info-row info-row-span">
+                                    <div class="info-row-label">Comment</div>
+                                    <div class="info-row-value" style="white-space: pre-wrap;">
+                                        {selectedComment.commentBodyDisplay}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+            </div>
+
+            <template if:true={hasFilePreview}>
+                <div class="preview-overlay" onclick={closeFilePreview}>
+                    <div class="preview-modal" onclick={stopPropagation}>
+                        <div class="preview-header">
+                            <div class="preview-title">{previewFile.title}</div>
+                            <button type="button" class="preview-close-btn" onclick={closeFilePreview}>✕</button>
+                        </div>
+                        <div class="preview-body">
+                            <template if:true={previewFile.isImage}>
+                                <img src={previewFile.url} alt={previewFile.title} class="preview-image" />
+                            </template>
+                            <template if:true={previewFile.isPdf}>
+                                <iframe src={previewFile.url} class="preview-iframe" title={previewFile.title}></iframe>
+                            </template>
+                            <template if:false={previewFile.isImage}>
+                                <template if:false={previewFile.isPdf}>
+                                    <div class="preview-fallback">
+                                        Preview isn't available for this file type.
+                                        <a href={previewFile.url} target="_blank" rel="noopener noreferrer"
+                                            class="preview-download-link">
+                                            Download {previewFile.title}
+                                        </a>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </template>
+
+    <template if:true={showNewComplaintModal}>
+        <div class="complaint-modal-host" onclick={handleModalClose}>
+            <div class="complaint-modal-stop" onclick={stopModalBubble}>
+                <c-dealer-new-complaint-modal onclosemodal={handleModalClose}
+                    oncomplaintcreated={handleComplaintCreated}>
+                </c-dealer-new-complaint-modal>
+            </div>
+        </div>
+    </template>
+</template>

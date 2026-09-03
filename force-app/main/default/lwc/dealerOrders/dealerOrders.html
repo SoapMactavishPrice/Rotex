@@ -1,0 +1,412 @@
+<template>
+    <template if:false={selectedOrder}>
+        <div class="list-view">
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="page-header">
+                <div>
+                    <div class="breadcrumb">ORDERS · ASSIGNED TO YOU</div>
+                    <div class="page-title">Orders</div>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+                        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6" />
+                        <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    </svg>
+                    <input type="text" class="search-input" placeholder="Search by order no, name, account, status..."
+                        onkeyup={handleSearch} />
+                </div>
+                <div class="filter-actions">
+                    <c-dealer-data-export
+                        object-key="Order"
+                        button-label="Export"
+                        search-key={searchKey}
+                    ></c-dealer-data-export>
+                </div>
+            </div>
+
+            <div class="quote-table">
+                <div class="table-header">
+                    <div>ORDER NO</div>
+                    <div>ROTEX ORDER NUMBER</div>
+                    <div>ACCOUNT Name</div>
+                    <div>STATUS</div>
+                    <div>ORDER DATE</div>
+                    <div>TOTAL AMOUNT</div>
+                    <div>OWNER</div>
+                </div>
+
+                <template if:true={hasOrders}>
+                    <template for:each={filteredOrders} for:item="order">
+                        <div key={order.Id} class="table-row" data-id={order.Id} onclick={openOrderDetail}>
+                            <div>
+                                <div class="customer-name">{order.OrderNumber}</div>
+                            </div>
+                            <div class="contact-text">{order.SO_No__c}</div>
+                            <div class="contact-text">{order.accountName}</div>
+                            <div class="contact-text">{order.Status}</div>
+                            <div class="contact-text">{order.effectiveDateDisplay}</div>
+                            <div class="contact-text">{order.totalAmountDisplay}</div>
+                            <div class="contact-text">{order.ownerName}</div>
+                        </div>
+                    </template>
+                </template>
+
+                <template if:false={hasOrders}>
+                    <div class="empty-state">No orders found for your Channel Partner customers.</div>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={selectedOrder}>
+        <div class="detail-view">
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="detail-header">
+                <div class="detail-topbar">
+                    <button type="button" class="back-btn" onclick={backToList}>
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        Back to Orders
+                    </button>
+                </div>
+
+                <div class="detail-top">
+                    <div class="detail-identity">
+                        <div>
+                            <div class="detail-meta">ORDER · {selectedOrder.OrderNumber}</div>
+                            <div class="detail-name">{selectedOrder.Name}</div>
+                            <div class="detail-company">
+                                <span>{selectedOrder.accountName}</span>
+                                <span class="divider-dot">·</span>
+                                <span>{selectedOrder.statusDisplay}</span>
+                                <span class="divider-dot">·</span>
+                                <span>Created {selectedOrder.createdDate}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="status-path-wrap" aria-label="Order status path">
+                    <template for:each={statusPathSteps} for:item="step">
+                        <div key={step.key} class={step.className}>{step.label}</div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="quote-tabs">
+                <button type="button" class={detailsTabClass} data-tab="details" onclick={handleTabClick}>
+                    Details
+                </button>
+                <button type="button" class={lineItemTabClass} data-tab="lineItem" onclick={handleTabClick}>
+                    Order Line Items
+                </button>
+            </div>
+
+            <template if:true={isLineItemTab}>
+                <div class="detail-layout">
+                    <template if:true={showLineItemListView}>
+                        <template if:true={selectedOrder.hasLineItems}>
+                            <div class="qli-list-wrap">
+                                <div class="qli-list-meta">
+                                    {selectedOrder.lineItems.length} items · Sorted by Line Number
+                                </div>
+                                <div class="qli-table">
+                                    <div class="qli-table-header">
+                                        <div>SR NO.</div>
+                                        <div>PRODUCT</div>
+                                        <div>PRODUCT CODE</div>
+                                        <div>UOM</div>
+                                        <div>LIST PRICE</div>
+                                        <div>SALES PRICE</div>
+                                        <div>QUANTITY</div>
+                                        <div>TOTAL PRICE</div>
+                                    </div>
+                                    <template for:each={selectedOrder.lineItems} for:item="li">
+                                        <div
+                                            key={li.id}
+                                            class="qli-table-row"
+                                            data-id={li.id}
+                                            onclick={handleLineItemClick}
+                                            role="button"
+                                            tabindex="0">
+                                            <div class="qli-cell qli-cell-num">{li.itemNumberDisplay}</div>
+                                            <div class="qli-cell qli-cell-link" title={li.itemDisplay}>{li.itemDisplay}</div>
+                                            <div class="qli-cell qli-cell-link">{li.itemCodeDisplay}</div>
+                                            <div class="qli-cell">{li.uomDisplay}</div>
+                                            <div class="qli-cell">{li.listPriceDisplay}</div>
+                                            <div class="qli-cell">{li.unitPriceDisplay}</div>
+                                            <div class="qli-cell">{li.quantityDisplay}</div>
+                                            <div class="qli-cell">{li.totalPriceDisplay}</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                        <template if:false={selectedOrder.hasLineItems}>
+                            <div class="qli-empty">No line items found for this order.</div>
+                        </template>
+                    </template>
+
+                    <template if:true={showLineItemDetailView}>
+                        <div class="qli-detail">
+                            <div class="qli-detail-topbar">
+                                <button type="button" class="qli-back-btn" onclick={handleBackToLineItems}>
+                                    ← Back to Line Items
+                                </button>
+                            </div>
+
+                            <div class="info-card qli-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-title">Order Line Item Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Item Number</div>
+                                        <div class="info-row-value">{selectedLineItem.itemNumberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Product Code</div>
+                                        <div class="info-row-value">{selectedLineItem.itemCodeDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Product</div>
+                                        <div class="info-row-value">{selectedLineItem.itemDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">UOM</div>
+                                        <div class="info-row-value">{selectedLineItem.uomDisplay}</div>
+                                    </div>
+                                </div>
+
+                                <div class="info-card-header">
+                                    <div class="info-card-title">Discount &amp; Price Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">List Price</div>
+                                        <div class="info-row-value">{selectedLineItem.listPriceDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Quantity</div>
+                                        <div class="info-row-value">{selectedLineItem.quantityDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Sales Price</div>
+                                        <div class="info-row-value">{selectedLineItem.unitPriceDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Total Price</div>
+                                        <div class="info-row-value">{selectedLineItem.totalPriceDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <template if:true={isDetailsTab}>
+                <div class="detail-layout">
+                    <div class="detail-columns">
+                        <div class="detail-col detail-col-left">
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="utility:moneybag" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Order Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">SF Order Number</div>
+                                        <div class={selectedOrder.orderNumberClass}>{selectedOrder.orderNumberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Order Type</div>
+                                        <div class={selectedOrder.orderTypeClass}>{selectedOrder.orderTypeDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Rotex Order Number</div>
+                                        <div class={selectedOrder.rotexOrderNumberClass}>{selectedOrder.rotexOrderNumberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Order Date</div>
+                                        <div class={selectedOrder.orderDateClass}>{selectedOrder.orderDateDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Account Name</div>
+                                        <div class={selectedOrder.accountNameClass}>{selectedOrder.accountName}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Order Currency</div>
+                                        <div class={selectedOrder.orderCurrencyClass}>{selectedOrder.orderCurrencyDisplay}</div>
+                                    </div>
+                                    <div class="info-row info-row-empty"></div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Net Value</div>
+                                        <div class={selectedOrder.netValueClass}>{selectedOrder.netValueDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Additional Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Bill To</div>
+                                        <div class={selectedOrder.billToClass}>{selectedOrder.billToDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Ship To</div>
+                                        <div class={selectedOrder.shipToClass}>{selectedOrder.shipToDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Bill To Customer Name</div>
+                                        <div class={selectedOrder.billToCustomerNameClass}>{selectedOrder.billToCustomerNameDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Sold To</div>
+                                        <div class={selectedOrder.soldToClass}>{selectedOrder.soldToDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Cust Ref Number</div>
+                                        <div class={selectedOrder.custRefNumberClass}>{selectedOrder.custRefNumberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Terms Of Payment</div>
+                                        <div class={selectedOrder.termsOfPaymentClass}>{selectedOrder.termsOfPaymentDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Cust Ref Date</div>
+                                        <div class={selectedOrder.custRefDateClass}>{selectedOrder.custRefDateDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Incoterms</div>
+                                        <div class={selectedOrder.incotermsClass}>{selectedOrder.incotermsDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Req Del Date</div>
+                                        <div class={selectedOrder.reqDelDateClass}>{selectedOrder.reqDelDateDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-col detail-col-right">
+
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="utility:note" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Notes</div>
+                                </div>
+                                <div class="info-card-body">
+                                    <div class="notes-box notes-scroll">
+                                        <template if:true={hasNotes}>
+                                            <template for:each={orderNotes} for:item="note">
+                                                <div key={note.id} class="note-item">
+                                                    <div class="note-body">{note.body}</div>
+                                                    <div class="note-meta">{note.createdDate} · {note.author}</div>
+                                                </div>
+                                            </template>
+                                        </template>
+                                        <template if:false={hasNotes}>
+                                            <div class="no-notes-text">No notes available</div>
+                                        </template>
+                                    </div>
+                                    <div class="note-input-wrap">
+                                        <input type="text" class="note-input"
+                                            placeholder="Add a note..." value={noteText}
+                                            oninput={handleNoteChange} />
+                                        <button type="button" class="add-note-btn" onclick={handleAddNote}>
+                                            Add note
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="utility:file" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Files</div>
+                                </div>
+                                <div class="info-card-body files-scroll">
+                                    <template if:true={hasFiles}>
+                                        <template for:each={orderFiles} for:item="file">
+                                            <div key={file.id} class="file-item" data-id={file.id}
+                                                onclick={handleFilePreview}>
+                                                <div class="file-icon">
+                                                    <lightning-icon icon-name="doctype:attachment"
+                                                        size="small"></lightning-icon>
+                                                </div>
+                                                <div>
+                                                    <div class="file-name">{file.title}</div>
+                                                    <div class="file-meta">{file.uploadedDate} · {file.size}</div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </template>
+                                    <template if:false={hasFiles}>
+                                        <div class="activity-empty">No files yet.</div>
+                                    </template>
+                                </div>
+                                <div class="file-upload-wrap">
+                                    <label class="upload-btn" for="orderFileInput">
+                                        <lightning-icon icon-name="utility:upload" size="xx-small"></lightning-icon>
+                                        Upload Files
+                                    </label>
+                                    <input type="file" id="orderFileInput" class="file-input-hidden" multiple
+                                        onchange={handleFileInputChange} />
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <template if:true={hasFilePreview}>
+                <div class="preview-overlay" onclick={closeFilePreview}>
+                    <div class="preview-modal" onclick={stopPropagation}>
+                        <div class="preview-header">
+                            <div class="preview-title">{previewFile.title}</div>
+                            <button type="button" class="preview-close-btn" onclick={closeFilePreview}>✕</button>
+                        </div>
+                        <div class="preview-body">
+                            <template if:true={previewFile.isImage}>
+                                <img src={previewFile.url} alt={previewFile.title} class="preview-image" />
+                            </template>
+                            <template if:true={previewFile.isPdf}>
+                                <iframe src={previewFile.url} class="preview-iframe" title={previewFile.title}></iframe>
+                            </template>
+                            <template if:false={previewFile.isImage}>
+                                <template if:false={previewFile.isPdf}>
+                                    <div class="preview-fallback">
+                                        Preview isn't available for this file type.
+                                        <a href={previewFile.url} target="_blank" rel="noopener noreferrer"
+                                            class="preview-download-link">
+                                            Download {previewFile.title}
+                                        </a>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </template>
+</template>

@@ -25,27 +25,30 @@ public class salesQuotationPDFController {
     public String attachmentData { get; set; }
     public List<Map<String, String>> attachedFiles { get; set; }
     
+    // New properties for Amendment Quote functionality
+    public Boolean showAmendmentOptions { get; set; }
+    public String selectedQuoteType { get; set; }
+    public Boolean isAmendmentQuote { get; set; }
+    public List<SelectOption> quoteTypeOptions { get; set; }
+    
     public salesQuotationPDFController(){
         qId = ApexPages.currentPage().getparameters().get('id');
+        System.debug('===== START salesQuotationPDFController Constructor =====');
         System.debug('qId: ' + qId);
         if (qId == null) { 
-            
             qId = '0Q0Hz0000012wHVKAY';
-            /*     try {
-// Query to get a sample quote ID
-Quote sampleQuote = [SELECT Id FROM Quote LIMIT 1];
-qId = sampleQuote.Id;
-} catch (Exception e) {
-System.debug('Error querying for sample quote ID: ' + e.getMessage());
-ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'No Quote records found.'));
-isValid = false;
-return;
-}*/
         }
         
         System.debug('Assigned qId: ' + qId);
         quoteRecord = new QuotedataWrapper();
         showSaveQuote = true;
+        showAmendmentOptions = false;
+        isAmendmentQuote = false;
+        quoteTypeOptions = new List<SelectOption>();
+        quoteTypeOptions.add(new SelectOption('', '-- Select --'));
+        quoteTypeOptions.add(new SelectOption('Normal', 'Normal Quote'));
+        quoteTypeOptions.add(new SelectOption('Amendment', 'Amendment Quote'));
+        selectedQuoteType = '';  // Set to empty initially
         
         try {
             quData = [SELECT Id, Name, OpportunityId, Pricebook2Id, ContactId, QuoteNumber, IsSyncing, ShippingHandling, Tax, Status, 
@@ -71,7 +74,8 @@ return;
                       Final_Warranty_Terms_Approver__c,MD_Warranty_Status__c,BM_Warranty_Status__c,GS_Warranty_Status__c,CH_Warranty_Status__c,SM_Warranty_Status__c,
                       Final_Validity_Offer_Approver__c,MD_Validity_Offer_Status__c,BM_Validity_Offer_Status__c,GS_Validity_Offer_Status__c,CH_Validity_Offer_Status__c,SM_Validity_Offer_Status__c,
                       Final_Minimum_Offer_Value_Approver__c,MD_Min_Offer_Status__c,BM_Min_Offer_Status__c,GS_Min_Offer_Status__c,CH_Min_Offer_Status__c,SM_Min_Offer_Status__c,
-                      Final_Total_Value_Approver__c,MD_Value_Status__c,BM_Value_Status__c,GS_Value_Status__c,CH_Value_Status__c,SM_Value_Status__c
+                      Final_Total_Value_Approver__c,MD_Value_Status__c,BM_Value_Status__c,GS_Value_Status__c,CH_Value_Status__c,SM_Value_Status__c,
+                      owner.email, Opportunity.Quote_Reason__c, Amendment_Quote__c
                       FROM Quote WHERE Id = :qId];
         } catch (Exception e) {
             System.debug('Error querying Quote data: ' + e.getMessage());
@@ -79,6 +83,36 @@ return;
             isValid = false;
             return;
         }
+        
+        // Check if Quote Reason is PO ARC or PO Non ARC
+        String quoteReason = quData.Opportunity.Quote_Reason__c;
+        System.debug('===== QUOTE REASON CHECK =====');
+        System.debug('Quote Reason from Opportunity: ' + quoteReason);
+        System.debug('Is Quote Reason NULL or Empty? ' + String.isBlank(quoteReason));
+        
+        if (quoteReason == 'PO ARC' || quoteReason == 'PO Non ARC') {
+            showAmendmentOptions = true;
+            System.debug('✅ showAmendmentOptions set to TRUE (Quote Reason is PO ARC or PO Non ARC)');
+        } else {
+            showAmendmentOptions = false;
+            System.debug('❌ showAmendmentOptions set to FALSE (Quote Reason is NOT PO ARC or PO Non ARC)');
+            System.debug('   Current Quote Reason value: "' + quoteReason + '"');
+        }
+        System.debug('showAmendmentOptions final value: ' + showAmendmentOptions);
+        
+        // If Amendment_Quote__c is true, set selectedQuoteType to Amendment
+        System.debug('===== AMENDMENT QUOTE CHECK =====');
+        System.debug('Amendment_Quote__c value: ' + quData.Amendment_Quote__c);
+        if (quData.Amendment_Quote__c == true) {
+            selectedQuoteType = 'Amendment';
+            isAmendmentQuote = true;
+            System.debug('✅ Amendment_Quote__c is true, setting to Amendment');
+        } else {
+            System.debug('❌ Amendment_Quote__c is false or null, keeping as Normal');
+        }
+        System.debug('selectedQuoteType: ' + selectedQuoteType);
+        System.debug('isAmendmentQuote: ' + isAmendmentQuote);
+        
         //quoteRecord.INCOTerms = quData.INCO_Terms__c;
         INCOTerms = quData.INCO_Terms__c;
         // PaymentTerms = quData.Payment_Terms__c;
@@ -92,14 +126,15 @@ return;
             }
         }
         
-        
         QuoteNumber = quData.QuoteNumber;
         pdf = Page.salesQuotationPDF;
         pdfUrl = '/apex/salesQuotationPDF?id=' + qId + '#toolbar=0';
         pdfName = quData.Name;
-        //subject = 'Sales Quotation for Enquiry No: ' + quData.Opportunity.Customer_Enquiry_Ref_No__c + ' - ' + quData.Account.Name;
-        subject = 'Sales Quotation for Customer Ref No: ' + quData.Customer_Reference_No__c + ' - ' + quData.Account.Name;
-        // QuotationNo = qudata.QuoteNumber;
+        
+        // Set subject based on Amendment status
+        updateSubject();
+        System.debug('===== INITIAL SUBJECT =====');
+        System.debug('Initial subject: ' + subject);
         
         isValid = true;
         createNew = true;
@@ -112,6 +147,7 @@ return;
         } catch (Exception e) {
             userSignature = '';
         }
+        
         // Build Ship To Address – skip empty fields
         List<String> shipParts = new List<String>();
         
@@ -313,8 +349,68 @@ no2words = totalValueINRWords + ' Rupees Only.';*/
         } else {
             ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Before making a Quote PDF, please add at least one product.'));
             isValid = false;
-        }  
+        }
+        
+        System.debug('===== END salesQuotationPDFController Constructor =====');
+        System.debug('Final showAmendmentOptions: ' + showAmendmentOptions);
+        System.debug('Final selectedQuoteType: ' + selectedQuoteType);
+        System.debug('Final isAmendmentQuote: ' + isAmendmentQuote);
+        System.debug('Final subject: ' + subject);
     }
+    
+    // New method to update subject based on Amendment status
+    private void updateSubject() {
+        System.debug('===== updateSubject() called =====');
+        System.debug('isAmendmentQuote: ' + isAmendmentQuote);
+        
+        String customerRef = quData.Customer_Reference_No__c;
+        String accountName = quData.Account.Name;
+        
+        System.debug('Customer_Reference_No__c: ' + customerRef);
+        System.debug('Account.Name: ' + accountName);
+        
+        // Handle null/empty values
+        if (String.isBlank(customerRef)) {
+            customerRef = 'N/A';
+            System.debug('Customer_Reference_No__c is blank, using N/A');
+        }
+        if (String.isBlank(accountName)) {
+            accountName = 'Unknown';
+            System.debug('Account.Name is blank, using Unknown');
+        }
+        
+        if (isAmendmentQuote) {
+            subject = 'Amendment for Customer Ref No: ' + customerRef + ' - ' + accountName;
+            System.debug('✅ Amendment Quote - Subject set to: ' + subject);
+        } else {
+            subject = 'Sales Quotation for Customer Ref No: ' + customerRef + ' - ' + accountName;
+            System.debug('✅ Normal Quote - Subject set to: ' + subject);
+        }
+        System.debug('===== end updateSubject() =====');
+    }
+    
+    // Method to handle quote type selection change
+    public void updateQuoteType() {
+        System.debug('===== updateQuoteType() called =====');
+        System.debug('selectedQuoteType received: ' + selectedQuoteType);
+        
+        if (selectedQuoteType == 'Amendment') {
+            isAmendmentQuote = true;
+            System.debug('✅ Setting isAmendmentQuote to TRUE');
+        } else if (selectedQuoteType == 'Normal') {
+            isAmendmentQuote = false;
+            System.debug('✅ Setting isAmendmentQuote to FALSE (Normal)');
+        } else {
+            // If empty selection, default to false
+            isAmendmentQuote = false;
+            System.debug('⚠️ Empty selection, setting isAmendmentQuote to FALSE');
+        }
+        updateSubject();
+        System.debug('Quote type changed to: ' + selectedQuoteType);
+        System.debug('Is Amendment: ' + isAmendmentQuote);
+        System.debug('===== end updateQuoteType() =====');
+    }
+    
     public static String forceWrap(String s, Integer interval) {
         if (String.isBlank(s)) return s;
         String out = '';
@@ -330,10 +426,25 @@ no2words = totalValueINRWords + ' Rupees Only.';*/
         return out;
     }
     
+    // Modified save method to handle Amendment Quote checkbox
     public PageReference save() {
+        System.debug('===== save() called =====');
         attachmentData = ApexPages.currentPage().getParameters().get('attachmentData');
         if (!isValid) {
+            System.debug('❌ isValid is false, returning null');
             return null;
+        }
+        
+        // Update Amendment_Quote__c checkbox
+        System.debug('isAmendmentQuote: ' + isAmendmentQuote);
+        System.debug('quData.Amendment_Quote__c: ' + quData.Amendment_Quote__c);
+        if (isAmendmentQuote != quData.Amendment_Quote__c) {
+            Quote qUpdate = new Quote(Id = quData.Id, Amendment_Quote__c = isAmendmentQuote);
+            update qUpdate;
+            quData.Amendment_Quote__c = isAmendmentQuote;
+            System.debug('✅ Updated Amendment_Quote__c to: ' + isAmendmentQuote);
+        } else {
+            System.debug('⚠️ Amendment_Quote__c unchanged');
         }
         
         String finalString = '%' + quData.Name + '%';
@@ -418,19 +529,175 @@ no2words = totalValueINRWords + ' Rupees Only.';*/
                 System.debug('Error saving uploaded attachments: ' + e.getMessage());
             }
         }
-
+        /*
         PageReference pageRef = new PageReference('/' + qId);
         pageRef.setRedirect(true);
-        return pageRef;    
+        System.debug('===== end save() =====');
+        return pageRef;  
+        */
+        // ============================================================
+        // UPDATE QUOTE STATUS TO SUBMITTED
+        // Only update when current status is:
+        // Draft
+        // Under Review by Sales Rep
+        // Submit for SOA Approval
+        // ============================================================
+        
+        if (
+            quData.Status == 'Draft' ||
+            quData.Status == 'Under Review by Sales Rep' ||
+            quData.Status == 'Submit for SOA Approval'
+        ) {
+            Quote qToUpdate = new Quote(
+                Id = quData.Id,
+                Status = 'Submitted'
+            );
+            
+            update qToUpdate;
+            
+            System.debug(
+                '✅ Quote Status updated from ' +
+                quData.Status +
+                ' to Submitted'
+            );
+        } else {
+            System.debug(
+                '⚠️ Quote Status is ' +
+                quData.Status +
+                '. Status update skipped.'
+            );
+        }
+        
+        
+        // ============================================================
+        // REDIRECT TO QUOTE
+        // ============================================================
+        
+        PageReference pageRef = new PageReference('/' + qId);
+        pageRef.setRedirect(true);
+        
+        System.debug('===== end save() =====');
+        
+        return pageRef;
     }
     
+    // Modified saveAndSend method to handle Amendment Quote
     public PageReference saveAndSend() {
+        System.debug('===== saveAndSend() called =====');
         attachmentData = ApexPages.currentPage().getParameters().get('attachmentData');
         if (!isValid || String.isBlank(emailId) || String.isBlank(subject)) {
             ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Email Id and subject are mandatory fields, please verify.'));
+            System.debug('❌ Validation failed: isValid=' + isValid + ', emailId=' + emailId + ', subject=' + subject);
             return null;
         }
         
+        // Update Amendment_Quote__c checkbox
+        System.debug('isAmendmentQuote: ' + isAmendmentQuote);
+        System.debug('quData.Amendment_Quote__c: ' + quData.Amendment_Quote__c);
+        if (isAmendmentQuote != quData.Amendment_Quote__c) {
+            Quote qUpdate = new Quote(Id = quData.Id, Amendment_Quote__c = isAmendmentQuote);
+            update qUpdate;
+            quData.Amendment_Quote__c = isAmendmentQuote;
+            System.debug('✅ Updated Amendment_Quote__c to: ' + isAmendmentQuote);
+        }
+        
+        // For Amendment Quote, only send email without PDF
+        if (isAmendmentQuote) {
+            System.debug('✅ Amendment Quote - Sending email without PDF');
+            // Update subject for amendment
+            updateSubject();
+            
+            Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
+            email.setToAddresses(new String[] { emailId });
+            if (String.isNotBlank(CC_Addresses)) {
+                CC_Addresses = CC_Addresses.replaceAll('[;,:]', ',');
+                Set<String> CCEmails = new Set<String>();
+                for (String str : CC_Addresses.split(',')) {
+                    if (String.isNotBlank(str))
+                        CCEmails.add(str);
+                }
+                email.setCcAddresses(new List<String>(CCEmails));
+            }
+            
+            if (String.isNotBlank(quData.Opportunity.Owner.Email)) {
+                email.setReplyTo(quData.Opportunity.Owner.Email);
+                email.setBccAddresses(new List<String> { quData.Opportunity.Owner.Email });
+            }
+            email.setSubject(subject);
+            email.setHtmlBody(body);
+            email.setUseSignature(true);
+            email.setSaveAsActivity(true);
+            email.setWhatId(quData.Id);
+            
+            Messaging.SendEmailResult[] results = Messaging.sendEmail(new Messaging.SingleEmailMessage[] { email });
+            /*
+            if(results != null && results.size() > 0 && results[0].isSuccess()) {
+                Quote qToUpdate = new Quote(
+                    Id = quData.Id,
+                    Status = 'In Review with Customer',
+                    In_Review_with_Customer_Date_Time__c = System.now()
+                );
+                update qToUpdate;
+                System.debug('✅ Email sent successfully for Amendment Quote');
+            } else {
+                System.debug('❌ Email sending failed for Amendment Quote');
+            }
+            */
+            if(results != null && results.size() > 0 && results[0].isSuccess()) {
+                
+                // ============================================================
+                // UPDATE QUOTE STATUS AFTER SUCCESSFUL SAVE & SEND
+                //
+                // Only these active statuses should move to Submitted:
+                // Draft
+                // Under Review by Sales Rep
+                // Submit for SOA Approval
+                //
+                // All other active Quote statuses remain unchanged.
+                // ============================================================
+                
+                if (
+                    quData.Status == 'Draft' ||
+                    quData.Status == 'Under Review by Sales Rep' ||
+                    quData.Status == 'Submit for SOA Approval'
+                ) {
+                    
+                    Quote qToUpdate = new Quote(
+                        Id = quData.Id,
+                        Status = 'Submitted'
+                    );
+                    
+                    update qToUpdate;
+                    
+                    System.debug(
+                        '✅ Quote Status updated from ' +
+                        quData.Status +
+                        ' to Submitted'
+                    );
+                    
+                } else {
+                    
+                    System.debug(
+                        '⚠️ Quote Status is ' +
+                        quData.Status +
+                        '. Status update skipped.'
+                    );
+                }
+                
+                System.debug('✅ Email sent successfully for Normal Quote');
+                
+            } else {
+                
+                System.debug('❌ Email sending failed for Normal Quote');
+            }
+            PageReference pageRef = new PageReference('/' + qId);
+            pageRef.setRedirect(true);
+            System.debug('===== end saveAndSend() (Amendment) =====');
+            return pageRef;
+        }
+        
+        // Original saveAndSend logic for Normal Quote (with PDF)
+        System.debug('✅ Normal Quote - Sending email with PDF');
         String finalString = '%' + quData.Name + '%';
         List<ContentDocument> contentDocs = [SELECT Id, Title FROM ContentDocument WHERE Title LIKE :finalString ORDER BY CreatedDate DESC LIMIT 1];
         String version = '0';
@@ -450,7 +717,6 @@ no2words = totalValueINRWords + ' Rupees Only.';*/
         
         ContentVersion contentVersion = new ContentVersion();
         contentVersion.ContentLocation = 'S';
-       // Integer newVersion = Integer.valueOf(version) + 1;
         Integer newVersion = 1;
         
         try {
@@ -485,31 +751,15 @@ no2words = totalValueINRWords + ' Rupees Only.';*/
                 if (String.isNotBlank(str))
                     CCEmails.add(str);
             }
-            
             email.setCcAddresses(new List<String>(CCEmails));
-            System.debug(CC_Addresses);
         }
         
-        /* LatestPublishedVersionIds.add(contentVersion.ContentDocument.LatestPublishedVersionId);
-
-if (LatestPublishedVersionIds.size() > 0) {
-List<String> LatestPublishedVersionIdList = new List<String>();
-LatestPublishedVersionIdList.addAll(LatestPublishedVersionIds);
-email.setEntityAttachments(LatestPublishedVersionIdList);
-} */
-        
-        // ── Step 1: collect all LatestPublishedVersionIds for email ──
         List<String> attachmentIds = new List<String>();
-
-        // Always attach the generated Quote PDF first
         attachmentIds.add(contentVersion.ContentDocument.LatestPublishedVersionId);
 
-        // ── Step 2: process user-uploaded files ──
         if (String.isNotBlank(attachmentData)) {
             try {
                 List<Object> fileList = (List<Object>) JSON.deserializeUntyped(attachmentData);
-
-                // Bulk-insert all ContentVersions at once
                 List<ContentVersion> uploadedCVs = new List<ContentVersion>();
                 for (Object fileObj : fileList) {
                     Map<String, Object> fileMap = (Map<String, Object>) fileObj;
@@ -527,8 +777,6 @@ email.setEntityAttachments(LatestPublishedVersionIdList);
 
                 if (!uploadedCVs.isEmpty()) {
                     insert uploadedCVs;
-
-                    // Re-query to get ContentDocumentId + LatestPublishedVersionId
                     Set<Id> cvIds = new Set<Id>();
                     for (ContentVersion cv : uploadedCVs) cvIds.add(cv.Id);
 
@@ -538,7 +786,6 @@ email.setEntityAttachments(LatestPublishedVersionIdList);
                         WHERE Id IN :cvIds
                     ];
 
-                    // Bulk-insert ContentDocumentLinks to link files to the Quote
                     List<ContentDocumentLink> cdlsList = new List<ContentDocumentLink>();
                     for (ContentVersion cv : insertedCVs) {
                         ContentDocumentLink cdl = new ContentDocumentLink();
@@ -546,13 +793,9 @@ email.setEntityAttachments(LatestPublishedVersionIdList);
                         cdl.LinkedEntityId    = qId;
                         cdl.ShareType         = 'V';
                         cdlsList.add(cdl);
-
-                        // Add to email attachment list
                         attachmentIds.add(cv.ContentDocument.LatestPublishedVersionId);
                     }
                     insert cdlsList;
-
-                    System.debug('Uploaded files linked to Quote: ' + cdlsList.size());
                 }
             } catch (Exception e) {
                 System.debug('Error processing uploaded attachments: ' + e.getMessage());
@@ -563,9 +806,7 @@ email.setEntityAttachments(LatestPublishedVersionIdList);
             }
         }
 
-        System.debug('Total email attachments: ' + attachmentIds.size());
         email.setEntityAttachments(attachmentIds);
-        
         
         if (String.isNotBlank(quData.Opportunity.Owner.Email)) {
             email.setReplyTo(quData.Opportunity.Owner.Email);
@@ -574,33 +815,187 @@ email.setEntityAttachments(LatestPublishedVersionIdList);
         email.setSubject(subject);
         email.setHtmlBody(body);
         email.setUseSignature(true);
-        
         email.setSaveAsActivity(true);
         email.setWhatId(quData.Id);
         
         Messaging.SendEmailResult[] results = Messaging.sendEmail(new Messaging.SingleEmailMessage[] { email });
-        
-        if(results != null &&
-           results.size() > 0 &&
-           results[0].isSuccess()) {
-               
-               Quote qToUpdate = new Quote(
-                   Id = quData.Id,
-                   Status = 'In Review with Customer',
-                   In_Review_with_Customer_Date_Time__c = System.now()
-               );
-               
-               update qToUpdate;
-           }
-        
+        /*
+        if(results != null && results.size() > 0 && results[0].isSuccess()) {
+            Quote qToUpdate = new Quote(
+                Id = quData.Id,
+                Status = 'In Review with Customer',
+                In_Review_with_Customer_Date_Time__c = System.now()
+            );
+            update qToUpdate;
+            System.debug('✅ Email sent successfully for Normal Quote');
+        } else {
+            System.debug('❌ Email sending failed for Normal Quote');
+        }
+        */
+        if(results != null && results.size() > 0 && results[0].isSuccess()) {
+            
+            if (
+                quData.Status == 'Draft' ||
+                quData.Status == 'Under Review by Sales Rep' ||
+                quData.Status == 'Submit for SOA Approval'
+            ) {
+                
+                Quote qToUpdate = new Quote(
+                    Id = quData.Id,
+                    Status = 'Submitted'
+                );
+                
+                update qToUpdate;
+                
+                System.debug(
+                    '✅ Quote Status updated from ' +
+                    quData.Status +
+                    ' to Submitted'
+                );
+                
+            } else {
+                
+                System.debug(
+                    '⚠️ Quote Status is ' +
+                    quData.Status +
+                    '. Status update skipped.'
+                );
+            }
+            
+            System.debug('✅ Email sent successfully for Normal Quote');
+            
+        } else {
+            
+            System.debug('❌ Email sending failed for Normal Quote');
+        }
         PageReference pageRef = new PageReference('/' + qId);
         pageRef.setRedirect(true);
+        System.debug('===== end saveAndSend() (Normal) =====');
         return pageRef;
-    }   
+    }
+    
+    // New method for Amendment Send (without PDF)
+    public PageReference sendAmendmentEmail() {
+        System.debug('===== sendAmendmentEmail() called =====');
+        if (!isValid || String.isBlank(emailId) || String.isBlank(subject)) {
+            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Email Id and subject are mandatory fields, please verify.'));
+            System.debug('❌ Validation failed: isValid=' + isValid + ', emailId=' + emailId + ', subject=' + subject);
+            return null;
+        }
+        
+        System.debug('Sending Amendment Email without PDF');
+        System.debug('Email ID: ' + emailId);
+        System.debug('Subject: ' + subject);
+        System.debug('CC Addresses: ' + CC_Addresses);
+        
+        // Update Amendment_Quote__c checkbox
+        System.debug('isAmendmentQuote: ' + isAmendmentQuote);
+        System.debug('quData.Amendment_Quote__c: ' + quData.Amendment_Quote__c);
+        if (isAmendmentQuote != quData.Amendment_Quote__c) {
+            Quote qUpdate = new Quote(Id = quData.Id, Amendment_Quote__c = isAmendmentQuote);
+            update qUpdate;
+            quData.Amendment_Quote__c = isAmendmentQuote;
+            System.debug('✅ Updated Amendment_Quote__c to: ' + isAmendmentQuote);
+        }
+        
+        // Update subject for amendment
+        updateSubject();
+        System.debug('Updated subject: ' + subject);
+        
+        Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
+        email.setToAddresses(new String[] { emailId });
+        if (String.isNotBlank(CC_Addresses)) {
+            CC_Addresses = CC_Addresses.replaceAll('[;,:]', ',');
+            Set<String> CCEmails = new Set<String>();
+            for (String str : CC_Addresses.split(',')) {
+                if (String.isNotBlank(str))
+                    CCEmails.add(str);
+            }
+            email.setCcAddresses(new List<String>(CCEmails));
+        }
+        
+        if (String.isNotBlank(quData.Opportunity.Owner.Email)) {
+            email.setReplyTo(quData.Opportunity.Owner.Email);
+            email.setBccAddresses(new List<String> { quData.Opportunity.Owner.Email });
+        }
+        email.setSubject(subject);
+        email.setHtmlBody(body);
+        email.setUseSignature(true);
+        email.setSaveAsActivity(true);
+        email.setWhatId(quData.Id);
+        
+        Messaging.SendEmailResult[] results = Messaging.sendEmail(new Messaging.SingleEmailMessage[] { email });
+        /*
+        if(results != null && results.size() > 0 && results[0].isSuccess()) {
+            Quote qToUpdate = new Quote(
+                Id = quData.Id,
+                Status = 'In Review with Customer',
+                In_Review_with_Customer_Date_Time__c = System.now()
+            );
+            update qToUpdate;
+            System.debug('✅ Amendment Email sent successfully');
+        } else {
+            System.debug('❌ Amendment Email sending failed');
+        }
+        */
+        if(results != null && results.size() > 0 && results[0].isSuccess()) {
+            
+            // ============================================================
+            // UPDATE QUOTE STATUS AFTER SUCCESSFUL SAVE & SEND
+            //
+            // Only these statuses move to Submitted:
+            // Draft
+            // Under Review by Sales Rep
+            // Submit for SOA Approval
+            //
+            // All other statuses remain unchanged.
+            // ============================================================
+            
+            if (
+                quData.Status == 'Draft' ||
+                quData.Status == 'Under Review by Sales Rep' ||
+                quData.Status == 'Submit for SOA Approval'
+            ) {
+                
+                Quote qToUpdate = new Quote(
+                    Id = quData.Id,
+                    Status = 'Submitted'
+                );
+                
+                update qToUpdate;
+                
+                System.debug(
+                    '✅ Quote Status updated from ' +
+                    quData.Status +
+                    ' to Submitted'
+                );
+                
+            } else {
+                
+                System.debug(
+                    '⚠️ Quote Status is ' +
+                    quData.Status +
+                    '. Status update skipped.'
+                );
+            }
+            
+            System.debug('✅ Email sent successfully for Normal Quote');
+            
+        } else {
+            
+            System.debug('❌ Email sending failed for Normal Quote');
+        }
+        PageReference pageRef = new PageReference('/' + qId);
+        pageRef.setRedirect(true);
+        System.debug('===== end sendAmendmentEmail() =====');
+        return pageRef;
+    }
     
     public PageReference cancel() {
+        System.debug('===== cancel() called =====');
         PageReference pageRef = new PageReference('/' + qId);
         pageRef.setRedirect(true);
+        System.debug('===== end cancel() =====');
         return pageRef;
     }
     

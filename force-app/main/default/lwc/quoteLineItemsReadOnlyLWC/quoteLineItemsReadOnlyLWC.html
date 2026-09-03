@@ -1,0 +1,234 @@
+<template>
+
+    <lightning-card title="Quote Line Items">
+
+        <div class="button-section">
+            <lightning-button
+                label="View PDF"
+                variant="brand"
+                icon-name="utility:preview"
+                onclick={handleViewPDF}>
+            </lightning-button>
+
+            <!-- <lightning-button
+                label="Download PDF"
+                variant="success"
+                icon-name="utility:download"
+                class="slds-m-left_small"
+                onclick={handleDownloadPDF}>
+            </lightning-button> -->
+        </div>
+
+        <template if:true={isLoading}>
+            <lightning-spinner
+                alternative-text="Loading"
+                size="large">
+            </lightning-spinner>
+        </template>
+
+        <template if:true={products}>
+
+            <div class="table-container" style="padding-right: 24px;">
+
+                <table class="approval-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Product Name</th>
+
+                            <th>List Price</th>
+
+                            <th>Qty</th>
+
+                            <th>Disc SAP%</th>
+
+                            <th>Pr. Disc.%</th>
+
+                            <th>Disc.%</th>
+
+                            <th>Sales Price</th>
+
+                            <th>SOA User</th>
+
+                            <th>Status</th>
+
+                            <th>Requestor Comments</th>
+
+                            <th>Previous Approver Comments</th>
+
+                            <th>Approver Comments</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <template
+                            for:each={products}
+                            for:item="item">
+
+                            <template
+                                for:each={item.soaUsers}
+                                for:item="soa"
+                                for:index="index">
+
+                                <tr
+                                    key={soa.uniqueKey}>
+
+                                    <!-- Product Cells -->
+
+                                    <template if:true={soa.firstRow}>
+
+                                        <td rowspan={item.rowSpan}>
+
+                                            {item.productName}
+
+                                            <br/>
+
+                                            <strong>
+
+                                                ({item.productCode})
+
+                                            </strong>
+
+                                        </td>
+
+                                        <td
+                                            rowspan={item.rowSpan}
+                                            class="number">
+
+                                            {item.listPrice}
+
+                                        </td>
+
+                                        <td
+                                            rowspan={item.rowSpan}
+                                            class="number">
+
+                                            {item.quantity}
+
+                                        </td>
+
+                                        <td
+                                            rowspan={item.rowSpan}
+                                            class="number">
+
+                                            {item.discountSAP}
+
+                                        </td>
+
+                                        <td
+                                            rowspan={item.rowSpan}
+                                            class="number">
+
+                                            {item.previousDiscount}
+
+                                        </td>
+
+                                        <td
+                                            rowspan={item.rowSpan}
+                                            class="number">
+
+                                            {item.discount}
+
+                                        </td>
+
+                                        <td
+                                            rowspan={item.rowSpan}
+                                            class="number">
+
+                                            {item.salesPrice}
+
+                                        </td>
+
+                                    </template>
+
+                                    <!-- SOA USER -->
+
+                                    <td>
+
+                                        {soa.approverName}
+
+                                    </td>
+
+                                    <!-- STATUS -->
+
+                                    <td>
+
+                                        <span class={soa.statusClass}>
+
+                                            {soa.status}
+
+                                        </span>
+
+                                        <template if:true={soa.dateTimeString}>
+
+                                            <div class="datetime">
+
+                                                {soa.dateTimeString}
+
+                                            </div>
+
+                                        </template>
+
+                                    </td>
+
+                                    <!-- REQUESTOR COMMENTS -->
+
+                                    <template if:true={soa.firstRow}>
+
+                                        <td
+                                            rowspan={item.rowSpan}>
+
+                                            {item.requestorComments}
+
+                                        </td>
+
+                                    </template>
+
+                                    <!-- PREVIOUS COMMENTS -->
+
+                                    <td>
+
+                                        {soa.previousComments}
+
+                                    </td>
+
+                                    <!-- APPROVER COMMENTS -->
+
+                                    <td>
+
+                                        {soa.comments}
+
+                                    </td>
+
+                                </tr>
+
+                            </template>
+
+                        </template>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </template>
+
+        <div class="footer">
+
+            <lightning-button
+                label="Cancel"
+                onclick={handleCancel}>
+
+            </lightning-button>
+
+        </div>
+
+    </lightning-card>
+
+</template>

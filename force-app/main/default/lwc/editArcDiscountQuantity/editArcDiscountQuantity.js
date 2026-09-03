@@ -145,7 +145,9 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
                         newDesiredPriceValue: null,
                         newDiscountValue: null,
                         isProposedPriceDisabled: true,
-                        isNewProposedPriceDisabled: newProposedPriceLocked
+                        isNewProposedPriceDisabled: newProposedPriceLocked,
+                        isRequestedCommentsDisabled: this.computeRequestedCommentsDisabled(item, null),
+                        requestedCommentsPlaceholder: 'Enter comments...'
                     };
                 } else {
                     // Non-approved row: only "Proposed ARC Price" is editable; Disc % is calculated & read-only
@@ -161,7 +163,9 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
                             ? this.computeDesiredPrice(item.ListPrice, item.Discount_to_be_offered__c)
                             : null,
                         isProposedPriceDisabled: baseDisabled,
-                        isNewProposedPriceDisabled: true
+                        isNewProposedPriceDisabled: true,
+                        isRequestedCommentsDisabled: this.computeRequestedCommentsDisabled(item, null),
+                        requestedCommentsPlaceholder: 'Enter comments...'
                     };
                 }
             });
@@ -182,33 +186,40 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
     computeDiscountFromDesiredPrice(listPrice, desiredPrice) {
         if (listPrice == null || listPrice === 0 || desiredPrice == null || desiredPrice === '') return null;
         const raw = ((listPrice - parseFloat(desiredPrice)) / listPrice) * 100;
-        return this.roundTo3Decimals(raw);
+        return this.roundTo15Decimals(raw);
     }
 
-    roundTo3Decimals(value) {
+    roundTo15Decimals(value) {
         if (value == null) return null;
-        return parseFloat(parseFloat(value).toFixed(3));
+        return parseFloat(parseFloat(value).toFixed(15));
     }
 
-    enforceMax3Decimals(value) {
+    enforceMax15Decimals(value) {
         if (value === '' || value == null) return null;
         const str = String(value);
         const dotIndex = str.indexOf('.');
-        if (dotIndex !== -1 && str.length - dotIndex - 1 > 3) {
-            this.showToast('Invalid Input', 'Discount can have a maximum of 3 decimal places.', 'warning');
-            return this.roundTo3Decimals(parseFloat(value));
+        if (dotIndex !== -1 && str.length - dotIndex - 1 > 15) {
+            this.showToast('Invalid Input', 'Discount can have a maximum of 15 decimal places.', 'warning');
+            return this.roundTo15Decimals(parseFloat(value));
         }
         return parseFloat(value);
     }
 
-    hasMoreThan3Decimals(rawValue) {
+    hasMoreThan15Decimals(rawValue) {
         const str = String(rawValue);
         const dotIndex = str.indexOf('.');
-        return dotIndex !== -1 && str.length - dotIndex - 1 > 3;
+        return dotIndex !== -1 && str.length - dotIndex - 1 > 15;
     }
 
     hasDiscountOfferedValue(val) {
         return val != null && val !== '';
+    }
+
+    computeRequestedCommentsDisabled(item, overrideNewDiscount) {
+        const newDiscount = overrideNewDiscount !== undefined ? overrideNewDiscount : item.newDiscountValue;
+        const hasDiscountOffered = item.Discount_to_be_offered__c != null && item.Discount_to_be_offered__c !== '';
+        const hasNewDiscount = newDiscount != null && newDiscount !== '';
+        return !(hasDiscountOffered || hasNewDiscount);
     }
 
     isRowLocked(item) {
@@ -250,11 +261,16 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
         this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
                 const computedDiscount = this.computeDiscountFromDesiredPrice(item.ListPrice, parsedDesiredPrice);
-                return {
+                const updatedItem = {
                     ...item,
                     desiredPriceValue: parsedDesiredPrice,
-                    Discount_to_be_offered__c: computedDiscount
+                    Discount_to_be_offered__c: computedDiscount,
+                    Requested_Comments__c: null
                 };
+                updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(
+                    updatedItem, item.newDiscountValue
+                );
+                return updatedItem;
             }
             return item;
         });
@@ -269,11 +285,27 @@ export default class EditArcDiscountQuantity extends NavigationMixin(LightningEl
         this.quoteLineItemList = this.quoteLineItemList.map(item => {
             if (item.Id === id) {
                 const computedDiscount = this.computeDiscountFromDesiredPrice(item.ListPrice, parsedPrice);
-                return {
+                const updatedItem = {
                     ...item,
                     newDesiredPriceValue: parsedPrice,
-                    newDiscountValue: computedDiscount
+                    newDiscountValue: computedDiscount,
+                    Requested_Comments__c: null
                 };
+                updatedItem.isRequestedCommentsDisabled = this.computeRequestedCommentsDisabled(
+                    updatedItem, computedDiscount
+                );
+                return updatedItem;
+            }
+            return item;
+        });
+    }
+
+    handleRequestedCommentsChange(event) {
+        const id = event.target.dataset.id;
+        const value = event.target.value;
+        this.quoteLineItemList = this.quoteLineItemList.map(item => {
+            if (item.Id === id) {
+                return { ...item, Requested_Comments__c: value };
             }
             return item;
         });

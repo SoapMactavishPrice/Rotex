@@ -15,6 +15,7 @@
         content: element(footer);
     }
 }
+
             div.header {
             padding-top: 10px;
             position: running(header);
@@ -342,80 +343,105 @@ color: #008080; -->
 
         <hr/>
         
-        <table style="width: 100%; ">
-            <tr>
-                <td colspan="2" style="font-size: 13px;" >
-                    <strong>Special Terms and Conditions</strong>
-                </td>
-            </tr>
-            <tr>
-                <td class="terms-label" style="width: 20%; vertical-align: middle; font-size: 12px; ">
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Period__c))}">
-                    <span><strong>Delivery Period</strong></span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(INCOTerms))}">
-                    <span><strong>Incoterm</strong></span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(PaymentTerms))}">
-                    <span><strong>Payment Terms</strong></span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Prices__c))}">
-                    <span><strong>Prices</strong></span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Warranty_Terms__c))}">
-                    <span><strong>Warranty Terms</strong></span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Liquidate_Terms__c))}">
-                    <span><strong>Liquidate Terms</strong></span>
-               </apex:outputPanel>
-               <apex:outputPanel rendered="{!LEN(shipToAddress) > 0}">
-                    <span><strong>Ship to Address</strong></span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Transport_Details__c))}">
-                    <span><strong>Transport Details</strong></span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Location__c))}">
-                    <span><strong>Delivery Location</strong></span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Special_Remarks__c))}">
-                    <span><strong>Special Remarks</strong></span>
-               </apex:outputPanel>
-                </td>
-                <td class="terms-value" style="width: 80%; vertical-align: middle; font-size: 12px;">
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Period__c))}">
-                    <span>:&nbsp;{!quData.Delivery_Period__c}</span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(INCOTerms))}">
-                    <span>:&nbsp;{!INCOTerms}</span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(PaymentTerms))}">
-                    <span>:&nbsp;{!PaymentTerms}</span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Prices__c))}">
-                    <span>:&nbsp;{!quData.Prices__c}</span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Warranty_Terms__c))}">
-                    <span>:&nbsp;{!quData.Warranty_Terms__c}</span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Liquidate_Terms__c))}">
-                    <span>:&nbsp;{!quData.Liquidate_Terms__c}</span>
-               </apex:outputPanel>
-               <apex:outputPanel rendered="{!LEN(shipToAddress) > 0}">
-                    <span>:&nbsp;{!shipToAddress}</span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Transport_Details__c))}">
-                    <span>:&nbsp;{!quData.Transport_Details__c}</span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Location__c))}">
-                    <span>:&nbsp;{!quData.Delivery_Location__c}</span>
-               </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Special_Remarks__c))}">
-                    <span>:&nbsp;{!quData.Special_Remarks__c}</span>
-               </apex:outputPanel>
-                </td>
-            </tr>
-            <hr/>
-        </table>
+        <table style="width:100%; border-collapse:collapse;">
+
+    <tr>
+        <td colspan="2" style="font-size:13px; padding-bottom:5px;">
+            <strong>Special Terms and Conditions</strong>
+        </td>
+    </tr>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Period__c))}" layout="none">
+        <tr>
+            <td style="width:20%; font-size:12px; vertical-align:top;"><strong>Delivery Period</strong></td>
+            <td style="width:80%; font-size:12px; vertical-align:top;">:&nbsp;{!quData.Delivery_Period__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(INCOTerms))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Incoterm</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!INCOTerms}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(PaymentTerms))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Payment Terms</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!PaymentTerms}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Prices__c))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Prices</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!quData.Prices__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Warranty_Terms__c))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Warranty Terms</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!quData.Warranty_Terms__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Liquidate_Terms__c))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Liquidate Terms</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!quData.Liquidate_Terms__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!LEN(shipToAddress) > 0}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Ship to Address</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!shipToAddress}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Transport_Details__c))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Transport Details</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!quData.Transport_Details__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Delivery_Location__c))}" layout="none">
+        <tr>
+            <td style="font-size:12px; vertical-align:top;"><strong>Delivery Location</strong></td>
+            <td style="font-size:12px; vertical-align:top;">:&nbsp;{!quData.Delivery_Location__c}</td>
+        </tr>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!NOT(ISBLANK(quData.Special_Remarks__c))}" layout="none">
+<tr style="page-break-inside:avoid;">
+
+    <td style="width:20%; font-size:12px; vertical-align:top; padding-top:0px;">
+        <strong>Special Remarks</strong>
+    </td>
+
+    <td style="width:80%; font-size:12px; vertical-align:top; padding-top:0px; line-height:14px;">
+        : {!quData.Special_Remarks__c}
+    </td>
+
+</tr>
+</apex:outputPanel>
+
+    <tr>
+        <td colspan="2" style="padding-top:10px; font-size:12px;">
+            <strong>
+                For faster order processing, please send your Purchase Order (PO) to
+                <span style="color:#0000FF;">po@rotexautomation.com</span>
+                and mark a copy (CC) to your SE
+                <span style="color:#0000FF;">{!quData.Owner.Email}</span>.
+            </strong>
+        </td>
+    </tr>
+
+</table>
+
+<hr/>
         
         
         

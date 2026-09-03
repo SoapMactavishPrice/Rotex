@@ -7,7 +7,8 @@
     height: 100vh;
 
     background: #0d6b69;
-    padding: 18px 14px;
+    /* Top gap 3px above logo; bottom of logo aligns with top header bar */
+    padding: 3px 14px 18px 14px;
 
     display: flex;
     flex-direction: column;
@@ -19,15 +20,19 @@
 .logo-section {
     background: #ffff;
     border-radius: 6px;
-    padding: 12px 10px;
+    padding: 4px 8px;
     display: flex;
-    height: 60px;
+    /* Shorter logo; 3px top + 52px = 55px header band */
+    height: 52px;
+    box-sizing: border-box;
     justify-content: center;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .logo {
-    width: 140px;
+    width: 130px;
+    max-height: 100%;
     object-fit: contain;
 }
 
@@ -43,62 +48,10 @@
 .menu-list {
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 18px 0 0;
     flex: 1;
 }
 
 .menu-list li {
     margin-bottom: 10px;
-}
-
-.sidebar-footer {
-    margin-top: auto;
-    border-top: 1px solid rgba(255,255,255,0.15);
-    padding-top: 18px;
-    display: flex;
-    align-items: center;
-}
-
-.user-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #ffc107;
-    color: #000;
-    font-size: 14px;
-    font-weight: bold;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.user-info {
-    margin-left: 10px;
-    flex: 1;
-}
-
-.user-name {
-    color: white;
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.2;
-}
-
-.user-id {
-    color: rgba(255,255,255,0.6);
-    font-size: 11px;
-    margin-top: 2px;
-}
-
-.logout-icon {
-    transform: scale(0.8);
-
-    --slds-c-icon-color-foreground-default:
-        rgba(255,255,255,0.7);
-}
-.user-account {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.7); /* lighter/muted so it reads as secondary text */
-    line-height: 1.2;
-    margin-top: 1px;
 }

@@ -1,0 +1,230 @@
+.table-container {
+    width: 100%;
+    margin: 15px;
+}
+
+.approval-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 11px; /* Slightly smaller font */
+}
+
+.approval-table th,
+.approval-table td {
+    border:1px solid black;
+        padding-right: 24px;
+    padding:6px;
+    vertical-align:top;
+    white-space:normal;
+    word-break:break-word;
+    overflow-wrap:anywhere;
+}
+
+.approval-table th {
+    background: #007764;
+    color: #fff;
+    text-align: center;
+    font-weight: 600;
+}
+
+.number {
+    text-align: center;
+}
+
+/* Product */
+.approval-table th:nth-child(1),
+.approval-table td:nth-child(1){
+    width:12%;
+}
+
+/* List Price */
+.approval-table th:nth-child(2),
+.approval-table td:nth-child(2){
+    width:5%;
+}
+
+/* Qty */
+.approval-table th:nth-child(3),
+.approval-table td:nth-child(3){
+    width:3%;
+}
+
+/* Disc SAP */
+.approval-table th:nth-child(4),
+.approval-table td:nth-child(4){
+    width:5%;
+}
+
+/* Previous Disc */
+.approval-table th:nth-child(5),
+.approval-table td:nth-child(5){
+    width:5%;
+}
+
+/* Disc */
+.approval-table th:nth-child(6),
+.approval-table td:nth-child(6){
+    width:4%;
+}
+
+/* Sales Price */
+.approval-table th:nth-child(7),
+.approval-table td:nth-child(7){
+    width:6%;
+}
+
+/* SOA User */
+.approval-table th:nth-child(8),
+.approval-table td:nth-child(8){
+    width:10%;
+}
+
+/* Status */
+.approval-table th:nth-child(9),
+.approval-table td:nth-child(9){
+    width:8%;
+}
+
+/* Requestor */
+.approval-table th:nth-child(10),
+.approval-table td:nth-child(10){
+    width:10%;
+}
+
+/* Previous Comments */
+.approval-table th:nth-child(11),
+.approval-table td:nth-child(11){
+    width:14%;
+}
+
+/* Approver Comments */
+.approval-table th:nth-child(12),
+.approval-table td:nth-child(12){
+    width:10%;
+}
+
+.datetime{
+
+    margin-top:4px;
+
+    font-size:11px;
+
+    color:#666;
+
+}
+
+.footer{
+
+    margin:20px;
+
+    text-align:center;
+
+}
+
+.status-approved{
+
+    background:#e7f7eb;
+
+    color:#15803d;
+
+    border:1px solid #16a34a;
+
+    border-radius:12px;
+
+    padding:2px 8px;
+
+    font-size:11px;
+
+    font-weight:600;
+
+    display:inline-block;
+
+}
+
+.status-rejected{
+
+    background:#fdecec;
+
+    color:#c62828;
+
+    border:1px solid #ef5350;
+
+    border-radius:12px;
+
+    padding:2px 8px;
+
+    font-size:11px;
+
+    font-weight:600;
+
+    display:inline-block;
+
+}
+
+.status-submitted{
+
+    background:#fff7df;
+
+    color:#b7791f;
+
+    border:1px solid #d69e2e;
+
+    border-radius:12px;
+
+    padding:2px 8px;
+
+    font-size:11px;
+
+    font-weight:600;
+
+    display:inline-block;
+
+}
+
+.status-commented{
+
+    background:#e6f0ff;
+
+    color:#1565c0;
+
+    border:1px solid #42a5f5;
+
+    border-radius:12px;
+
+    padding:2px 8px;
+
+    font-size:11px;
+
+    font-weight:600;
+
+    display:inline-block;
+
+}
+
+.status-default{
+
+    background:#f3f3f3;
+
+    color:#555;
+
+    border:1px solid #ddd;
+
+    border-radius:12px;
+
+    padding:2px 8px;
+
+    font-size:11px;
+
+    font-weight:600;
+
+    display:inline-block;
+
+}
+
+.button-section{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    padding:15px 20px 0 20px;
+}

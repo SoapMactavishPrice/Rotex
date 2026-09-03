@@ -1,0 +1,78 @@
+<template>
+    <div class="arc-sap-modal-root" onclick={stopPropagation}>
+        <div class="modal-container">
+            <template if:true={showSpinner}>
+                <div class="spinner-wrap">
+                    <lightning-spinner alternative-text="Loading..." variant="brand" size="medium"></lightning-spinner>
+                </div>
+            </template>
+
+            <template if:false={showSpinner}>
+                <div class="modal-header">
+                    <h2>Push ARC to SAP</h2>
+                    <button type="button" class="modal-close-btn" onclick={handleCancel} disabled={isSaving}>×</button>
+                </div>
+
+                <div class="modal-body">
+                    <template if:true={errorMessage}>
+                        <div class="banner banner-error">{errorMessage}</div>
+                    </template>
+                    <template if:true={successMessage}>
+                        <div class="banner banner-success">{successMessage}</div>
+                    </template>
+
+                    <div class="section-title">Quote Line Items</div>
+
+                    <template if:true={hasLineItems}>
+                        <div class="table-wrap">
+                            <table class="line-table">
+                                <thead>
+                                    <tr>
+                                        <th class="col-product">Product</th>
+                                        <th class="col-num">List Price</th>
+                                        <th class="col-num">Sales Price</th>
+                                        <th class="col-num">Discount %</th>
+                                        <th class="col-num">Quantity</th>
+                                        <th class="col-num">Total Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={lineItems} for:item="item">
+                                        <tr key={item.id}>
+                                            <td>
+                                                <div class="product-name" title={item.productName}>{item.productName}</div>
+                                                <div class="product-code">{item.productCode}</div>
+                                            </td>
+                                            <td class="col-num">{item.formattedListPrice}</td>
+                                            <td class="col-num">{item.formattedSalesPrice}</td>
+                                            <td class="col-num">{item.formattedDiscount}</td>
+                                            <td class="col-num">{item.quantity}</td>
+                                            <td class="col-num col-total">{item.formattedTotalPrice}</td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+
+                    <template if:true={hasNoLineItems}>
+                        <div class="empty-state">
+                            <p>No line items found for this quote</p>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="modal-footer">
+                    <template if:true={hasLineItems}>
+                        <button type="button" class="btn-primary" onclick={handleSave} disabled={isSaving}>
+                            Submit
+                        </button>
+                    </template>
+                    <button type="button" class="btn-secondary" onclick={handleCancel} disabled={isSaving}>
+                        Cancel
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+</template>

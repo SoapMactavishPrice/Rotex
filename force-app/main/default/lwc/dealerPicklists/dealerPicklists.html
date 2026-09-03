@@ -1,0 +1,282 @@
+<template>
+    <template if:true={portalToastVisible}>
+        <div class={portalToastClass} role="status" aria-live="polite">
+            <div class="portal-toast__title">{portalToastTitle}</div>
+            <template if:true={portalToastMessage}>
+                <div class="portal-toast__message">{portalToastMessage}</div>
+            </template>
+        </div>
+    </template>
+
+    <template if:false={selectedPicklist}>
+        <div class={listViewClass}>
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="page-header">
+                <div>
+                    <div class="breadcrumb">PICK LIST · ASSIGNED TO YOU</div>
+                    <div class="page-title">Pick Lists</div>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+                        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6" />
+                        <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    </svg>
+                    <input
+                        type="text"
+                        class="search-input"
+                        placeholder="Search by number, customer, partner..."
+                        onkeyup={handleSearch} />
+                </div>
+                <div class="filter-actions">
+                    <c-dealer-data-export
+                        object-key="Picklist"
+                        button-label="Export"
+                        search-key={searchKey}
+                    ></c-dealer-data-export>
+                    <button type="button" class="btn-create" onclick={handleCreate}>
+                        <svg viewBox="0 0 16 16" fill="none" class="btn-create-icon">
+                            <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+                        </svg>
+                        Create
+                    </button>
+                </div>
+            </div>
+
+            <div class="quote-table">
+                <div class="table-header">
+                    <div>PICK LIST NUMBER</div>
+                    <div>SECONDARY CUSTOMER</div>
+                    <div>CHANNEL PARTNER</div>
+                    <div>PICK LIST DATE</div>
+                    <div>REQ. DELIVERY DATE</div>
+                    <div>OWNER</div>
+                    <div>CREATED</div>
+                </div>
+
+                <template if:true={hasPicklists}>
+                    <template for:each={filteredPicklists} for:item="row">
+                        <div
+                            key={row.Id}
+                            class="table-row"
+                            data-id={row.Id}
+                            onclick={openPicklistDetail}>
+                            <div>
+                                <div class="customer-name">{row.numberDisplay}</div>
+                            </div>
+                            <div class="contact-text">{row.secondaryCustomerName}</div>
+                            <div class="contact-text">{row.channelPartnerName}</div>
+                            <div class="contact-text">{row.pickListDateDisplay}</div>
+                            <div class="contact-text">{row.requestedDeliveryDateDisplay}</div>
+                            <div class="contact-text">{row.ownerName}</div>
+                            <div class="contact-text">{row.createdDate}</div>
+                        </div>
+                    </template>
+                </template>
+
+                <template if:false={hasPicklists}>
+                    <div class="empty-state">No Pick Lists found.</div>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={selectedPicklist}>
+        <div class="detail-view">
+            <c-dealer-user-menu></c-dealer-user-menu>
+            <div class="detail-header">
+                <div class="detail-topbar">
+                    <button type="button" class="back-btn" onclick={backToList}>
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path
+                                d="M10 4L6 8l4 4"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        Back to Pick Lists
+                    </button>
+                </div>
+                <div class="detail-top">
+                    <div class="detail-identity">
+                        <div class="detail-meta">PICK LIST · {selectedPicklist.numberDisplay}</div>
+                        <div class="detail-name">{selectedPicklist.Name}</div>
+                        <div class="detail-company">
+                            <span>{selectedPicklist.channelPartnerName}</span>
+                            <span class="divider-dot">·</span>
+                            <span>Created {selectedPicklist.createdDate}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quote-tabs">
+                <button type="button" class={detailsTabClass} data-tab="details" onclick={handleTabClick}>
+                    Details
+                </button>
+                <button type="button" class={lineItemsTabClass} data-tab="lineItems" onclick={handleTabClick}>
+                    Pick List Line Items
+                </button>
+            </div>
+
+            <div class="detail-layout">
+                <template if:true={isDetailsTab}>
+                    <div class="detail-columns">
+                        <div class="detail-col detail-col-left">
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="utility:list" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Pick List Information</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Pick List Number</div>
+                                        <div class="info-row-value">{selectedPicklist.numberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Owner Name</div>
+                                        <div class="info-row-value">{selectedPicklist.ownerName}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Secondary Customer</div>
+                                        <div class={selectedPicklist.secondaryClass}>{selectedPicklist.secondaryCustomerName}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Channel Partner</div>
+                                        <div class={selectedPicklist.partnerClass}>{selectedPicklist.channelPartnerName}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Pick List Date</div>
+                                        <div class={selectedPicklist.pickDateClass}>{selectedPicklist.pickListDateDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Requested Delivery Date</div>
+                                        <div class={selectedPicklist.deliveryDateClass}>{selectedPicklist.requestedDeliveryDateDisplay}</div>
+                                    </div>
+                                    <div class="info-row info-row-full">
+                                        <div class="info-row-label">Remarks</div>
+                                        <div class={selectedPicklist.remarksClass}>{selectedPicklist.remarksDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template if:true={isLineItemsTab}>
+                    <template if:true={isLineItemDetail}>
+                        <div class="line-detail">
+                            <button type="button" class="back-btn line-detail-back" onclick={backToLineItems}>
+                                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                    <path
+                                        d="M10 4L6 8l4 4"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                                Back to Line Items
+                            </button>
+                            <div class="info-card">
+                                <div class="info-card-header">
+                                    <div class="info-card-icon">
+                                        <lightning-icon icon-name="utility:product" size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="info-card-title">Pick List Line Item</div>
+                                </div>
+                                <div class="info-card-body info-card-body-2col">
+                                    <div class="info-row">
+                                        <div class="info-row-label">Line Item #</div>
+                                        <div class="info-row-value">{selectedLineItem.lineNumberDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Inventory</div>
+                                        <div class={selectedLineItem.inventoryNameClass}>{selectedLineItem.inventoryName}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Product Name</div>
+                                        <div class={selectedLineItem.productNameClass}>{selectedLineItem.productName}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Product Code</div>
+                                        <div class={selectedLineItem.productCodeClass}>{selectedLineItem.productCode}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Available Qty</div>
+                                        <div class={selectedLineItem.availableClass}>{selectedLineItem.availableQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">PickList Qty</div>
+                                        <div class={selectedLineItem.pickClass}>{selectedLineItem.pickQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-row-label">Remaining Qty</div>
+                                        <div class={selectedLineItem.remainingClass}>{selectedLineItem.remainingQtyDisplay}</div>
+                                    </div>
+                                    <div class="info-row info-row-full">
+                                        <div class="info-row-label">Remarks</div>
+                                        <div class={selectedLineItem.lineRemarksClass}>{selectedLineItem.remarksDisplay}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template if:true={isLineItemsList}>
+                        <div class="qli-list-wrap">
+                            <div class="qli-list-meta">
+                                {lineItems.length} items · Sorted by Created Date
+                            </div>
+                            <div class="line-table">
+                                <div class="line-header">
+                                    <div>Product Name</div>
+                                    <div>Product Code</div>
+                                    <div class="line-num">Available Qty</div>
+                                    <div class="line-num">PickList Qty</div>
+                                    <div class="line-num">Remaining Qty</div>
+                                    <div>Remarks</div>
+                                </div>
+                                <template if:true={hasLineItems}>
+                                    <template for:each={lineItems} for:item="li">
+                                        <div
+                                            key={li.Id}
+                                            class="line-row line-row--clickable"
+                                            data-id={li.Id}
+                                            role="button"
+                                            tabindex="0"
+                                            onclick={openLineItemDetail}
+                                            onkeydown={handleLineItemKeydown}>
+                                            <div class="line-text strong line-link" title={li.productName}>{li.productName}</div>
+                                            <div class="line-text">{li.productCode}</div>
+                                            <div class="line-text line-num">{li.availableQtyDisplay}</div>
+                                            <div class="line-text line-num">{li.pickQtyDisplay}</div>
+                                            <div class="line-text line-num">{li.remainingQtyDisplay}</div>
+                                            <div class="line-text" title={li.remarksDisplay}>{li.remarksDisplay}</div>
+                                        </div>
+                                    </template>
+                                </template>
+                                <template if:false={hasLineItems}>
+                                    <div class="empty-state">No pick list line items found.</div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={showCreateModal}>
+        <c-new-picklist-modal
+            is-open={showCreateModal}
+            onclose={handleModalClose}
+            onsaved={handleModalSaved}
+            ontoast={handleModalToast}>
+        </c-new-picklist-modal>
+    </template>
+</template>

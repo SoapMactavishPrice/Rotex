@@ -748,19 +748,32 @@ public without sharing class AddProductPageOpp {
             oli.UnitPrice = pw.Price;
             oli.UnitPrice = pw.Price;
             oli.UnitPrice = pw.Price;
-            oli.Discount_as_per_SAP__c = customerSAPdiscount != null ? customerSAPdiscount : 0;
+       //     oli.Discount_as_per_SAP__c = customerSAPdiscount != null ? customerSAPdiscount : 0;
 
             //oli.Product_Category__c = pw.Family;
             oli.UnitPrice = pw.Price;
             system.debug(oli.UnitPrice);
             oli.ServiceDate = system.today();
-            oli.Discount_to_be_offered__c = pw.Discount;
+       //     oli.Discount_to_be_offered__c = pw.Discount;
             oli.Description = pw.LineDescription;
             oli.OpportunityId = recId; //'0065j00000N2RXiAAN';
             oli.Product2Id = pw.Product2Id;
-            if (!Test.isRunningTest()) {
+        /*    if (!Test.isRunningTest()) {
                 oli.Item_Type__c = pw.IsARC ? 'ARC' : 'Discount';
-            }
+            } */
+            
+            Boolean isARC = pw.itemType == 'ARC' || pw.IsARC;
+            
+            oli.Discount_as_per_SAP__c = isARC
+                ? 0
+                : (customerSAPdiscount != null ? customerSAPdiscount : 0);
+                    
+                    oli.Discount_to_be_offered__c = isARC
+                    ? 0
+                    : (pw.Discount != null ? pw.Discount : 0);
+                        
+                        oli.Item_Type__c = isARC ? 'ARC' : 'Discount';
+            
             // oli.HSN_Master__c = pw.hsnMasterId;
             //oli.CGST_RATE__c = pw.CGSTRATE;
             //oli.SGST_RATE__c = pw.SGSTRATE;

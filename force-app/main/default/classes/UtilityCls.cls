@@ -124,7 +124,7 @@ public class UtilityCls {
         request.setMethod(apiparam.method);
         // Set basic authentication header
         String username = 'IBS_SD';
-        String password = 'Rotex@1234';
+        String password = 'Rotex@9876';
         String authHeader = 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(username + ':' + password));
         request.setHeader('Authorization', authHeader);
         request.setHeader('Content-Type', 'application/json'); // Adjust content type as needed
@@ -216,7 +216,7 @@ public class UtilityCls {
         
         // Basic Auth
         String username = 'IBS_SD';
-        String password = 'Rotex@1234';
+        String password = 'Rotex@9876';
         
         String authHeader = 'Basic ' +
             EncodingUtil.base64Encode(

@@ -41,7 +41,7 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
                 }
             
             // 1️⃣ Populate fields from parent Quote if blank (only for new QLI)
-            if (Trigger.isInsert && quoteMap.containsKey(qli.QuoteId)) {
+            if ((Trigger.isInsert || Trigger.isUpdate) && quoteMap.containsKey(qli.QuoteId)) {
                 System.debug('APPROVAL: Populating approver fields from parent Quote');
                 Quote parentQuote = quoteMap.get(qli.QuoteId);
                 
@@ -123,11 +123,29 @@ trigger QuoteLineItemTrigger on QuoteLineItem (before insert, before update, aft
         if (!insertedIds.isEmpty()) {
             // Re-query so formula field Discount_to_be_offered__c is freshly calculated
             List<QuoteLineItem> freshInserted = [
-                SELECT Id, ListPrice, Discount_to_be_offered__c, Item_Type__c
+                SELECT Id, ListPrice, List_Price_Backend__c, Discount_to_be_offered__c, Item_Type__c
                 FROM QuoteLineItem
                 WHERE Id IN :insertedIds
             ];
-
+            
+            List<QuoteLineItem> listPriceUpdates = new List<QuoteLineItem>();
+            
+            // ONLY ListPrice → List_Price_Backend__c
+            for (QuoteLineItem fresh : freshInserted) {
+                if (fresh.ListPrice != null &&
+                    fresh.List_Price_Backend__c != fresh.ListPrice) {
+                        
+                        listPriceUpdates.add(new QuoteLineItem(
+                            Id = fresh.Id,
+                            List_Price_Backend__c = fresh.ListPrice
+                        ));
+                    }
+            }
+            
+            if (!listPriceUpdates.isEmpty()) {
+                update listPriceUpdates;
+            }
+            // EXISTING LOGIC — DON'T CHANGE
             List<QuoteLineItem> toUpdate = new List<QuoteLineItem>();
             for (QuoteLineItem fresh : freshInserted) {
                 if (fresh.ListPrice == null || fresh.ListPrice == 0 || fresh.Item_Type__c == 'ARC') continue;

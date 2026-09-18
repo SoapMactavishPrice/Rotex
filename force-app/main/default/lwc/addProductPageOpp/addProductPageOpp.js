@@ -1110,25 +1110,81 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
         this.handleShowSelected();
     }
 
+    // handleQuantityChange(event) {
+    //     var selectedRow = event.currentTarget;
+    //     var key = selectedRow.dataset.targetId;
+    //     let record = this.SelectedProductData.find(item => item.Id == key);
+
+    //     console.log(record);
+
+
+    //     //console.log(' key ' + key + ' event.target.value ' + event.target.value);
+    //     this.mapIdQuantity.set(key, event.target.value);
+
+    //     if (record.IsARC) {
+    //         let enteredQty = parseInt(event.target.value, 10);
+    //         let resultValue;
+
+    //         // Sort array by label just in case
+    //         let sortedArr = [...record.PriceOption].sort((a, b) => a.label - b.label);
+
+    //         // Find the closest label <= enteredQty
+    //         for (let i = sortedArr.length - 1; i >= 0; i--) {
+    //             if (enteredQty >= sortedArr[i].label) {
+    //                 resultValue = sortedArr[i].value;
+    //                 break;
+    //             }
+    //         }
+
+    //         // If nothing matches (smaller than smallest label), take the first value
+    //         if (!resultValue && sortedArr.length > 0) {
+    //             resultValue = sortedArr[0].value;
+    //         }
+    //         console.log('For Qty:', enteredQty, 'Value:', resultValue);
+
+    //         this.SelectedProductData = this.SelectedProductData.map(rec => {
+    //             var newPrice = resultValue;
+
+    //             let newPriceNum = Number(newPrice) || 0;
+    //             let incoPercent = Number(rec.IncoTerms) || 0;
+
+    //             newPrice = newPriceNum + (newPriceNum * incoPercent / 100);
+
+    //             // Round to 2 decimals
+    //             newPrice = parseFloat(newPrice.toFixed(2));
+
+    //             if (rec.Id == key) {
+    //                 return { ...rec, Price: newPrice }; // merge old + new values
+    //             }
+    //             return rec;
+    //         });
+
+    //     }
+
+
+    // }
+
     handleQuantityChange(event) {
         var selectedRow = event.currentTarget;
         var key = selectedRow.dataset.targetId;
         let record = this.SelectedProductData.find(item => item.Id == key);
 
-        console.log(record);
+        const enteredQty = parseFloat(event.target.value) || 0;
+        this.mapIdQuantity.set(key, enteredQty);
 
+        // Always update Quantity first (for ARC and non-ARC)
+        this.SelectedProductData = this.SelectedProductData.map(rec => {
+            if (rec.Id == key) {
+                return { ...rec, Quantity: enteredQty };
+            }
+            return rec;
+        });
 
-        //console.log(' key ' + key + ' event.target.value ' + event.target.value);
-        this.mapIdQuantity.set(key, event.target.value);
-
-        if (record.IsARC) {
-            let enteredQty = parseInt(event.target.value, 10);
+        // If ARC, also recalc Price based on the slab
+        if (record && record.IsARC) {
             let resultValue;
-
-            // Sort array by label just in case
             let sortedArr = [...record.PriceOption].sort((a, b) => a.label - b.label);
 
-            // Find the closest label <= enteredQty
             for (let i = sortedArr.length - 1; i >= 0; i--) {
                 if (enteredQty >= sortedArr[i].label) {
                     resultValue = sortedArr[i].value;
@@ -1136,32 +1192,21 @@ export default class AddProductPage extends NavigationMixin(LightningElement) {
                 }
             }
 
-            // If nothing matches (smaller than smallest label), take the first value
             if (!resultValue && sortedArr.length > 0) {
                 resultValue = sortedArr[0].value;
             }
-            console.log('For Qty:', enteredQty, 'Value:', resultValue);
 
             this.SelectedProductData = this.SelectedProductData.map(rec => {
-                var newPrice = resultValue;
-
-                let newPriceNum = Number(newPrice) || 0;
-                let incoPercent = Number(rec.IncoTerms) || 0;
-
-                newPrice = newPriceNum + (newPriceNum * incoPercent / 100);
-
-                // Round to 2 decimals
-                newPrice = parseFloat(newPrice.toFixed(2));
-
                 if (rec.Id == key) {
-                    return { ...rec, Price: newPrice }; // merge old + new values
+                    let newPrice = Number(resultValue) || 0;
+                    let incoPercent = Number(rec.IncoTerms) || 0;
+                    newPrice = newPrice + (newPrice * incoPercent / 100);
+                    newPrice = parseFloat(newPrice.toFixed(2));
+                    return { ...rec, Price: newPrice };
                 }
                 return rec;
             });
-
         }
-
-
     }
 
     handleSalesPriceChange(event) {

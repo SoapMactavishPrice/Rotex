@@ -409,15 +409,29 @@ public without sharing class AddProductPageQuote {
             QuoteLineItem oli = new QuoteLineItem();
             oli.Quantity = pw.Quantity;
             oli.UnitPrice = pw.Price;
-            oli.Discount_as_per_SAP__c = customerSAPdiscount != null ? customerSAPdiscount : 0;
+        //    oli.Discount_as_per_SAP__c = customerSAPdiscount != null ? customerSAPdiscount : 0;
             oli.ServiceDate = system.today();
-            oli.Discount_to_be_offered__c = pw.Discount;
+        //    oli.Discount_to_be_offered__c = pw.Discount;
             oli.Description = pw.LineDescription;
             oli.QuoteId = recId;
             oli.Product2Id = pw.Product2Id;
             oli.PricebookEntryId = pw.Id;
-            oli.Item_Type__c = pw.IsARC ? 'ARC' : null;
+         //   oli.Item_Type__c = pw.IsARC ? 'ARC' : null;
+            
+            Boolean isARC = pw.itemType == 'ARC' || pw.IsARC;
+            
+            oli.Discount_as_per_SAP__c = isARC
+                ? 0
+                : (customerSAPdiscount != null ? customerSAPdiscount : 0);
+                    
+                    oli.Discount_to_be_offered__c = isARC
+                    ? 0
+                    : (pw.Discount != null ? pw.Discount : 0);
+                        
+                        oli.Item_Type__c = isARC ? 'ARC' : null;
+            
             lstOpp.add(oli);
+
         }
         try {
             insert lstOpp;
